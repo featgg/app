@@ -1,16 +1,26 @@
-# featgg
+# Feat.gg App 🎮
 
-A new Flutter project.
+**The official frontend client for the Feat.gg app.**
 
-## Getting Started
+> _Building the future of gaming with transparency._
 
-This project is a starting point for a Flutter application.
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 
-A few resources to get you started if this is your first Flutter project:
+## ⚡ About
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+This repository hosts the open-source client for **Feat.gg**.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+We believe in **Building in public**. While our backend infrastructure remains
+private to protect user data and business logic, our client-side code is open
+for the community to audit, learn from, and trust.
+
+## 🛠️ Tech stack & architecture
+
+We use a scalable stack focused on performance and developer experience:
+
+- **Framework:** Flutter
+- **State Management:** Riverpod
+- **Backend:** Supabase
+- **Architecture:** Feature-first / Clean architecture
