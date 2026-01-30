@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "gg.feat.featgg"
+    namespace = "gg.feat.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
