@@ -2,7 +2,12 @@
 <1 paragraph: what closes when this PR merges>
 
 ## Type
-<feat | fix | refactor | docs | chore | test | ci | build>
+<feat | fix | refactor | docs | chore | test | ci | build — append '!' to the type or scope to signal a breaking change, and describe the break + migration steps in Scope>
+
+## Changeset
+<numbered bullets enumerating the logical sub-changes the squash combines; mirrors the atomic commits on this branch and replaces what 'git log main' loses under squash merge>
+1. <first change>
+2. <second change>
 
 ## Verification
 - [ ] 'flutter analyze' green
