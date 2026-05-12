@@ -1,0 +1,74 @@
+name: Sub-issue
+description: An atomic unit of work tied to a parent epic. One sub-issue closes with one PR.
+title: "<type>(<scope>): <one-line subject>"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Each sub-issue is one atomic change that closes when its PR merges. The
+        title follows Conventional Commits subject format and matches the commit
+        message. The body describes what to do, not how the decision was reached.
+  - type: input
+    id: parent-epic
+    attributes:
+      label: Parent epic
+      description: Issue number or epic identifier of the parent.
+      placeholder: "#5  or  EPIC-FE-AUTH"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What closes when this PR merges. One short paragraph.
+      placeholder: "Add the email OTP entry screen with Resend cooldown and navigation to the OTP code screen on submit."
+    validations:
+      required: true
+  - type: textarea
+    id: files-to-touch
+    attributes:
+      label: Files to touch (high-level)
+      description: Directories or files this sub-issue is expected to change. The concrete file list belongs in the sub-issue's plan, not the issue body.
+      placeholder: |
+        - lib/src/features/auth/presentation/email_screen.dart (new)
+        - lib/src/features/auth/data/auth_repository.dart (extend)
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Checkbox list of what proves this sub-issue is done.
+      placeholder: |
+        - [ ] Email input validates format client-side
+        - [ ] Submit triggers OTP send
+        - [ ] Resend button shows cooldown countdown
+        - [ ] Submit navigates to OTP code screen on success
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Commands run locally before requesting review.
+      placeholder: |
+        - flutter analyze
+        - dart format --set-exit-if-changed .
+        - flutter test test/features/auth
+    validations:
+      required: false
+  - type: input
+    id: branch-commit
+    attributes:
+      label: Suggested branch + commit
+      description: Branch name and Conventional Commits subject. The branch matches the scope; the commit subject becomes the PR title.
+      placeholder: "feat/auth-email-screen + feat(auth): add email OTP entry screen"
+    validations:
+      required: false
+  - type: checkboxes
+    id: discipline
+    attributes:
+      label: Public-repo discipline
+      options:
+        - label: No backend paths, internal function names, schema namespaces, or backend env var names appear in this issue body.
+          required: true
