@@ -1,0 +1,66 @@
+# Default: auto-detect text and normalize to LF in repo
+* text=auto eol=lf
+
+# Dart / Flutter
+*.dart       text eol=lf
+*.yaml       text eol=lf
+*.yml        text eol=lf
+*.arb        text eol=lf
+pubspec.lock text eol=lf
+
+# Common
+*.md   text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.txt  text eol=lf
+*.sh   text eol=lf
+
+# Android
+*.gradle     text eol=lf
+*.kts        text eol=lf
+*.kt         text eol=lf
+*.java       text eol=lf
+*.properties text eol=lf
+*.xml        text eol=lf
+gradlew      text eol=lf
+
+# iOS / macOS
+*.swift    text eol=lf
+*.m        text eol=lf
+*.mm       text eol=lf
+*.h        text eol=lf
+*.plist    text eol=lf
+*.xcconfig text eol=lf
+*.pbxproj  text eol=lf -merge=binary
+
+# Web target
+*.html text eol=lf
+*.js   text eol=lf
+*.ts   text eol=lf
+*.css  text eol=lf
+*.scss text eol=lf
+
+# Windows-only scripts MUST keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets — no conversion
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.jar   binary
+*.keystore binary
+*.jks   binary
+*.so    binary
+*.dylib binary
+*.a     binary
+*.pdf   binary
+*.zip   binary
