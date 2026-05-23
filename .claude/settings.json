@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(git reset *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git push *)",
+      "Bash(gh issue close *)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(del *)",
+      "Bash(rmdir *)",
+      "Bash(rd *)",
+      "Bash(unlink *)",
+      "Bash(sudo *)",
+      "Bash(git push --force *)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git checkout -- *)",
+      "Bash(git restore *)",
+      "Bash(gh pr merge *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Read(./env.json)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./android/key.properties)",
+      "Edit(./env.json)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/settings.local.json)",
+      "Write(./env.json)",
+      "Write(./.env)",
+      "Write(./.env.*)",
+      "Write(./.claude/settings.json)",
+      "Write(./.claude/settings.local.json)"
+    ]
+  }
+}

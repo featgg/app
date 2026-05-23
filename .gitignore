@@ -71,8 +71,12 @@ local.properties
 .env
 .env.*
 *.env
+env.json
 *.pem
 *.key
 *.crt
 *.p12
 *.pfx
+
+# AI agent pipeline run artifacts (local notes, never committed)
+.ai/runs/**
