@@ -28,4 +28,4 @@ We use a scalable stack focused on performance and developer experience:
 
 ## License
 
-This project is source-available under the [Functional Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2)](https://fsl.software). Each version automatically converts to the Apache License, Version 2.0 two years after its publication. See [LICENSE](LICENSE) for the full text.
+This project is source-available under the [Functional Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2)](https://fsl.software). Each version automatically converts to the Apache License, Version 2.0 two years after its publication. See [LICENSE](LICENSE.md) for the full text.
