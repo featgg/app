@@ -47,9 +47,15 @@ manipulation) — follow step 4.
 4. Stage and commit in atomic units. Conventional Commits: English,
    imperative, scoped where applicable (e.g.
    `feat(auth): add email OTP screen`). Use single quotes in commit
-   messages (plain text), per AGENTS.md. Do not add `Co-Authored-By` or
-   any auto-credit footer unless the dispatch task explicitly supplies
-   one.
+   messages (plain text), per AGENTS.md.
+
+   Never add an auto-generated footer to a commit message or PR body —
+   no `Co-Authored-By` line, no `Generated with Claude Code`, no tool
+   or model attribution, no auto-credit of any kind. This holds even
+   if a tool default would inject one; strip it before committing. The
+   only footer any agent emits is the handoff footer in chat (see
+   `AGENTS.md` § Handoff convention), which never enters a commit or PR
+   body.
 
    If `git commit` fails with `Enter passphrase`, `incorrect passphrase`,
    or `gpg: signing failed`: STOP. Ask the operator to run
@@ -64,9 +70,20 @@ manipulation) — follow step 4.
    - If either check fails: ABORT, write the mismatch as a forensic dump
      to `.ai/runs/<current>/git-report.md`, do not push.
 
-6. `git push -u origin <type>/<slug>`. Push is gated behind the `ask`
-   permission in `.claude/settings.json`; the operator confirms before
-   the push runs.
+6. Informed push gate. Push is gated behind the `ask` permission in
+   `.claude/settings.json`; the operator MUST review the staged changes
+   before approving. Immediately before invoking the push, output to
+   chat:
+   - the staged file list: `git diff --name-status @{u}..HEAD` (or
+     `git diff --name-status main..HEAD` if the branch has no upstream
+     yet);
+   - the branch commit list: `git log --oneline main..HEAD`;
+   - the full diff of what will be pushed:
+     `git diff main..HEAD`.
+
+   Then run `git push -u origin <type>/<slug>` and let the `ask` gate
+   prompt the operator. Do not approve on the operator's behalf and do
+   not push before presenting this output.
 
 7. `gh pr create --base main`. Fill `PULL_REQUEST_TEMPLATE.md` exactly,
    in the order the template lists:
