@@ -18,3 +18,7 @@
 
 ## Smoke test
 <numbered steps to verify runtime behavior end-to-end; write 'N/A' if this PR has no runtime impact>
+
+## Closes
+<closing keyword that auto-closes the parent issue on merge; remove this section if the PR has no parent issue>
+Closes #<issue number>
