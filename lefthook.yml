@@ -1,0 +1,17 @@
+# Local pre-commit hooks. Install with: lefthook install
+# See README.md § Pre-commit hooks for setup.
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      run: dart format --output=none --set-exit-if-changed .
+      fail_text: "Dart files are not formatted. Run: dart format ."
+    analyze:
+      run: flutter analyze
+      fail_text: "flutter analyze reported issues."
+    test:
+      run: flutter test
+      fail_text: "flutter test failed."
+    gitleaks:
+      run: gitleaks protect --staged --redact --verbose
+      fail_text: "gitleaks detected a potential secret in staged content. Review the redacted output above. To override in a genuine emergency, commit with --no-verify and open an issue."

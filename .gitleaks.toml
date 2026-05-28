@@ -1,0 +1,17 @@
+# Gitleaks configuration. Extends the default ruleset shipped with
+# gitleaks; the local pre-commit hook and the CI 'secrets' job both
+# consume this file automatically when present at the repo root.
+#
+# See https://github.com/gitleaks/gitleaks for rule documentation.
+
+[extend]
+useDefault = true
+
+# Repo-wide allowlist. Add entries here only when a real false
+# positive is confirmed. Each entry must include a one-line
+# justification in a comment immediately above it.
+#
+# Example shape (do not uncomment without a justification):
+# [[allowlists]]
+# description = "<why this is safe>"
+# regexes = ['''<pattern>''']
