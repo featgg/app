@@ -98,9 +98,18 @@ manipulation) — follow step 4.
    - `## Smoke test`: numbered steps to verify runtime behavior
      end-to-end. Write `N/A` if this PR has no runtime impact (most
      instrumentation PRs do not).
+   - `## Closes`: parse the parent issue number from the `Issue:` line
+     of `.ai/runs/<current>/plan.md` — the first `#N` token after
+     `Issue:` on that line — and write `Closes #N`. If `Issue:` is
+     absent, reads `none`, or has no parseable `#N`, omit the entire
+     `## Closes` section (heading and body) from the PR body. Do not
+     leave the literal `<issue number>` placeholder in the PR body and
+     do not invent a number.
 
-   Do not add fields the template does not contain. The operator handles
-   issue closure manually.
+   Do not add fields the template does not contain. Merging the PR
+   auto-closes the linked issue via the `Closes #N` keyword; the
+   GitHub project board's "issue closed → Done" automation moves the
+   card.
 
 8. Report in chat: branch name, commit SHAs, and the PR URL. End with
    the handoff footer (see `AGENTS.md` § Handoff convention) —
