@@ -21,7 +21,13 @@ GitHub's "Report a vulnerability" form:
 Do not open a public issue, pull request, or discussion thread for a
 suspected vulnerability before a fix is published.
 
-If you cannot access the private reporting form, open a minimal
+For vulnerabilities outside this repository's scope — most notably
+the backend service this client communicates with — email
+security@feat.gg. Reports through this channel follow the same
+response timelines described below.
+
+If you cannot access the private reporting form, email
+security@feat.gg. If neither channel is available, open a minimal
 public issue stating only that you have a private security report
 ready and asking the maintainer to contact you. Do not include
 vulnerability details in that public issue.
@@ -87,7 +93,8 @@ In scope:
 Out of scope:
 
 - The backend service this client communicates with. It is a
-  separate scope and is not covered by this policy.
+  separate scope and is not covered by this policy; report
+  suspected backend vulnerabilities to security@feat.gg instead.
 - Third-party services or libraries this project depends on. Please
   report those directly to the upstream maintainers; advisories that
   affect this project will be tracked once a fix exists upstream.
