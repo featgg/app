@@ -67,4 +67,4 @@ jobs:
           ./gitleaks version
 
       - name: Run gitleaks
-        run: ./gitleaks dir --redact --verbose .
+        run: ./gitleaks git --redact --verbose .
