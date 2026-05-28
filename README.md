@@ -26,6 +26,59 @@ We use a scalable stack focused on performance and developer experience:
 - **Backend:** Supabase
 - **Architecture:** Feature-first / Clean architecture
 
+## Pre-commit hooks
+
+This repo uses [lefthook](https://github.com/evilmartians/lefthook)
+to run local pre-commit checks. On every commit the hook runs:
+
+- `dart format --output=none --set-exit-if-changed .` on the working tree
+- `flutter analyze` on the working tree
+- `flutter test` on the working tree
+- `gitleaks protect --staged` to scan staged content for secrets
+
+The same format / analyze / test checks also run in CI; the local
+hook catches them earlier. Secret scanning runs locally
+(staged diff) and in CI (full history) as defense in depth.
+
+### Install
+
+Install lefthook and gitleaks once per machine, then wire the hooks
+into `.git/hooks/` from the repo root.
+
+**macOS:**
+
+```sh
+brew install lefthook gitleaks
+lefthook install
+```
+
+**Windows:**
+
+```powershell
+winget install -e --id evilmartians.lefthook
+winget install -e --id Gitleaks.Gitleaks
+lefthook install
+```
+
+**Linux (apt / snap):**
+
+```sh
+sudo snap install lefthook
+# gitleaks: download the latest binary from
+# https://github.com/gitleaks/gitleaks/releases and place it in $PATH
+lefthook install
+```
+
+Other install methods (npm, scoop, chocolatey, `go install`) are
+listed in each tool's upstream docs.
+
+### Skipping the hook
+
+If you absolutely must commit without running the hook, use
+`git commit --no-verify`. Skipping is discouraged: the same
+format / analyze / test checks run in CI and will block the PR, and
+the CI secret scan runs against full history.
+
 ## License
 
 This project is source-available under the [Functional Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2)](https://fsl.software). Each version automatically converts to the Apache License, Version 2.0 two years after its publication. See [LICENSE](LICENSE.md) for the full text.
