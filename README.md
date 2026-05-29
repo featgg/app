@@ -26,6 +26,13 @@ We use a scalable stack focused on performance and developer experience:
 - **Backend:** Supabase
 - **Architecture:** Feature-first / Clean architecture
 
+## Agent workflow
+
+This repository is maintained through a four-agent agentic
+pipeline (Plan, Implement, Review, Git). See
+[OPERATING.md](OPERATING.md) for the operator
+guide.
+
 ## Pre-commit hooks
 
 This repo uses [lefthook](https://github.com/evilmartians/lefthook)
