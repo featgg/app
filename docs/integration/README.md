@@ -22,12 +22,14 @@ The layout is flat: no subdirectories, no epic grouping. Volume can
 justify a richer layout later; today's KISS default is one flat Markdown
 file per surface.
 
-A brief covers one **contract shape**, not one provider. Where a single
-surface serves many third-party platforms through one shape
-parameterized by a platform value, that is one brief listing the
-supported platform values — not one file per platform.
-
-Each surface is one of two shapes, and the brief declares which:
+A brief documents one logically-grouped surface, and covers one
+**contract**, not one provider: where a single surface serves many
+third-party platforms through one shape parameterized by a platform
+value, that is one brief listing the supported platform values — not one
+file per platform. Each endpoint or data access within a brief is one of
+two shapes, and the brief declares the shape of each; when the surface is
+a single conceptual feature, a brief may mix shapes across sections, each
+section stating its shape. The two shapes are:
 
 - **Server operation (HTTP endpoint).** An operation the backend runs
   server-side — anything secret-bearing, cross-record, or derived. The
@@ -47,6 +49,15 @@ to handle errors.
 
 These conventions are shared by all briefs so individual briefs do not
 repeat them. A brief states only its deviations.
+
+**Base URL.** The client calls the backend at a single base URL,
+configured once in the client (the SDK is initialized with it). Today
+that is the backend's default project URL; `api.feat.gg` is a planned
+alias (post-MVP) and is not yet routable. Briefs document paths and
+resource names relative to this base — never a hard-coded host. The full
+URL for a server operation is the base URL plus the brief's path.
+
+**Versioning.** Surfaces are unversioned unless a brief states otherwise.
 
 **Server-operation surfaces** exchange JSON and use a stable envelope:
 
@@ -99,7 +110,8 @@ planning stage for any feature that depends on the surface.
 
 **Shape 1 — Server operation (HTTP endpoint):**
 
-- **Public URL.** The full HTTPS URL the client calls.
+- **Path.** The path the client calls, relative to the base URL (for
+  example, `/functions/v1/<name>`).
 - **HTTP method.** One of `GET`, `POST`, `PUT`, `PATCH`, `DELETE`.
 - **Request headers.** Every header the client must send, by purpose and
   on-the-wire name.
@@ -143,7 +155,9 @@ following:
   access rule enforced for each.
 - The security model in plain terms: row-level authorization keyed to
   the signed-in user.
-- The real public base URL and hostname the client calls.
+- The public base URL and hostname the client calls (a product fact). It
+  is documented once in § Global conventions § Base URL; individual briefs
+  use paths relative to it rather than repeating the host.
 - HTTP methods, status codes, and IANA-standard header names.
 - Abstract request/response field shapes, the auth scheme, rate-limit
   numbers, idempotency contract, and versioning signal.
