@@ -1,12 +1,9 @@
 /// Router module for featgg core: central go_router configuration.
 library;
 
-export 'router_placeholder_page.dart';
-
+import 'package:featgg/src/features/home/presentation/home_presentation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import 'router_placeholder_page.dart';
 
 part 'router.g.dart';
 
@@ -17,10 +14,7 @@ GoRouter router(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     routes: <RouteBase>[
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const RouterPlaceholderPage(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const HomePage()),
     ],
   );
 }
