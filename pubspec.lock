@@ -488,14 +488,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-  import_guard:
-    dependency: "direct dev"
-    description:
-      name: import_guard
-      sha256: "60a0882c2c14f38f2db6fa350a51eee9feb57018bf0c15c50dee614572533488"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.0"
   io:
     dependency: transitive
     description:

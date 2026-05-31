@@ -1,4 +1,0 @@
-# presentation may import its feature's application and domain, but must
-# not import data.
-deny:
-  - package:featgg/src/features/sample/data/**

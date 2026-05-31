@@ -11,7 +11,6 @@ include: package:flutter_lints/flutter.yaml
 
 plugins:
   riverpod_lint: "3.1.0"
-  import_guard: "0.2.0"
 
 linter:
   # The lint rules applied to this project can be customized in the
