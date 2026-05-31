@@ -63,6 +63,8 @@ flutter test
 
 Run exactly what the plan's "Verification commands" section lists — no more, no less.
 
+Run the sequence in the foreground in one shell, each command to its real exit code before the next — it is a dependency chain, not parallel work; do not background-and-poll. A genuinely long-lived process (a dev server) is the exception and may background. Stay in that shell: switch only if the shell itself cannot run the command (unrecognized syntax, shell unavailable), never because a command failed on its own merits — a failing test or `analyze` error is a real result, not a shell fault. After switching, stay in the new shell until it also fails.
+
 ## Testing
 
 Tests accompany behavior changes; pick the lowest level that proves the behavior. Golden tests when visual regressions matter. Coverage not enforced as a number. PRs missing tests for testable behavior are blocked at review.

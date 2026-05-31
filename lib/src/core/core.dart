@@ -5,4 +5,5 @@
 library;
 
 export 'env/env.dart';
+export 'router/router.dart';
 export 'theme/theme.dart';
