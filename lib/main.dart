@@ -19,6 +19,8 @@ class App extends ConsumerWidget {
       title: 'Feat.gg',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
     );
   }
