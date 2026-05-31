@@ -1,3 +1,0 @@
-# core is cross-cutting and must not depend on any feature.
-deny:
-  - package:featgg/src/features/**

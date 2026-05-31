@@ -1,6 +1,0 @@
-# domain is the dependency-free core of its feature: it must not import
-# any outward layer (application, data, or presentation).
-deny:
-  - package:featgg/src/features/sample/application/**
-  - package:featgg/src/features/sample/data/**
-  - package:featgg/src/features/sample/presentation/**

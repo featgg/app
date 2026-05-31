@@ -66,10 +66,22 @@ Apply each item that is relevant. Cite a file:line for every finding.
 - [ ] **Security**: no hardcoded API keys or tokens, no `env.json`
       values committed, no logging of credentials, no untrusted input
       on privileged paths.
-- [ ] **Architecture**: code in the correct `lib/src/` location; Clean
-      Architecture layering respected (presentation → application →
-      domain → data, never reverse); Riverpod codegen-only; shared
-      helpers not duplicated; AGENTS.md conventions honored.
+- [ ] **Layering (dependency rule)**: enforce the source-dependency rule
+      on every diff that touches `lib/src/` — this is now the sole
+      enforcement, no lint backs it. Inward-only layer rule: a file in one
+      layer must not import a more-outward layer — `presentation` may import
+      `application` and `domain`; `application` may import `domain`; `data`
+      may import `domain`; nothing imports outward (e.g. a `domain` file
+      importing a `data` file, or an `application` file importing
+      `presentation`, is a violation). Cross-feature isolation: a feature
+      must not import another feature's `application/` or `data/` internals —
+      only `domain` entities and interfaces cross feature boundaries (e.g.
+      `features/a/presentation` importing `features/b/data` is a violation).
+      Grep the diff's imports against these rules and cite a file:line for
+      each violation.
+- [ ] **Architecture**: code in the correct `lib/src/` location; Riverpod
+      codegen-only; shared helpers not duplicated; AGENTS.md conventions
+      honored.
 - [ ] **Testing vs `testing_policy`**: tests meaningful (not
       tautological); cover the edge cases the plan listed; level (unit /
       widget / golden / integration) matches what the plan declared.

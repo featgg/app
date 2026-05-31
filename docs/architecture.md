@@ -14,7 +14,7 @@ The app follows Clean Architecture with four layers and a strict source-dependen
 presentation → application → domain → data
 ```
 
-In source-dependency terms, every layer depends inward toward `domain`, the dependency-free core: `presentation` depends on `application`; `application` depends on `domain`; and `data` also depends on `domain` — it implements `domain`'s repository interfaces rather than the other way around. The dependency direction never reverses; a layering lint enforces it, not convention (§ Dependency rule and enforcement).
+In source-dependency terms, every layer depends inward toward `domain`, the dependency-free core: `presentation` depends on `application`; `application` depends on `domain`; and `data` also depends on `domain` — it implements `domain`'s repository interfaces rather than the other way around. The dependency direction never reverses; the reviewer agent enforces it, not convention (§ Dependency rule and enforcement).
 
 ### Responsibility of each layer
 
@@ -37,7 +37,7 @@ This document fixes their layout and responsibilities; the directories themselve
 
 ### Dependency rule and enforcement
 
-A layer may import only code in its own sub-tree and code in layers it depends inward on. Concretely: `presentation` may import `application` and `domain`; `application` may import `domain`; `data` may import `domain`. No layer imports code from a more outward layer. Additionally, a feature's `application/` and `data/` internals are not importable by a different feature; only `domain` entities and interfaces cross feature boundaries. This is enforced by a layering lint, not by convention alone — no cross-feature coupling for a single caller.
+A layer may import only code in its own sub-tree and code in layers it depends inward on. Concretely: `presentation` may import `application` and `domain`; `application` may import `domain`; `data` may import `domain`. No layer imports code from a more outward layer. Additionally, a feature's `application/` and `data/` internals are not importable by a different feature; only `domain` entities and interfaces cross feature boundaries. The reviewer enforces both the inward-only layer rule and cross-feature isolation on every review (`.claude/agents/app-reviewer.md` § Review checklist), not convention alone — no cross-feature coupling for a single caller.
 
 ### Data layer and the integration contract
 
