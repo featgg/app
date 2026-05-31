@@ -1,0 +1,5 @@
+# application depends only on its feature's domain: it must not import
+# data or presentation.
+deny:
+  - package:featgg/src/features/sample/data/**
+  - package:featgg/src/features/sample/presentation/**
