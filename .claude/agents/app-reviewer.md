@@ -63,7 +63,7 @@ Apply each item that is relevant. Cite a file:line for every finding.
       finding.
 - [ ] **KISS**: no abstractions for a single caller, no unrequested
       configurability, no ceremony without payoff.
-- [ ] **Security**: no hardcoded API keys or tokens, no `env.json`
+- [ ] **Security**: no hardcoded API keys or tokens, no `env.*.json`
       values committed, no logging of credentials, no untrusted input
       on privileged paths.
 - [ ] **Layering (dependency rule)**: enforce the source-dependency rule
