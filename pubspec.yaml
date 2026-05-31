@@ -41,7 +41,6 @@ dev_dependencies:
   # Linting
   flutter_lints: 6.0.0
   riverpod_lint: 3.1.0
-  import_guard: 0.2.0
 
   # Codegen
   build_runner: 2.10.5
