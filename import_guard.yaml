@@ -1,0 +1,4 @@
+# Project-wide import restrictions. Per-layer rules live in the
+# import_guard.yaml inside each layer directory under lib/src/.
+deny:
+  - dart:mirrors
