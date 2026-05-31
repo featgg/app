@@ -53,6 +53,14 @@ Apply each item that is relevant. Cite a file:line for every finding.
 - [ ] **Antipatterns**: god widgets, hidden side effects, misleading
       names, swallowed errors, magic constants, premature abstraction,
       legacy `StateNotifier` instead of Riverpod codegen.
+- [ ] **Design tokens**: UI code in `lib/` consumes named design tokens, not
+      hard-coded design values. Flag raw `Color(...)` constructions or
+      `Colors.*` literals, magic spacing/radii numbers in padding/margin/
+      `SizedBox`/`BorderRadius`, and ad-hoc `TextStyle`/hard-coded `fontSize`
+      that bypass the theme. Theme assembly under `lib/src/core/theme/` is the
+      one place token values are defined and is exempt; everywhere else cites a
+      token or the theme (`Theme.of(context)`). Cite a file:line for each
+      finding.
 - [ ] **KISS**: no abstractions for a single caller, no unrequested
       configurability, no ceremony without payoff.
 - [ ] **Security**: no hardcoded API keys or tokens, no `env.json`
