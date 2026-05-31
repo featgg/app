@@ -83,6 +83,15 @@ Nothing about backend internals belongs in this repo — code, comments, commits
 
 **Until `docs/integration/` exists**, do not write code that hits the backend.
 
+## Code comments
+
+Comments earn their place by saying what the code cannot say for itself — keep them few and high-signal.
+
+- Explain *why*, not *what*: justify a non-obvious choice, record an assumption or constraint, or flag something that looks out of place on purpose. The code already shows what it does.
+- Don't restate the code or comment the obvious — a comment that paraphrases the line below it is noise that drifts out of date.
+- No references to ephemeral or external locations: no chat, no issue/PR numbers, no `.ai/runs/*`, no doc paths or section/line numbers (e.g. not "see docs/architecture.md § X"). State the justification inline. Docs reference code, not the reverse.
+- Doc-comments (`///`) on public APIs are welcome — scope them to the caller's contract, not the implementation.
+
 ### Naming hygiene
 
 PR bodies, issue bodies, and commit messages reference only identifiers with a URL in this repo (issue #, PR #, file path, commit SHA). Internal planning names, epic IDs, sub-task numbers, roadmap milestones do not appear in public artifacts. **If a reference does not have a URL in this repo, do not write it.**
