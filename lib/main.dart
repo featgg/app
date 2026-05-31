@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'src/core/bootstrap.dart';
+import 'src/core/core.dart';
 
 Future<void> main() async {
   await bootstrap();
@@ -16,6 +17,7 @@ class App extends StatelessWidget {
     return MaterialApp(
       title: 'Feat.gg',
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
       home: const Scaffold(body: Center(child: Text('Hello Feat.gg'))),
     );
   }
