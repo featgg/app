@@ -8,7 +8,7 @@ Pinned versions in `pubspec.yaml`. Rules:
 
 - Riverpod codegen only — no legacy `StateNotifier`.
 - All backend calls return `Either<Failure, T>` via fpdart.
-- Env via `--dart-define-from-file=env.json`. No `flutter_dotenv`.
+- Env via `--dart-define-from-file`, selecting a per-environment file (`env.staging.json` or `env.production.json`). No `flutter_dotenv`.
 - Mobile-first (Android + iOS). Desktop best-effort. Web TBD.
 
 ## Core principles
@@ -111,7 +111,7 @@ Prompts do not enforce themselves. Three layers do:
 
 The git stage cannot be fully tool-restricted (Bash is needed for git itself), so its scope is verified post-hoc by a pre/post diff equality check inside the agent.
 
-Denied, do not retry: file deletion (`rm`, `del`, `rmdir`, …), destructive git (`push --force`, `reset --hard`, `clean`, `checkout --`, `restore`), `gh pr merge`, reading or writing `env.json` and `.env*`, and editing `.claude/settings.json`. Git writes (`push`, `reset`, `merge`, `rebase`) and `gh issue close` prompt the human before running.
+Denied, do not retry: file deletion (`rm`, `del`, `rmdir`, …), destructive git (`push --force`, `reset --hard`, `clean`, `checkout --`, `restore`), `gh pr merge`, reading or writing `env.*.json` and `.env*`, and editing `.claude/settings.json`. Git writes (`push`, `reset`, `merge`, `rebase`) and `gh issue close` prompt the human before running.
 
 ## Defect protocol
 
