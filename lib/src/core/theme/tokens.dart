@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 /// Seed for the Material 3 color scheme.
 ///
-/// A KISS placeholder pending a brand design system — the specific hue is not
-/// a finished brand decision. Confined here so a future swap touches one line.
+/// Provisional brand seed (dusty-rose accent) — the hue is not yet locked.
+/// Confined here so a future swap touches one line.
 abstract final class AppColorTokens {
-  static const Color seed = Color(0xFF4F46E5);
+  static const Color seed = Color(0xFFBC3B4E);
 }
 
 /// Spacing scale in logical pixels.
@@ -22,11 +22,15 @@ abstract final class AppSpacing {
 
 /// Border-radius scale in logical pixels.
 ///
-/// Strictly increasing — monotonicity asserted in `tokens_test`.
+/// Six-step strictly-increasing scale. Monotonicity asserted in `tokens_test`
+/// to catch accidental edits.
 abstract final class AppRadii {
-  static const double sm = 4;
-  static const double md = 8;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
   static const double lg = 16;
+  static const double xl = 24;
+  static const double full = 999;
 }
 
 /// Font-family-agnostic type scale.
@@ -42,5 +46,6 @@ abstract final class AppTypography {
 
   static const FontWeight regular = FontWeight.w400;
   static const FontWeight medium = FontWeight.w500;
+  static const FontWeight semiBold = FontWeight.w600;
   static const FontWeight bold = FontWeight.w700;
 }
