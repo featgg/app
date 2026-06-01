@@ -13,15 +13,18 @@ void main() {
 
   group('AppRadii', () {
     test('radius scale is strictly increasing', () {
+      expect(AppRadii.xs, lessThan(AppRadii.sm));
       expect(AppRadii.sm, lessThan(AppRadii.md));
       expect(AppRadii.md, lessThan(AppRadii.lg));
+      expect(AppRadii.lg, lessThan(AppRadii.xl));
+      expect(AppRadii.xl, lessThan(AppRadii.full));
     });
   });
 
   group('AppColorTokens', () {
-    test('seed is the declared placeholder value', () {
-      // Guards accidental drift of the single source of truth.
-      expect(AppColorTokens.seed.toARGB32(), equals(0xFF4F46E5));
+    test('seed is the declared value', () {
+      // Guards accidental drift of the single source of truth for the brand seed.
+      expect(AppColorTokens.seed.toARGB32(), equals(0xFFBC3B4E));
     });
   });
 }
