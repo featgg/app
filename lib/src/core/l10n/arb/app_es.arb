@@ -1,0 +1,9 @@
+{
+  "@@locale": "es",
+  "errorNetwork": "Revisa tu conexión e intenta de nuevo.",
+  "errorServer": "Algo salió mal. Intenta de nuevo.",
+  "errorAuth": "Tu sesión expiró. Inicia sesión de nuevo.",
+  "errorInput": "Algunos datos parecen incorrectos. Revisalos e intenta de nuevo.",
+  "errorUnexpected": "Pasó algo inesperado. Intenta de nuevo.",
+  "errorNotImplemented": "Esta función todavía no está disponible."
+}

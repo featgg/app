@@ -71,6 +71,8 @@ Tests accompany behavior changes; pick the lowest level that proves the behavior
 
 Each plan declares `testing_policy`: `none`, `existing`, or `required`. Default by work type: documentation/research → `none`; fix/feature → `required`. Tests assert what the spec requires, not what the code currently does.
 
+Tests never assert hard-coded user-facing or localized copy. A translated string is owned by its ARB file and edited freely; assert against the l10n key or structural behavior (a locale resolves, two locales differ, a value is non-empty) — never a literal translation. A copy edit must never break a test.
+
 ## Language
 
 Respond in the human's language. Anything committed — code, comments, docs, commit and PR text — is English only.
