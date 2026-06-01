@@ -13,6 +13,11 @@ abstract final class Env {
     'SUPABASE_ANON_KEY',
   );
 
+  /// Sentry DSN for the selected environment. Empty when no define was passed,
+  /// in which case crash reporting initializes to a disabled no-op. Optional:
+  /// absence must not break boot, so it is excluded from requireValid().
+  static const String sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
   /// True when both required defines are non-empty.
   static bool get isValid =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
