@@ -143,7 +143,7 @@ Colors, spacing, typography, and border radii live as named design tokens. `Them
 
 ## UI and presentation conventions
 
-This part fixes the structural rules for the `presentation` layer. It deliberately contains rules, not visual or UX decisions. The dividing line: **a structural rule the reviewer can enforce belongs here; a value that changes with design judgment belongs in the design system.** The existence of design tokens, the prohibition on hard-coded values, where responsive logic lives, and the state-rendering pattern are rules and live here. The concrete visual and UX values — the palette, the exact breakpoint pixels, whether an error is a snackbar or a full screen, whether loading is a skeleton or a spinner — are design decisions that will live in a planned `docs/design-system.md` (not yet created), not here.
+This part fixes the structural rules for the `presentation` layer. It deliberately contains rules, not visual or UX decisions. The dividing line: **a structural rule the reviewer can enforce belongs here; a value that changes with design judgment belongs in the design system.** The existence of design tokens, the prohibition on hard-coded values, where responsive logic lives, and the state-rendering pattern are rules and live here. The concrete visual and UX values — the palette, the exact breakpoint pixels, whether an error is a snackbar or a full screen, whether loading is a skeleton or a spinner — are design decisions that live in `docs/design-system.md`, not here.
 
 ### Dummy widgets
 
