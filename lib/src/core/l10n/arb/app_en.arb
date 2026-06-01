@@ -1,0 +1,27 @@
+{
+  "@@locale": "en",
+  "errorNetwork": "Check your connection and try again.",
+  "@errorNetwork": {
+    "description": "Shown when a request fails due to no connectivity, DNS, TLS, or timeout."
+  },
+  "errorServer": "Something went wrong on our end. Please try again.",
+  "@errorServer": {
+    "description": "Shown when the server returns a non-2xx response or an error envelope."
+  },
+  "errorAuth": "Your session has expired. Please sign in again.",
+  "@errorAuth": {
+    "description": "Shown when the user's session is invalid or expired and re-authentication is required."
+  },
+  "errorInput": "Some details look incorrect. Please review and try again.",
+  "@errorInput": {
+    "description": "Shown when the server rejects the request due to invalid client-supplied input."
+  },
+  "errorUnexpected": "Something unexpected happened. Please try again.",
+  "@errorUnexpected": {
+    "description": "Shown for any fault the error mapper cannot classify into a more specific subtype."
+  },
+  "errorNotImplemented": "This feature isn't available yet.",
+  "@errorNotImplemented": {
+    "description": "Shown when a feature stub returns NotImplemented because no integration brief exists yet."
+  }
+}

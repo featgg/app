@@ -85,6 +85,10 @@ Apply each item that is relevant. Cite a file:line for every finding.
 - [ ] **Testing vs `testing_policy`**: tests meaningful (not
       tautological); cover the edge cases the plan listed; level (unit /
       widget / golden / integration) matches what the plan declared.
+- [ ] **No hard-coded copy in tests**: no test asserts a literal user-facing
+      or localized string (an ARB value or any rendered copy). Tests assert
+      against the l10n key or structural behavior; a translation/copy edit must
+      never break a test. Flag any literal-copy assertion.
 - [ ] **Dead code, commented-out code, debug logs, stray `print()`
       statements**: none left behind.
 - [ ] **Cleanup**: no orphan files, no scratchpads, no leftover stubs
