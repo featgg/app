@@ -13,7 +13,7 @@
   "signInContinue": "Continuar",
   "signInCodeTitle": "Verifique seu e-mail",
   "signInCodeLabel": "Código de verificação",
-  "signInCodeHint": "Digite o código de 6 dígitos que enviamos",
+  "signInCodeHint": "Digite o código de 6 dígitos",
   "signInVerify": "Verificar",
   "signInResend": "Reenviar código",
   "signInEditEmail": "Alterar e-mail",

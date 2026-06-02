@@ -72,7 +72,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             sendCooldownActive: otpState.sendCooldownActive,
             verifyCooldownActive: otpState.verifyCooldownActive,
             resendSecondsRemaining: otpState.resendSecondsRemaining,
-            lastFailedCode: otpState.lastFailedCode,
             onVerify: () async {
               if (_codeFormKey.currentState?.validate() ?? false) {
                 await controller.verifyCode(_codeController.text.trim());
@@ -159,6 +158,7 @@ class _EmailStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           TextFormField(
             controller: emailController,
+            enabled: !submitting,
             decoration: InputDecoration(
               labelText: l10n.signInEmailLabel,
               hintText: l10n.signInEmailHint,
@@ -208,7 +208,6 @@ class _CodeStep extends StatefulWidget {
     required this.sendCooldownActive,
     required this.verifyCooldownActive,
     required this.resendSecondsRemaining,
-    required this.lastFailedCode,
     required this.onVerify,
     required this.onResend,
     required this.onEditEmail,
@@ -231,10 +230,6 @@ class _CodeStep extends StatefulWidget {
   /// Initial seconds remaining for the proactive resend window seeded on each
   /// successful send. When > 0 this widget starts a 1 s display ticker.
   final int resendSecondsRemaining;
-
-  /// Last code that produced a failed verify; Verify is disabled while the
-  /// entered code equals this value (identical re-submit guard).
-  final String? lastFailedCode;
 
   final VoidCallback onVerify;
   final VoidCallback onResend;
@@ -310,7 +305,7 @@ class _CodeStepState extends State<_CodeStep> {
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
     final code = widget.codeController.text;
-    final codeIsSubmittable = code.length == 6 && code != widget.lastFailedCode;
+    final codeIsSubmittable = code.length == 6;
     final resendBlocked =
         widget.submitting || widget.sendCooldownActive || _remaining > 0;
     final verifyBlocked =
@@ -332,6 +327,7 @@ class _CodeStepState extends State<_CodeStep> {
           const SizedBox(height: AppSpacing.xl),
           TextFormField(
             controller: widget.codeController,
+            enabled: !widget.submitting,
             decoration: InputDecoration(
               labelText: l10n.signInCodeLabel,
               hintText: l10n.signInCodeHint,

@@ -165,43 +165,37 @@ void main() {
     expect(tester.widget<FilledButton>(sendButton).onPressed, isNotNull);
   });
 
-  testWidgets(
-    'verify disables while rate-limited, re-enables after cooldown with changed code',
-    (tester) async {
-      await tester.pumpWidget(
-        _screen(
-          _FakeRepository(verifyResult: left(const AuthRateLimitFailure())),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('verify disables while rate-limited, re-enables after cooldown', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _screen(
+        _FakeRepository(verifyResult: left(const AuthRateLimitFailure())),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      // Email step: a successful send advances to the code step.
-      await tester.enterText(find.byType(TextFormField), 'user@example.com');
-      await tester.tap(find.byType(FilledButton));
-      // Use pump(Duration) while the proactive display ticker may be live.
-      await tester.pump(const Duration(milliseconds: 100));
+    // Email step: a successful send advances to the code step.
+    await tester.enterText(find.byType(TextFormField), 'user@example.com');
+    await tester.tap(find.byType(FilledButton));
+    // Use pump(Duration) while the proactive display ticker may be live.
+    await tester.pump(const Duration(milliseconds: 100));
 
-      // Code step: enter the code and tap Verify (rate-limited).
-      await tester.enterText(find.byType(TextFormField), '123456');
-      await tester.pump();
-      final verifyButton = find.byType(FilledButton);
-      expect(tester.widget<FilledButton>(verifyButton).onPressed, isNotNull);
+    // Code step: enter the code and tap Verify (rate-limited).
+    await tester.enterText(find.byType(TextFormField), '123456');
+    await tester.pump();
+    final verifyButton = find.byType(FilledButton);
+    expect(tester.widget<FilledButton>(verifyButton).onPressed, isNotNull);
 
-      await tester.tap(verifyButton);
-      await tester.pump();
+    await tester.tap(verifyButton);
+    await tester.pump();
+    expect(tester.widget<FilledButton>(verifyButton).onPressed, isNull);
 
-      expect(tester.widget<FilledButton>(verifyButton).onPressed, isNull);
-
-      // After the cooldown elapses the verify cooldown clears, but
-      // lastFailedCode still matches '123456' so Verify stays blocked.
-      await tester.pump(const Duration(seconds: 61));
-
-      // Enter a CHANGED code to lift the identical-code guard.
-      await tester.enterText(find.byType(TextFormField), '123457');
-      await tester.pump();
-      expect(tester.widget<FilledButton>(verifyButton).onPressed, isNotNull);
-    },
-  );
+    // The verify cooldown clears after the reactive window; the same code is
+    // submittable again (no identical-code guard).
+    await tester.pump(const Duration(seconds: 61));
+    expect(tester.widget<FilledButton>(verifyButton).onPressed, isNotNull);
+  });
 
   testWidgets(
     'primary button shows a spinner and is disabled while submitting',
@@ -285,53 +279,11 @@ void main() {
         isNotNull,
       );
 
-      // After the proactive interval elapses, Resend re-enables.
-      await tester.pump(const Duration(seconds: 61));
+      // After the short proactive interval elapses, Resend re-enables.
+      await tester.pump(const Duration(seconds: 6));
       expect(tester.widget<TextButton>(resendButton).onPressed, isNotNull);
     },
   );
-
-  testWidgets('identical-code guard disables Verify; changed code re-enables', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _screen(_FakeRepository(verifyResult: left(const InputFailure()))),
-    );
-    await tester.pumpAndSettle();
-
-    // Advance to code step.
-    await tester.enterText(find.byType(TextFormField), 'user@example.com');
-    await tester.tap(find.byType(FilledButton));
-    await tester.pump(const Duration(milliseconds: 100));
-
-    // Enter code and tap Verify (fails with InputFailure).
-    await tester.enterText(find.byType(TextFormField), '123456');
-    await tester.pump();
-    await tester.tap(find.byType(FilledButton));
-    await tester.pump();
-
-    // Verify is disabled because lastFailedCode == '123456'.
-    expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-      isNull,
-    );
-
-    // Re-enter the same code → still disabled.
-    await tester.enterText(find.byType(TextFormField), '123456');
-    await tester.pump();
-    expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-      isNull,
-    );
-
-    // Enter a different 6-digit code → Verify re-enables.
-    await tester.enterText(find.byType(TextFormField), '123457');
-    await tester.pump();
-    expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-      isNotNull,
-    );
-  });
 
   testWidgets('Change email is disabled during send cooldown (bypass closed)', (
     tester,

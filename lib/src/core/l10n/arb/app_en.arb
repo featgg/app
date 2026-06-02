@@ -52,7 +52,7 @@
   "@signInCodeLabel": {
     "description": "Label for the 6-digit code input field."
   },
-  "signInCodeHint": "Enter the 6-digit code we emailed you",
+  "signInCodeHint": "Enter the 6-digit code",
   "@signInCodeHint": {
     "description": "Instructive placeholder/helper for the 6-digit code input field."
   },

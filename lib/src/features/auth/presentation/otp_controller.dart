@@ -15,11 +15,11 @@ part 'otp_controller.g.dart';
 /// be rate-limited again.
 const _cooldown = Duration(seconds: 60);
 
-/// Proactive resend interval: after a successful send the resend action is
-/// suppressed for this duration so the user has time to receive the code before
-/// retrying. Seeded into the widget's display ticker; the controller stores
-/// the initial count and the widget owns the live decrement.
-const _resendInterval = Duration(seconds: 60);
+/// Short proactive anti-mash throttle on resend after a successful send. Kept
+/// brief on purpose: a long client-side block is bypassable (close/reopen the
+/// app) and punishes honest mistakes — the server's 429 is the authoritative
+/// limit, handled reactively via [_cooldown]. Seeded into the widget's ticker.
+const _resendInterval = Duration(seconds: 5);
 
 /// Step of the email-OTP flow the screen renders.
 enum OtpStep { email, code }
@@ -33,7 +33,6 @@ final class OtpState extends Equatable {
     required this.sendCooldownActive,
     required this.verifyCooldownActive,
     this.resendSecondsRemaining = 0,
-    this.lastFailedCode,
     this.failure,
   });
 
@@ -67,11 +66,6 @@ final class OtpState extends Equatable {
   /// available.
   final int resendSecondsRemaining;
 
-  /// The last code that produced a non-success verify result. Verify is
-  /// disabled while the entered code matches this value, preventing a no-op
-  /// re-submit. Cleared by [editEmail].
-  final String? lastFailedCode;
-
   /// Last expected failure to surface to the user; null means no error shown.
   final Failure? failure;
 
@@ -84,8 +78,6 @@ final class OtpState extends Equatable {
     int? resendSecondsRemaining,
     Failure? failure,
     bool clearFailure = false,
-    String? lastFailedCode,
-    bool clearLastFailedCode = false,
   }) => OtpState(
     step: step ?? this.step,
     email: email ?? this.email,
@@ -95,9 +87,6 @@ final class OtpState extends Equatable {
     resendSecondsRemaining:
         resendSecondsRemaining ?? this.resendSecondsRemaining,
     failure: clearFailure ? null : (failure ?? this.failure),
-    lastFailedCode: clearLastFailedCode
-        ? null
-        : (lastFailedCode ?? this.lastFailedCode),
   );
 
   @override
@@ -108,7 +97,6 @@ final class OtpState extends Equatable {
     sendCooldownActive,
     verifyCooldownActive,
     resendSecondsRemaining,
-    lastFailedCode,
     failure,
   ];
 }
@@ -179,16 +167,11 @@ class OtpController extends _$OtpController {
           state = state.copyWith(
             submitting: false,
             verifyCooldownActive: true,
-            lastFailedCode: code,
             failure: failure,
           );
           _startVerifyCooldown();
         } else {
-          state = state.copyWith(
-            submitting: false,
-            lastFailedCode: code,
-            failure: failure,
-          );
+          state = state.copyWith(submitting: false, failure: failure);
         }
       },
       (_) {

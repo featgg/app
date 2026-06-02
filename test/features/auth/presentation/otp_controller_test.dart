@@ -237,26 +237,6 @@ void main() {
       },
     );
 
-    test(
-      'lastFailedCode is set on verifyCode failure and cleared by editEmail',
-      () async {
-        final container = _container(
-          _FakeAuthRepository(
-            onRequest: (_) => right(unit),
-            onVerify: () => left(const InputFailure()),
-          ),
-        );
-        final notifier = container.read(otpControllerProvider.notifier);
-        await notifier.requestCode('a@b.com');
-        await notifier.verifyCode('111111');
-
-        expect(container.read(otpControllerProvider).lastFailedCode, '111111');
-
-        notifier.editEmail();
-        expect(container.read(otpControllerProvider).lastFailedCode, isNull);
-      },
-    );
-
     test('requestCode success seeds resendSecondsRemaining > 0', () async {
       final container = _container(
         _FakeAuthRepository(onRequest: (_) => right(unit)),
