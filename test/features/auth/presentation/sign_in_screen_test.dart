@@ -279,11 +279,40 @@ void main() {
         isNotNull,
       );
 
-      // After the short proactive interval elapses, Resend re-enables.
-      await tester.pump(const Duration(seconds: 6));
+      // The proactive interval mirrors the server's resend window; once it
+      // elapses, Resend re-enables.
+      await tester.pump(const Duration(seconds: 61));
       expect(tester.widget<TextButton>(resendButton).onPressed, isNotNull);
     },
   );
+
+  testWidgets('a successful resend shows a transient confirmation snackbar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_screen(_FakeRepository()));
+    await tester.pumpAndSettle();
+
+    // Send succeeds → code step.
+    await tester.enterText(find.byType(TextFormField), 'user@example.com');
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // No snackbar on the initial send — the step change is its feedback.
+    expect(find.byType(SnackBar), findsNothing);
+
+    // Let the resend window elapse, then resend.
+    final resendButton = find.byType(TextButton).first;
+    await tester.pump(const Duration(seconds: 61));
+    await tester.tap(resendButton);
+    // Use pump(Duration) — the re-seeded display ticker is live, so the tree
+    // never settles. Assert by widget type, not localized copy.
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(SnackBar), findsOneWidget);
+
+    // Drain the re-seeded resend ticker and the snackbar's auto-dismiss timer
+    // so nothing is pending at teardown.
+    await tester.pump(const Duration(seconds: 61));
+  });
 
   testWidgets('Change email is disabled during send cooldown (bypass closed)', (
     tester,

@@ -15,11 +15,15 @@ part 'otp_controller.g.dart';
 /// be rate-limited again.
 const _cooldown = Duration(seconds: 60);
 
-/// Short proactive anti-mash throttle on resend after a successful send. Kept
-/// brief on purpose: a long client-side block is bypassable (close/reopen the
-/// app) and punishes honest mistakes — the server's 429 is the authoritative
-/// limit, handled reactively via [_cooldown]. Seeded into the widget's ticker.
-const _resendInterval = Duration(seconds: 5);
+/// Proactive resend countdown seeded on each successful send. Mirrors the auth
+/// platform's documented minimum interval between code requests to one address
+/// (about a minute by default) — the same way client-side validation mirrors a
+/// documented field constraint — so the resend control re-enables exactly when
+/// the server will next accept a request, instead of a few seconds early into a
+/// guaranteed "you can only request this after N seconds" rejection. This is a
+/// UX countdown, not enforcement: the server's 429 stays authoritative and is
+/// handled reactively via [_cooldown]. Seeded into the widget's display ticker.
+const _resendInterval = Duration(seconds: 60);
 
 /// Step of the email-OTP flow the screen renders.
 enum OtpStep { email, code }
@@ -33,6 +37,7 @@ final class OtpState extends Equatable {
     required this.sendCooldownActive,
     required this.verifyCooldownActive,
     this.resendSecondsRemaining = 0,
+    this.resendSuccessTick = 0,
     this.failure,
   });
 
@@ -66,6 +71,11 @@ final class OtpState extends Equatable {
   /// available.
   final int resendSecondsRemaining;
 
+  /// Monotonic counter bumped once each time a resend (not the initial send)
+  /// succeeds. The screen listens for an increment to surface a one-shot "code
+  /// sent" confirmation; the value itself carries no meaning.
+  final int resendSuccessTick;
+
   /// Last expected failure to surface to the user; null means no error shown.
   final Failure? failure;
 
@@ -76,6 +86,7 @@ final class OtpState extends Equatable {
     bool? sendCooldownActive,
     bool? verifyCooldownActive,
     int? resendSecondsRemaining,
+    int? resendSuccessTick,
     Failure? failure,
     bool clearFailure = false,
   }) => OtpState(
@@ -86,6 +97,7 @@ final class OtpState extends Equatable {
     verifyCooldownActive: verifyCooldownActive ?? this.verifyCooldownActive,
     resendSecondsRemaining:
         resendSecondsRemaining ?? this.resendSecondsRemaining,
+    resendSuccessTick: resendSuccessTick ?? this.resendSuccessTick,
     failure: clearFailure ? null : (failure ?? this.failure),
   );
 
@@ -97,6 +109,7 @@ final class OtpState extends Equatable {
     sendCooldownActive,
     verifyCooldownActive,
     resendSecondsRemaining,
+    resendSuccessTick,
     failure,
   ];
 }
@@ -118,39 +131,7 @@ class OtpController extends _$OtpController {
   /// Email step: request a 6-digit code. On success advances to [OtpStep.code]
   /// and seeds the proactive resend window. On [AuthRateLimitFailure] starts
   /// the send back-off (see [_startSendCooldown]).
-  Future<void> requestCode(String email) async {
-    state = state.copyWith(submitting: true, clearFailure: true);
-    final repo = ref.read(authRepositoryProvider);
-    final result = await repo.requestEmailCode(email);
-    result.fold(
-      (failure) {
-        if (failure is AuthRateLimitFailure) {
-          state = state.copyWith(
-            email: email,
-            submitting: false,
-            sendCooldownActive: true,
-            failure: failure,
-          );
-          _startSendCooldown();
-        } else {
-          state = state.copyWith(
-            email: email,
-            submitting: false,
-            failure: failure,
-          );
-        }
-      },
-      (_) {
-        state = state.copyWith(
-          step: OtpStep.code,
-          email: email,
-          submitting: false,
-          clearFailure: true,
-          resendSecondsRemaining: _resendInterval.inSeconds,
-        );
-      },
-    );
-  }
+  Future<void> requestCode(String email) => _send(email, isResend: false);
 
   /// Code step: verify the 6-digit code. On success the SDK persists the
   /// session; the auth-status stream flip drives the router redirect — this
@@ -180,9 +161,49 @@ class OtpController extends _$OtpController {
     );
   }
 
-  /// Resend the code while on the code step (same back-off rules as requestCode).
-  Future<void> resendCode() async {
-    await requestCode(state.email);
+  /// Resend the code while on the code step. Same back-off rules as
+  /// [requestCode]; a successful resend additionally bumps
+  /// [OtpState.resendSuccessTick] so the screen can confirm it to the user.
+  Future<void> resendCode() => _send(state.email, isResend: true);
+
+  /// Shared send path for the initial request and resends. [isResend] only
+  /// affects the success signal: a resend bumps [OtpState.resendSuccessTick];
+  /// the initial send does not, since its feedback is the step change.
+  Future<void> _send(String email, {required bool isResend}) async {
+    state = state.copyWith(submitting: true, clearFailure: true);
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.requestEmailCode(email);
+    result.fold(
+      (failure) {
+        if (failure is AuthRateLimitFailure) {
+          state = state.copyWith(
+            email: email,
+            submitting: false,
+            sendCooldownActive: true,
+            failure: failure,
+          );
+          _startSendCooldown();
+        } else {
+          state = state.copyWith(
+            email: email,
+            submitting: false,
+            failure: failure,
+          );
+        }
+      },
+      (_) {
+        state = state.copyWith(
+          step: OtpStep.code,
+          email: email,
+          submitting: false,
+          clearFailure: true,
+          resendSecondsRemaining: _resendInterval.inSeconds,
+          resendSuccessTick: isResend
+              ? state.resendSuccessTick + 1
+              : state.resendSuccessTick,
+        );
+      },
+    );
   }
 
   /// Return from the code step to the email step.

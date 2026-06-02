@@ -88,5 +88,9 @@
         "type": "String"
       }
     }
+  },
+  "signInResendSuccess": "We sent you a new code.",
+  "@signInResendSuccess": {
+    "description": "Transient snackbar confirmation shown after a sign-in code is successfully resent."
   }
 }

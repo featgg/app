@@ -48,6 +48,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final otpState = ref.watch(otpControllerProvider);
     final controller = ref.read(otpControllerProvider.notifier);
 
+    // A successful resend leaves the screen visually unchanged (still the code
+    // step, countdown restarted), so confirm it with a transient snackbar. The
+    // initial send is excluded — its feedback is the step change.
+    ref.listen(otpControllerProvider.select((s) => s.resendSuccessTick), (
+      previous,
+      next,
+    ) {
+      if (previous != null && next > previous) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.signInResendSuccess)));
+      }
+    });
+
     final step = otpState.step == OtpStep.email
         ? _EmailStep(
             l10n: l10n,

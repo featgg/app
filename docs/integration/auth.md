@@ -50,7 +50,15 @@ code-verification / token-refresh attempts. The client must handle a
 rate-limited response and back off: briefly disable the action that was
 rate-limited (the "send / resend code" action, and code verification) and
 surface a "try again shortly" message. The exact limits are
-environment-configured; do not hard-code them.
+environment-configured; do not hard-code them as enforcement.
+
+One limit is a fixed minimum interval between successive code sends to the same
+address (about a minute by default). Because that interval is known up front, the
+client may mirror it as a proactive resend countdown so the resend control
+re-enables when the server will next accept a request, rather than re-enabling
+early into an immediate rejection. This countdown is UX only and approximate —
+the window is environment-configured and may differ; the rate-limited response
+stays authoritative.
 
 ## Out-of-band side effects
 

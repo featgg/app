@@ -20,5 +20,6 @@
   "signOut": "Cerrar sesión",
   "signInInvalidCode": "El código es incorrecto o ha expirado. Inténtalo de nuevo.",
   "signInInvalidEmail": "Ingresa un correo electrónico válido",
-  "signInResendCountdown": "Reenviar código en {time}"
+  "signInResendCountdown": "Reenviar código en {time}",
+  "signInResendSuccess": "Te enviamos un código nuevo."
 }
