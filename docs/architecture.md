@@ -230,6 +230,8 @@ A `UNAUTHORIZED` error (HTTP 401, code token `UNAUTHORIZED`) from any Shape-1 op
 
 Client-side validation mirrors the field constraints documented in the briefs — for example the `display_name` 1–50 and `bio` 150-character limits in the profile brief, or the `INVALID_REQUEST` error in the connections brief — for fast UX feedback before a round trip. The backend constraint is authoritative. When the backend surfaces a constraint violation (a Shape-2 SDK error or a Shape-1 `INVALID_REQUEST` code), the data layer maps it to a `Failure` and the presentation layer shows the user a meaningful, localized message.
 
+**Rate-limit back-off.** The same client-vs-server split governs rate limiting. A client-side throttle is anti-spam UX only: it is kept short (a few seconds), exists to stop accidental mashing, and is treated as bypassable (closing and reopening the app clears it) — it is never a real rate-limit control. The authoritative limit is the backend's, surfaced as a rate-limit `Failure` (HTTP 429 class); only that drives the longer "try again shortly" message and back-off. The client never imposes a long block of its own, because a long client block punishes honest mistakes while doing nothing a determined caller cannot bypass.
+
 ### Deep links and platform surfaces
 
 Inbound deep links (App Links on Android, Universal Links on iOS) are treated as untrusted input. The router resolves an inbound URI to a named route, but reaching a privileged destination still gates on current session state — the router does not bypass authorization. An OAuth redirect (part of the PKCE flow for Google and Discord sign-in) is handled per `docs/integration/auth.md`. The deep-link platform plumbing lives in code.
