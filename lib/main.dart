@@ -5,8 +5,14 @@ import 'src/core/bootstrap.dart';
 import 'src/core/core.dart';
 
 Future<void> main() async {
-  await bootstrap();
-  runApp(const ProviderScope(child: App()));
+  await bootstrap(
+    () => runApp(
+      ProviderScope(
+        observers: [const CrashReportingObserver(SentryCrashReporter())],
+        child: const App(),
+      ),
+    ),
+  );
 }
 
 class App extends ConsumerWidget {
