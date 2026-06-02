@@ -13,10 +13,12 @@
   "signInContinue": "Continuar",
   "signInCodeTitle": "Revisa tu correo",
   "signInCodeLabel": "Código de verificación",
-  "signInCodeHint": "Código de 6 dígitos",
+  "signInCodeHint": "Ingresa el código de 6 dígitos que te enviamos",
   "signInVerify": "Verificar",
   "signInResend": "Reenviar código",
   "signInEditEmail": "Cambiar correo",
   "signOut": "Cerrar sesión",
-  "signInInvalidCode": "El código es incorrecto o ha expirado. Inténtalo de nuevo."
+  "signInInvalidCode": "El código es incorrecto o ha expirado. Inténtalo de nuevo.",
+  "signInInvalidEmail": "Ingresa un correo electrónico válido",
+  "signInResendCountdown": "Reenviar código en {time}"
 }

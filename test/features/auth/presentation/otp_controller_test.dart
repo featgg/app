@@ -91,7 +91,7 @@ void main() {
       },
     );
 
-    test('a rate-limit on requestCode activates the cooldown', () async {
+    test('a rate-limit on requestCode activates the send cooldown', () async {
       final container = _container(
         _FakeAuthRepository(
           onRequest: (_) => left(const AuthRateLimitFailure()),
@@ -102,7 +102,8 @@ void main() {
           .requestCode('a@b.com');
 
       final state = container.read(otpControllerProvider);
-      expect(state.cooldownActive, isTrue);
+      expect(state.sendCooldownActive, isTrue);
+      expect(state.verifyCooldownActive, isFalse);
       expect(state.failure, isA<AuthRateLimitFailure>());
     });
 
@@ -117,7 +118,7 @@ void main() {
       expect(container.read(otpControllerProvider).step, OtpStep.email);
     });
 
-    test('cooldown clears after it elapses', () {
+    test('send cooldown clears after it elapses', () {
       fakeAsync((async) {
         final container = _container(
           _FakeAuthRepository(
@@ -128,13 +129,16 @@ void main() {
 
         notifier.requestCode('a@b.com');
         async.flushMicrotasks();
-        expect(container.read(otpControllerProvider).cooldownActive, isTrue);
+        expect(
+          container.read(otpControllerProvider).sendCooldownActive,
+          isTrue,
+        );
 
         async.elapse(const Duration(seconds: 60));
         async.flushMicrotasks();
 
         final state = container.read(otpControllerProvider);
-        expect(state.cooldownActive, isFalse);
+        expect(state.sendCooldownActive, isFalse);
         expect(state.failure, isNull);
 
         container.dispose();
@@ -142,7 +146,7 @@ void main() {
     });
 
     test(
-      'a second rate-limit extends the cooldown instead of re-enabling early',
+      'a second rate-limit extends the send cooldown instead of re-enabling early',
       () {
         fakeAsync((async) {
           final container = _container(
@@ -163,15 +167,108 @@ void main() {
           // 60s since the FIRST limit but only 30s since the second: still active
           // (the first timer was cancelled, so it does not re-enable early).
           async.elapse(const Duration(seconds: 30));
-          expect(container.read(otpControllerProvider).cooldownActive, isTrue);
+          expect(
+            container.read(otpControllerProvider).sendCooldownActive,
+            isTrue,
+          );
 
           // The full window since the SECOND limit elapses -> re-enabled.
           async.elapse(const Duration(seconds: 30));
-          expect(container.read(otpControllerProvider).cooldownActive, isFalse);
+          expect(
+            container.read(otpControllerProvider).sendCooldownActive,
+            isFalse,
+          );
 
           container.dispose();
         });
       },
     );
+
+    test('a rate-limit on verifyCode activates the verify cooldown only', () {
+      fakeAsync((async) {
+        final container = _container(
+          _FakeAuthRepository(
+            onRequest: (_) => right(unit),
+            onVerify: () => left(const AuthRateLimitFailure()),
+          ),
+        );
+        final notifier = container.read(otpControllerProvider.notifier);
+
+        notifier.requestCode('a@b.com');
+        async.flushMicrotasks();
+        notifier.verifyCode('123456');
+        async.flushMicrotasks();
+
+        final stateAfter = container.read(otpControllerProvider);
+        expect(stateAfter.verifyCooldownActive, isTrue);
+        expect(stateAfter.sendCooldownActive, isFalse);
+
+        async.elapse(const Duration(seconds: 60));
+        async.flushMicrotasks();
+        expect(
+          container.read(otpControllerProvider).verifyCooldownActive,
+          isFalse,
+        );
+
+        container.dispose();
+      });
+    });
+
+    test(
+      'a resend 429 sets sendCooldownActive but not verifyCooldownActive',
+      () {
+        fakeAsync((async) {
+          final container = _container(
+            _FakeAuthRepository(
+              onRequest: (_) => left(const AuthRateLimitFailure()),
+            ),
+          );
+          final notifier = container.read(otpControllerProvider.notifier);
+
+          notifier.resendCode();
+          async.flushMicrotasks();
+
+          final state = container.read(otpControllerProvider);
+          expect(state.sendCooldownActive, isTrue);
+          expect(state.verifyCooldownActive, isFalse);
+
+          container.dispose();
+        });
+      },
+    );
+
+    test(
+      'lastFailedCode is set on verifyCode failure and cleared by editEmail',
+      () async {
+        final container = _container(
+          _FakeAuthRepository(
+            onRequest: (_) => right(unit),
+            onVerify: () => left(const InputFailure()),
+          ),
+        );
+        final notifier = container.read(otpControllerProvider.notifier);
+        await notifier.requestCode('a@b.com');
+        await notifier.verifyCode('111111');
+
+        expect(container.read(otpControllerProvider).lastFailedCode, '111111');
+
+        notifier.editEmail();
+        expect(container.read(otpControllerProvider).lastFailedCode, isNull);
+      },
+    );
+
+    test('requestCode success seeds resendSecondsRemaining > 0', () async {
+      final container = _container(
+        _FakeAuthRepository(onRequest: (_) => right(unit)),
+      );
+      await container
+          .read(otpControllerProvider.notifier)
+          .requestCode('a@b.com');
+
+      expect(
+        container.read(otpControllerProvider).resendSecondsRemaining,
+        greaterThan(0),
+      );
+    });
   });
 }

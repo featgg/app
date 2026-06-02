@@ -15,6 +15,12 @@ part 'otp_controller.g.dart';
 /// be rate-limited again.
 const _cooldown = Duration(seconds: 60);
 
+/// Proactive resend interval: after a successful send the resend action is
+/// suppressed for this duration so the user has time to receive the code before
+/// retrying. Seeded into the widget's display ticker; the controller stores
+/// the initial count and the widget owns the live decrement.
+const _resendInterval = Duration(seconds: 60);
+
 /// Step of the email-OTP flow the screen renders.
 enum OtpStep { email, code }
 
@@ -24,7 +30,10 @@ final class OtpState extends Equatable {
     required this.step,
     required this.email,
     required this.submitting,
-    required this.cooldownActive,
+    required this.sendCooldownActive,
+    required this.verifyCooldownActive,
+    this.resendSecondsRemaining = 0,
+    this.lastFailedCode,
     this.failure,
   });
 
@@ -32,7 +41,8 @@ final class OtpState extends Equatable {
     step: OtpStep.email,
     email: '',
     submitting: false,
-    cooldownActive: false,
+    sendCooldownActive: false,
+    verifyCooldownActive: false,
   );
 
   final OtpStep step;
@@ -42,9 +52,25 @@ final class OtpState extends Equatable {
   /// spinner and is disabled.
   final bool submitting;
 
-  /// True while backing off after a rate-limited response; the rate-limited
-  /// actions are disabled until the cooldown elapses.
-  final bool cooldownActive;
+  /// True while backing off after a rate-limited send/resend response (429).
+  /// Disables the send, resend, and "Change email" actions.
+  final bool sendCooldownActive;
+
+  /// True while backing off after a rate-limited verify response (429).
+  /// Disables only the Verify action; independent of the send cooldown.
+  final bool verifyCooldownActive;
+
+  /// Seconds remaining in the proactive resend window seeded on each successful
+  /// send. The widget owns the live decrement via a `Timer.periodic`; this field
+  /// is only the initial seed (set to [_resendInterval] seconds on send, 0
+  /// otherwise). When > 0 the widget starts its countdown; when 0 resend is
+  /// available.
+  final int resendSecondsRemaining;
+
+  /// The last code that produced a non-success verify result. Verify is
+  /// disabled while the entered code matches this value, preventing a no-op
+  /// re-submit. Cleared by [editEmail].
+  final String? lastFailedCode;
 
   /// Last expected failure to surface to the user; null means no error shown.
   final Failure? failure;
@@ -53,33 +79,57 @@ final class OtpState extends Equatable {
     OtpStep? step,
     String? email,
     bool? submitting,
-    bool? cooldownActive,
+    bool? sendCooldownActive,
+    bool? verifyCooldownActive,
+    int? resendSecondsRemaining,
     Failure? failure,
     bool clearFailure = false,
+    String? lastFailedCode,
+    bool clearLastFailedCode = false,
   }) => OtpState(
     step: step ?? this.step,
     email: email ?? this.email,
     submitting: submitting ?? this.submitting,
-    cooldownActive: cooldownActive ?? this.cooldownActive,
+    sendCooldownActive: sendCooldownActive ?? this.sendCooldownActive,
+    verifyCooldownActive: verifyCooldownActive ?? this.verifyCooldownActive,
+    resendSecondsRemaining:
+        resendSecondsRemaining ?? this.resendSecondsRemaining,
     failure: clearFailure ? null : (failure ?? this.failure),
+    lastFailedCode: clearLastFailedCode
+        ? null
+        : (lastFailedCode ?? this.lastFailedCode),
   );
 
   @override
-  List<Object?> get props => [step, email, submitting, cooldownActive, failure];
+  List<Object?> get props => [
+    step,
+    email,
+    submitting,
+    sendCooldownActive,
+    verifyCooldownActive,
+    resendSecondsRemaining,
+    lastFailedCode,
+    failure,
+  ];
 }
 
 @riverpod
 class OtpController extends _$OtpController {
-  Timer? _cooldownTimer;
+  Timer? _sendCooldownTimer;
+  Timer? _verifyCooldownTimer;
 
   @override
   OtpState build() {
-    ref.onDispose(() => _cooldownTimer?.cancel());
+    ref.onDispose(() {
+      _sendCooldownTimer?.cancel();
+      _verifyCooldownTimer?.cancel();
+    });
     return OtpState.initial();
   }
 
-  /// Email step: request a 6-digit code. On success advances to [OtpStep.code].
-  /// On [AuthRateLimitFailure] starts the back-off (see [_startCooldown]).
+  /// Email step: request a 6-digit code. On success advances to [OtpStep.code]
+  /// and seeds the proactive resend window. On [AuthRateLimitFailure] starts
+  /// the send back-off (see [_startSendCooldown]).
   Future<void> requestCode(String email) async {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(authRepositoryProvider);
@@ -90,10 +140,10 @@ class OtpController extends _$OtpController {
           state = state.copyWith(
             email: email,
             submitting: false,
-            cooldownActive: true,
+            sendCooldownActive: true,
             failure: failure,
           );
-          _startCooldown();
+          _startSendCooldown();
         } else {
           state = state.copyWith(
             email: email,
@@ -108,6 +158,7 @@ class OtpController extends _$OtpController {
           email: email,
           submitting: false,
           clearFailure: true,
+          resendSecondsRemaining: _resendInterval.inSeconds,
         );
       },
     );
@@ -115,8 +166,9 @@ class OtpController extends _$OtpController {
 
   /// Code step: verify the 6-digit code. On success the SDK persists the
   /// session; the auth-status stream flip drives the router redirect — this
-  /// controller does NOT navigate. On [AuthRateLimitFailure] starts the
-  /// back-off so the screen disables the verify action.
+  /// controller does NOT navigate. On [AuthRateLimitFailure] starts the verify
+  /// back-off. On any failure records [lastFailedCode] to prevent identical
+  /// re-submissions.
   Future<void> verifyCode(String code) async {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(authRepositoryProvider);
@@ -126,12 +178,17 @@ class OtpController extends _$OtpController {
         if (failure is AuthRateLimitFailure) {
           state = state.copyWith(
             submitting: false,
-            cooldownActive: true,
+            verifyCooldownActive: true,
+            lastFailedCode: code,
             failure: failure,
           );
-          _startCooldown();
+          _startVerifyCooldown();
         } else {
-          state = state.copyWith(submitting: false, failure: failure);
+          state = state.copyWith(
+            submitting: false,
+            lastFailedCode: code,
+            failure: failure,
+          );
         }
       },
       (_) {
@@ -147,18 +204,27 @@ class OtpController extends _$OtpController {
 
   /// Return from the code step to the email step.
   void editEmail() {
-    _cooldownTimer?.cancel();
+    _sendCooldownTimer?.cancel();
+    _verifyCooldownTimer?.cancel();
     state = OtpState.initial();
   }
 
-  /// Starts (or restarts) the back-off. Cancelling any in-flight timer first
-  /// means a fresh rate-limit reschedules from scratch: a longer server block
-  /// that 429s again on retry extends the cooldown rather than re-enabling
-  /// early. The timer is also cancelled on dispose and on [editEmail].
-  void _startCooldown() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer(_cooldown, () {
-      state = state.copyWith(cooldownActive: false, clearFailure: true);
+  /// Starts (or restarts) the send back-off. Cancelling any in-flight timer
+  /// first means a fresh rate-limit reschedules from scratch: a longer server
+  /// block that 429s again on retry extends the cooldown rather than
+  /// re-enabling early.
+  void _startSendCooldown() {
+    _sendCooldownTimer?.cancel();
+    _sendCooldownTimer = Timer(_cooldown, () {
+      state = state.copyWith(sendCooldownActive: false, clearFailure: true);
+    });
+  }
+
+  /// Starts (or restarts) the verify back-off; independent of the send bucket.
+  void _startVerifyCooldown() {
+    _verifyCooldownTimer?.cancel();
+    _verifyCooldownTimer = Timer(_cooldown, () {
+      state = state.copyWith(verifyCooldownActive: false, clearFailure: true);
     });
   }
 }

@@ -52,9 +52,9 @@
   "@signInCodeLabel": {
     "description": "Label for the 6-digit code input field."
   },
-  "signInCodeHint": "6-digit code",
+  "signInCodeHint": "Enter the 6-digit code we emailed you",
   "@signInCodeHint": {
-    "description": "Placeholder hint for the 6-digit code input field."
+    "description": "Instructive placeholder/helper for the 6-digit code input field."
   },
   "signInVerify": "Verify",
   "@signInVerify": {
@@ -75,5 +75,18 @@
   "signInInvalidCode": "The code is incorrect or has expired. Please try again.",
   "@signInInvalidCode": {
     "description": "Shown on the code step when the server rejects the entered code as wrong or expired."
+  },
+  "signInInvalidEmail": "Enter a valid email address",
+  "@signInInvalidEmail": {
+    "description": "Shown on the email step when the entered value does not match a basic email format."
+  },
+  "signInResendCountdown": "Resend code in {time}",
+  "@signInResendCountdown": {
+    "description": "Resend button label while the proactive resend window is active; {time} is formatted as m:ss.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }
