@@ -92,5 +92,17 @@
   "signInResendSuccess": "We sent you a new code.",
   "@signInResendSuccess": {
     "description": "Transient snackbar confirmation shown after a sign-in code is successfully resent."
+  },
+  "signInOrDivider": "or",
+  "@signInOrDivider": {
+    "description": "Divider label between the email sign-in option and the third-party provider buttons."
+  },
+  "signInWithGoogle": "Continue with Google",
+  "@signInWithGoogle": {
+    "description": "Label for the button that starts Google OAuth sign-in."
+  },
+  "signInWithDiscord": "Continue with Discord",
+  "@signInWithDiscord": {
+    "description": "Label for the button that starts Discord OAuth sign-in."
   }
 }

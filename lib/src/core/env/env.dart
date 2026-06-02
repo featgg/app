@@ -18,6 +18,15 @@ abstract final class Env {
   /// absence must not break boot, so it is excluded from requireValid().
   static const String sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
+  /// Google Web (OAuth) Client ID — the serverClientId passed to google_sign_in
+  /// and the audience of the idToken Supabase verifies. Client-distributable
+  /// (an OAuth audience, not a secret). Empty when no define was passed, in which
+  /// case native Google sign-in is unavailable; the email flow is unaffected, so
+  /// this is excluded from requireValid().
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
+
   /// True when both required defines are non-empty.
   static bool get isValid =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;

@@ -27,6 +27,10 @@ final class _SignedInAuthRepository implements AuthRepository {
   }) async => right(unit);
 
   @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
+
+  @override
   Future<Either<Failure, Unit>> signOut() async => right(unit);
 }
 

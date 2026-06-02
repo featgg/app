@@ -3,9 +3,16 @@ import 'dart:async';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/observability/observability.dart';
 import 'package:featgg/src/features/auth/data/auth_repository_impl.dart';
+import 'package:featgg/src/features/auth/data/google_sign_in_client.dart';
 import 'package:featgg/src/features/auth/domain/auth_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+// ignore: depend_on_referenced_packages
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+// ignore: depend_on_referenced_packages
+import 'package:url_launcher_platform_interface/link.dart' show LinkDelegate;
 
 /// Hand-rolled recording reporter — mirrors the existing _RecordingReporter
 /// pattern. Drops expected failures (isExpected == true), records the rest.
@@ -27,11 +34,20 @@ final class _FakeGoTrueClient extends GoTrueClient {
     Future<void> Function()? onSignInWithOtp,
     Future<AuthResponse> Function()? onVerifyOTP,
     Future<void> Function()? onSignOut,
+    Future<OAuthResponse> Function()? onGetOAuthSignInUrl,
+    Future<AuthResponse> Function(
+      OAuthProvider provider,
+      String idToken,
+      String? accessToken,
+    )?
+    onSignInWithIdToken,
     Session? session,
     Stream<AuthState>? authStateStream,
   }) : _onSignInWithOtp = onSignInWithOtp,
        _onVerifyOTP = onVerifyOTP,
        _onSignOut = onSignOut,
+       _onGetOAuthSignInUrl = onGetOAuthSignInUrl,
+       _onSignInWithIdToken = onSignInWithIdToken,
        _session = session,
        _authStateStream = authStateStream ?? const Stream.empty(),
        super(url: 'http://localhost', autoRefreshToken: false);
@@ -39,8 +55,28 @@ final class _FakeGoTrueClient extends GoTrueClient {
   final Future<void> Function()? _onSignInWithOtp;
   final Future<AuthResponse> Function()? _onVerifyOTP;
   final Future<void> Function()? _onSignOut;
+  final Future<OAuthResponse> Function()? _onGetOAuthSignInUrl;
+  final Future<AuthResponse> Function(
+    OAuthProvider provider,
+    String idToken,
+    String? accessToken,
+  )?
+  _onSignInWithIdToken;
   final Session? _session;
   final Stream<AuthState> _authStateStream;
+
+  // The OAuth args the repository passed, captured for assertions. The
+  // browser-launching `signInWithOAuth` is a supabase_flutter extension (not
+  // overridable), so the test asserts the wiring at the `getOAuthSignInUrl`
+  // seam the extension calls.
+  OAuthProvider? capturedProvider;
+  String? capturedRedirectTo;
+
+  // Captured args for signInWithIdToken assertions.
+  OAuthProvider? capturedIdTokenProvider;
+  String? capturedIdToken;
+  String? capturedAccessToken;
+  int signInWithIdTokenCalls = 0;
 
   @override
   Session? get currentSession => _session;
@@ -79,12 +115,85 @@ final class _FakeGoTrueClient extends GoTrueClient {
   Future<void> signOut({SignOutScope scope = SignOutScope.local}) async {
     if (_onSignOut != null) return _onSignOut();
   }
+
+  @override
+  Future<OAuthResponse> getOAuthSignInUrl({
+    required OAuthProvider provider,
+    String? redirectTo,
+    String? scopes,
+    Map<String, String>? queryParams,
+  }) {
+    capturedProvider = provider;
+    capturedRedirectTo = redirectTo;
+    if (_onGetOAuthSignInUrl != null) return _onGetOAuthSignInUrl();
+    return Future.value(
+      OAuthResponse(provider: provider, url: 'https://example.test/authorize'),
+    );
+  }
+
+  @override
+  Future<AuthResponse> signInWithIdToken({
+    required OAuthProvider provider,
+    required String idToken,
+    String? accessToken,
+    String? nonce,
+    String? captchaToken,
+  }) async {
+    signInWithIdTokenCalls++;
+    capturedIdTokenProvider = provider;
+    capturedIdToken = idToken;
+    capturedAccessToken = accessToken;
+    if (_onSignInWithIdToken != null) {
+      return _onSignInWithIdToken(provider, idToken, accessToken);
+    }
+    return AuthResponse();
+  }
+}
+
+/// Callback-driven fake for the GoogleSignInClient seam.
+final class _FakeGoogleSignInClient implements GoogleSignInClient {
+  _FakeGoogleSignInClient({this.onSignIn});
+  final Future<GoogleCredentials?> Function()? onSignIn;
+  int calls = 0;
+
+  @override
+  Future<GoogleCredentials?> signIn() {
+    calls++;
+    return onSignIn?.call() ??
+        Future.value(
+          const GoogleCredentials(idToken: 'id-tok', accessToken: 'ac-tok'),
+        );
+  }
 }
 
 AuthRepositoryImpl _repo(
   _FakeGoTrueClient client,
-  _RecordingReporter reporter,
-) => AuthRepositoryImpl(client, reporter);
+  _RecordingReporter reporter, {
+  GoogleSignInClient? googleSignIn,
+}) => AuthRepositoryImpl(
+  client,
+  reporter,
+  googleSignIn ?? _FakeGoogleSignInClient(),
+);
+
+/// Forces the platform `launchUrl` result so the data layer's bool-handling
+/// is testable without a real browser. The SDK's signInWithOAuth ultimately
+/// calls UrlLauncherPlatform.instance.launchUrl.
+final class _StubUrlLauncher extends UrlLauncherPlatform
+    with MockPlatformInterfaceMixin {
+  _StubUrlLauncher(this._launchResult);
+  final bool _launchResult;
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> canLaunch(String url) async => true;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async =>
+      _launchResult;
+}
 
 void main() {
   group('AuthRepositoryImpl.requestEmailCode', () {
@@ -157,6 +266,26 @@ void main() {
           (f) => expect(f, isA<UnexpectedFailure>()),
           (_) => fail('expected Left'),
         );
+      },
+    );
+
+    test(
+      'returns Left(NetworkFailure) on AuthRetryableFetchException and does not report',
+      () async {
+        final reporter = _RecordingReporter();
+        final repo = _repo(
+          _FakeGoTrueClient(
+            onSignInWithOtp: () async =>
+                throw AuthRetryableFetchException(message: 'socket closed'),
+          ),
+          reporter,
+        );
+        final result = await repo.requestEmailCode('user@example.com');
+        result.fold(
+          (f) => expect(f, isA<NetworkFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, isEmpty);
       },
     );
   });
@@ -312,5 +441,171 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       await controller.close();
     });
+  });
+
+  group('AuthRepositoryImpl.signInWithOAuth — Discord browser path', () {
+    // Asserts the impl→SDK wiring at the `getOAuthSignInUrl` seam (provider +
+    // redirect URL) and the error mapping. The launch itself (`launchUrl`) is a
+    // platform call left to smoke/the controller success test, so these cases
+    // throw at `getOAuthSignInUrl`, before the platform is reached.
+    test('passes discord + redirect URL to the SDK', () async {
+      final client = _FakeGoTrueClient(
+        onGetOAuthSignInUrl: () async => throw Exception('stop before launch'),
+      );
+      final repo = _repo(client, _RecordingReporter());
+
+      await repo.signInWithOAuth(AuthProvider.discord);
+      expect(client.capturedProvider, OAuthProvider.discord);
+      expect(client.capturedRedirectTo, 'gg.feat.app://login-callback');
+    });
+
+    test('returns Left(AuthRateLimitFailure) on 429 AuthException', () async {
+      final repo = _repo(
+        _FakeGoTrueClient(
+          onGetOAuthSignInUrl: () async =>
+              throw const AuthException('rate limit', statusCode: '429'),
+        ),
+        _RecordingReporter(),
+      );
+      final result = await repo.signInWithOAuth(AuthProvider.discord);
+      result.fold(
+        (f) => expect(f, isA<AuthRateLimitFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'returns Left(UnexpectedFailure) and reports on non-AuthException',
+      () async {
+        final reporter = _RecordingReporter();
+        final repo = _repo(
+          _FakeGoTrueClient(
+            onGetOAuthSignInUrl: () async => throw Exception('no browser'),
+          ),
+          reporter,
+        );
+        final result = await repo.signInWithOAuth(AuthProvider.discord);
+        result.fold(
+          (f) => expect(f, isA<UnexpectedFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, hasLength(1));
+      },
+    );
+
+    test('returns Right(unit) when the browser launch succeeds', () async {
+      final original = UrlLauncherPlatform.instance;
+      addTearDown(() => UrlLauncherPlatform.instance = original);
+      UrlLauncherPlatform.instance = _StubUrlLauncher(true);
+      final repo = _repo(_FakeGoTrueClient(), _RecordingReporter());
+
+      final result = await repo.signInWithOAuth(AuthProvider.discord);
+      expect(result.isRight(), isTrue);
+    });
+
+    test(
+      'returns Left(UnexpectedFailure) and reports when the launch fails',
+      () async {
+        final original = UrlLauncherPlatform.instance;
+        addTearDown(() => UrlLauncherPlatform.instance = original);
+        UrlLauncherPlatform.instance = _StubUrlLauncher(false);
+        final reporter = _RecordingReporter();
+        final repo = _repo(_FakeGoTrueClient(), reporter);
+
+        final result = await repo.signInWithOAuth(AuthProvider.discord);
+        result.fold(
+          (f) => expect(f, isA<UnexpectedFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, hasLength(1));
+      },
+    );
+  });
+
+  group('AuthRepositoryImpl.signInWithOAuth — Google native path', () {
+    test(
+      'calls signInWithIdToken with the client tokens and returns Right(unit)',
+      () async {
+        final client = _FakeGoTrueClient();
+        const fakeCredentials = GoogleCredentials(
+          idToken: 'my-id-token',
+          accessToken: 'my-ac-token',
+        );
+        final googleClient = _FakeGoogleSignInClient(
+          onSignIn: () async => fakeCredentials,
+        );
+        final repo = _repo(
+          client,
+          _RecordingReporter(),
+          googleSignIn: googleClient,
+        );
+
+        final result = await repo.signInWithOAuth(AuthProvider.google);
+
+        expect(result.isRight(), isTrue);
+        expect(client.signInWithIdTokenCalls, 1);
+        expect(client.capturedIdTokenProvider, OAuthProvider.google);
+        expect(client.capturedIdToken, 'my-id-token');
+        expect(client.capturedAccessToken, 'my-ac-token');
+      },
+    );
+
+    test(
+      'returns Right(unit) and skips the SDK when the client returns null (cancel)',
+      () async {
+        final client = _FakeGoTrueClient();
+        final googleClient = _FakeGoogleSignInClient(
+          onSignIn: () async => null,
+        );
+        final repo = _repo(
+          client,
+          _RecordingReporter(),
+          googleSignIn: googleClient,
+        );
+
+        final result = await repo.signInWithOAuth(AuthProvider.google);
+
+        expect(result.isRight(), isTrue);
+        expect(client.signInWithIdTokenCalls, 0);
+      },
+    );
+
+    test('maps a token rejection (401) to Left(AuthFailure)', () async {
+      final client = _FakeGoTrueClient(
+        onSignInWithIdToken: (p, id, ac) async =>
+            throw const AuthException('invalid token', statusCode: '401'),
+      );
+      final repo = _repo(client, _RecordingReporter());
+
+      final result = await repo.signInWithOAuth(AuthProvider.google);
+
+      result.fold(
+        (f) => expect(f, isA<AuthFailure>()),
+        (_) => fail('expected Left'),
+      );
+    });
+
+    test(
+      'reports a non-cancel client failure and returns Left(UnexpectedFailure)',
+      () async {
+        final reporter = _RecordingReporter();
+        final googleClient = _FakeGoogleSignInClient(
+          onSignIn: () async => throw Exception('boom'),
+        );
+        final repo = _repo(
+          _FakeGoTrueClient(),
+          reporter,
+          googleSignIn: googleClient,
+        );
+
+        final result = await repo.signInWithOAuth(AuthProvider.google);
+
+        result.fold(
+          (f) => expect(f, isA<UnexpectedFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, hasLength(1));
+      },
+    );
   });
 }

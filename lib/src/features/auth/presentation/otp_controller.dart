@@ -162,6 +162,23 @@ class OtpController extends _$OtpController {
     );
   }
 
+  /// Email step: start OAuth sign-in with [provider]. Sets `submitting` while
+  /// the browser launches and clears it on return. On success the SDK completes
+  /// the PKCE session on the redirect callback and the auth-status stream flip
+  /// drives the router redirect — this controller does NOT navigate. On Left
+  /// surfaces the failure (e.g. the browser could not be launched). A user who
+  /// cancels in the browser produces no callback and no auth flip; `submitting`
+  /// is already cleared, so the screen simply stays on the email step.
+  Future<void> signInWithProvider(AuthProvider provider) async {
+    state = state.copyWith(submitting: true, clearFailure: true);
+    final repo = ref.read(authRepositoryProvider);
+    final result = await repo.signInWithOAuth(provider);
+    result.fold(
+      (failure) => state = state.copyWith(submitting: false, failure: failure),
+      (_) => state = state.copyWith(submitting: false),
+    );
+  }
+
   /// Resend the code while on the code step. Same back-off rules as
   /// [requestCode]; a successful resend additionally bumps
   /// [OtpState.resendSuccessTick] so the screen can confirm it to the user.

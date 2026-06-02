@@ -42,8 +42,8 @@ void main() {
       expect(const ServerFailure().isExpected, isFalse);
     });
 
-    test('NetworkFailure is not expected', () {
-      expect(const NetworkFailure().isExpected, isFalse);
+    test('NetworkFailure is expected', () {
+      expect(const NetworkFailure().isExpected, isTrue);
     });
 
     test('UnexpectedFailure is not expected', () {
@@ -69,7 +69,7 @@ void main() {
       const network = NetworkFailure(message: 'net');
       expect(network.message, 'net');
       expect(network.code, isNull);
-      expect(network.isExpected, isFalse);
+      expect(network.isExpected, isTrue);
 
       const auth = AuthFailure(code: 'UNAUTHORIZED');
       expect(auth.message, isNull);

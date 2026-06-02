@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
 import '../../../core/error/failure.dart';
+import '../domain/auth_domain.dart';
 import 'otp_controller.dart';
 
 /// Loose email format gate: one `@`, at least one dot in the domain, no
@@ -75,6 +76,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 await controller.requestCode(_emailController.text.trim());
               }
             },
+            onProvider: controller.signInWithProvider,
           )
         : _CodeStep(
             l10n: l10n,
@@ -143,6 +145,7 @@ class _EmailStep extends StatelessWidget {
     required this.submitting,
     required this.sendCooldownActive,
     required this.onSubmit,
+    required this.onProvider,
   });
 
   final AppLocalizations l10n;
@@ -155,6 +158,9 @@ class _EmailStep extends StatelessWidget {
   /// disabled.
   final bool sendCooldownActive;
   final VoidCallback onSubmit;
+
+  /// Starts OAuth sign-in for the tapped provider.
+  final void Function(AuthProvider provider) onProvider;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +210,35 @@ class _EmailStep extends StatelessWidget {
             child: submitting
                 ? const _SubmitSpinner()
                 : Text(l10n.signInContinue),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: Text(l10n.signInOrDivider),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          OutlinedButton.icon(
+            key: const Key('signInProviderGoogle'),
+            onPressed: submitting
+                ? null
+                : () => onProvider(AuthProvider.google),
+            icon: const Icon(Icons.login),
+            label: Text(l10n.signInWithGoogle),
+          ),
+          const SizedBox(height: AppSpacing.smMd),
+          OutlinedButton.icon(
+            key: const Key('signInProviderDiscord'),
+            onPressed: submitting
+                ? null
+                : () => onProvider(AuthProvider.discord),
+            icon: const Icon(Icons.login),
+            label: Text(l10n.signInWithDiscord),
           ),
           const Spacer(flex: 2),
         ],
