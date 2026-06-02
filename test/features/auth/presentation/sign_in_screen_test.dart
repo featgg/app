@@ -44,6 +44,7 @@ final class _FakeRepository implements AuthRepository {
 /// Counts how many times requestEmailCode was called.
 final class _CountingRepository implements AuthRepository {
   int requestCount = 0;
+  int verifyCount = 0;
   final Either<Failure, Unit> requestResult;
 
   _CountingRepository({Either<Failure, Unit>? requestResult})
@@ -59,7 +60,10 @@ final class _CountingRepository implements AuthRepository {
   Future<Either<Failure, Unit>> verifyEmailCode({
     required String email,
     required String code,
-  }) async => right(unit);
+  }) async {
+    verifyCount++;
+    return right(unit);
+  }
 
   @override
   Future<Either<Failure, Unit>> signOut() async => right(unit);
@@ -343,4 +347,64 @@ void main() {
     await tester.pump(const Duration(seconds: 61));
     expect(tester.widget<TextButton>(changeEmailButton).onPressed, isNotNull);
   });
+
+  testWidgets(
+    'a successful resend restarts the countdown (cannot be hammered)',
+    (tester) async {
+      await tester.pumpWidget(_screen(_FakeRepository()));
+      await tester.pumpAndSettle();
+
+      // Send succeeds → code step → resend disabled during the initial window.
+      await tester.enterText(find.byType(TextFormField), 'user@example.com');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final resendButton = find.byType(TextButton).first;
+      expect(tester.widget<TextButton>(resendButton).onPressed, isNull);
+
+      // The window elapses → resend re-enables.
+      await tester.pump(const Duration(seconds: 61));
+      expect(tester.widget<TextButton>(resendButton).onPressed, isNotNull);
+
+      // Resend → the window must restart, disabling resend again so the next
+      // request cannot fire straight into the server's rate limit.
+      await tester.tap(resendButton);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.widget<TextButton>(resendButton).onPressed, isNull);
+
+      // Drain the restarted ticker and the snackbar timer before teardown.
+      await tester.pump(const Duration(seconds: 61));
+    },
+  );
+
+  testWidgets(
+    'submitting the code field empty or partial does not call the server',
+    (tester) async {
+      final repo = _CountingRepository();
+      await tester.pumpWidget(_screen(repo));
+      await tester.pumpAndSettle();
+
+      // Advance to the code step.
+      await tester.enterText(find.byType(TextFormField), 'user@example.com');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Focus the empty code field and fire the keyboard "done" action — it
+      // only closes the keyboard; verify must not be called.
+      await tester.tap(find.byType(TextFormField));
+      await tester.pump();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(repo.verifyCount, 0);
+
+      // A partial (< 6 digit) code must not submit on "done" either.
+      await tester.enterText(find.byType(TextFormField), '123');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(repo.verifyCount, 0);
+
+      // Drain the resend display ticker before teardown.
+      await tester.pump(const Duration(seconds: 61));
+    },
+  );
 }

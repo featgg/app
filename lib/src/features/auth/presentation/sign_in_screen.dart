@@ -86,6 +86,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             sendCooldownActive: otpState.sendCooldownActive,
             verifyCooldownActive: otpState.verifyCooldownActive,
             resendSecondsRemaining: otpState.resendSecondsRemaining,
+            resendSuccessTick: otpState.resendSuccessTick,
             onVerify: () async {
               if (_codeFormKey.currentState?.validate() ?? false) {
                 await controller.verifyCode(_codeController.text.trim());
@@ -222,6 +223,7 @@ class _CodeStep extends StatefulWidget {
     required this.sendCooldownActive,
     required this.verifyCooldownActive,
     required this.resendSecondsRemaining,
+    required this.resendSuccessTick,
     required this.onVerify,
     required this.onResend,
     required this.onEditEmail,
@@ -244,6 +246,11 @@ class _CodeStep extends StatefulWidget {
   /// Initial seconds remaining for the proactive resend window seeded on each
   /// successful send. When > 0 this widget starts a 1 s display ticker.
   final int resendSecondsRemaining;
+
+  /// Bumped on each successful resend. The display countdown restarts on a
+  /// change to this — not to [resendSecondsRemaining], whose seeded value is the
+  /// same window every send (60 → 60) and so cannot signal a fresh resend.
+  final int resendSuccessTick;
 
   final VoidCallback onVerify;
   final VoidCallback onResend;
@@ -269,7 +276,10 @@ class _CodeStepState extends State<_CodeStep> {
   @override
   void didUpdateWidget(_CodeStep old) {
     super.didUpdateWidget(old);
-    if (widget.resendSecondsRemaining != old.resendSecondsRemaining) {
+    // Restart on a fresh resend, not on the seed value: the seeded seconds are
+    // the same window every send (60 → 60), so comparing them misses a resend
+    // and leaves the control enabled to fire straight into a server rejection.
+    if (widget.resendSuccessTick != old.resendSuccessTick) {
       _startCountdownIfNeeded(widget.resendSecondsRemaining);
     }
   }

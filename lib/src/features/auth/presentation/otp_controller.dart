@@ -72,8 +72,10 @@ final class OtpState extends Equatable {
   final int resendSecondsRemaining;
 
   /// Monotonic counter bumped once each time a resend (not the initial send)
-  /// succeeds. The screen listens for an increment to surface a one-shot "code
-  /// sent" confirmation; the value itself carries no meaning.
+  /// succeeds. A change signals a fresh resend, which the screen uses both to
+  /// surface a one-shot "code sent" confirmation and to restart the resend
+  /// countdown — the seeded seconds repeat each send (60 → 60), so they cannot
+  /// signal it. The value itself carries no meaning.
   final int resendSuccessTick;
 
   /// Last expected failure to surface to the user; null means no error shown.
