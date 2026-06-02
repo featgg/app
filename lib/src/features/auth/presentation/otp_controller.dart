@@ -138,8 +138,7 @@ class OtpController extends _$OtpController {
   /// Code step: verify the 6-digit code. On success the SDK persists the
   /// session; the auth-status stream flip drives the router redirect — this
   /// controller does NOT navigate. On [AuthRateLimitFailure] starts the verify
-  /// back-off. On any failure records [lastFailedCode] to prevent identical
-  /// re-submissions.
+  /// back-off.
   Future<void> verifyCode(String code) async {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(authRepositoryProvider);
