@@ -43,6 +43,9 @@ ProviderContainer _container(AuthRepository repo) {
     overrides: [authRepositoryProvider.overrideWithValue(repo)],
   );
   addTearDown(container.dispose);
+  // Keep the auto-dispose controller alive across awaits / fakeAsync time
+  // advances, mirroring the screen watching it in production.
+  container.listen(otpControllerProvider, (_, _) {});
   return container;
 }
 
@@ -65,6 +68,7 @@ void main() {
       expect(state.step, OtpStep.code);
       expect(state.email, 'a@b.com');
       expect(state.failure, isNull);
+      expect(state.submitting, isFalse);
     });
 
     test(
@@ -83,10 +87,11 @@ void main() {
         final state = container.read(otpControllerProvider);
         expect(state.step, OtpStep.code);
         expect(state.failure, isA<InputFailure>());
+        expect(state.submitting, isFalse);
       },
     );
 
-    test('a rate-limit on requestCode blocks resend', () async {
+    test('a rate-limit on requestCode activates the cooldown', () async {
       final container = _container(
         _FakeAuthRepository(
           onRequest: (_) => left(const AuthRateLimitFailure()),
@@ -112,7 +117,7 @@ void main() {
       expect(container.read(otpControllerProvider).step, OtpStep.email);
     });
 
-    test('resend unblocks after the 30 s cooldown elapses', () {
+    test('cooldown clears after it elapses', () {
       fakeAsync((async) {
         final container = _container(
           _FakeAuthRepository(
@@ -121,14 +126,11 @@ void main() {
         );
         final notifier = container.read(otpControllerProvider.notifier);
 
-        // Trigger the rate-limit synchronously within the fake-async zone.
         notifier.requestCode('a@b.com');
         async.flushMicrotasks();
-
         expect(container.read(otpControllerProvider).cooldownActive, isTrue);
 
-        // Elapse past the cooldown.
-        async.elapse(const Duration(seconds: 30));
+        async.elapse(const Duration(seconds: 60));
         async.flushMicrotasks();
 
         final state = container.read(otpControllerProvider);
@@ -138,5 +140,38 @@ void main() {
         container.dispose();
       });
     });
+
+    test(
+      'a second rate-limit extends the cooldown instead of re-enabling early',
+      () {
+        fakeAsync((async) {
+          final container = _container(
+            _FakeAuthRepository(
+              onRequest: (_) => left(const AuthRateLimitFailure()),
+            ),
+          );
+          final notifier = container.read(otpControllerProvider.notifier);
+
+          notifier.requestCode('a@b.com');
+          async.flushMicrotasks();
+
+          // Halfway through the first cooldown, a retry is rate-limited again.
+          async.elapse(const Duration(seconds: 30));
+          notifier.requestCode('a@b.com');
+          async.flushMicrotasks();
+
+          // 60s since the FIRST limit but only 30s since the second: still active
+          // (the first timer was cancelled, so it does not re-enable early).
+          async.elapse(const Duration(seconds: 30));
+          expect(container.read(otpControllerProvider).cooldownActive, isTrue);
+
+          // The full window since the SECOND limit elapses -> re-enabled.
+          async.elapse(const Duration(seconds: 30));
+          expect(container.read(otpControllerProvider).cooldownActive, isFalse);
+
+          container.dispose();
+        });
+      },
+    );
   });
 }

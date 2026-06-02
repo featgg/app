@@ -9,11 +9,12 @@ import 'otp_controller.dart';
 /// Email OTP sign-in screen.
 ///
 /// Renders two steps driven by [OtpController]:
-///   1. Email step — user enters their address and taps "Send code".
+///   1. Email step — user enters their address and taps "Continue".
 ///   2. Code step — user enters the 6-digit code, can resend or edit email.
 ///
 /// Navigation after a successful verify is driven by the auth-status stream
-/// (router redirect); this screen never calls go_router directly.
+/// (router redirect); this screen never calls go_router directly. The content
+/// scrolls so the soft keyboard never overflows it.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -40,48 +41,73 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final otpState = ref.watch(otpControllerProvider);
     final controller = ref.read(otpControllerProvider.notifier);
 
+    final step = otpState.step == OtpStep.email
+        ? _EmailStep(
+            l10n: l10n,
+            emailController: _emailController,
+            formKey: _emailFormKey,
+            failure: otpState.failure,
+            submitting: otpState.submitting,
+            cooldownActive: otpState.cooldownActive,
+            onSubmit: () async {
+              if (_emailFormKey.currentState?.validate() ?? false) {
+                await controller.requestCode(_emailController.text.trim());
+              }
+            },
+          )
+        : _CodeStep(
+            l10n: l10n,
+            email: otpState.email,
+            codeController: _codeController,
+            formKey: _codeFormKey,
+            failure: otpState.failure,
+            submitting: otpState.submitting,
+            cooldownActive: otpState.cooldownActive,
+            onVerify: () async {
+              if (_codeFormKey.currentState?.validate() ?? false) {
+                await controller.verifyCode(_codeController.text.trim());
+              }
+            },
+            onResend: controller.resendCode,
+            onEditEmail: () {
+              _emailController.clear();
+              _codeController.clear();
+              controller.editEmail();
+            },
+          );
+
+    // Fill the viewport when there is room (Spacers center the content) and
+    // scroll when the keyboard shrinks it, so the layout never overflows.
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: otpState.step == OtpStep.email
-              ? _EmailStep(
-                  l10n: l10n,
-                  emailController: _emailController,
-                  formKey: _emailFormKey,
-                  failure: otpState.failure,
-                  cooldownActive: otpState.cooldownActive,
-                  onSubmit: () async {
-                    if (_emailFormKey.currentState?.validate() ?? false) {
-                      await controller.requestCode(
-                        _emailController.text.trim(),
-                      );
-                    }
-                  },
-                )
-              : _CodeStep(
-                  l10n: l10n,
-                  email: otpState.email,
-                  codeController: _codeController,
-                  formKey: _codeFormKey,
-                  failure: otpState.failure,
-                  cooldownActive: otpState.cooldownActive,
-                  onVerify: () async {
-                    if (_codeFormKey.currentState?.validate() ?? false) {
-                      await controller.verifyCode(_codeController.text.trim());
-                    }
-                  },
-                  onResend: controller.resendCode,
-                  onEditEmail: () {
-                    _emailController.clear();
-                    _codeController.clear();
-                    controller.editEmail();
-                  },
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: step,
                 ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+/// Small adaptive spinner shown inside a primary button while a call is in
+/// flight (design-system § 11.3: spinner for button submit state).
+class _SubmitSpinner extends StatelessWidget {
+  const _SubmitSpinner();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.square(
+    dimension: AppSpacing.md,
+    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+  );
 }
 
 class _EmailStep extends StatelessWidget {
@@ -90,6 +116,7 @@ class _EmailStep extends StatelessWidget {
     required this.emailController,
     required this.formKey,
     required this.failure,
+    required this.submitting,
     required this.cooldownActive,
     required this.onSubmit,
   });
@@ -98,6 +125,7 @@ class _EmailStep extends StatelessWidget {
   final TextEditingController emailController;
   final GlobalKey<FormState> formKey;
   final Failure? failure;
+  final bool submitting;
 
   /// True while backing off after a rate-limit; the send action is disabled.
   final bool cooldownActive;
@@ -105,6 +133,7 @@ class _EmailStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = submitting || cooldownActive;
     return Form(
       key: formKey,
       child: Column(
@@ -126,7 +155,7 @@ class _EmailStep extends StatelessWidget {
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
             textInputAction: TextInputAction.done,
-            onFieldSubmitted: cooldownActive ? null : (_) => onSubmit(),
+            onFieldSubmitted: blocked ? null : (_) => onSubmit(),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return l10n.signInEmailHint;
@@ -143,8 +172,10 @@ class _EmailStep extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
-            onPressed: cooldownActive ? null : onSubmit,
-            child: Text(l10n.signInSendCode),
+            onPressed: blocked ? null : onSubmit,
+            child: submitting
+                ? const _SubmitSpinner()
+                : Text(l10n.signInContinue),
           ),
           const Spacer(flex: 2),
         ],
@@ -160,6 +191,7 @@ class _CodeStep extends StatelessWidget {
     required this.codeController,
     required this.formKey,
     required this.failure,
+    required this.submitting,
     required this.cooldownActive,
     required this.onVerify,
     required this.onResend,
@@ -171,6 +203,7 @@ class _CodeStep extends StatelessWidget {
   final TextEditingController codeController;
   final GlobalKey<FormState> formKey;
   final Failure? failure;
+  final bool submitting;
 
   /// True while backing off after a rate-limit; verify and resend are disabled.
   final bool cooldownActive;
@@ -185,6 +218,7 @@ class _CodeStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = submitting || cooldownActive;
     return Form(
       key: formKey,
       child: Column(
@@ -211,7 +245,7 @@ class _CodeStep extends StatelessWidget {
               LengthLimitingTextInputFormatter(6),
             ],
             textInputAction: TextInputAction.done,
-            onFieldSubmitted: cooldownActive ? null : (_) => onVerify(),
+            onFieldSubmitted: blocked ? null : (_) => onVerify(),
             validator: (value) {
               if (value == null || value.trim().length != 6) {
                 return l10n.signInCodeHint;
@@ -228,15 +262,20 @@ class _CodeStep extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
-            onPressed: cooldownActive ? null : onVerify,
-            child: Text(l10n.signInVerify),
+            onPressed: blocked ? null : onVerify,
+            child: submitting
+                ? const _SubmitSpinner()
+                : Text(l10n.signInVerify),
           ),
           const SizedBox(height: AppSpacing.smMd),
           TextButton(
-            onPressed: cooldownActive ? null : onResend,
+            onPressed: blocked ? null : onResend,
             child: Text(l10n.signInResend),
           ),
-          TextButton(onPressed: onEditEmail, child: Text(l10n.signInEditEmail)),
+          TextButton(
+            onPressed: submitting ? null : onEditEmail,
+            child: Text(l10n.signInEditEmail),
+          ),
           const Spacer(flex: 2),
         ],
       ),
