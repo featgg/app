@@ -5,7 +5,8 @@ void main() {
   group('AppSpacing', () {
     test('spacing scale is strictly increasing', () {
       expect(AppSpacing.xs, lessThan(AppSpacing.sm));
-      expect(AppSpacing.sm, lessThan(AppSpacing.md));
+      expect(AppSpacing.sm, lessThan(AppSpacing.smMd));
+      expect(AppSpacing.smMd, lessThan(AppSpacing.md));
       expect(AppSpacing.md, lessThan(AppSpacing.lg));
       expect(AppSpacing.lg, lessThan(AppSpacing.xl));
     });

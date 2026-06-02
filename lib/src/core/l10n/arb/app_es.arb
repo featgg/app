@@ -5,5 +5,21 @@
   "errorAuth": "Tu sesión expiró. Inicia sesión de nuevo.",
   "errorInput": "Algunos datos parecen incorrectos. Revisalos e intenta de nuevo.",
   "errorUnexpected": "Pasó algo inesperado. Intenta de nuevo.",
-  "errorNotImplemented": "Esta función todavía no está disponible."
+  "errorNotImplemented": "Esta función todavía no está disponible.",
+  "errorAuthRateLimited": "Demasiados intentos. Inténtalo de nuevo en aproximadamente un minuto.",
+  "signInTitle": "Inicia sesión en Feat.gg",
+  "signInEmailLabel": "Correo electrónico",
+  "signInEmailHint": "Ingresa tu correo electrónico",
+  "signInContinue": "Continuar",
+  "signInCodeTitle": "Revisa tu correo",
+  "signInCodeLabel": "Código de verificación",
+  "signInCodeHint": "Ingresa el código de 6 dígitos",
+  "signInVerify": "Verificar",
+  "signInResend": "Reenviar código",
+  "signInEditEmail": "Cambiar correo",
+  "signOut": "Cerrar sesión",
+  "signInInvalidCode": "El código es incorrecto o ha expirado. Inténtalo de nuevo.",
+  "signInInvalidEmail": "Ingresa un correo electrónico válido",
+  "signInResendCountdown": "Reenviar código en {time}",
+  "signInResendSuccess": "Te enviamos un código nuevo."
 }

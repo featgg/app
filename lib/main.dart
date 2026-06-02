@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'src/core/bootstrap.dart';
 import 'src/core/core.dart';
+import 'src/features/auth/data/auth_data.dart';
+import 'src/features/auth/domain/auth_domain.dart';
 
 Future<void> main() async {
   await bootstrap(
     () => runApp(
       ProviderScope(
         observers: [const CrashReportingObserver(SentryCrashReporter())],
+        overrides: [authRepositoryProvider.overrideWith(buildAuthRepository)],
         child: const App(),
       ),
     ),

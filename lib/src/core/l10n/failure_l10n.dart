@@ -11,6 +11,7 @@ extension FailureL10n on Failure {
     NetworkFailure() => l10n.errorNetwork,
     ServerFailure() => l10n.errorServer,
     AuthFailure() => l10n.errorAuth,
+    AuthRateLimitFailure() => l10n.errorAuthRateLimited,
     InputFailure() => l10n.errorInput,
     NotImplemented() => l10n.errorNotImplemented,
     UnexpectedFailure() => l10n.errorUnexpected,
