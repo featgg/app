@@ -67,6 +67,15 @@ final class InputFailure extends Failure {
   bool get isExpected => true;
 }
 
+/// Auth send/verify was rate-limited (HTTP 429 class). Normal control flow:
+/// the UI disables resend and backs off. Not crash-reported.
+final class AuthRateLimitFailure extends Failure {
+  const AuthRateLimitFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => true;
+}
+
 /// Catch-all for anything the mapper cannot classify (DTO parse failure,
 /// unhandled exception). Crash-reported.
 final class UnexpectedFailure extends Failure {

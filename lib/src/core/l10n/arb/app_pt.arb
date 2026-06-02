@@ -5,5 +5,18 @@
   "errorAuth": "Sua sessão expirou. Entre novamente.",
   "errorInput": "Alguns dados parecem incorretos. Revise e tente novamente.",
   "errorUnexpected": "Algo inesperado aconteceu. Tente novamente.",
-  "errorNotImplemented": "Este recurso ainda não está disponível."
+  "errorNotImplemented": "Este recurso ainda não está disponível.",
+  "errorAuthRateLimited": "Muitas tentativas. Por favor, tente novamente em breve.",
+  "signInTitle": "Entre no Feat.gg",
+  "signInEmailLabel": "E-mail",
+  "signInEmailHint": "Digite seu endereço de e-mail",
+  "signInSendCode": "Enviar código",
+  "signInCodeTitle": "Verifique seu e-mail",
+  "signInCodeLabel": "Código de verificação",
+  "signInCodeHint": "Código de 6 dígitos",
+  "signInVerify": "Verificar",
+  "signInResend": "Reenviar código",
+  "signInEditEmail": "Alterar e-mail",
+  "signOut": "Sair",
+  "signInInvalidCode": "O código está incorreto ou expirou. Tente novamente."
 }

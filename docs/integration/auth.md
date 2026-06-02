@@ -47,9 +47,10 @@ client uses the SDK methods described below rather than hand-rolling requests.
 
 The auth platform rate-limits verification-email sends and sign-in /
 code-verification / token-refresh attempts. The client must handle a
-rate-limited response and back off — for example, briefly disable the
-"send / resend code" action and surface a "try again shortly" message. The
-exact limits are environment-configured; do not hard-code them.
+rate-limited response and back off: briefly disable the action that was
+rate-limited (the "send / resend code" action, and code verification) and
+surface a "try again shortly" message. The exact limits are
+environment-configured; do not hard-code them.
 
 ## Out-of-band side effects
 

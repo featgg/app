@@ -40,5 +40,12 @@ void main() {
         l10n.errorUnexpected,
       );
     });
+
+    test('AuthRateLimitFailure maps to errorAuthRateLimited', () {
+      expect(
+        const AuthRateLimitFailure().localizedMessage(l10n),
+        l10n.errorAuthRateLimited,
+      );
+    });
   });
 }

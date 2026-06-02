@@ -23,5 +23,57 @@
   "errorNotImplemented": "This feature isn't available yet.",
   "@errorNotImplemented": {
     "description": "Shown when a feature stub returns NotImplemented because no integration brief exists yet."
+  },
+  "errorAuthRateLimited": "Too many attempts. Please try again shortly.",
+  "@errorAuthRateLimited": {
+    "description": "Shown when the auth service rate-limits a send or verify request (HTTP 429 class). The UI disables resend and backs off."
+  },
+  "signInTitle": "Sign in to Feat.gg",
+  "@signInTitle": {
+    "description": "Title shown on the sign-in screen email step."
+  },
+  "signInEmailLabel": "Email",
+  "@signInEmailLabel": {
+    "description": "Label for the email input field on the sign-in screen."
+  },
+  "signInEmailHint": "Enter your email address",
+  "@signInEmailHint": {
+    "description": "Placeholder hint for the email input field."
+  },
+  "signInSendCode": "Send code",
+  "@signInSendCode": {
+    "description": "Button label to request an email sign-in code."
+  },
+  "signInCodeTitle": "Check your email",
+  "@signInCodeTitle": {
+    "description": "Title shown on the sign-in screen code verification step."
+  },
+  "signInCodeLabel": "Verification code",
+  "@signInCodeLabel": {
+    "description": "Label for the 6-digit code input field."
+  },
+  "signInCodeHint": "6-digit code",
+  "@signInCodeHint": {
+    "description": "Placeholder hint for the 6-digit code input field."
+  },
+  "signInVerify": "Verify",
+  "@signInVerify": {
+    "description": "Button label to submit the 6-digit code for verification."
+  },
+  "signInResend": "Resend code",
+  "@signInResend": {
+    "description": "Button label to resend the email sign-in code."
+  },
+  "signInEditEmail": "Change email",
+  "@signInEditEmail": {
+    "description": "Button label to go back to the email entry step."
+  },
+  "signOut": "Sign out",
+  "@signOut": {
+    "description": "Button label to sign the current user out."
+  },
+  "signInInvalidCode": "The code is incorrect or has expired. Please try again.",
+  "@signInInvalidCode": {
+    "description": "Shown on the code step when the server rejects the entered code as wrong or expired."
   }
 }
