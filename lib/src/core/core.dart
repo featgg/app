@@ -6,5 +6,6 @@ library;
 
 export 'env/env.dart';
 export 'l10n/l10n.dart';
+export 'observability/observability.dart';
 export 'router/router.dart';
 export 'theme/theme.dart';
