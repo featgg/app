@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:featgg/main.dart';
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/core/router/router.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
@@ -84,5 +85,36 @@ void main() {
       expect(find.byType(SignInScreen), findsOneWidget);
       expect(find.byType(HomePage), findsNothing);
     });
+
+    testWidgets(
+      'the router is built once — a same-state status change does not recreate it',
+      (tester) async {
+        final controller = StreamController<AuthStatus>();
+        addTearDown(controller.close);
+        final container = ProviderContainer(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(
+              _FakeAuthRepository(AuthStatus.signedIn, controller.stream),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(container: container, child: const App()),
+        );
+        await tester.pumpAndSettle();
+        final firstRouter = container.read(routerProvider);
+
+        // A status change that does NOT flip signed-in/out (e.g. the ~hourly
+        // token refresh re-emits signedIn) must not rebuild the provider or
+        // recreate the router, so the nav stack is preserved.
+        controller.add(AuthStatus.signedIn);
+        await tester.pumpAndSettle();
+
+        expect(identical(container.read(routerProvider), firstRouter), isTrue);
+        expect(find.byType(HomePage), findsOneWidget);
+      },
+    );
   });
 }
