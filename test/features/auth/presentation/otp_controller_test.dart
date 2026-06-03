@@ -12,11 +12,14 @@ final class _FakeAuthRepository implements AuthRepository {
   _FakeAuthRepository({
     Either<Failure, Unit> Function(String email)? onRequest,
     Either<Failure, Unit> Function()? onVerify,
+    Either<Failure, Unit> Function(AuthProvider provider)? onOAuth,
   }) : _onRequest = onRequest,
-       _onVerify = onVerify;
+       _onVerify = onVerify,
+       _onOAuth = onOAuth;
 
   final Either<Failure, Unit> Function(String email)? _onRequest;
   final Either<Failure, Unit> Function()? _onVerify;
+  final Either<Failure, Unit> Function(AuthProvider provider)? _onOAuth;
 
   @override
   Future<Either<Failure, Unit>> requestEmailCode(String email) async =>
@@ -27,6 +30,10 @@ final class _FakeAuthRepository implements AuthRepository {
     required String email,
     required String code,
   }) async => _onVerify?.call() ?? right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      _onOAuth?.call(provider) ?? right(unit);
 
   @override
   Future<Either<Failure, Unit>> signOut() async => right(unit);
@@ -250,5 +257,39 @@ void main() {
         greaterThan(0),
       );
     });
+
+    test(
+      'signInWithProvider success clears submitting and does not navigate',
+      () async {
+        final container = _container(
+          _FakeAuthRepository(onOAuth: (_) => right(unit)),
+        );
+        await container
+            .read(otpControllerProvider.notifier)
+            .signInWithProvider(AuthProvider.google);
+
+        final state = container.read(otpControllerProvider);
+        expect(state.submitting, isFalse);
+        expect(state.failure, isNull);
+        // Navigation is stream-driven; the controller never changes the step.
+        expect(state.step, OtpStep.email);
+      },
+    );
+
+    test(
+      'signInWithProvider failure clears submitting and carries it',
+      () async {
+        final container = _container(
+          _FakeAuthRepository(onOAuth: (_) => left(const InputFailure())),
+        );
+        await container
+            .read(otpControllerProvider.notifier)
+            .signInWithProvider(AuthProvider.discord);
+
+        final state = container.read(otpControllerProvider);
+        expect(state.submitting, isFalse);
+        expect(state.failure, isA<InputFailure>());
+      },
+    );
   });
 }

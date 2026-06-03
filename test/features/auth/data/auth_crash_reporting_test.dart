@@ -1,6 +1,7 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/observability/observability.dart';
 import 'package:featgg/src/features/auth/data/auth_repository_impl.dart';
+import 'package:featgg/src/features/auth/data/google_sign_in_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -36,12 +37,21 @@ final class _ThrowingGoTrueClient extends GoTrueClient {
   }
 }
 
+/// Minimal no-op GoogleSignInClient for tests that do not exercise the native path.
+final class _NoOpGoogleSignInClient implements GoogleSignInClient {
+  @override
+  Future<GoogleCredentials?> signIn() async => null;
+}
+
+AuthRepositoryImpl _repo(GoTrueClient client, _RecordingReporter reporter) =>
+    AuthRepositoryImpl(client, reporter, _NoOpGoogleSignInClient());
+
 void main() {
   group('AuthRepositoryImpl crash-reporting capture point', () {
     test('forwards an unexpected error to the reporter exactly once', () async {
       final reporter = _RecordingReporter();
       final error = Exception('network down');
-      final repo = AuthRepositoryImpl(_ThrowingGoTrueClient(error), reporter);
+      final repo = _repo(_ThrowingGoTrueClient(error), reporter);
 
       final result = await repo.requestEmailCode('user@example.com');
 
@@ -55,7 +65,7 @@ void main() {
 
     test('does NOT forward an expected rate-limit failure', () async {
       final reporter = _RecordingReporter();
-      final repo = AuthRepositoryImpl(
+      final repo = _repo(
         _ThrowingGoTrueClient(const AuthException('rate', statusCode: '429')),
         reporter,
       );
@@ -71,7 +81,7 @@ void main() {
 
     test('does NOT forward an expected input failure', () async {
       final reporter = _RecordingReporter();
-      final repo = AuthRepositoryImpl(
+      final repo = _repo(
         _ThrowingGoTrueClient(
           const AuthException('invalid', statusCode: '400'),
         ),
@@ -92,7 +102,7 @@ void main() {
       () async {
         final reporter = _RecordingReporter();
         const error = AuthException('internal', statusCode: '500');
-        final repo = AuthRepositoryImpl(_ThrowingGoTrueClient(error), reporter);
+        final repo = _repo(_ThrowingGoTrueClient(error), reporter);
 
         final result = await repo.requestEmailCode('user@example.com');
 
@@ -102,6 +112,27 @@ void main() {
         );
         expect(reporter.reported, hasLength(1));
         expect(reporter.reported.single, same(error));
+      },
+    );
+
+    test(
+      'does NOT forward a network failure (AuthRetryableFetchException)',
+      () async {
+        final reporter = _RecordingReporter();
+        final repo = _repo(
+          _ThrowingGoTrueClient(
+            AuthRetryableFetchException(message: 'socket closed'),
+          ),
+          reporter,
+        );
+
+        final result = await repo.requestEmailCode('user@example.com');
+
+        result.fold(
+          (f) => expect(f, isA<NetworkFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, isEmpty);
       },
     );
   });

@@ -26,6 +26,10 @@ final class _FakeRepository implements AuthRepository {
       _requestResult;
 
   @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
+
+  @override
   Future<Either<Failure, Unit>> verifyEmailCode({
     required String email,
     required String code,
@@ -55,6 +59,10 @@ final class _CountingRepository implements AuthRepository {
     requestCount++;
     return requestResult;
   }
+
+  @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
 
   @override
   Future<Either<Failure, Unit>> verifyEmailCode({
@@ -88,6 +96,10 @@ final class _FirstSuccessThenRateLimitRepository implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
+
+  @override
   Future<Either<Failure, Unit>> verifyEmailCode({
     required String email,
     required String code,
@@ -111,6 +123,45 @@ final class _PendingRepository implements AuthRepository {
   @override
   Future<Either<Failure, Unit>> requestEmailCode(String email) =>
       requestCompleter.future;
+
+  @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> verifyEmailCode({
+    required String email,
+    required String code,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> signOut() async => right(unit);
+
+  @override
+  AuthStatus currentStatus() => AuthStatus.signedOut;
+
+  @override
+  Stream<AuthStatus> statusChanges() => const Stream.empty();
+}
+
+/// Records the provider passed to signInWithOAuth; optionally holds the call in
+/// flight so the submitting state is observable.
+final class _OAuthRepository implements AuthRepository {
+  _OAuthRepository({this.hold = false});
+
+  final bool hold;
+  AuthProvider? lastProvider;
+  final _completer = Completer<Either<Failure, Unit>>();
+
+  @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) {
+    lastProvider = provider;
+    return hold ? _completer.future : Future.value(right(unit));
+  }
+
+  @override
+  Future<Either<Failure, Unit>> requestEmailCode(String email) async =>
+      right(unit);
 
   @override
   Future<Either<Failure, Unit>> verifyEmailCode({
@@ -407,4 +458,76 @@ void main() {
       await tester.pump(const Duration(seconds: 61));
     },
   );
+
+  testWidgets('email step shows Google and Discord provider buttons', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_screen(_FakeRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OutlinedButton), findsNWidgets(2));
+  });
+
+  testWidgets('tapping the Google button calls signInWithOAuth(google)', (
+    tester,
+  ) async {
+    final repo = _OAuthRepository();
+    await tester.pumpWidget(_screen(repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('signInProviderGoogle')));
+    await tester.pump();
+
+    expect(repo.lastProvider, AuthProvider.google);
+  });
+
+  testWidgets(
+    'provider buttons are disabled while an OAuth launch is in flight',
+    (tester) async {
+      final repo = _OAuthRepository(hold: true);
+      await tester.pumpWidget(_screen(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('signInProviderGoogle')));
+      await tester.pump(); // apply submitting: true
+
+      for (final button in tester.widgetList<OutlinedButton>(
+        find.byType(OutlinedButton),
+      )) {
+        expect(button.onPressed, isNull);
+      }
+    },
+  );
+
+  testWidgets('provider buttons stay enabled during an email-send cooldown', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _screen(
+        _FakeRepository(requestResult: left(const AuthRateLimitFailure())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A rate-limited send activates the cooldown but stays on the email step.
+    await tester.enterText(find.byType(TextFormField), 'user@example.com');
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
+    // The email Continue button is gated by the send cooldown...
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+    // ...but OAuth is an independent path the send cooldown has no say over.
+    expect(
+      tester
+          .widget<OutlinedButton>(find.byKey(const Key('signInProviderGoogle')))
+          .onPressed,
+      isNotNull,
+    );
+
+    // Drain the send-cooldown timer so none is pending at teardown.
+    await tester.pump(const Duration(seconds: 61));
+  });
 }

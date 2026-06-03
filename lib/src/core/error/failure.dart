@@ -41,12 +41,14 @@ final class ServerFailure extends Failure {
   bool get isExpected => false;
 }
 
-/// Transport-level fault: no connection, DNS, TLS, timeout.
+/// Transport-level: no connection, DNS, TLS, timeout. Normal control flow —
+/// offline/transport is the user's environment, not an app fault.
+/// Not crash-reported.
 final class NetworkFailure extends Failure {
   const NetworkFailure({super.message, super.code});
 
   @override
-  bool get isExpected => false;
+  bool get isExpected => true;
 }
 
 /// Session invalid/expired (`UNAUTHORIZED` 401 class). Normal control flow —
