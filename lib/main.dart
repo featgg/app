@@ -5,13 +5,18 @@ import 'src/core/bootstrap.dart';
 import 'src/core/core.dart';
 import 'src/features/auth/data/auth_data.dart';
 import 'src/features/auth/domain/auth_domain.dart';
+import 'src/features/profile/data/profile_data.dart';
+import 'src/features/profile/domain/profile_domain.dart';
 
 Future<void> main() async {
   await bootstrap(
     () => runApp(
       ProviderScope(
         observers: [const CrashReportingObserver(SentryCrashReporter())],
-        overrides: [authRepositoryProvider.overrideWith(buildAuthRepository)],
+        overrides: [
+          authRepositoryProvider.overrideWith(buildAuthRepository),
+          profileRepositoryProvider.overrideWith(buildProfileRepository),
+        ],
         child: const App(),
       ),
     ),

@@ -104,5 +104,42 @@
   "signInWithDiscord": "Continue with Discord",
   "@signInWithDiscord": {
     "description": "Label for the button that starts Discord OAuth sign-in."
+  },
+  "profileTitle": "Profile",
+  "@profileTitle": {
+    "description": "App bar title for the profile screen."
+  },
+  "profileHandle": "@{username}",
+  "@profileHandle": {
+    "description": "Rendered username handle on the profile screen. Keeps the @ prefix out of widget code.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "profileBioEmpty": "No bio yet.",
+  "@profileBioEmpty": {
+    "description": "Shown on the profile screen when the user has no bio set."
+  },
+  "profilePrivacyPublic": "Public profile",
+  "@profilePrivacyPublic": {
+    "description": "Privacy indicator label when the profile is public."
+  },
+  "profilePrivacyPrivate": "Private profile",
+  "@profilePrivacyPrivate": {
+    "description": "Privacy indicator label when the profile is private."
+  },
+  "profileAvatarLabel": "Profile photo",
+  "@profileAvatarLabel": {
+    "description": "Semantics label for the profile avatar image."
+  },
+  "asyncErrorTitle": "Couldn't load this",
+  "@asyncErrorTitle": {
+    "description": "Heading shown in the AsyncValueWidget error state."
+  },
+  "asyncRetry": "Retry",
+  "@asyncRetry": {
+    "description": "Label for the Retry action in the AsyncValueWidget error state."
   }
 }

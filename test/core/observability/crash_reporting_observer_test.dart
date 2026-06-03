@@ -16,13 +16,13 @@ final class _RecordingReporter implements CrashReporter {
 
 void main() {
   group('CrashReportingObserver', () {
-    test('forwards an unexpected provider error to the reporter', () {
+    test('forwards a non-Failure provider error', () {
       final fake = _RecordingReporter();
       final observer = CrashReportingObserver(fake);
 
-      final unexpectedError = const UnexpectedFailure(message: 'boom');
+      final nonFailureError = UnimplementedError('boom');
       final provider = Provider<int>((ref) {
-        Error.throwWithStackTrace(unexpectedError, StackTrace.empty);
+        Error.throwWithStackTrace(nonFailureError, StackTrace.empty);
       });
 
       final container = ProviderContainer(observers: [observer]);
@@ -32,7 +32,7 @@ void main() {
       // Riverpod 3 wraps the original error in ProviderException on read.
       expect(() => container.read(provider), throwsA(anything));
       expect(fake.reported, hasLength(1));
-      expect(fake.reported.first, same(unexpectedError));
+      expect(fake.reported.first, isA<UnimplementedError>());
     });
 
     test('drops an expected provider error', () {
@@ -50,6 +50,25 @@ void main() {
       expect(() => container.read(provider), throwsA(anything));
 
       // Expected failure must not be forwarded to the reporter.
+      expect(fake.reported, isEmpty);
+    });
+
+    test('drops an unexpected Failure wrapper', () {
+      final fake = _RecordingReporter();
+      final observer = CrashReportingObserver(fake);
+
+      final unexpectedFailure = const UnexpectedFailure(message: 'boom');
+      final provider = Provider<int>((ref) {
+        Error.throwWithStackTrace(unexpectedFailure, StackTrace.empty);
+      });
+
+      final container = ProviderContainer(observers: [observer]);
+      addTearDown(container.dispose);
+
+      expect(() => container.read(provider), throwsA(anything));
+
+      // The observer guard drops Failure wrappers — the repository is the single
+      // owner of unexpected-fault reporting (with the original exception).
       expect(fake.reported, isEmpty);
     });
   });

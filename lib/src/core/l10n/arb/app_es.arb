@@ -24,5 +24,13 @@
   "signInResendSuccess": "Te enviamos un código nuevo.",
   "signInOrDivider": "o",
   "signInWithGoogle": "Continuar con Google",
-  "signInWithDiscord": "Continuar con Discord"
+  "signInWithDiscord": "Continuar con Discord",
+  "profileTitle": "Perfil",
+  "profileHandle": "@{username}",
+  "profileBioEmpty": "Sin biografía todavía.",
+  "profilePrivacyPublic": "Perfil público",
+  "profilePrivacyPrivate": "Perfil privado",
+  "profileAvatarLabel": "Foto de perfil",
+  "asyncErrorTitle": "No se pudo cargar",
+  "asyncRetry": "Reintentar"
 }

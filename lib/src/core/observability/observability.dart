@@ -49,8 +49,9 @@ SentryEvent? filterExpectedFailures(SentryEvent event, Hint hint) {
 @riverpod
 CrashReporter crashReporter(Ref ref) => const SentryCrashReporter();
 
-/// Forwards otherwise-uncaught provider errors to a [CrashReporter]. The
-/// expected/unexpected gate lives in the reporter, so this simply forwards.
+/// Forwards otherwise-uncaught provider errors to a [CrashReporter]. A
+/// [Failure] reaching the observer was already mapped and reported by a
+/// repository, so it is skipped here; non-[Failure] errors are forwarded.
 final class CrashReportingObserver extends ProviderObserver {
   const CrashReportingObserver(this._reporter);
   final CrashReporter _reporter;
@@ -61,6 +62,11 @@ final class CrashReportingObserver extends ProviderObserver {
     Object error,
     StackTrace stackTrace,
   ) {
+    // A Failure here was already caught and mapped by a repository, which owns
+    // unexpected-fault reporting (with the original exception). Reporting it again
+    // would double-count the same fault. The observer covers only uncaught,
+    // non-Failure provider errors.
+    if (error is Failure) return;
     _reporter.reportError(error, stackTrace);
   }
 }
