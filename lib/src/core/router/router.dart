@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:featgg/src/features/auth/domain/auth_repository.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
+import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -39,6 +40,7 @@ GoRouter router(Ref ref) {
     routes: <RouteBase>[
       GoRoute(path: '/', builder: (_, _) => const HomePage()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
+      GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
     ],
   );
 }

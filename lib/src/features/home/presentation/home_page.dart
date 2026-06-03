@@ -2,6 +2,7 @@ import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Root screen of the app, reached through the central router at '/'.
 ///
@@ -15,6 +16,15 @@ class HomePage extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: l10n.profileTitle,
+            onPressed: () => context.push('/profile'),
+          ),
+        ],
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),

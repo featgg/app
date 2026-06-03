@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:featgg/main.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
+import 'package:featgg/src/features/profile/domain/profile_domain.dart';
+import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,10 +38,30 @@ final class _SignedInAuthRepository implements AuthRepository {
   Future<Either<Failure, Unit>> signOut() async => right(unit);
 }
 
+/// Profile repository that holds its future open so ProfileScreen stays in
+/// the loading state — no real data or network call needed for nav tests.
+final class _PendingProfileRepository implements ProfileRepository {
+  final _completer = Completer<Either<Failure, Profile>>();
+
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() => _completer.future;
+}
+
 Widget _signedInApp() {
   final container = ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(_SignedInAuthRepository()),
+    ],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(container: container, child: const App());
+}
+
+Widget _signedInAppWithProfile() {
+  final container = ProviderContainer(
+    overrides: [
+      authRepositoryProvider.overrideWithValue(_SignedInAuthRepository()),
+      profileRepositoryProvider.overrideWithValue(_PendingProfileRepository()),
     ],
   );
   addTearDown(container.dispose);
@@ -60,5 +84,31 @@ void main() {
       final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.theme?.useMaterial3, isTrue);
     });
+
+    testWidgets(
+      'profile icon push navigates to ProfileScreen and back returns to HomePage',
+      (tester) async {
+        await tester.pumpWidget(_signedInAppWithProfile());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HomePage), findsOneWidget);
+
+        // Tap the profile icon button to push /profile.
+        await tester.tap(find.byIcon(Icons.account_circle_outlined));
+        await tester.pump(); // one frame — routing + ProfileScreen loading
+        await tester.pump(); // settle the push animation
+
+        expect(find.byType(ProfileScreen), findsOneWidget);
+
+        // Tap the AppBar back button to pop the profile route.
+        final backButton = find.byType(BackButton);
+        expect(backButton, findsOneWidget);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HomePage), findsOneWidget);
+        expect(find.byType(ProfileScreen), findsNothing);
+      },
+    );
   });
 }
