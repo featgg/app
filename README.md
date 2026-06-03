@@ -86,6 +86,28 @@ If you absolutely must commit without running the hook, use
 format / analyze / test checks run in CI and will block the PR, and
 the CI secret scan runs against full history.
 
+## Project setup
+
+Run this after a fresh clone, after `flutter clean`, or when `flutter analyze`
+or a build fails because generated code (`*.g.dart`) or l10n output is missing
+(both are gitignored and absent until regenerated):
+
+```sh
+dart run tool/setup.dart
+```
+
+What it does: `flutter clean` → `flutter pub get` (also regenerates l10n) →
+`dart run build_runner build --delete-conflicting-outputs`.
+
+If the script itself cannot launch (no Dart on PATH, no package resolution at
+all), run the three steps manually:
+
+```sh
+flutter clean
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+```
+
 ## License
 
 This project is source-available under the [Functional Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2)](https://fsl.software). Each version automatically converts to the Apache License, Version 2.0 two years after its publication. See [LICENSE](LICENSE.md) for the full text.
