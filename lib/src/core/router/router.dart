@@ -12,11 +12,15 @@ part 'router.g.dart';
 
 @riverpod
 GoRouter router(Ref ref) {
-  final status = ref.watch(authStatusProvider);
-
-  // A ValueNotifier bridges Riverpod rebuilds to go_router's refreshListenable
-  // so that redirect re-runs whenever the auth status changes.
-  final notifier = ValueNotifier<AuthStatus?>(status.value);
+  // Build the GoRouter ONCE: read (not watch) the seed status, so an auth-status
+  // change does not rebuild this provider. Rebuilding would recreate the router
+  // and reset the navigation stack — including on the ~hourly token refresh. A
+  // ValueNotifier kept current by the listener below is go_router's
+  // refreshListenable; it alone drives redirect re-evaluation, and redirect
+  // reads the notifier's live value rather than a captured one.
+  final notifier = ValueNotifier<AuthStatus?>(
+    ref.read(authStatusProvider).value,
+  );
   ref.listen<AsyncValue<AuthStatus>>(authStatusProvider, (_, next) {
     notifier.value = next.value;
   });
@@ -26,7 +30,7 @@ GoRouter router(Ref ref) {
     initialLocation: '/',
     refreshListenable: notifier,
     redirect: (context, state) {
-      final signedIn = status.value == AuthStatus.signedIn;
+      final signedIn = notifier.value == AuthStatus.signedIn;
       final atSignIn = state.matchedLocation == '/sign-in';
       if (!signedIn && !atSignIn) return '/sign-in';
       if (signedIn && atSignIn) return '/';
