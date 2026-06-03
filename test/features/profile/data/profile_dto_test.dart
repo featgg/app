@@ -2,12 +2,16 @@ import 'package:featgg/src/features/profile/data/profile_dto.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, dynamic> _fullRow({String privacyLevel = 'public'}) => {
+Map<String, dynamic> _fullRow({
+  String privacyLevel = 'public',
+  String themeId = 'classic',
+}) => {
   'id': 'user-123',
   'username': 'testuser',
   'display_name': 'Test User',
   'avatar_url': 'https://example.com/avatar.png',
   'bio': 'Hello world',
+  'theme_id': themeId,
   'privacy_level': privacyLevel,
 };
 
@@ -23,6 +27,7 @@ void main() {
       expect(profile.avatarUrl, 'https://example.com/avatar.png');
       expect(profile.bio, 'Hello world');
       expect(profile.privacy, ProfilePrivacy.public);
+      expect(profile.theme, ProfileTheme.classic);
     });
 
     test('privacy_level "private" maps to ProfilePrivacy.private', () {
@@ -39,6 +44,7 @@ void main() {
         'display_name': 'No Avatar',
         'avatar_url': null,
         'bio': null,
+        'theme_id': 'classic',
         'privacy_level': 'public',
       };
       final profile = profileFromDto(ProfileDto.fromJson(row));
@@ -51,6 +57,62 @@ void main() {
       final dto = ProfileDto.fromJson(_fullRow(privacyLevel: 'restricted'));
 
       expect(() => profileFromDto(dto), throwsA(isA<FormatException>()));
+    });
+
+    // New tests for theme_id mapping.
+
+    test('maps each theme_id wire token to the matching ProfileTheme', () {
+      for (final entry in {
+        'classic': ProfileTheme.classic,
+        'immersive': ProfileTheme.immersive,
+        'retro': ProfileTheme.retro,
+        'analyst': ProfileTheme.analyst,
+      }.entries) {
+        final dto = ProfileDto.fromJson(_fullRow(themeId: entry.key));
+        final profile = profileFromDto(dto);
+        expect(
+          profile.theme,
+          entry.value,
+          reason: 'theme_id "${entry.key}" should map to ${entry.value}',
+        );
+      }
+    });
+
+    test('an unknown theme_id throws FormatException', () {
+      final dto = ProfileDto.fromJson(_fullRow(themeId: 'neon'));
+
+      expect(() => profileFromDto(dto), throwsA(isA<FormatException>()));
+    });
+
+    test('profileEditToColumns builds the writable columns', () {
+      const edit = ProfileEdit(
+        displayName: 'Alice',
+        avatarUrl: 'https://example.com/a.png',
+        bio: 'Hello',
+        theme: ProfileTheme.retro,
+        privacy: ProfilePrivacy.private,
+      );
+      final columns = profileEditToColumns(edit);
+
+      expect(
+        columns.keys,
+        containsAll([
+          'display_name',
+          'avatar_url',
+          'bio',
+          'theme_id',
+          'privacy_level',
+        ]),
+      );
+      expect(columns['display_name'], 'Alice');
+      expect(columns['avatar_url'], 'https://example.com/a.png');
+      expect(columns['bio'], 'Hello');
+      expect(columns['theme_id'], 'retro');
+      expect(columns['privacy_level'], 'private');
+
+      // username and server-managed columns must be absent.
+      expect(columns.containsKey('username'), isFalse);
+      expect(columns.containsKey('id'), isFalse);
     });
   });
 }

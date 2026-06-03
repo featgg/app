@@ -9,4 +9,12 @@ abstract interface class ProfileDataSource {
   /// Returns null when no row exists (maybeSingle semantics). Throwing on a
   /// transport or parse fault is the caller's single try/catch to map.
   Future<ProfileDto?> fetchProfileRow(String userId);
+
+  /// Writes [values] (the writable columns) to the signed-in user's row and
+  /// returns the updated row as a DTO. Throws on transport or parse fault for
+  /// the caller's single try/catch to map.
+  Future<ProfileDto> updateProfileRow(
+    String userId,
+    Map<String, dynamic> values,
+  );
 }

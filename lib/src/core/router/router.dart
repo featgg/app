@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:featgg/src/features/auth/domain/auth_repository.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
+import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -41,6 +42,13 @@ GoRouter router(Ref ref) {
       GoRoute(path: '/', builder: (_, _) => const HomePage()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: '/profile/edit',
+        redirect: (context, state) =>
+            state.extra is Profile ? null : '/profile',
+        builder: (_, state) =>
+            ProfileEditScreen(profile: state.extra! as Profile),
+      ),
     ],
   );
 }

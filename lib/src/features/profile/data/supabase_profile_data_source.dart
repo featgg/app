@@ -10,7 +10,7 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
 
   static const _table = 'profiles';
   static const _columns =
-      'id, username, display_name, avatar_url, bio, privacy_level';
+      'id, username, display_name, avatar_url, bio, theme_id, privacy_level';
 
   @override
   Future<ProfileDto?> fetchProfileRow(String userId) async {
@@ -20,6 +20,22 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
         .eq('id', userId)
         .maybeSingle();
     if (row == null) return null;
+    return ProfileDto.fromJson(row);
+  }
+
+  @override
+  Future<ProfileDto> updateProfileRow(
+    String userId,
+    Map<String, dynamic> values,
+  ) async {
+    // .single() — an update of the owner's own row must return exactly one row;
+    // zero rows is a fault that the caller's try/catch maps to UnexpectedFailure.
+    final row = await _client
+        .from(_table)
+        .update(values)
+        .eq('id', userId)
+        .select(_columns)
+        .single();
     return ProfileDto.fromJson(row);
   }
 }

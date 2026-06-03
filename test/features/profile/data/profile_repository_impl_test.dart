@@ -21,15 +21,28 @@ final class _RecordingReporter implements CrashReporter {
 
 /// Callback-driven fake for the ProfileDataSource seam.
 final class _FakeDataSource implements ProfileDataSource {
-  _FakeDataSource({this.onFetch});
+  _FakeDataSource({this.onFetch, this.onUpdate});
 
   final Future<ProfileDto?> Function(String userId)? onFetch;
-  int calls = 0;
+  final Future<ProfileDto> Function(String userId, Map<String, dynamic> values)?
+  onUpdate;
+  int fetchCalls = 0;
+  int updateCalls = 0;
 
   @override
   Future<ProfileDto?> fetchProfileRow(String userId) {
-    calls++;
+    fetchCalls++;
     return onFetch?.call(userId) ?? Future.value(null);
+  }
+
+  @override
+  Future<ProfileDto> updateProfileRow(
+    String userId,
+    Map<String, dynamic> values,
+  ) {
+    updateCalls++;
+    if (onUpdate != null) return onUpdate!(userId, values);
+    throw UnimplementedError('onUpdate not set');
   }
 }
 
@@ -39,6 +52,7 @@ final _validDto = ProfileDto.fromJson(const {
   'display_name': 'Test User',
   'avatar_url': 'https://example.com/avatar.png',
   'bio': 'Hello world',
+  'theme_id': 'classic',
   'privacy_level': 'public',
 });
 
@@ -82,7 +96,7 @@ void main() {
           (_) => fail('expected Left'),
         );
         expect(reporter.reported, isEmpty);
-        expect(dataSource.calls, equals(0));
+        expect(dataSource.fetchCalls, equals(0));
       },
     );
 
@@ -188,6 +202,100 @@ void main() {
           onFetch: (_) async => throw const FormatException('bad column'),
         );
         final result = await _repo(dataSource, reporter).fetchMyProfile();
+
+        result.fold(
+          (f) => expect(f, isA<UnexpectedFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, hasLength(1));
+      },
+    );
+  });
+
+  group('ProfileRepositoryImpl.updateMyProfile', () {
+    const edit = ProfileEdit(
+      displayName: 'Updated Name',
+      avatarUrl: 'https://example.com/new.png',
+      bio: 'New bio',
+      theme: ProfileTheme.retro,
+      privacy: ProfilePrivacy.private,
+    );
+
+    final updatedDto = ProfileDto.fromJson(const {
+      'id': 'user-123',
+      'username': 'testuser',
+      'display_name': 'Updated Name',
+      'avatar_url': 'https://example.com/new.png',
+      'bio': 'New bio',
+      'theme_id': 'retro',
+      'privacy_level': 'private',
+    });
+
+    test('returns Right(Profile) on a valid row', () async {
+      final dataSource = _FakeDataSource(onUpdate: (_, _) async => updatedDto);
+      final result = await _repo(
+        dataSource,
+        _RecordingReporter(),
+      ).updateMyProfile(edit);
+
+      expect(result.isRight(), isTrue);
+      result.fold((_) => fail('expected Right'), (profile) {
+        expect(profile.displayName, 'Updated Name');
+        expect(profile.theme, ProfileTheme.retro);
+        expect(profile.privacy, ProfilePrivacy.private);
+      });
+    });
+
+    test(
+      'null currentUser returns Left(AuthFailure) and does not call the seam',
+      () async {
+        final reporter = _RecordingReporter();
+        final dataSource = _FakeDataSource();
+        final result = await _repo(
+          dataSource,
+          reporter,
+          userId: null,
+        ).updateMyProfile(edit);
+
+        result.fold(
+          (f) => expect(f, isA<AuthFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, isEmpty);
+        expect(dataSource.updateCalls, equals(0));
+      },
+    );
+
+    test(
+      'a constraint-violation PostgrestException returns Left(InputFailure) and is not reported',
+      () async {
+        final reporter = _RecordingReporter();
+        final dataSource = _FakeDataSource(
+          onUpdate: (_, _) async => throw PostgrestException(
+            message: 'check violation',
+            code: '23514',
+          ),
+        );
+        final result = await _repo(dataSource, reporter).updateMyProfile(edit);
+
+        result.fold(
+          (f) => expect(f, isA<InputFailure>()),
+          (_) => fail('expected Left'),
+        );
+        // InputFailure is expected control flow — must not be crash-reported.
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'a parse fault on update returns Left(UnexpectedFailure) and is reported',
+      () async {
+        final reporter = _RecordingReporter();
+        final dataSource = _FakeDataSource(
+          onUpdate: (_, _) async =>
+              throw const FormatException('bad column on update'),
+        );
+        final result = await _repo(dataSource, reporter).updateMyProfile(edit);
 
         result.fold(
           (f) => expect(f, isA<UnexpectedFailure>()),
