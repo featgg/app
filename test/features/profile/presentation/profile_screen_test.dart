@@ -21,6 +21,10 @@ final class _FakeRepository implements ProfileRepository {
     calls++;
     return result();
   }
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
+      right(_profile);
 }
 
 /// Holds the future open indefinitely so the loading state is observable.
@@ -29,6 +33,10 @@ final class _PendingRepository implements ProfileRepository {
 
   @override
   Future<Either<Failure, Profile>> fetchMyProfile() => _completer.future;
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
+      _completer.future;
 }
 
 const _profile = Profile(
@@ -37,6 +45,7 @@ const _profile = Profile(
   displayName: 'Test User',
   avatarUrl: null,
   bio: 'My bio',
+  theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
 );
 
@@ -46,6 +55,7 @@ const _privateProfile = Profile(
   displayName: 'Private User',
   avatarUrl: null,
   bio: null,
+  theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.private,
 );
 

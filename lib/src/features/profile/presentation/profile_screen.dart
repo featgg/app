@@ -1,12 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/core.dart';
 import '../domain/profile.dart';
 import 'profile_provider.dart';
 
-/// Displays the signed-in user's own profile. View only — no edit affordance.
+/// Displays the signed-in user's own profile.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -15,7 +16,22 @@ class ProfileScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(profileProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.profileTitle)),
+      appBar: AppBar(
+        title: Text(l10n.profileTitle),
+        actions: [
+          // Only show Edit when the profile has loaded; the action is defined
+          // here so the AppBar is always present, but it is conditionally
+          // populated from the data state below.
+          if (state.hasValue)
+            IconButton(
+              key: const Key('profileEditButton'),
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l10n.profileEdit,
+              onPressed: () =>
+                  context.push('/profile/edit', extra: state.value!),
+            ),
+        ],
+      ),
       body: AsyncValueWidget<Profile>(
         value: state,
         onRetry: () => ref.invalidate(profileProvider),

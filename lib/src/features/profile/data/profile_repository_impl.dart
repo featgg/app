@@ -39,6 +39,19 @@ final class ProfileRepositoryImpl implements ProfileRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final columns = profileEditToColumns(edit);
+      final dto = await _dataSource.updateProfileRow(userId, columns);
+      return right(profileFromDto(dto));
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
   Failure _handleError(Object error, StackTrace st) {
     final failure = _mapError(error);
     if (!failure.isExpected) _crashReporter.reportError(error, st);
@@ -56,6 +69,12 @@ final class ProfileRepositoryImpl implements ProfileRepository {
       // PostgREST surfaces RLS denial / JWT problems in the 401/403 class.
       if (code == '401' || code == '403' || code == 'PGRST301') {
         return const AuthFailure();
+      }
+      // Postgres integrity-violation class (23xxx): check, unique, not-null
+      // violations are expected control flow — the backend constraint is
+      // authoritative and the client surfaces the rejection as an InputFailure.
+      if (code != null && code.startsWith('23')) {
+        return InputFailure(message: error.message, code: code);
       }
       return UnexpectedFailure(message: error.message);
     }

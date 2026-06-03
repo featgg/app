@@ -6,7 +6,10 @@ import 'package:featgg/src/core/router/router.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
+import 'package:featgg/src/features/profile/domain/profile_domain.dart';
+import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
@@ -41,9 +44,35 @@ final class _FakeAuthRepository implements AuthRepository {
   Future<Either<Failure, Unit>> signOut() async => right(unit);
 }
 
+/// Profile repository whose future never completes, keeping ProfileScreen in
+/// a stable loading state — navigation tests do not need real profile data.
+final class _PendingProfileRepository implements ProfileRepository {
+  final _completer = Completer<Either<Failure, Profile>>();
+
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() => _completer.future;
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
+      _completer.future;
+}
+
 Widget _app(AuthRepository repo) {
   final container = ProviderContainer(
     overrides: [authRepositoryProvider.overrideWithValue(repo)],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(container: container, child: const App());
+}
+
+Widget _signedInAppWithProfile() {
+  final container = ProviderContainer(
+    overrides: [
+      authRepositoryProvider.overrideWithValue(
+        _FakeAuthRepository(AuthStatus.signedIn),
+      ),
+      profileRepositoryProvider.overrideWithValue(_PendingProfileRepository()),
+    ],
   );
   addTearDown(container.dispose);
   return UncontrolledProviderScope(container: container, child: const App());
@@ -116,5 +145,25 @@ void main() {
         expect(find.byType(HomePage), findsOneWidget);
       },
     );
+
+    testWidgets('/profile/edit without a Profile extra redirects to /profile', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_signedInAppWithProfile());
+      await tester.pumpAndSettle();
+
+      // Navigate to /profile/edit with no extra — the route-level redirect
+      // must send to /profile instead of crashing on the missing Profile.
+      final context = tester.element(find.byType(HomePage));
+      GoRouter.of(context).go('/profile/edit');
+      // The redirect lands on /profile, which stays in a perpetual loading
+      // state here (the pending repo never completes), so pump frames rather
+      // than settling the spinner, which would never settle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.byType(ProfileEditScreen), findsNothing);
+    });
   });
 }

@@ -134,6 +134,70 @@
   "@profileAvatarLabel": {
     "description": "Semantics label for the profile avatar image."
   },
+  "profileEdit": "Edit",
+  "@profileEdit": {
+    "description": "Tooltip and button label for the Edit profile action on the profile screen."
+  },
+  "profileEditTitle": "Edit profile",
+  "@profileEditTitle": {
+    "description": "App bar title for the profile-edit screen."
+  },
+  "profileDisplayNameLabel": "Display name",
+  "@profileDisplayNameLabel": {
+    "description": "Label for the display-name input field on the profile-edit screen."
+  },
+  "profileAvatarUrlLabel": "Avatar URL",
+  "@profileAvatarUrlLabel": {
+    "description": "Label for the avatar URL input field on the profile-edit screen."
+  },
+  "profileBioLabel": "Bio",
+  "@profileBioLabel": {
+    "description": "Label for the bio input field on the profile-edit screen."
+  },
+  "profileThemeLabel": "Theme",
+  "@profileThemeLabel": {
+    "description": "Section label above the theme selector on the profile-edit screen."
+  },
+  "profileThemeClassic": "Classic",
+  "@profileThemeClassic": {
+    "description": "Label for the Classic theme option."
+  },
+  "profileThemeImmersive": "Immersive",
+  "@profileThemeImmersive": {
+    "description": "Label for the Immersive theme option."
+  },
+  "profileThemeRetro": "Retro",
+  "@profileThemeRetro": {
+    "description": "Label for the Retro theme option."
+  },
+  "profileThemeAnalyst": "Analyst",
+  "@profileThemeAnalyst": {
+    "description": "Label for the Analyst theme option."
+  },
+  "profilePrivacyLabel": "Privacy",
+  "@profilePrivacyLabel": {
+    "description": "Section label above the privacy selector on the profile-edit screen."
+  },
+  "profileSave": "Save",
+  "@profileSave": {
+    "description": "Label for the Save action on the profile-edit screen."
+  },
+  "profileSaved": "Profile saved.",
+  "@profileSaved": {
+    "description": "Transient snackbar confirmation shown after a profile update succeeds."
+  },
+  "profileDisplayNameInvalid": "Display name must be 1–50 characters.",
+  "@profileDisplayNameInvalid": {
+    "description": "Shown on the display-name field when the value fails client validation."
+  },
+  "profileBioTooLong": "Bio must be 150 characters or fewer.",
+  "@profileBioTooLong": {
+    "description": "Shown on the bio field when the value exceeds the 150-character limit."
+  },
+  "profileAvatarUrlInvalid": "Enter a valid http or https URL, or leave blank.",
+  "@profileAvatarUrlInvalid": {
+    "description": "Shown on the avatar URL field when the value is not a valid absolute http/https URL."
+  },
   "asyncErrorTitle": "Couldn't load this",
   "@asyncErrorTitle": {
     "description": "Heading shown in the AsyncValueWidget error state."

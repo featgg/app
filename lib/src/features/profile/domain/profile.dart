@@ -3,6 +3,9 @@ import 'package:equatable/equatable.dart';
 /// Whether the signed-in user's profile is publicly discoverable.
 enum ProfilePrivacy { public, private }
 
+/// Visual theme the user has chosen for their profile.
+enum ProfileTheme { classic, immersive, retro, analyst }
+
 /// The signed-in user's own identity as read from the profiles table.
 final class Profile extends Equatable {
   const Profile({
@@ -11,6 +14,7 @@ final class Profile extends Equatable {
     required this.displayName,
     required this.avatarUrl,
     required this.bio,
+    required this.theme,
     required this.privacy,
   });
 
@@ -24,7 +28,25 @@ final class Profile extends Equatable {
   /// Free-text bio (≤150 chars per the brief), or null when unset.
   final String? bio;
 
+  final ProfileTheme theme;
   final ProfilePrivacy privacy;
+
+  Profile copyWith({
+    String? displayName,
+    // Wrapped in a nullary function so callers can explicitly set null.
+    String? Function()? avatarUrl,
+    String? Function()? bio,
+    ProfileTheme? theme,
+    ProfilePrivacy? privacy,
+  }) => Profile(
+    id: id,
+    username: username,
+    displayName: displayName ?? this.displayName,
+    avatarUrl: avatarUrl != null ? avatarUrl() : this.avatarUrl,
+    bio: bio != null ? bio() : this.bio,
+    theme: theme ?? this.theme,
+    privacy: privacy ?? this.privacy,
+  );
 
   @override
   List<Object?> get props => [
@@ -33,6 +55,58 @@ final class Profile extends Equatable {
     displayName,
     avatarUrl,
     bio,
+    theme,
     privacy,
   ];
 }
+
+/// Writable fields for an update (the documented writable columns, minus
+/// username). avatarUrl/bio are nullable: null clears the column.
+final class ProfileEdit extends Equatable {
+  const ProfileEdit({
+    required this.displayName,
+    required this.avatarUrl,
+    required this.bio,
+    required this.theme,
+    required this.privacy,
+  });
+
+  final String displayName;
+  final String? avatarUrl;
+  final String? bio;
+  final ProfileTheme theme;
+  final ProfilePrivacy privacy;
+
+  /// Pure client-side validation mirroring the documented constraints.
+  /// Returns the per-field errors found, empty when the edit is valid.
+  /// UX feedback only; the backend remains authoritative.
+  Set<ProfileEditField> validate() {
+    final errors = <ProfileEditField>{};
+
+    final trimmedName = displayName.trim();
+    if (trimmedName.isEmpty || trimmedName.length > 50) {
+      errors.add(ProfileEditField.displayName);
+    }
+
+    if (bio != null && bio!.length > 150) {
+      errors.add(ProfileEditField.bio);
+    }
+
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      final uri = Uri.tryParse(avatarUrl!);
+      if (uri == null ||
+          !uri.isAbsolute ||
+          (uri.scheme != 'http' && uri.scheme != 'https')) {
+        errors.add(ProfileEditField.avatarUrl);
+      }
+    }
+
+    return errors;
+  }
+
+  @override
+  List<Object?> get props => [displayName, avatarUrl, bio, theme, privacy];
+}
+
+/// Which field failed client validation; the screen maps each to localized copy.
+enum ProfileEditField { displayName, avatarUrl, bio }

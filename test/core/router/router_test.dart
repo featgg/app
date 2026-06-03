@@ -45,6 +45,10 @@ final class _PendingProfileRepository implements ProfileRepository {
 
   @override
   Future<Either<Failure, Profile>> fetchMyProfile() => _completer.future;
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
+      _completer.future;
 }
 
 Widget _signedInApp() {
