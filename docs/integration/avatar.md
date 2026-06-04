@@ -39,7 +39,7 @@ token and the endpoint returns `UNAUTHORIZED`.
   | `PAYLOAD_TOO_LARGE`       |    413 | `{ "success": false, "code": "...", "message": "..." }`    | Generic "couldn't use that image" copy. Maximum upload size is 1 MB.           |
   | `UNSUPPORTED_MEDIA_TYPE`  |    415 | `{ "success": false, "code": "...", "message": "..." }`    | Generic "couldn't use that image" copy. Fires when `Content-Type` is not `image/jpeg`, when the request bytes are not a real JPEG (server magic-byte sniff), when the body is empty, or when the HTTP method is not POST. The client never triggers these — it always POSTs a non-empty, real `image/jpeg` body (`encodeJpg` output). |
   | `UNAUTHORIZED`            |    401 | `{ "success": false, "code": "...", "message": "..." }`    | Re-authenticate; avatar unchanged.                                             |
-  | `AVATAR_COOLDOWN`         |    429 | `{ "success": false, "code": "...", "message": "...", "retry_after": <int seconds> }` | The upload affordance disables and shows a countdown seeded from `retry_after`; when `retry_after` is absent the client disables for a short window and shows a generic "try again shortly" message. Note: a `Retry-After` header also carries the seconds, but the client reads `retry_after` from the body because the client SDK does not expose response headers. |
+  | `AVATAR_COOLDOWN`         |    429 | `{ "success": false, "code": "...", "message": "..." }`    | Show a "try again shortly" message; avatar unchanged.                          |
   | `MODERATION_UNAVAILABLE`  |    500 | `{ "success": false, "code": "...", "message": "..." }`    | "Try again later"; avatar unchanged (fail closed).                             |
 
   The client branches on the `code` token first; HTTP status is the
@@ -62,12 +62,9 @@ token and the endpoint returns `UNAUTHORIZED`.
 This surface enforces a per-user upload throttle: a burst of 3 uploads is
 allowed, then roughly 1 per 60 seconds (the allowance refills one slot per
 minute, up to 3). In normal use it is almost never hit. When it is, the
-endpoint returns `429 AVATAR_COOLDOWN`. The server reports the remaining
-seconds in the `Retry-After` header (authoritative); because the client SDK
-does not expose response headers, the client uses a `retry_after` body field
-when present and otherwise backs off for a fixed ~60 s window. Either way the
-client disables the upload affordance for the window — a live countdown when
-the seconds are known, a generic "try again shortly" message otherwise.
+endpoint returns `429 AVATAR_COOLDOWN`. The client treats the 429 as a
+retryable error and surfaces a static "try again shortly" message; the avatar
+is unchanged.
 
 ## Cross-references
 

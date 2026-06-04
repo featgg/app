@@ -129,7 +129,7 @@ final class _CooldownAvatarRepository implements AvatarRepository {
   Future<Either<Failure, String>> uploadAvatar({
     required Uint8List bytes,
     required String contentType,
-  }) async => left(const RateLimitFailure(retryAfterSeconds: 30));
+  }) async => left(const RateLimitFailure());
 }
 
 Widget _screen(
@@ -231,9 +231,7 @@ void main() {
     expect(find.byKey(const Key('avatarUploadErrorSnackBar')), findsOneWidget);
   });
 
-  testWidgets('a 429 cooldown disables the affordance and shows a countdown', (
-    tester,
-  ) async {
+  testWidgets('a 429 surfaces a keyed error snackbar', (tester) async {
     await tester.pumpWidget(
       _screen(
         _FakeRepository(updateResult: () => right(_profile)),
@@ -244,18 +242,10 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('avatarUploadField')));
-    await tester.pump(); // start the pick → upload
-    await tester.pump(const Duration(milliseconds: 10)); // resolve → cooldown
+    await tester.pumpAndSettle();
 
-    // The cooldown countdown label renders (by key, not literal copy).
-    expect(
-      find.byKey(const Key('avatarCooldownCountdownLabel')),
-      findsOneWidget,
-    );
-
-    // Drain the controller's cooldown timer and the widget's countdown timer so
-    // the test ends with no pending timers.
-    await tester.pump(const Duration(seconds: 61));
+    // A 429 surfaces through the same keyed error snackbar as a rejection.
+    expect(find.byKey(const Key('avatarUploadErrorSnackBar')), findsOneWidget);
   });
 
   testWidgets(

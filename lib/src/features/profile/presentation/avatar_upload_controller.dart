@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/error/failure.dart';
@@ -12,12 +9,8 @@ import 'profile_provider.dart';
 
 part 'avatar_upload_controller.g.dart';
 
-/// Fixed fallback window used when the server omits retry_after. Mirrors the
-/// documented ≈60s per-user cooldown from the avatar upload brief.
-const _cooldownFallback = Duration(seconds: 60);
-
 /// Coarse upload-pipeline status.
-enum AvatarUploadStatus { idle, picking, uploading, success, error, cooldown }
+enum AvatarUploadStatus { idle, picking, uploading, success, error }
 
 /// Immutable state for the avatar-upload pipeline.
 final class AvatarUploadState extends Equatable {
@@ -25,74 +18,56 @@ final class AvatarUploadState extends Equatable {
     required this.status,
     this.failure,
     this.newAvatarUrl,
-    this.cooldownSecondsRemaining = 0,
   });
 
   final AvatarUploadStatus status;
 
-  /// Set when [status] is [AvatarUploadStatus.error] or
-  /// [AvatarUploadStatus.cooldown].
+  /// Set when [status] is [AvatarUploadStatus.error].
   final Failure? failure;
 
   /// Set when [status] is [AvatarUploadStatus.success].
   final String? newAvatarUrl;
 
-  /// Seed for the widget's display countdown when [status] is
-  /// [AvatarUploadStatus.cooldown]. 0 means retry_after was absent; the widget
-  /// shows a generic "try again shortly" message in that case. The widget owns
-  /// the live decrement — this field is the initial seed only (mirrors
-  /// OtpState.resendSecondsRemaining).
-  final int cooldownSecondsRemaining;
-
   @override
-  List<Object?> get props => [
-    status,
-    failure,
-    newAvatarUrl,
-    cooldownSecondsRemaining,
-  ];
+  List<Object?> get props => [status, failure, newAvatarUrl];
 
   AvatarUploadState copyWith({
     AvatarUploadStatus? status,
     Failure? failure,
     String? newAvatarUrl,
     bool clearFailure = false,
-    int? cooldownSecondsRemaining,
   }) => AvatarUploadState(
     status: status ?? this.status,
     failure: clearFailure ? null : (failure ?? this.failure),
     newAvatarUrl: newAvatarUrl ?? this.newAvatarUrl,
-    cooldownSecondsRemaining:
-        cooldownSecondsRemaining ?? this.cooldownSecondsRemaining,
   );
 }
 
 @riverpod
 class AvatarUploadController extends _$AvatarUploadController {
-  Timer? _cooldownTimer;
-
   @override
   AvatarUploadState build() {
-    ref.onDispose(() => _cooldownTimer?.cancel());
     return const AvatarUploadState(status: AvatarUploadStatus.idle);
   }
 
   /// Runs the full pick → crop → compress → upload pipeline.
   ///
-  /// Cancelling at either the gallery-pick or the crop step returns to idle
-  /// without an error. On success, invalidates [profileProvider] so the new
-  /// avatar URL re-renders. Throws [AvatarProcessingException] on a local
-  /// decode/crop fault, which is mapped to [MediaProcessingFailure].
-  Future<void> pickAndUpload(BuildContext context) async {
+  /// [pickAndCrop] is supplied by the widget; it closes over the widget's UI
+  /// context so the controller stays context-free (no UI types in the provider).
+  /// Returns `null` on
+  /// cancel, throws [AvatarProcessingException] on a local decode/crop fault
+  /// (mapped to [MediaProcessingFailure]), or throws any other exception
+  /// (mapped to [UnexpectedFailure] + crash-reported).
+  /// On success, invalidates [profileProvider] so the new avatar URL re-renders.
+  Future<void> pickAndUpload(Future<AvatarPick?> Function() pickAndCrop) async {
     state = state.copyWith(
       status: AvatarUploadStatus.picking,
       clearFailure: true,
     );
 
-    final picker = ref.read(avatarPickerProvider);
     final AvatarPick? pick;
     try {
-      pick = await picker.pickAndCrop(context);
+      pick = await pickAndCrop();
     } catch (e, st) {
       // Guard against a disposed notifier before writing state or reporting.
       if (!ref.mounted) return;
@@ -138,16 +113,10 @@ class AvatarUploadController extends _$AvatarUploadController {
     if (!ref.mounted) return;
 
     result.fold(
-      (failure) {
-        if (failure is RateLimitFailure) {
-          _startCooldown(failure);
-        } else {
-          state = state.copyWith(
-            status: AvatarUploadStatus.error,
-            failure: failure,
-          );
-        }
-      },
+      (failure) => state = state.copyWith(
+        status: AvatarUploadStatus.error,
+        failure: failure,
+      ),
       (url) {
         ref.invalidate(profileProvider);
         state = state.copyWith(
@@ -157,27 +126,5 @@ class AvatarUploadController extends _$AvatarUploadController {
         );
       },
     );
-  }
-
-  /// Starts (or restarts) the upload cooldown. Cancelling any in-flight timer
-  /// first means a re-upload that also 429s extends the window rather than
-  /// re-enabling early (mirrors OtpController._startSendCooldown).
-  void _startCooldown(RateLimitFailure failure) {
-    final windowSeconds =
-        failure.retryAfterSeconds ?? _cooldownFallback.inSeconds;
-    state = state.copyWith(
-      status: AvatarUploadStatus.cooldown,
-      failure: failure,
-      cooldownSecondsRemaining: failure.retryAfterSeconds ?? 0,
-    );
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer(Duration(seconds: windowSeconds), () {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        status: AvatarUploadStatus.idle,
-        clearFailure: true,
-        cooldownSecondsRemaining: 0,
-      );
-    });
   }
 }

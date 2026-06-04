@@ -11,8 +11,7 @@ abstract interface class AvatarRepository {
   ///
   /// Left([ModerationRejectedFailure]) when content is flagged (carries
   /// categories); Left([InputFailure]) on 413/415; Left([AuthFailure]) on 401;
-  /// Left([RateLimitFailure]) on 429 (per-user upload cooldown; carries
-  /// [RateLimitFailure.retryAfterSeconds] when the server supplies them);
+  /// Left([RateLimitFailure]) on 429 (per-user upload cooldown);
   /// Left([ModerationUnavailableFailure]) on provider error/timeout (fail
   /// closed); Left([MediaProcessingFailure]) on a local decode/crop fault
   /// (produced by the picker layer, not the repository itself);

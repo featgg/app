@@ -25,11 +25,11 @@ final class AvatarCropFailure extends AvatarCropResult {
 
 /// In-app crop screen pushed by [CropYourImageAvatarPicker].
 ///
-/// Shows a circular crop guide (1:1) so what the user frames matches the
-/// circular avatar displayed throughout the app. Confirm triggers
-/// [CropController.crop] (rectangular encode → opaque square output);
-/// [Crop.onCropped] pops the route with an [AvatarCropResult]. Cancel pops
-/// with null. Not a router-declared route — pushed imperatively from the picker.
+/// The circular frame is fixed on screen; the user pans and pinches the image
+/// beneath it to frame the desired area. Confirm triggers [CropController.crop]
+/// (rectangular encode → opaque square output); [Crop.onCropped] pops the route
+/// with an [AvatarCropResult]. Cancel pops with null. Not a router-declared
+/// route — pushed imperatively from the picker.
 class AvatarCropScreen extends StatefulWidget {
   const AvatarCropScreen({super.key, required this.sourceBytes});
 
@@ -77,6 +77,8 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
         image: widget.sourceBytes,
         controller: _cropController,
         withCircleUi: true,
+        fixCropRect: true,
+        interactive: true,
         aspectRatio: 1,
         onCropped: (result) {
           switch (result) {

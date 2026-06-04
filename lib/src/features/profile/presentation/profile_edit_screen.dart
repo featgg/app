@@ -1,11 +1,10 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
 import '../domain/profile.dart';
+import 'avatar_picker.dart';
 import 'avatar_upload_controller.dart';
 import 'profile_edit_controller.dart';
 
@@ -167,7 +166,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         l10n: l10n,
                         onTap: () => ref
                             .read(avatarUploadControllerProvider.notifier)
-                            .pickAndUpload(context),
+                            .pickAndUpload(
+                              () => ref
+                                  .read(avatarPickerProvider)
+                                  .pickAndCrop(context),
+                            ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextFormField(
@@ -247,7 +250,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   }
 }
 
-class _AvatarUploadField extends StatefulWidget {
+class _AvatarUploadField extends StatelessWidget {
   const _AvatarUploadField({
     super.key,
     required this.avatarUrl,
@@ -261,81 +264,20 @@ class _AvatarUploadField extends StatefulWidget {
   final AppLocalizations l10n;
   final VoidCallback onTap;
 
-  @override
-  State<_AvatarUploadField> createState() => _AvatarUploadFieldState();
-}
-
-class _AvatarUploadFieldState extends State<_AvatarUploadField> {
-  Timer? _countdownTimer;
-  int _secondsRemaining = 0;
-
   bool get _inFlight =>
-      widget.uploadState.status == AvatarUploadStatus.picking ||
-      widget.uploadState.status == AvatarUploadStatus.uploading;
-
-  bool get _inCooldown =>
-      widget.uploadState.status == AvatarUploadStatus.cooldown;
-
-  @override
-  void didUpdateWidget(_AvatarUploadField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final oldStatus = oldWidget.uploadState.status;
-    final newStatus = widget.uploadState.status;
-    // Restart the display countdown whenever the controller enters cooldown or
-    // the seed changes (e.g. a repeated 429 with a fresh window).
-    if (newStatus == AvatarUploadStatus.cooldown &&
-        (oldStatus != AvatarUploadStatus.cooldown ||
-            oldWidget.uploadState.cooldownSecondsRemaining !=
-                widget.uploadState.cooldownSecondsRemaining)) {
-      _startCountdown(widget.uploadState.cooldownSecondsRemaining);
-    } else if (oldStatus == AvatarUploadStatus.cooldown &&
-        newStatus != AvatarUploadStatus.cooldown) {
-      _stopCountdown();
-    }
-  }
-
-  void _startCountdown(int seconds) {
-    _countdownTimer?.cancel();
-    setState(() => _secondsRemaining = seconds);
-    if (seconds <= 0) return;
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _secondsRemaining = (_secondsRemaining - 1).clamp(0, _secondsRemaining);
-        if (_secondsRemaining == 0) _countdownTimer?.cancel();
-      });
-    });
-  }
-
-  void _stopCountdown() {
-    _countdownTimer?.cancel();
-    setState(() => _secondsRemaining = 0);
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    super.dispose();
-  }
-
-  String _formatCountdown(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
-  }
+      uploadState.status == AvatarUploadStatus.picking ||
+      uploadState.status == AvatarUploadStatus.uploading;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     const size = AppSpacing.xl * 2;
-    final l10n = widget.l10n;
-    final avatarUrl = widget.avatarUrl;
 
     Widget avatar;
     if (avatarUrl != null) {
       avatar = ClipOval(
         child: CachedNetworkImage(
-          imageUrl: avatarUrl,
+          imageUrl: avatarUrl!,
           width: size,
           height: size,
           fit: BoxFit.cover,
@@ -362,71 +304,42 @@ class _AvatarUploadFieldState extends State<_AvatarUploadField> {
       );
     }
 
-    final bool disabled = _inFlight || _inCooldown;
-
-    // Cooldown label: show countdown when seconds are known, else generic copy.
-    Widget? cooldownLabel;
-    if (_inCooldown) {
-      final label = _secondsRemaining > 0
-          ? l10n.profileAvatarCooldownCountdown(
-              _formatCountdown(_secondsRemaining),
-            )
-          : l10n.errorAvatarRateLimited;
-      cooldownLabel = Text(
-        key: const Key('avatarCooldownCountdownLabel'),
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
-      );
-    }
+    final bool disabled = _inFlight;
 
     return Align(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: disabled ? null : widget.onTap,
-            child: Tooltip(
-              message: l10n.profileAvatarChange,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Semantics(
-                    label: _inFlight ? l10n.profileAvatarUploading : null,
-                    child: Opacity(
-                      opacity: _inFlight ? 0.5 : 1.0,
-                      child: avatar,
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: Tooltip(
+          message: l10n.profileAvatarChange,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Semantics(
+                label: _inFlight ? l10n.profileAvatarUploading : null,
+                child: Opacity(opacity: _inFlight ? 0.5 : 1.0, child: avatar),
+              ),
+              if (_inFlight)
+                const SizedBox.square(
+                  dimension: AppSpacing.lg,
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                )
+              else
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: CircleAvatar(
+                    radius: AppSpacing.sm,
+                    backgroundColor: colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.edit,
+                      size: AppSpacing.sm,
+                      color: colorScheme.onPrimaryContainer,
                     ),
                   ),
-                  if (_inFlight)
-                    const SizedBox.square(
-                      dimension: AppSpacing.lg,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    )
-                  else if (!_inCooldown)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: CircleAvatar(
-                        radius: AppSpacing.sm,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: Icon(
-                          Icons.edit,
-                          size: AppSpacing.sm,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
-          if (cooldownLabel != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            cooldownLabel,
-          ],
-        ],
+        ),
       ),
     );
   }

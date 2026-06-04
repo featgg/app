@@ -80,9 +80,7 @@ final class AvatarRepositoryImpl implements AvatarRepository {
       );
     }
     if (code == 'AVATAR_COOLDOWN' || status == 429) {
-      final ra = details is Map ? details['retry_after'] : null;
       return RateLimitFailure(
-        retryAfterSeconds: ra is int ? ra : (ra is num ? ra.toInt() : null),
         code: code,
         message: details is Map ? details['message'] as String? : null,
       );

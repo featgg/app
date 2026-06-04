@@ -36,22 +36,13 @@
   "@errorAvatarUnavailable": {
     "description": "Shown when the moderation provider is unavailable or returns an unexpected error. The avatar is unchanged; the user can retry."
   },
-  "errorAvatarRateLimited": "You're uploading too quickly. Please try again shortly.",
+  "errorAvatarRateLimited": "You're uploading too quickly. Try again in about a minute.",
   "@errorAvatarRateLimited": {
-    "description": "Shown when the avatar upload endpoint returns 429 (rate limited). Generic fallback — the countdown copy is composed in the widget when retry_after seconds are known."
+    "description": "Shown when the avatar upload endpoint returns 429 (rate limited). Static message — the server is authoritative on the wait window."
   },
   "errorAvatarProcessing": "Couldn't process that image. Please choose a different one.",
   "@errorAvatarProcessing": {
     "description": "Shown when the local image decode or crop step fails before any upload attempt."
-  },
-  "profileAvatarCooldownCountdown": "Try again in {time}",
-  "@profileAvatarCooldownCountdown": {
-    "description": "Avatar upload affordance label while the rate-limit cooldown window is active and the remaining seconds are known. {time} is formatted as m:ss.",
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
   },
   "signInTitle": "Sign in to Feat.gg",
   "@signInTitle": {

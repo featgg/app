@@ -44,13 +44,11 @@ FunctionException _fnEx(
   String? code,
   String? message,
   List<String>? categories,
-  int? retryAfter,
 }) {
   final details = <String, dynamic>{};
   if (code != null) details['code'] = code;
   if (message != null) details['message'] = message;
   if (categories != null) details['categories'] = categories;
-  if (retryAfter != null) details['retry_after'] = retryAfter;
   return FunctionException(
     status: status,
     details: details.isEmpty ? null : details,
@@ -192,48 +190,22 @@ void main() {
       expect(reporter.reported, hasLength(1));
     });
 
-    test(
-      'AVATAR_COOLDOWN / 429 with retry_after → RateLimitFailure carrying seconds, not reported',
-      () async {
-        final source = _FakeUploadSource(
-          (_, _) async =>
-              throw _fnEx(429, code: 'AVATAR_COOLDOWN', retryAfter: 45),
-        );
-        final reporter = _RecordingReporter();
-        final result = await _repo(
-          source,
-          reporter,
-        ).uploadAvatar(bytes: Uint8List(1), contentType: 'image/jpeg');
+    test('AVATAR_COOLDOWN / 429 → RateLimitFailure, not reported', () async {
+      final source = _FakeUploadSource(
+        (_, _) async => throw _fnEx(429, code: 'AVATAR_COOLDOWN'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(
+        source,
+        reporter,
+      ).uploadAvatar(bytes: Uint8List(1), contentType: 'image/jpeg');
 
-        result.fold((f) {
-          expect(f, isA<RateLimitFailure>());
-          expect((f as RateLimitFailure).retryAfterSeconds, 45);
-          expect(f.isExpected, isTrue);
-        }, (_) => fail('expected Left'));
-        expect(reporter.reported, isEmpty);
-      },
-    );
-
-    test(
-      '429 without retry_after → RateLimitFailure(retryAfterSeconds: null), not reported',
-      () async {
-        final source = _FakeUploadSource(
-          (_, _) async => throw _fnEx(429, code: 'AVATAR_COOLDOWN'),
-        );
-        final reporter = _RecordingReporter();
-        final result = await _repo(
-          source,
-          reporter,
-        ).uploadAvatar(bytes: Uint8List(1), contentType: 'image/jpeg');
-
-        result.fold((f) {
-          expect(f, isA<RateLimitFailure>());
-          expect((f as RateLimitFailure).retryAfterSeconds, isNull);
-          expect(f.isExpected, isTrue);
-        }, (_) => fail('expected Left'));
-        expect(reporter.reported, isEmpty);
-      },
-    );
+      result.fold((f) {
+        expect(f, isA<RateLimitFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('expected Left'));
+      expect(reporter.reported, isEmpty);
+    });
 
     test(
       '429 detected by status alone (no code) → RateLimitFailure, not reported',

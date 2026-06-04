@@ -9,16 +9,8 @@
   "errorAuthRateLimited": "Muitas tentativas. Tente novamente em cerca de um minuto.",
   "errorAvatarRejected": "Esta imagem não pode ser usada como foto de perfil. Por favor, escolha uma diferente.",
   "errorAvatarUnavailable": "Não foi possível processar sua imagem agora. Tente novamente mais tarde.",
-  "errorAvatarRateLimited": "Você está enviando rápido demais. Tente novamente em breve.",
+  "errorAvatarRateLimited": "Você está enviando rápido demais. Tente novamente em cerca de um minuto.",
   "errorAvatarProcessing": "Não foi possível processar essa imagem. Por favor, escolha uma diferente.",
-  "profileAvatarCooldownCountdown": "Tente novamente em {time}",
-  "@profileAvatarCooldownCountdown": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
   "signInTitle": "Entre no Feat.gg",
   "signInEmailLabel": "E-mail",
   "signInEmailHint": "Digite seu endereço de e-mail",
