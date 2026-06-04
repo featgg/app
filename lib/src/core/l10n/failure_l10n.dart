@@ -15,5 +15,9 @@ extension FailureL10n on Failure {
     InputFailure() => l10n.errorInput,
     NotImplemented() => l10n.errorNotImplemented,
     UnexpectedFailure() => l10n.errorUnexpected,
+    ModerationRejectedFailure() => l10n.errorAvatarRejected,
+    ModerationUnavailableFailure() => l10n.errorAvatarUnavailable,
+    RateLimitFailure() => l10n.errorAvatarRateLimited,
+    MediaProcessingFailure() => l10n.errorAvatarProcessing,
   };
 }

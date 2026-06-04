@@ -7,6 +7,18 @@
   "errorUnexpected": "Algo inesperado aconteceu. Tente novamente.",
   "errorNotImplemented": "Este recurso ainda não está disponível.",
   "errorAuthRateLimited": "Muitas tentativas. Tente novamente em cerca de um minuto.",
+  "errorAvatarRejected": "Esta imagem não pode ser usada como foto de perfil. Por favor, escolha uma diferente.",
+  "errorAvatarUnavailable": "Não foi possível processar sua imagem agora. Tente novamente mais tarde.",
+  "errorAvatarRateLimited": "Você está enviando rápido demais. Tente novamente em breve.",
+  "errorAvatarProcessing": "Não foi possível processar essa imagem. Por favor, escolha uma diferente.",
+  "profileAvatarCooldownCountdown": "Tente novamente em {time}",
+  "@profileAvatarCooldownCountdown": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "signInTitle": "Entre no Feat.gg",
   "signInEmailLabel": "E-mail",
   "signInEmailHint": "Digite seu endereço de e-mail",
@@ -34,7 +46,9 @@
   "profileEdit": "Editar",
   "profileEditTitle": "Editar perfil",
   "profileDisplayNameLabel": "Nome de exibição",
-  "profileAvatarUrlLabel": "URL do avatar",
+  "profileAvatarChange": "Alterar foto",
+  "profileAvatarUploading": "Enviando foto…",
+  "profileAvatarUpdated": "Foto de perfil atualizada.",
   "profileBioLabel": "Biografia",
   "profileThemeLabel": "Tema",
   "profileThemeClassic": "Clássico",
@@ -46,7 +60,6 @@
   "profileSaved": "Perfil salvo.",
   "profileDisplayNameInvalid": "O nome deve ter entre 1 e 50 caracteres.",
   "profileBioTooLong": "A biografia deve ter 150 caracteres ou menos.",
-  "profileAvatarUrlInvalid": "Insira uma URL http ou https válida, ou deixe em branco.",
   "asyncErrorTitle": "Não foi possível carregar",
   "asyncRetry": "Tentar novamente"
 }

@@ -47,5 +47,33 @@ void main() {
         l10n.errorAuthRateLimited,
       );
     });
+
+    test('ModerationRejectedFailure maps to errorAvatarRejected', () {
+      expect(
+        const ModerationRejectedFailure().localizedMessage(l10n),
+        l10n.errorAvatarRejected,
+      );
+    });
+
+    test('ModerationUnavailableFailure maps to errorAvatarUnavailable', () {
+      expect(
+        const ModerationUnavailableFailure().localizedMessage(l10n),
+        l10n.errorAvatarUnavailable,
+      );
+    });
+
+    test('RateLimitFailure maps to errorAvatarRateLimited', () {
+      expect(
+        const RateLimitFailure().localizedMessage(l10n),
+        l10n.errorAvatarRateLimited,
+      );
+    });
+
+    test('MediaProcessingFailure maps to errorAvatarProcessing', () {
+      expect(
+        const MediaProcessingFailure().localizedMessage(l10n),
+        l10n.errorAvatarProcessing,
+      );
+    });
   });
 }

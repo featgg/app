@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
 import '../domain/profile.dart';
+import 'avatar_upload_controller.dart';
 import 'profile_edit_controller.dart';
 
 /// Edit form for the signed-in user's own profile.
@@ -23,7 +26,6 @@ class ProfileEditScreen extends ConsumerStatefulWidget {
 class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _displayNameController;
-  late final TextEditingController _avatarUrlController;
   late final TextEditingController _bioController;
   late ProfileTheme _selectedTheme;
   late ProfilePrivacy _selectedPrivacy;
@@ -38,38 +40,29 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _displayNameController = TextEditingController(
       text: widget.profile.displayName,
     );
-    _avatarUrlController = TextEditingController(
-      text: widget.profile.avatarUrl ?? '',
-    );
     _bioController = TextEditingController(text: widget.profile.bio ?? '');
     _selectedTheme = widget.profile.theme;
     _selectedPrivacy = widget.profile.privacy;
     _seed = _editFrom(widget.profile);
 
     _displayNameController.addListener(_onFieldChanged);
-    _avatarUrlController.addListener(_onFieldChanged);
     _bioController.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
     _displayNameController.removeListener(_onFieldChanged);
-    _avatarUrlController.removeListener(_onFieldChanged);
     _bioController.removeListener(_onFieldChanged);
     _displayNameController.dispose();
-    _avatarUrlController.dispose();
     _bioController.dispose();
     super.dispose();
   }
 
-  /// Builds a [ProfileEdit] from a seed [Profile], applying the same
-  /// trim/empty-to-null normalization as [_buildEdit].
+  /// Builds a [ProfileEdit] from a seed [Profile].
   ProfileEdit _editFrom(Profile p) {
-    final avatarRaw = (p.avatarUrl ?? '').trim();
     final bioRaw = (p.bio ?? '').trim();
     return ProfileEdit(
       displayName: p.displayName.trim(),
-      avatarUrl: avatarRaw.isEmpty ? null : avatarRaw,
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: p.theme,
       privacy: p.privacy,
@@ -77,11 +70,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   }
 
   ProfileEdit _buildEdit() {
-    final avatarRaw = _avatarUrlController.text.trim();
     final bioRaw = _bioController.text.trim();
     return ProfileEdit(
       displayName: _displayNameController.text.trim(),
-      avatarUrl: avatarRaw.isEmpty ? null : avatarRaw,
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: _selectedTheme,
       privacy: _selectedPrivacy,
@@ -95,6 +86,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final l10n = AppLocalizations.of(context);
     final editState = ref.watch(profileEditControllerProvider);
     final controller = ref.read(profileEditControllerProvider.notifier);
+    final uploadState = ref.watch(avatarUploadControllerProvider);
 
     ref.listen(profileEditControllerProvider.select((s) => s.saved), (
       previous,
@@ -108,7 +100,37 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       }
     });
 
+    ref.listen(avatarUploadControllerProvider, (previous, next) {
+      if (next.status == AvatarUploadStatus.success) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              key: const Key('avatarUploadSuccessSnackBar'),
+              content: Text(l10n.profileAvatarUpdated),
+            ),
+          );
+      } else if (next.status == AvatarUploadStatus.error &&
+          next.failure != null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              key: const Key('avatarUploadErrorSnackBar'),
+              content: Text(next.failure!.localizedMessage(l10n)),
+            ),
+          );
+      }
+    });
+
     final fieldErrors = editState.fieldErrors;
+
+    // Popping while an avatar upload is in-flight would dispose the auto-dispose
+    // controller before it can invalidate profileProvider on success, leaving
+    // the view stale. Block Save until the upload pipeline settles.
+    final avatarInFlight =
+        uploadState.status == AvatarUploadStatus.picking ||
+        uploadState.status == AvatarUploadStatus.uploading;
 
     return Scaffold(
       appBar: AppBar(
@@ -117,7 +139,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           _SaveButton(
             key: const Key('profileSaveButton'),
             submitting: editState.submitting,
-            onPressed: (_isDirty && !editState.submitting)
+            onPressed: (_isDirty && !editState.submitting && !avatarInFlight)
                 ? () => controller.submit(_buildEdit())
                 : null,
             l10n: l10n,
@@ -136,6 +158,18 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _AvatarUploadField(
+                        key: const Key('avatarUploadField'),
+                        avatarUrl:
+                            uploadState.newAvatarUrl ??
+                            widget.profile.avatarUrl,
+                        uploadState: uploadState,
+                        l10n: l10n,
+                        onTap: () => ref
+                            .read(avatarUploadControllerProvider.notifier)
+                            .pickAndUpload(context),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       TextFormField(
                         key: const Key('profileDisplayNameField'),
                         controller: _displayNameController,
@@ -148,26 +182,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                               ? l10n.profileDisplayNameInvalid
                               : null,
                         ),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _AvatarPreview(
-                        url: _avatarUrlController.text.trim(),
-                        l10n: l10n,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        key: const Key('profileAvatarUrlField'),
-                        controller: _avatarUrlController,
-                        enabled: !editState.submitting,
-                        decoration: InputDecoration(
-                          labelText: l10n.profileAvatarUrlLabel,
-                          errorText:
-                              fieldErrors.contains(ProfileEditField.avatarUrl)
-                              ? l10n.profileAvatarUrlInvalid
-                              : null,
-                        ),
-                        keyboardType: TextInputType.url,
                         textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -233,48 +247,186 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   }
 }
 
-class _AvatarPreview extends StatelessWidget {
-  const _AvatarPreview({required this.url, required this.l10n});
+class _AvatarUploadField extends StatefulWidget {
+  const _AvatarUploadField({
+    super.key,
+    required this.avatarUrl,
+    required this.uploadState,
+    required this.l10n,
+    required this.onTap,
+  });
 
-  final String url;
+  final String? avatarUrl;
+  final AvatarUploadState uploadState;
   final AppLocalizations l10n;
+  final VoidCallback onTap;
+
+  @override
+  State<_AvatarUploadField> createState() => _AvatarUploadFieldState();
+}
+
+class _AvatarUploadFieldState extends State<_AvatarUploadField> {
+  Timer? _countdownTimer;
+  int _secondsRemaining = 0;
+
+  bool get _inFlight =>
+      widget.uploadState.status == AvatarUploadStatus.picking ||
+      widget.uploadState.status == AvatarUploadStatus.uploading;
+
+  bool get _inCooldown =>
+      widget.uploadState.status == AvatarUploadStatus.cooldown;
+
+  @override
+  void didUpdateWidget(_AvatarUploadField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldStatus = oldWidget.uploadState.status;
+    final newStatus = widget.uploadState.status;
+    // Restart the display countdown whenever the controller enters cooldown or
+    // the seed changes (e.g. a repeated 429 with a fresh window).
+    if (newStatus == AvatarUploadStatus.cooldown &&
+        (oldStatus != AvatarUploadStatus.cooldown ||
+            oldWidget.uploadState.cooldownSecondsRemaining !=
+                widget.uploadState.cooldownSecondsRemaining)) {
+      _startCountdown(widget.uploadState.cooldownSecondsRemaining);
+    } else if (oldStatus == AvatarUploadStatus.cooldown &&
+        newStatus != AvatarUploadStatus.cooldown) {
+      _stopCountdown();
+    }
+  }
+
+  void _startCountdown(int seconds) {
+    _countdownTimer?.cancel();
+    setState(() => _secondsRemaining = seconds);
+    if (seconds <= 0) return;
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _secondsRemaining = (_secondsRemaining - 1).clamp(0, _secondsRemaining);
+        if (_secondsRemaining == 0) _countdownTimer?.cancel();
+      });
+    });
+  }
+
+  void _stopCountdown() {
+    _countdownTimer?.cancel();
+    setState(() => _secondsRemaining = 0);
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  String _formatCountdown(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     const size = AppSpacing.xl * 2;
+    final l10n = widget.l10n;
+    final avatarUrl = widget.avatarUrl;
 
-    if (url.isNotEmpty) {
-      return Align(
-        key: const Key('profileAvatarPreview'),
-        child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: url,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            placeholder: (context, _) => _iconPlaceholder(colorScheme, size),
-            errorWidget: (context, _, _) => _iconPlaceholder(colorScheme, size),
-            imageBuilder: (_, imageProvider) => Semantics(
-              label: l10n.profileAvatarLabel,
-              image: true,
-              child: Image(
-                image: imageProvider,
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
-              ),
+    Widget avatar;
+    if (avatarUrl != null) {
+      avatar = ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: avatarUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          fadeInDuration: Duration.zero,
+          placeholderFadeInDuration: Duration.zero,
+          placeholder: (context, _) => _iconPlaceholder(colorScheme, size),
+          errorWidget: (context, _, _) => _iconPlaceholder(colorScheme, size),
+          imageBuilder: (_, imageProvider) => Semantics(
+            label: l10n.profileAvatarLabel,
+            image: true,
+            child: Image(
+              image: imageProvider,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
             ),
           ),
         ),
       );
+    } else {
+      avatar = Semantics(
+        label: l10n.profileAvatarLabel,
+        child: _iconPlaceholder(colorScheme, size),
+      );
+    }
+
+    final bool disabled = _inFlight || _inCooldown;
+
+    // Cooldown label: show countdown when seconds are known, else generic copy.
+    Widget? cooldownLabel;
+    if (_inCooldown) {
+      final label = _secondsRemaining > 0
+          ? l10n.profileAvatarCooldownCountdown(
+              _formatCountdown(_secondsRemaining),
+            )
+          : l10n.errorAvatarRateLimited;
+      cooldownLabel = Text(
+        key: const Key('avatarCooldownCountdownLabel'),
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+      );
     }
 
     return Align(
-      key: const Key('profileAvatarPreview'),
-      child: Semantics(
-        label: l10n.profileAvatarLabel,
-        child: _iconPlaceholder(colorScheme, size),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: disabled ? null : widget.onTap,
+            child: Tooltip(
+              message: l10n.profileAvatarChange,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Semantics(
+                    label: _inFlight ? l10n.profileAvatarUploading : null,
+                    child: Opacity(
+                      opacity: _inFlight ? 0.5 : 1.0,
+                      child: avatar,
+                    ),
+                  ),
+                  if (_inFlight)
+                    const SizedBox.square(
+                      dimension: AppSpacing.lg,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    )
+                  else if (!_inCooldown)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        radius: AppSpacing.sm,
+                        backgroundColor: colorScheme.primaryContainer,
+                        child: Icon(
+                          Icons.edit,
+                          size: AppSpacing.sm,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (cooldownLabel != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            cooldownLabel,
+          ],
+        ],
       ),
     );
   }

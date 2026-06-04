@@ -19,6 +19,38 @@ outputs into the review report under `## Verification`. If any command
 fails, the recommendation is `changes-required` and the rest of the
 review is informational.
 
+## Regression guard — trace changed behavior end to end
+
+Green verification and canon-compliance do NOT prove the absence of
+regressions. Existing tests cover only the paths someone already thought
+to write; a change can be locally correct on its target path and still
+break an adjacent behavior on the same surface. Catching that is a primary
+review duty, not an afterthought — most of all when the diff is itself a
+fix (a fix is the highest-risk place to introduce a new defect).
+
+For every behavior the diff changes or adds:
+
+- **Trace the full state space the change touches.** Enumerate every enum
+  state, every nullable field with a fallback, every failure / cancel /
+  retry path, every repeated or out-of-order user action (do X, then do X
+  again, cancel the second; act before the first completes), and every
+  lifecycle event (dispose, route pop, backgrounding, token refresh) — and
+  follow the new code through each. A change that is correct for the happy
+  path but wrong on a cancel, error, second attempt, in-flight, or disposal
+  path is a blocker.
+- **A fix must not regress the surface it modifies.** Re-run the prior,
+  already-approved scenarios in your head against the new code. A fix that
+  introduces a new defect on the code it touches — a fallback that now
+  reverts to a stale value, a guard that now skips a needed write, a state
+  field no longer carried forward — is a blocker, even though it compiles,
+  passes the existing tests, and matches canon. The earlier approval does
+  not transfer to the changed code.
+- **Untested edge cases that could plausibly break are findings.** If a
+  path you traced has no test and could fail, require a test (or a fix)
+  with a file:line — do not approve "green but untested edge case". Green
+  tests over a path the diff just changed prove nothing if that path was
+  never asserted.
+
 ## Tools and boundaries
 
 - Bash is read-only here. Allowed: `flutter pub get`, `flutter analyze`,
@@ -50,6 +82,14 @@ Apply each item that is relevant. Cite a file:line for every finding.
 - [ ] **Spec alignment**: tests assert what the plan said they should
       assert. A test that asserts only the code's current behavior, when
       the plan said otherwise, is a blocker.
+- [ ] **Regression guard (changed behavior)**: every behavior the diff
+      changes or adds is traced through its full state space — failure,
+      cancel, retry, repeated / out-of-order actions, in-flight, and
+      lifecycle (dispose / route-pop) paths — not just the happy path. A
+      fix must not regress the surface it modifies (self-introduced
+      regression), and passing existing tests + clean analyze do not prove
+      it didn't. Untested paths the diff touches that could break are
+      findings. See § Regression guard.
 - [ ] **Antipatterns**: god widgets, hidden side effects, misleading
       names, swallowed errors, magic constants, premature abstraction,
       legacy `StateNotifier` instead of Riverpod codegen.

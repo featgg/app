@@ -114,6 +114,8 @@ class _Avatar extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
+          fadeInDuration: Duration.zero,
+          placeholderFadeInDuration: Duration.zero,
           placeholder: (context, url) => _iconPlaceholder(colorScheme, size),
           errorWidget: (context, url, error) =>
               _iconPlaceholder(colorScheme, size),

@@ -45,6 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a photo from your library to use as your profile picture.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

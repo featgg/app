@@ -22,17 +22,18 @@ it — a user can update only their own profile.
 - **Readable columns.** `id`, `username`, `display_name`, `avatar_url`,
   `bio`, `theme_id`, `privacy_level`, `created_at`. A public profile exposes
   these to anyone; a private profile is readable only by its owner.
-- **Writable columns (owner only).** `display_name`, `avatar_url`, `bio`,
-  `theme_id`, `privacy_level`.
+- **Writable columns (owner only).** `display_name`, `bio`, `theme_id`,
+  `privacy_level`.
 - **Server-managed (read-only to the client).** `id`, `created_at`,
-  `last_updated_at`, and `deletion_requested_at`. Never client-writable.
+  `last_updated_at`, `deletion_requested_at`, and `avatar_url`. Never
+  client-writable directly; `avatar_url` is updated by the upload endpoint
+  (see `avatar.md`).
 - **Access rule.** Read: public profiles by anyone, private profiles by the
   owner only. Update: owner only, restricted to the writable columns above.
 - **Constraints (surface as the SDK error on violation).**
   - `username` — unique, lowercase, 3–30 chars.
   - `display_name` — 1–50 chars.
   - `bio` — up to 150 chars.
-  - `avatar_url` — must be an `http`/`https` URL.
   - `theme_id` — one of `classic`, `immersive`, `retro`, `analyst`.
   - `privacy_level` — one of `public`, `private`. Setting it to `private`
     hides the profile and the user's game cards from everyone but the owner.
@@ -47,6 +48,7 @@ user's game cards (see `feed.md`): private hides them, public restores them.
 ## Cross-references
 
 - `auth.md` — issues the session token and provisions the profile at sign-up.
+- `avatar.md` — the upload operation that writes `avatar_url` server-side.
 - `feed.md` — the user's public game cards, gated by the same `privacy_level`.
 
 ## Notes
