@@ -32,6 +32,13 @@ Each agent file owns its own contract — tools, prompt, output.
 
 Stage artifacts live in `.ai/runs/<YYYY-MM-DD>-<slug>/`. They are local working notes: gitignored, never committed. The pipeline reads them across stages within one task; once the PR merges they have no canonical value.
 
+Codex (or any other AI tool) auto-reviews every PR on GitHub
+outside the repo. Its findings arrive as PR comments after Stage 4.
+The human triages them — which apply, which do not — and either
+dismisses them or returns the run to Stage 1 or 2 (depending on the
+nature of the findings) with the accepted findings as scope. Agents
+never act on AI PR review comments without that triage.
+
 ## Handoff convention
 
 Every agent ends its report with a one-line footer on its own line:
@@ -131,3 +138,37 @@ Denied, do not retry: file deletion (`rm`, `del`, `rmdir`, …), destructive git
 ## Defect protocol
 
 Off-scope defects don't get patched ad-hoc. File a new issue (`Sub-issue` template) linking the source PR; re-scope deliberately.
+
+## Review guidelines
+
+Guidance for AI code review on GitHub PRs (Codex or any other
+reviewer that reads this file). The Stage-3 reviewer subagent
+remains the authoritative gate; this section tunes diff-level
+review passes only. The P0/P1 lists below are repo-specific
+additions, not a whitelist: genuine correctness or logic defects
+remain reportable at the severity they merit. P0 maps to Blocker
+and P1 to Major in the Stage-3 reviewer's severity buckets.
+
+- P0: backend internals anywhere in the diff — internal function
+  names, schema namespaces, migration filenames, cron job names,
+  backend env var names, or paths reaching outside this repo root
+  (this repo is public); hardcoded secrets, API keys, or tokens;
+  committed `env.*.json` values.
+- P1: backend calls not returning `Either<Failure, T>`; swallowed
+  errors on network or auth paths; legacy `StateNotifier` instead
+  of Riverpod codegen; raw `Color(...)` / `Colors.*` literals,
+  magic spacing, or ad-hoc `TextStyle` outside
+  `lib/src/core/theme/`; imports violating the inward-only layer
+  rule or cross-feature isolation (only `domain` crosses feature
+  boundaries); tests asserting literal user-facing or localized
+  copy; code that calls the backend while `docs/integration/` does
+  not exist; internal planning identifiers (epic IDs, internal
+  issue numbers) in the diff or PR text.
+- When `docs/` covers the area the diff touches, read the relevant
+  sections and flag any contradiction with the implementation as
+  P1 (P0 if it falls under a P0 item above).
+- Respect the minimal-patch policy: do not propose refactors,
+  abstractions, or improvements beyond the diff's scope.
+- Plan and run artifacts live outside the repo; do not flag their
+  absence. Any file under `.ai/runs/` appearing in the diff is P0 —
+  run artifacts must never be committed.
