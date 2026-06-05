@@ -161,17 +161,283 @@ The envelope shape is identical for every platform; this table records
 which optional slots carry data versus `null` in v1. A slot that is not
 populated is `null` — treat a missing optional slot as "not available
 yet", not an error. Each platform's `data` field inventory and stable
-`stats` keys ship with that platform's own contract.
+`stats` keys are documented per platform in *Per-platform data and stats (v1)* below.
 
 | Platform            | icon_image / hero_image                           | profile_url | subtitle     | Notes |
 | ------------------- | ------------------------------------------------- | ----------- | ------------ | ----- |
 | `steam`             | both shown                                        | URL shown   | `null`       | Complete worked example above. |
 | `league_of_legends` | both `null` (v1)                                  | `null`      | region token | Images deferred; `title` is `GameName#TAG`. |
-| `wow_retail`        | render (attributed) when available, else `null`   | `null`      | realm name   | When `last_updated` is >30 days old, show a "stale — tap to refresh" state, not the data. |
+| `wow_retail`        | render (attributed) when available, else `null`   | `null`      | realm-REGION | When `last_updated` is >30 days old, show a "stale — tap to refresh" state, not the data. |
 | `minecraft_hypixel` | both `null` (v1)                                  | `null`      | `null`       | Skin render deferred to a later image surface. |
 | `chess`             | avatar shown, hero `null`                         | URL shown   | country token| Cleanest avatar case. |
 | `retroachievements` | avatar shown, hero `null`                         | URL shown   | `null`       | Per-game box-art appears only inside `widget_data.data` and may be absent. |
-| `gw2`               | both `null`                                       | `null`      | `null`       | No account / character portrait exists. |
+| `gw2`               | both `null`                                       | `null`      | world name \| null | No account / character portrait exists. |
+
+### Per-platform data and stats (v1)
+
+These are the `data` field inventories and stable `stats` keys for the six non-Steam platforms, at the same depth as the Steam example. Steam's own shapes remain in § Steam example. All values are client-facing JSON read from `feed_preview` or `widget_data`; the envelope, Stat, and image rules above still apply.
+
+#### chess
+
+Platform value: `chess`.
+
+`feed_preview` headline stats:
+
+```json
+{
+  "stats": [
+    { "key": "rating", "value": 1842, "unit": "rating" },
+    { "key": "followers", "value": 530, "unit": "count" }
+  ]
+}
+```
+
+`widget_data` `data` block:
+
+```json
+{
+  "data": {
+    "primary_mode": "RAPID",
+    "ratings": {
+      "rapid":  { "current": 1842, "best": 1901, "record": { "win": 312, "loss": 198, "draw": 44 } },
+      "blitz":  { "current": 1654, "best": 1720 },
+      "bullet": { "current": 1580, "best": 1612 }
+    },
+    "puzzle_rush_score": 37,
+    "tactics_best": 2150,
+    "fide": 1900,
+    "title_flags": { "is_titled": true, "title": "FM" }
+  }
+}
+```
+
+`widget_data` adds one stat beyond `feed_preview`: `puzzle_rush` (unit `count`).
+
+`primary_mode` is the uppercase token naming the user's main mode — one of `RAPID` | `BLITZ` | `BULLET` | `DAILY`. The `ratings` object is keyed by the lowercase mode tokens `rapid` | `blitz` | `bullet` | `daily` (a subset — not all modes are guaranteed to be present). Each mode entry carries `current` and `best` numbers; `record` (`win`, `loss`, `draw`) is best-effort and may be absent. `tactics_best`, `fide`, and `title_flags` are optional and may be absent. `icon_image` is the user's avatar (`https://` URL or `null`); `hero_image` is `null`. Subtitle is the country token.
+
+#### retroachievements
+
+Platform value: `retroachievements`.
+
+`feed_preview` headline stats:
+
+```json
+{
+  "stats": [
+    { "key": "total_achievement_points", "value": 48320, "unit": "points" },
+    { "key": "retro_rank", "value": 1204, "unit": "count" }
+  ]
+}
+```
+
+`widget_data` `data` block:
+
+```json
+{
+  "data": {
+    "profile": {
+      "total_points": 48320,
+      "true_points": 112500,
+      "softcore_points": 320,
+      "rank": 1204,
+      "member_since": "2019-03-15T00:00:00Z",
+      "motto": "Achievement hunter"
+    },
+    "recent_games": [
+      {
+        "title": "Sonic the Hedgehog",
+        "console": "Mega Drive",
+        "achieved": 18,
+        "total": 22,
+        "completion_pct": 81.8,
+        "icon_url": "https://media.retroachievements.org/Images/001234.png"
+      }
+    ]
+  }
+}
+```
+
+`widget_data` adds one stat beyond `feed_preview`: `completion_pct` (unit `percent`, best-effort).
+
+`profile.member_since` and `profile.motto` may be `null`. `recent_games[].icon_url` is per-game box-art that appears only inside `widget_data.data`; it follows the envelope image rules and may be `null` (treat absent as not available). `icon_image` is the user's avatar (`https://` URL or `null`); `hero_image` is `null`.
+
+#### minecraft_hypixel
+
+Platform value: `minecraft_hypixel`.
+
+`feed_preview` headline stats:
+
+```json
+{
+  "stats": [
+    { "key": "network_level", "value": 142, "unit": "count" },
+    { "key": "bedwars_wins", "value": 2340, "unit": "count" }
+  ]
+}
+```
+
+`widget_data` `data` block:
+
+```json
+{
+  "data": {
+    "rank": "MVP_PLUS",
+    "rank_raw": "MVP+",
+    "level": 142,
+    "karma": 8750400,
+    "game_stats": {
+      "bedwars": { "wins": 2340, "kills": 18200, "final_kills": 9100, "beds_broken": 4750, "star": 142 },
+      "skywars": { "wins": 840, "kills": 5200, "final_kills": null, "beds_broken": null, "star": 35 }
+    }
+  }
+}
+```
+
+`widget_data` adds three stats beyond `feed_preview`: `bedwars_kills` (unit `count`), `karma` (unit `count`), `achievement_points` (unit `points`).
+
+`rank` is one of `DEFAULT` | `VIP` | `VIP_PLUS` | `MVP` | `MVP_PLUS` | `MVP_PLUS_PLUS` | `YOUTUBER` | `ADMIN` | `UNKNOWN`. Render an unknown rank token with a safe fallback. `rank_raw` is optional. Each block inside `game_stats` (e.g. `bedwars`, `skywars`, `duels`) is best-effort and may be absent; fields within a block may be `null`. `icon_image` is `null` and `hero_image` is `null` in v1 — skin render is deferred. Subtitle is `null`.
+
+#### gw2
+
+Platform value: `gw2`.
+
+`feed_preview` headline stats:
+
+```json
+{
+  "stats": [
+    { "key": "wvw_rank", "value": 842, "unit": "count" },
+    { "key": "fractal_level", "value": 100, "unit": "count" }
+  ]
+}
+```
+
+`widget_data` `data` block:
+
+```json
+{
+  "data": {
+    "main_profession": "GUARDIAN",
+    "account": {
+      "account_age_hours": 6240,
+      "veterancy_years": 9,
+      "total_ap": 18430,
+      "fractal_level": 100,
+      "wvw_rank": 842,
+      "home_world": "Seafarer's Rest"
+    },
+    "top_characters": [
+      {
+        "name": "Lyra Dawnseeker",
+        "race": "Human",
+        "profession": "GUARDIAN",
+        "level": 80,
+        "deaths": 124,
+        "hours_played": 1840,
+        "is_main": true
+      }
+    ]
+  }
+}
+```
+
+`widget_data` adds three stats beyond `feed_preview`: `total_ap` (unit `count`), `account_age_hours` (unit `count`), `veterancy_years` (unit `years`).
+
+Scope-gated fields: `wvw_rank`, `fractal_level`, and `total_ap` arrive `null` or omitted — NEVER `0` — depending on the permissions of the user's API key. Treat absent as "not available", not as zero. `main_profession` is `null` when the account has no character; it is otherwise a profession token (`GUARDIAN` | `WARRIOR` | `ENGINEER` | `RANGER` | `THIEF` | `ELEMENTALIST` | `MESMER` | `NECROMANCER` | `REVENANT`). `account.home_world` may be `null`. `icon_image` is `null` and `hero_image` is `null` — no portrait is exposed. Subtitle is the world name or `null`.
+
+#### league_of_legends
+
+Platform value: `league_of_legends`.
+
+`feed_preview` headline stats:
+
+```json
+{
+  "stats": [
+    { "key": "rank_lp", "value": 75, "unit": "lp" },
+    { "key": "winrate", "value": 54.2, "unit": "percent" }
+  ]
+}
+```
+
+`widget_data` `data` block:
+
+```json
+{
+  "data": {
+    "rank": {
+      "tier": "GOLD",
+      "division": "II",
+      "lp": 75,
+      "wins": 183,
+      "losses": 155
+    },
+    "top_mastery": [
+      { "champion_id": 157, "level": 7, "points": 412000 },
+      { "champion_id": 99,  "level": 6, "points": 198000 }
+    ],
+    "challenges_details": {
+      "total_points": 32400,
+      "level": "GOLD"
+    },
+    "summoner": {
+      "level": 312,
+      "profile_icon_id": 4895
+    }
+  }
+}
+```
+
+`widget_data` adds three stats beyond `feed_preview`: `mastery_points` (unit `points`), `challenge_points` (unit `points`), `summoner_level` (unit `count`).
+
+`rank` is `null` when the summoner is unranked; otherwise `tier` is one of `IRON` | `BRONZE` | `SILVER` | `GOLD` | `PLATINUM` | `EMERALD` | `DIAMOND` | `MASTER` | `GRANDMASTER` | `CHALLENGER`, and `division` is one of `I` | `II` | `III` | `IV`. `summoner.profile_icon_id` is a numeric ID — NOT a URL. `icon_image` is `null` and `hero_image` is `null` in v1 — images deferred. Title is `GameName#TAG`; subtitle is the region token.
+
+#### wow_retail
+
+Platform value: `wow_retail`.
+
+`feed_preview` headline stats:
+
+```json
+{
+  "stats": [
+    { "key": "item_level", "value": 639, "unit": "count" },
+    { "key": "achievement_points", "value": 28450, "unit": "points" }
+  ]
+}
+```
+
+`widget_data` `data` block:
+
+```json
+{
+  "data": {
+    "profile": {
+      "race": "Night Elf",
+      "faction": "ALLIANCE",
+      "class": "Hunter",
+      "spec": "Marksmanship",
+      "level": 80,
+      "ilvl_avg": 639,
+      "ilvl_equipped": 635
+    },
+    "mythic_plus": {
+      "rating": 2840,
+      "best_runs": [
+        { "dungeon": "Ara-Kara, City of Echoes", "level": 12, "completed_at": "2026-05-30T21:14:00Z" }
+      ]
+    },
+    "recent_achievements": [
+      { "id": 40281, "name": "Ahead of the Curve: Queen Ansurek", "completed_at": "2026-05-15T18:00:00Z" }
+    ],
+    "attribution": "Data provided by Blizzard"
+  }
+}
+```
+
+`widget_data` adds one stat beyond `feed_preview`: `mythic_plus_rating` — this stat carries no `unit` (the `rating` unit token belongs to `chess` and must not be applied here); it is present only when M+ data exists.
+
+`profile.spec` is best-effort and may be `null`. `mythic_plus.rating` is `null` or the `mythic_plus` block may be absent when M+ data is not available; render a safe fallback for absent M+ data. `profile.faction` is one of `ALLIANCE` | `HORDE`. `data.attribution` is the string `"Data provided by Blizzard"`, delivered in `widget_data.data`; show it conspicuously wherever the full card is rendered (any surface that reads `widget_data`). Apply a freshness gate: if `last_updated` is more than 30 days old, show a "stale — tap to refresh" state instead of the data. `icon_image` (avatar render) and `hero_image` (main character render) are absolute `https://` URLs or `null`. Subtitle is `realm-REGION`.
 
 ## Cross-references
 
