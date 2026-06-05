@@ -2,17 +2,13 @@ import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Builds a ProfileEdit with valid defaults so each test isolates one field.
-ProfileEdit _edit({
-  String displayName = 'Valid Name',
-  String? avatarUrl,
-  String? bio,
-}) => ProfileEdit(
-  displayName: displayName,
-  avatarUrl: avatarUrl,
-  bio: bio,
-  theme: ProfileTheme.classic,
-  privacy: ProfilePrivacy.public,
-);
+ProfileEdit _edit({String displayName = 'Valid Name', String? bio}) =>
+    ProfileEdit(
+      displayName: displayName,
+      bio: bio,
+      theme: ProfileTheme.classic,
+      privacy: ProfilePrivacy.public,
+    );
 
 void main() {
   group('ProfileEdit.validate', () {
@@ -51,30 +47,6 @@ void main() {
       expect(
         _edit(bio: null).validate(),
         isNot(contains(ProfileEditField.bio)),
-      );
-    });
-
-    test('flags an avatar URL that is not an absolute http(s) URL', () {
-      expect(
-        _edit(avatarUrl: 'ftp://example.com/a.png').validate(),
-        contains(ProfileEditField.avatarUrl),
-      );
-      expect(
-        _edit(avatarUrl: 'not a url').validate(),
-        contains(ProfileEditField.avatarUrl),
-      );
-      // http, https, and a null (cleared) avatar pass.
-      expect(
-        _edit(avatarUrl: 'https://example.com/a.png').validate(),
-        isNot(contains(ProfileEditField.avatarUrl)),
-      );
-      expect(
-        _edit(avatarUrl: 'http://example.com/a.png').validate(),
-        isNot(contains(ProfileEditField.avatarUrl)),
-      );
-      expect(
-        _edit(avatarUrl: null).validate(),
-        isNot(contains(ProfileEditField.avatarUrl)),
       );
     });
   });

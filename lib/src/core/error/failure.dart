@@ -86,3 +86,52 @@ final class UnexpectedFailure extends Failure {
   @override
   bool get isExpected => false;
 }
+
+/// The avatar moderation provider flagged the image content. Expected control
+/// flow — the user can pick a different image. Not crash-reported.
+/// [categories] contains the flagged category tokens from the server; they are
+/// never shown to the user directly.
+final class ModerationRejectedFailure extends Failure {
+  const ModerationRejectedFailure({
+    this.categories = const [],
+    super.message,
+    super.code,
+  });
+
+  final List<String> categories;
+
+  @override
+  bool get isExpected => true;
+
+  @override
+  List<Object?> get props => [...super.props, categories];
+}
+
+/// The moderation provider was unavailable or returned an unexpected error.
+/// Not expected control flow — worth a crash report so outages are visible.
+final class ModerationUnavailableFailure extends Failure {
+  const ModerationUnavailableFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => false;
+}
+
+/// A rate-limited server operation (HTTP 429 class). Expected control flow:
+/// the UI surfaces a "try again shortly" message and the user may retry.
+final class RateLimitFailure extends Failure {
+  const RateLimitFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => true;
+}
+
+/// A local image decode/crop step failed before any upload (the bytes could
+/// not be decoded, or the in-app cropper reported a failure). Expected control
+/// flow — distinct from a user cancel, which stays idle. Not crash-reported:
+/// a corrupt/unsupported local file is the user's input, not an app fault.
+final class MediaProcessingFailure extends Failure {
+  const MediaProcessingFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => true;
+}

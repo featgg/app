@@ -64,9 +64,10 @@ String _themeToWire(ProfileTheme t) => t.name;
 String _privacyToWire(ProfilePrivacy p) => p.name;
 
 /// Builds the writable-column map for an update request.
+/// avatar_url is server-managed (written by the upload endpoint) and is
+/// intentionally absent — the client must not overwrite it here.
 Map<String, dynamic> profileEditToColumns(ProfileEdit e) => {
   'display_name': e.displayName,
-  'avatar_url': e.avatarUrl,
   'bio': e.bio,
   'theme_id': _themeToWire(e.theme),
   'privacy_level': _privacyToWire(e.privacy),

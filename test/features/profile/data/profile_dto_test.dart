@@ -87,7 +87,6 @@ void main() {
     test('profileEditToColumns builds the writable columns', () {
       const edit = ProfileEdit(
         displayName: 'Alice',
-        avatarUrl: 'https://example.com/a.png',
         bio: 'Hello',
         theme: ProfileTheme.retro,
         privacy: ProfilePrivacy.private,
@@ -96,21 +95,17 @@ void main() {
 
       expect(
         columns.keys,
-        containsAll([
-          'display_name',
-          'avatar_url',
-          'bio',
-          'theme_id',
-          'privacy_level',
-        ]),
+        containsAll(['display_name', 'bio', 'theme_id', 'privacy_level']),
       );
       expect(columns['display_name'], 'Alice');
-      expect(columns['avatar_url'], 'https://example.com/a.png');
       expect(columns['bio'], 'Hello');
       expect(columns['theme_id'], 'retro');
       expect(columns['privacy_level'], 'private');
 
-      // username and server-managed columns must be absent.
+      // avatar_url is server-managed (set by the avatar-upload endpoint), so an
+      // update must never write it; username and other server-managed columns
+      // must also be absent.
+      expect(columns.containsKey('avatar_url'), isFalse);
       expect(columns.containsKey('username'), isFalse);
       expect(columns.containsKey('id'), isFalse);
     });

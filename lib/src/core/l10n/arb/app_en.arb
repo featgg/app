@@ -28,6 +28,22 @@
   "@errorAuthRateLimited": {
     "description": "Shown when the auth service rate-limits a send or verify request (HTTP 429 class). The UI disables the rate-limited action and backs off for about a minute. Wording is approximate because the server window is not known on the client."
   },
+  "errorAvatarRejected": "This image can't be used as a profile picture. Please choose a different one.",
+  "@errorAvatarRejected": {
+    "description": "Shown when the server's moderation provider flags the uploaded avatar image. Generic copy — raw category tokens are never displayed."
+  },
+  "errorAvatarUnavailable": "Couldn't process your image right now. Please try again later.",
+  "@errorAvatarUnavailable": {
+    "description": "Shown when the moderation provider is unavailable or returns an unexpected error. The avatar is unchanged; the user can retry."
+  },
+  "errorAvatarRateLimited": "You're uploading too quickly. Try again in about a minute.",
+  "@errorAvatarRateLimited": {
+    "description": "Shown when the avatar upload endpoint returns 429 (rate limited). Static message — the server is authoritative on the wait window."
+  },
+  "errorAvatarProcessing": "Couldn't process that image. Please choose a different one.",
+  "@errorAvatarProcessing": {
+    "description": "Shown when the local image decode or crop step fails before any upload attempt."
+  },
   "signInTitle": "Sign in to Feat.gg",
   "@signInTitle": {
     "description": "Title shown on the sign-in screen email step."
@@ -146,9 +162,17 @@
   "@profileDisplayNameLabel": {
     "description": "Label for the display-name input field on the profile-edit screen."
   },
-  "profileAvatarUrlLabel": "Avatar URL",
-  "@profileAvatarUrlLabel": {
-    "description": "Label for the avatar URL input field on the profile-edit screen."
+  "profileAvatarChange": "Change photo",
+  "@profileAvatarChange": {
+    "description": "Accessibility label and tooltip for the tap-to-upload avatar affordance on the profile-edit screen."
+  },
+  "profileAvatarUploading": "Uploading photo…",
+  "@profileAvatarUploading": {
+    "description": "Semantics label shown over the avatar while the upload is in flight."
+  },
+  "profileAvatarUpdated": "Profile photo updated.",
+  "@profileAvatarUpdated": {
+    "description": "Transient snackbar confirmation shown after a successful avatar upload."
   },
   "profileBioLabel": "Bio",
   "@profileBioLabel": {
@@ -193,10 +217,6 @@
   "profileBioTooLong": "Bio must be 150 characters or fewer.",
   "@profileBioTooLong": {
     "description": "Shown on the bio field when the value exceeds the 150-character limit."
-  },
-  "profileAvatarUrlInvalid": "Enter a valid http or https URL, or leave blank.",
-  "@profileAvatarUrlInvalid": {
-    "description": "Shown on the avatar URL field when the value is not a valid absolute http/https URL."
   },
   "asyncErrorTitle": "Couldn't load this",
   "@asyncErrorTitle": {

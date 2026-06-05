@@ -17,7 +17,6 @@ const _profile = Profile(
 
 const _validEdit = ProfileEdit(
   displayName: 'Updated Name',
-  avatarUrl: null,
   bio: 'Updated bio',
   theme: ProfileTheme.retro,
   privacy: ProfilePrivacy.private,
@@ -26,7 +25,6 @@ const _validEdit = ProfileEdit(
 // Empty display name fails client validation before any backend call.
 const _invalidEdit = ProfileEdit(
   displayName: '',
-  avatarUrl: null,
   bio: null,
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,

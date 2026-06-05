@@ -7,6 +7,7 @@ import 'src/features/auth/data/auth_data.dart';
 import 'src/features/auth/domain/auth_domain.dart';
 import 'src/features/profile/data/profile_data.dart';
 import 'src/features/profile/domain/profile_domain.dart';
+import 'src/features/profile/presentation/avatar_picker.dart';
 
 Future<void> main() async {
   await bootstrap(
@@ -16,6 +17,10 @@ Future<void> main() async {
         overrides: [
           authRepositoryProvider.overrideWith(buildAuthRepository),
           profileRepositoryProvider.overrideWith(buildProfileRepository),
+          avatarRepositoryProvider.overrideWith(buildAvatarRepository),
+          avatarPickerProvider.overrideWithValue(
+            const CropYourImageAvatarPicker(),
+          ),
         ],
         child: const App(),
       ),

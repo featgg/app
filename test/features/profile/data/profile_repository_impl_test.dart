@@ -213,9 +213,21 @@ void main() {
   });
 
   group('ProfileRepositoryImpl.updateMyProfile', () {
+    // avatar_url is server-managed; it must not appear in the writable-column
+    // map emitted by profileEditToColumns.
+    test('profileEditToColumns does not emit avatar_url', () {
+      const edit = ProfileEdit(
+        displayName: 'Updated Name',
+        bio: 'New bio',
+        theme: ProfileTheme.retro,
+        privacy: ProfilePrivacy.private,
+      );
+      final columns = profileEditToColumns(edit);
+      expect(columns.containsKey('avatar_url'), isFalse);
+    });
+
     const edit = ProfileEdit(
       displayName: 'Updated Name',
-      avatarUrl: 'https://example.com/new.png',
       bio: 'New bio',
       theme: ProfileTheme.retro,
       privacy: ProfilePrivacy.private,
@@ -225,7 +237,7 @@ void main() {
       'id': 'user-123',
       'username': 'testuser',
       'display_name': 'Updated Name',
-      'avatar_url': 'https://example.com/new.png',
+      'avatar_url': null,
       'bio': 'New bio',
       'theme_id': 'retro',
       'privacy_level': 'private',

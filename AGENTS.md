@@ -73,6 +73,8 @@ Each plan declares `testing_policy`: `none`, `existing`, or `required`. Default 
 
 Tests never assert hard-coded user-facing or localized copy. A translated string is owned by its ARB file and edited freely; assert against the l10n key or structural behavior (a locale resolves, two locales differ, a value is non-empty) — never a literal translation. A copy edit must never break a test.
 
+**Green tests prove logic, not integration.** Unit and widget tests run against fakes (hand-rolled SDK/repository/picker/data-source fakes), below the real integration boundary — they exercise neither a deployed backend endpoint, the client SDK against a live service, nor device/platform capabilities (camera, image codecs, file pickers, permissions, deep links). A feature whose behavior depends on any of those is **not "working" or "done" on green tests + `analyze` alone** — that only means its logic is sound. Claiming such a path works requires a real run on a target device/platform against the deployed backend; absent that, it ships explicitly marked "not integration-validated; blocked on `<dependency>`". No agent, report, or summary claims a backend-, SDK-, or device-dependent path "works" on the strength of green fakes — and a plan that depends on a backend surface must name the deploy/provisioning prerequisite in its smoke test, not assume it.
+
 ## Language
 
 Respond in the human's language. Anything committed — code, comments, docs, commit and PR text — is English only.

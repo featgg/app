@@ -61,18 +61,16 @@ final class Profile extends Equatable {
 }
 
 /// Writable fields for an update (the documented writable columns, minus
-/// username). avatarUrl/bio are nullable: null clears the column.
+/// username and avatar_url, which is server-managed via the upload endpoint).
 final class ProfileEdit extends Equatable {
   const ProfileEdit({
     required this.displayName,
-    required this.avatarUrl,
     required this.bio,
     required this.theme,
     required this.privacy,
   });
 
   final String displayName;
-  final String? avatarUrl;
   final String? bio;
   final ProfileTheme theme;
   final ProfilePrivacy privacy;
@@ -92,21 +90,12 @@ final class ProfileEdit extends Equatable {
       errors.add(ProfileEditField.bio);
     }
 
-    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
-      final uri = Uri.tryParse(avatarUrl!);
-      if (uri == null ||
-          !uri.isAbsolute ||
-          (uri.scheme != 'http' && uri.scheme != 'https')) {
-        errors.add(ProfileEditField.avatarUrl);
-      }
-    }
-
     return errors;
   }
 
   @override
-  List<Object?> get props => [displayName, avatarUrl, bio, theme, privacy];
+  List<Object?> get props => [displayName, bio, theme, privacy];
 }
 
 /// Which field failed client validation; the screen maps each to localized copy.
-enum ProfileEditField { displayName, avatarUrl, bio }
+enum ProfileEditField { displayName, bio }
