@@ -81,7 +81,7 @@ final class ConnectionActionsState extends Equatable {
   ];
 }
 
-@riverpod
+@Riverpod(dependencies: [card])
 class ConnectionActionsController extends _$ConnectionActionsController {
   Timer? _cooldownTimer;
 
