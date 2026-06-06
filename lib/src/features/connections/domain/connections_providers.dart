@@ -15,10 +15,6 @@ ConnectionsRepository connectionsRepository(Ref ref) =>
 
 /// DI seam for the cards repository. The concrete implementation is supplied
 /// as a composition-root override in `main.dart`.
-///
-/// Declares an (empty) `dependencies` list so it is a scopeable provider: the
-/// keyed `cardProvider` family that reads it lists it as a dependency, which
-/// Riverpod requires for the override to propagate into the family.
-@Riverpod(dependencies: [])
+@riverpod
 CardsRepository cardsRepository(Ref ref) =>
     throw UnimplementedError('cardsRepositoryProvider must be overridden');

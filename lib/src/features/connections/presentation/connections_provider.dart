@@ -25,11 +25,7 @@ Future<List<Connection>> myConnections(Ref ref) async {
 ///
 /// Keyed by [Platform] so each platform invalidates only its own card;
 /// adding a later platform requires no edit to this provider.
-///
-/// Declares `cardsRepository` as a dependency: as a keyed (scoped) provider that
-/// reads the overridable `cardsRepositoryProvider`, Riverpod requires the
-/// dependency so a composition-root or test override propagates into the family.
-@Riverpod(retry: _noRetry, dependencies: [cardsRepository])
+@Riverpod(retry: _noRetry)
 Future<GameCard?> card(Ref ref, Platform platform) async {
   final repo = ref.watch(cardsRepositoryProvider);
   final result = await repo.fetchMyCard(platform);

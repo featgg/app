@@ -29,19 +29,30 @@ final class _FakeCardsRepository implements CardsRepository {
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _wrap(Widget child, CardsRepository repo) => ProviderScope(
-  overrides: [cardsRepositoryProvider.overrideWithValue(repo)],
-  child: MaterialApp(
-    localizationsDelegates: [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: const [Locale('en')],
-    home: Scaffold(body: child),
-  ),
-);
+Widget _wrap(Widget child, CardsRepository repo) {
+  // Override at a root ProviderContainer (via UncontrolledProviderScope) rather
+  // than a ProviderScope widget: riverpod_lint treats a widget-test ProviderScope
+  // as a non-root scope and misfires scoped_providers_should_specify_dependencies
+  // when a keyed/family provider (cardProvider) reads the overridden seam. A root
+  // container is unambiguously root, so the override is correct and lint-clean.
+  final container = ProviderContainer(
+    overrides: [cardsRepositoryProvider.overrideWithValue(repo)],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(body: child),
+    ),
+  );
+}
 
 GameCard _steamCard({
   String? iconImage,
