@@ -104,7 +104,6 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
 
 /// Converts a [GameCardDto] into a [GameCard].
 ///
-/// Unknown `schema_version` (> 1) falls back to envelope-only (data: null).
 /// Absent `data` block is treated as null, not an error.
 GameCard gameCardFromDto(GameCardDto dto) {
   final platform = _platformFromWire(dto.platform);
