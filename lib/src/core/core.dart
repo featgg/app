@@ -8,5 +8,6 @@ export 'env/env.dart';
 export 'l10n/l10n.dart';
 export 'observability/observability.dart';
 export 'router/router.dart';
+export 'supabase/supabase.dart';
 export 'theme/theme.dart';
 export 'widgets/widgets.dart';

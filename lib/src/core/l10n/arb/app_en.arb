@@ -225,5 +225,126 @@
   "asyncRetry": "Retry",
   "@asyncRetry": {
     "description": "Label for the Retry action in the AsyncValueWidget error state."
+  },
+  "errorAlreadyLinked": "This platform is already connected.",
+  "@errorAlreadyLinked": {
+    "description": "Shown when a link attempt returns ALREADY_LINKED (409). Expected control flow."
+  },
+  "errorSyncCooldown": "Refresh is on cooldown. Try again shortly.",
+  "@errorSyncCooldown": {
+    "description": "Shown when a sync attempt returns SYNC_COOLDOWN (429). The server window is authoritative; the client shows this static message."
+  },
+  "errorUpstream": "The platform is unavailable right now. Please try again later.",
+  "@errorUpstream": {
+    "description": "Shown for transient upstream errors (platform busy, rate-limited, generic failure). Retry later."
+  },
+  "errorUpstreamNotFound": "Account not found. Please check the details and try again.",
+  "@errorUpstreamNotFound": {
+    "description": "Shown when the upstream platform cannot find the account (UPSTREAM_NOT_FOUND). Covers both initial link and sync identity-gone cases."
+  },
+  "errorUpstreamNotConnected": "Platform not connected. Please connect it first.",
+  "@errorUpstreamNotConnected": {
+    "description": "Shown when no linked account exists on the platform side (LINKED_ACCOUNT_NOT_FOUND). User needs to connect before syncing."
+  },
+  "errorUpstreamReconnect": "Stored connection is broken. Please reconnect the platform.",
+  "@errorUpstreamReconnect": {
+    "description": "Shown when the stored credential or routing is invalid (MISSING_STORED_CREDENTIAL, INVALID_STORED_ROUTING). User must relink."
+  },
+  "connectionsTitle": "Connections",
+  "@connectionsTitle": {
+    "description": "App bar title for the connections screen."
+  },
+  "connectionsEntry": "Connections",
+  "@connectionsEntry": {
+    "description": "Home AppBar action label / tooltip that routes to the connections screen."
+  },
+  "connectionsEmpty": "No platforms connected yet.",
+  "@connectionsEmpty": {
+    "description": "Shown on the connections screen when the user has no linked accounts."
+  },
+  "connectionsAddSteam": "Connect Steam",
+  "@connectionsAddSteam": {
+    "description": "Label for the add-Steam affordance on the connections screen."
+  },
+  "connectionsSteamRemoteIdLabel": "Steam ID",
+  "@connectionsSteamRemoteIdLabel": {
+    "description": "Label for the Steam remote_id input field."
+  },
+  "connectionsSteamRemoteIdHint": "Enter your Steam ID",
+  "@connectionsSteamRemoteIdHint": {
+    "description": "Placeholder hint for the Steam remote_id input field."
+  },
+  "connectionsRemoteIdRequired": "Steam ID is required.",
+  "@connectionsRemoteIdRequired": {
+    "description": "Shown on the Steam ID field when the user submits an empty value."
+  },
+  "connectionsLink": "Connect",
+  "@connectionsLink": {
+    "description": "Button label for the link/connect action."
+  },
+  "connectionsLinked": "Platform connected.",
+  "@connectionsLinked": {
+    "description": "Transient snackbar confirmation shown after a successful link."
+  },
+  "connectionsRefresh": "Refresh",
+  "@connectionsRefresh": {
+    "description": "Button label / tooltip for the refresh (sync) action on a connection."
+  },
+  "connectionsRefreshSkipped": "Already up to date.",
+  "@connectionsRefreshSkipped": {
+    "description": "Snackbar shown when a refresh returns skipped: true."
+  },
+  "connectionsRefreshCooldown": "Refresh is on cooldown.",
+  "@connectionsRefreshCooldown": {
+    "description": "Hint shown alongside the disabled refresh button while the client-side cooldown is active."
+  },
+  "connectionsUnlink": "Disconnect",
+  "@connectionsUnlink": {
+    "description": "Button label / tooltip for the unlink action on a connection."
+  },
+  "connectionsUnlinked": "Platform disconnected.",
+  "@connectionsUnlinked": {
+    "description": "Transient snackbar confirmation shown after a successful unlink."
+  },
+  "connectionsStatusActive": "Active",
+  "@connectionsStatusActive": {
+    "description": "Connection status label when status is active."
+  },
+  "connectionsStatusError": "Error",
+  "@connectionsStatusError": {
+    "description": "Connection status label when status is error."
+  },
+  "connectionsLastSync": "Last synced: {time}",
+  "@connectionsLastSync": {
+    "description": "Label showing when the connection was last synced. {time} is the last-sync date, already formatted for the active locale by the caller.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionsLastSyncNever": "Never synced",
+  "@connectionsLastSyncNever": {
+    "description": "Shown when no sync has completed yet for a connection."
+  },
+  "connectionsCardProfileLink": "View profile",
+  "@connectionsCardProfileLink": {
+    "description": "Label for the link to the user's upstream platform profile on the card."
+  },
+  "connectionsStatHoursPlayed": "Hours played",
+  "@connectionsStatHoursPlayed": {
+    "description": "Localized label for the hours_played stat key."
+  },
+  "connectionsStatGamesOwned": "Games owned",
+  "@connectionsStatGamesOwned": {
+    "description": "Localized label for the games_owned stat key."
+  },
+  "connectionsLibraryShowcase": "Library showcase",
+  "@connectionsLibraryShowcase": {
+    "description": "Section heading for the Steam library showcase block on the game card."
+  },
+  "connectionsRecentGames": "Recent games",
+  "@connectionsRecentGames": {
+    "description": "Section heading for the Steam recent games block on the game card."
   }
 }

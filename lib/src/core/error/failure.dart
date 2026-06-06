@@ -135,3 +135,37 @@ final class MediaProcessingFailure extends Failure {
   @override
   bool get isExpected => true;
 }
+
+/// A connection already exists for this platform (`ALREADY_LINKED` 409).
+/// Expected control flow — the link controller treats it as success-equivalent
+/// at the repository boundary; this subtype exists so a future "already
+/// connected" surface can branch on it without re-deriving the code.
+final class AlreadyLinkedFailure extends Failure {
+  const AlreadyLinkedFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => true;
+}
+
+/// A refresh hit the per-connection cooldown (`SYNC_COOLDOWN` 429). Expected
+/// control flow — drives a disabled-refresh state in the UI. The server window
+/// is authoritative; the client applies a fixed proactive cooldown as a UX
+/// affordance only.
+final class SyncCooldownFailure extends Failure {
+  const SyncCooldownFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => true;
+}
+
+/// An upstream third-party platform is unavailable, not-found, or rate-limited,
+/// or the stored connection routing is broken (`UPSTREAM_*`,
+/// `LINKED_ACCOUNT_NOT_FOUND`, `MISSING_STORED_CREDENTIAL`,
+/// `INVALID_STORED_ROUTING`). Expected control flow — the user retries or
+/// reconnects; not an app fault. Not crash-reported.
+final class UpstreamFailure extends Failure {
+  const UpstreamFailure({super.message, super.code});
+
+  @override
+  bool get isExpected => true;
+}

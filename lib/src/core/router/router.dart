@@ -4,6 +4,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:featgg/src/features/auth/domain/auth_repository.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
+import 'package:featgg/src/features/connections/presentation/connections_presentation.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
@@ -48,6 +49,10 @@ GoRouter router(Ref ref) {
             state.extra is Profile ? null : '/profile',
         builder: (_, state) =>
             ProfileEditScreen(profile: state.extra! as Profile),
+      ),
+      GoRoute(
+        path: '/connections',
+        builder: (_, _) => const ConnectionsScreen(),
       ),
     ],
   );
