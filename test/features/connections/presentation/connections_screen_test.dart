@@ -208,5 +208,30 @@ void main() {
       expect(refreshBtn.onPressed, isNull);
       expect(find.byKey(const Key('cooldownHint')), findsOneWidget);
     });
+
+    testWidgets(
+      'does not render a tile for a platform without a registered descriptor',
+      (tester) async {
+        final conn = Connection(
+          platform: Platform.leagueOfLegends,
+          status: ConnectionStatus.active,
+          createdAt: DateTime(2026),
+        );
+        await _pump(tester, connections: right([conn]));
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.byKey(const Key('connection_leagueOfLegends')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('refreshButton_leagueOfLegends')),
+          findsNothing,
+        );
+        // Empty state shows because no descriptor-registered connections exist.
+        expect(find.byKey(const Key('connectionsEmpty')), findsOneWidget);
+      },
+    );
   });
 }

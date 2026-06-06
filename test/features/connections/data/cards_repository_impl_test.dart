@@ -166,5 +166,26 @@ void main() {
       );
       expect(reporter.reported, hasLength(1));
     });
+
+    test(
+      'data source returns null for non-v1 schema_version → Right(null)',
+      () async {
+        // Models the data source returning null when schema_version != 1
+        // (the version gate in SupabaseCardsDataSource). The repository must
+        // treat null as card-unavailable, not an error.
+        final source = _FakeCardsDataSource((_, _) async => null);
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).fetchMyCard(Platform.steam);
+
+        result.fold(
+          (f) => fail('want Right(null), got $f'),
+          (card) => expect(card, isNull),
+        );
+        expect(reporter.reported, isEmpty);
+      },
+    );
   });
 }

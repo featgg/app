@@ -79,20 +79,6 @@ void main() {
     });
   });
 
-  group('gameCardFromDto — schema_version fallback', () {
-    test('unknown schema_version (> 1) → envelope only, data is null', () {
-      final raw = Map<String, dynamic>.from(_steamWidgetData);
-      raw['schema_version'] = 99;
-      final card = gameCardFromDto(GameCardDto.fromJson(raw));
-
-      expect(card.schemaVersion, 99);
-      expect(card.data, isNull);
-      // Envelope fields still parsed.
-      expect(card.title, 'TestUser');
-      expect(card.stats, hasLength(2));
-    });
-  });
-
   group('gameCardFromDto — absent data slots', () {
     test('absent library_showcase / recent_games → empty lists', () {
       final raw = Map<String, dynamic>.from(_steamWidgetData);

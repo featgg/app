@@ -18,6 +18,7 @@ abstract interface class ConnectionsDataSource {
   /// result DTO on 200. Throws on failure.
   Future<SyncResultDto> syncPlatform(String functionName);
 
-  /// Reads all `linked_accounts` rows for [userId] ordered by `created_at`.
-  Future<List<ConnectionDto>> fetchConnections(String userId);
+  /// Reads all `linked_accounts` rows for the caller ordered by `created_at`.
+  /// Owner-only RLS scopes the result server-side; no client-side user filter.
+  Future<List<ConnectionDto>> fetchConnections();
 }

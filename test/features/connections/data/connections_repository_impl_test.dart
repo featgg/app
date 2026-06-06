@@ -27,7 +27,7 @@ final class _RecordingReporter implements CrashReporter {
 typedef _LinkFn = Future<LinkSuccessDto> Function(Map<String, dynamic> body);
 typedef _UnlinkFn = Future<LinkSuccessDto> Function(String wireValue);
 typedef _SyncFn = Future<SyncResultDto> Function(String functionName);
-typedef _FetchFn = Future<List<ConnectionDto>> Function(String userId);
+typedef _FetchFn = Future<List<ConnectionDto>> Function();
 
 final class _FakeConnectionsDataSource implements ConnectionsDataSource {
   _FakeConnectionsDataSource({
@@ -39,7 +39,7 @@ final class _FakeConnectionsDataSource implements ConnectionsDataSource {
        _onUnlink =
            onUnlink ?? ((_) async => const LinkSuccessDto(success: true)),
        _onSync = onSync ?? ((_) async => const SyncResultDto(skipped: false)),
-       _onFetch = onFetch ?? ((_) async => []);
+       _onFetch = onFetch ?? (() async => []);
 
   final _LinkFn _onLink;
   final _UnlinkFn _onUnlink;
@@ -59,8 +59,7 @@ final class _FakeConnectionsDataSource implements ConnectionsDataSource {
       _onSync(functionName);
 
   @override
-  Future<List<ConnectionDto>> fetchConnections(String userId) =>
-      _onFetch(userId);
+  Future<List<ConnectionDto>> fetchConnections() => _onFetch();
 }
 
 // ---------------------------------------------------------------------------
@@ -523,7 +522,7 @@ void main() {
 
     test('maps a linked_accounts row to Connection list', () async {
       final source = _FakeConnectionsDataSource(
-        onFetch: (_) async => [
+        onFetch: () async => [
           ConnectionDto.fromJson({
             'platform': 'steam',
             'status': 'active',
@@ -548,7 +547,7 @@ void main() {
       'parse fault on unknown status → Left(UnexpectedFailure), reported',
       () async {
         final source = _FakeConnectionsDataSource(
-          onFetch: (_) async => [
+          onFetch: () async => [
             ConnectionDto.fromJson({
               'platform': 'steam',
               'status': 'unknown_status',

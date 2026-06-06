@@ -24,6 +24,11 @@ final class SupabaseCardsDataSource implements CardsDataSource {
     if (row == null) return null;
     final widgetData = row['widget_data'];
     if (widgetData == null) return null;
-    return GameCardDto.fromJson(Map<String, dynamic>.from(widgetData as Map));
+    final map = Map<String, dynamic>.from(widgetData as Map);
+    // Hard-code against v1; fall back to card-unavailable for any other
+    // version. A bumped version is a breaking change (feed.md), so the
+    // strict v1 envelope parse below cannot be trusted for it.
+    if (map['schema_version'] != 1) return null;
+    return GameCardDto.fromJson(map);
   }
 }

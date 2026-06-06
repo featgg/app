@@ -52,11 +52,10 @@ final class SupabaseConnectionsDataSource implements ConnectionsDataSource {
   }
 
   @override
-  Future<List<ConnectionDto>> fetchConnections(String userId) async {
+  Future<List<ConnectionDto>> fetchConnections() async {
     final rows = await _client
         .from(_table)
         .select(_columns)
-        .eq('user_id', userId)
         .order('created_at');
     return (rows as List<dynamic>)
         .map((r) => ConnectionDto.fromJson(Map<String, dynamic>.from(r as Map)))

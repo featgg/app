@@ -59,14 +59,17 @@ class _ConnectionsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final hasSteam = connections.any((c) => c.platform == Platform.steam);
+    final visible = connections
+        .where((c) => platformDescriptors.containsKey(c.platform))
+        .toList();
+    final hasSteam = visible.any((c) => c.platform == Platform.steam);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (connections.isEmpty)
+          if (visible.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Text(
@@ -78,7 +81,7 @@ class _ConnectionsBody extends ConsumerWidget {
                 ),
               ),
             ),
-          ...connections.map(
+          ...visible.map(
             (c) => Padding(
               key: Key('connection_${c.platform.name}'),
               padding: const EdgeInsets.only(bottom: AppSpacing.md),

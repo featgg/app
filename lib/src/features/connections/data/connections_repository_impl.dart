@@ -92,7 +92,7 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
     try {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
-      final dtos = await _source.fetchConnections(userId);
+      final dtos = await _source.fetchConnections();
       return right(dtos.map(connectionFromDto).toList());
     } catch (e, st) {
       return left(_handleNonFunctionError(e, st));
