@@ -6,6 +6,7 @@ import '../../../core/core.dart';
 import '../domain/connection.dart';
 import '../domain/game_card.dart';
 import 'connections_provider.dart';
+import 'minecraft_card_data_view.dart';
 import 'steam_card_data_view.dart';
 
 /// Widget-registry entry for a platform. Keyed by [Platform] in
@@ -19,22 +20,27 @@ typedef CardDataViewBuilder = Widget Function(CardData data);
 /// degradation asserted in tests).
 final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
   Platform.steam: (data) => SteamCardDataView(data: data as SteamCardData),
+  Platform.minecraftHypixel: (data) =>
+      MinecraftCardDataView(data: data as MinecraftCardData),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
 /// via [AsyncValueWidget] and delegates the per-platform `data` block to the
-/// widget registry.
+/// widget registry. The [platform] field determines which provider is watched
+/// and which data-view builder is selected.
 class GameCardWidget extends ConsumerWidget {
-  const GameCardWidget({super.key});
+  const GameCardWidget({super.key, required this.platform});
+
+  final Platform platform;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(cardProvider(Platform.steam));
+    final state = ref.watch(cardProvider(platform));
     final l10n = AppLocalizations.of(context);
 
     return AsyncValueWidget<GameCard?>(
       value: state,
-      onRetry: () => ref.invalidate(cardProvider(Platform.steam)),
+      onRetry: () => ref.invalidate(cardProvider(platform)),
       data: (card) {
         if (card == null) {
           return const SizedBox.shrink();
@@ -153,6 +159,11 @@ class _CardContent extends StatelessWidget {
 String _statLabel(String key, AppLocalizations l10n) => switch (key) {
   'hours_played' => l10n.connectionsStatHoursPlayed,
   'games_owned' => l10n.connectionsStatGamesOwned,
+  'network_level' => l10n.connectionsStatNetworkLevel,
+  'bedwars_wins' => l10n.connectionsStatBedwarsWins,
+  'bedwars_kills' => l10n.connectionsStatBedwarsKills,
+  'karma' => l10n.connectionsStatKarma,
+  'achievement_points' => l10n.connectionsStatAchievementPoints,
   _ => key,
 };
 

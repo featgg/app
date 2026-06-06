@@ -51,7 +51,7 @@ final class _FakeCardsRepository implements CardsRepository {
 /// action renders disabled without driving the real timing logic.
 final class _CooldownActionsController extends ConnectionActionsController {
   @override
-  ConnectionActionsState build() => ConnectionActionsState(
+  ConnectionActionsState build(Platform platform) => ConnectionActionsState(
     refreshing: false,
     unlinking: false,
     cooldownUntil: DateTime.now().add(const Duration(minutes: 1)),
@@ -75,9 +75,9 @@ Future<void> _pump(
         ),
         cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository()),
         if (onCooldown)
-          connectionActionsControllerProvider.overrideWith(
-            _CooldownActionsController.new,
-          ),
+          connectionActionsControllerProvider(
+            Platform.steam,
+          ).overrideWith(_CooldownActionsController.new),
       ],
       child: const MaterialApp(
         localizationsDelegates: [
@@ -171,7 +171,44 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      expect(find.byKey(const Key('linkForm_steam')), findsOneWidget);
       expect(find.byKey(const Key('steamLinkButton')), findsOneWidget);
+    });
+
+    testWidgets('shows a Minecraft link form when no Minecraft connection '
+        'exists', (tester) async {
+      await _pump(tester, connections: right([]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('linkForm_minecraftHypixel')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('minecraftLinkButton')), findsOneWidget);
+    });
+
+    testWidgets('renders a Minecraft connection tile and its card slot', (
+      tester,
+    ) async {
+      final conn = Connection(
+        platform: Platform.minecraftHypixel,
+        status: ConnectionStatus.active,
+        createdAt: DateTime(2026),
+        lastSyncAt: DateTime(2026, 6),
+        remoteId: 'TestPlayer',
+      );
+      await _pump(tester, connections: right([conn]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('connection_minecraftHypixel')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('card_minecraftHypixel')), findsOneWidget);
+      // A connected platform is not offered its link form again.
+      expect(find.byKey(const Key('linkForm_minecraftHypixel')), findsNothing);
     });
 
     testWidgets('refresh button is enabled when not on cooldown', (

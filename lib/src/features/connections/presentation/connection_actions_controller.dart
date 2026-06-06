@@ -86,7 +86,7 @@ class ConnectionActionsController extends _$ConnectionActionsController {
   Timer? _cooldownTimer;
 
   @override
-  ConnectionActionsState build() {
+  ConnectionActionsState build(Platform platform) {
     ref.onDispose(() => _cooldownTimer?.cancel());
     return ConnectionActionsState.initial();
   }
@@ -100,10 +100,11 @@ class ConnectionActionsController extends _$ConnectionActionsController {
     });
   }
 
-  /// Triggers a sync for [platform]. Short-circuits if the client-side cooldown
-  /// is still active. On success, invalidates the connections and card reads.
-  /// On [SyncCooldownFailure], sets a fixed cooldown-until timestamp.
-  Future<void> refresh(Platform platform) async {
+  /// Triggers a sync for the family [platform]. Short-circuits if the
+  /// client-side cooldown is still active. On success, invalidates the
+  /// connections and card reads. On [SyncCooldownFailure], sets a fixed
+  /// cooldown-until timestamp.
+  Future<void> refresh() async {
     if (state.onCooldown) return;
 
     state = state.copyWith(
@@ -142,8 +143,9 @@ class ConnectionActionsController extends _$ConnectionActionsController {
     );
   }
 
-  /// Unlinks [platform]. On success, invalidates the connections read.
-  Future<void> unlink(Platform platform) async {
+  /// Unlinks the family [platform]. On success, invalidates the connections
+  /// read.
+  Future<void> unlink() async {
     state = state.copyWith(unlinking: true, clearFailure: true);
 
     final repo = ref.read(connectionsRepositoryProvider);

@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-/// All platforms the backend supports. Only `steam` is wired in this story;
-/// the remaining six are registered here so later stories add no enum churn.
+/// All platforms the backend supports. Platforms are wired one story at a
+/// time; the full set is listed up front so later stories add no enum churn.
 enum Platform {
   steam,
   leagueOfLegends,

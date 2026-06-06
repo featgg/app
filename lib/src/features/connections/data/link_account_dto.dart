@@ -15,9 +15,15 @@ typedef LinkBodyBuilder =
 /// registry entries) — additive and conflict-free across parallel worktrees.
 const Map<Platform, LinkBodyBuilder> linkBodyBuilders = {
   Platform.steam: _steamLinkBody,
+  Platform.minecraftHypixel: _minecraftLinkBody,
 };
 
 Map<String, dynamic> _steamLinkBody(
+  String wireValue,
+  Map<String, String> input,
+) => {'platform': wireValue, 'remote_id': input['remote_id']!};
+
+Map<String, dynamic> _minecraftLinkBody(
   String wireValue,
   Map<String, String> input,
 ) => {'platform': wireValue, 'remote_id': input['remote_id']!};

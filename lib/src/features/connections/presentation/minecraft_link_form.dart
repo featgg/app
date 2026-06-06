@@ -5,17 +5,16 @@ import '../../../core/core.dart';
 import '../domain/connection.dart';
 import 'link_form_controller.dart';
 
-/// Steam-specific link form. Owns the [TextEditingController] so the typed
-/// value is never cleared on a backend failure — only the controller's state
-/// (error flags) is updated.
-class SteamLinkForm extends ConsumerStatefulWidget {
-  const SteamLinkForm({super.key});
+/// Minecraft (Hypixel) link form. Submits `Platform.minecraftHypixel` with
+/// the user's Minecraft username as `remote_id`.
+class MinecraftLinkForm extends ConsumerStatefulWidget {
+  const MinecraftLinkForm({super.key});
 
   @override
-  ConsumerState<SteamLinkForm> createState() => _SteamLinkFormState();
+  ConsumerState<MinecraftLinkForm> createState() => _MinecraftLinkFormState();
 }
 
-class _SteamLinkFormState extends ConsumerState<SteamLinkForm> {
+class _MinecraftLinkFormState extends ConsumerState<MinecraftLinkForm> {
   final _controller = TextEditingController();
 
   @override
@@ -27,35 +26,36 @@ class _SteamLinkFormState extends ConsumerState<SteamLinkForm> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final formState = ref.watch(linkFormControllerProvider(Platform.steam));
+    final formState = ref.watch(
+      linkFormControllerProvider(Platform.minecraftHypixel),
+    );
     final notifier = ref.read(
-      linkFormControllerProvider(Platform.steam).notifier,
+      linkFormControllerProvider(Platform.minecraftHypixel).notifier,
     );
 
-    // Show a snackbar once linking succeeds, then reset the form.
-    ref.listen<LinkFormState>(linkFormControllerProvider(Platform.steam), (
-      prev,
-      next,
-    ) {
-      if (!next.linked || (prev?.linked == true)) return;
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.connectionsLinked)));
-      _controller.clear();
-    });
+    ref.listen<LinkFormState>(
+      linkFormControllerProvider(Platform.minecraftHypixel),
+      (prev, next) {
+        if (!next.linked || (prev?.linked == true)) return;
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.connectionsLinked)));
+        _controller.clear();
+      },
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
-          key: const Key('steamRemoteIdField'),
+          key: const Key('minecraftRemoteIdField'),
           controller: _controller,
           decoration: InputDecoration(
-            labelText: l10n.connectionsSteamRemoteIdLabel,
-            hintText: l10n.connectionsSteamRemoteIdHint,
+            labelText: l10n.connectionsMinecraftRemoteIdLabel,
+            hintText: l10n.connectionsMinecraftRemoteIdHint,
             errorText: formState.remoteIdError
-                ? l10n.connectionsRemoteIdRequired
+                ? l10n.connectionsMinecraftRemoteIdRequired
                 : null,
           ),
           textInputAction: TextInputAction.done,
@@ -66,7 +66,7 @@ class _SteamLinkFormState extends ConsumerState<SteamLinkForm> {
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(
-              key: const Key('steamLinkError'),
+              key: const Key('minecraftLinkError'),
               formState.failure!.localizedMessage(l10n),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
@@ -74,7 +74,7 @@ class _SteamLinkFormState extends ConsumerState<SteamLinkForm> {
             ),
           ),
         FilledButton(
-          key: const Key('steamLinkButton'),
+          key: const Key('minecraftLinkButton'),
           onPressed: formState.submitting ? null : () => _submit(notifier),
           child: formState.submitting
               ? const SizedBox(

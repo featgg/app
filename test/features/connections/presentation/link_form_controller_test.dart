@@ -48,7 +48,7 @@ ProviderContainer _container(_FakeConnectionsRepository repo) {
     overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
   );
   addTearDown(container.dispose);
-  container.listen(linkFormControllerProvider, (_, _) {});
+  container.listen(linkFormControllerProvider(Platform.steam), (_, _) {});
   return container;
 }
 
@@ -65,10 +65,12 @@ void main() {
         final container = _container(repo);
 
         await container
-            .read(linkFormControllerProvider.notifier)
-            .submit(platform: Platform.steam, remoteId: '   ');
+            .read(linkFormControllerProvider(Platform.steam).notifier)
+            .submit(remoteId: '   ');
 
-        final state = container.read(linkFormControllerProvider);
+        final state = container.read(
+          linkFormControllerProvider(Platform.steam),
+        );
         expect(state.remoteIdError, isTrue);
         expect(state.linked, isFalse);
         expect(repo.linkCalls, 0);
@@ -84,10 +86,12 @@ void main() {
         container.listen(myConnectionsProvider, (_, _) {});
 
         await container
-            .read(linkFormControllerProvider.notifier)
-            .submit(platform: Platform.steam, remoteId: '12345');
+            .read(linkFormControllerProvider(Platform.steam).notifier)
+            .submit(remoteId: '12345');
 
-        final state = container.read(linkFormControllerProvider);
+        final state = container.read(
+          linkFormControllerProvider(Platform.steam),
+        );
         expect(state.linked, isTrue);
         expect(state.failure, isNull);
         expect(state.submitting, isFalse);
@@ -102,10 +106,10 @@ void main() {
       final container = _container(repo);
 
       await container
-          .read(linkFormControllerProvider.notifier)
-          .submit(platform: Platform.steam, remoteId: 'bad-id');
+          .read(linkFormControllerProvider(Platform.steam).notifier)
+          .submit(remoteId: 'bad-id');
 
-      final state = container.read(linkFormControllerProvider);
+      final state = container.read(linkFormControllerProvider(Platform.steam));
       expect(state.failure, isA<InputFailure>());
       expect(state.linked, isFalse);
       expect(state.submitting, isFalse);
@@ -126,12 +130,17 @@ void main() {
           ],
         );
         addTearDown(failContainer.dispose);
-        failContainer.listen(linkFormControllerProvider, (_, _) {});
+        failContainer.listen(
+          linkFormControllerProvider(Platform.steam),
+          (_, _) {},
+        );
         await failContainer
-            .read(linkFormControllerProvider.notifier)
-            .submit(platform: Platform.steam, remoteId: '12345');
+            .read(linkFormControllerProvider(Platform.steam).notifier)
+            .submit(remoteId: '12345');
         expect(
-          failContainer.read(linkFormControllerProvider).failure,
+          failContainer
+              .read(linkFormControllerProvider(Platform.steam))
+              .failure,
           isA<NetworkFailure>(),
         );
 
@@ -145,15 +154,46 @@ void main() {
           ],
         );
         addTearDown(successContainer.dispose);
-        successContainer.listen(linkFormControllerProvider, (_, _) {});
+        successContainer.listen(
+          linkFormControllerProvider(Platform.steam),
+          (_, _) {},
+        );
         await successContainer
-            .read(linkFormControllerProvider.notifier)
-            .submit(platform: Platform.steam, remoteId: '12345');
+            .read(linkFormControllerProvider(Platform.steam).notifier)
+            .submit(remoteId: '12345');
         expect(
-          successContainer.read(linkFormControllerProvider).failure,
+          successContainer
+              .read(linkFormControllerProvider(Platform.steam))
+              .failure,
           isNull,
         );
       },
     );
+
+    test('form state is isolated per platform (family)', () async {
+      final repo = _FakeConnectionsRepository(
+        linkResult: () => left(const NetworkFailure()),
+      );
+      final container = _container(repo);
+      container.listen(
+        linkFormControllerProvider(Platform.minecraftHypixel),
+        (_, _) {},
+      );
+
+      // Drive the Steam form into a failure state.
+      await container
+          .read(linkFormControllerProvider(Platform.steam).notifier)
+          .submit(remoteId: 'bad-id');
+
+      expect(
+        container.read(linkFormControllerProvider(Platform.steam)).failure,
+        isA<NetworkFailure>(),
+      );
+      // The Minecraft form keeps its own initial state — no contamination.
+      expect(
+        container.read(linkFormControllerProvider(Platform.minecraftHypixel)),
+        LinkFormState.initial(),
+      );
+    });
   });
 }

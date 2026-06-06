@@ -47,7 +47,7 @@ void main() {
           expect(l10n.connectionsTitle, isNotEmpty);
           expect(l10n.connectionsEntry, isNotEmpty);
           expect(l10n.connectionsEmpty, isNotEmpty);
-          expect(l10n.connectionsAddSteam, isNotEmpty);
+          expect(l10n.connectionsConnectPlatform('Steam'), isNotEmpty);
           expect(l10n.connectionsSteamRemoteIdLabel, isNotEmpty);
           expect(l10n.connectionsSteamRemoteIdHint, isNotEmpty);
           expect(l10n.connectionsRemoteIdRequired, isNotEmpty);
@@ -67,6 +67,26 @@ void main() {
           expect(l10n.connectionsLastSync('2026-06-05'), isNotEmpty);
           expect(l10n.connectionsLibraryShowcase, isNotEmpty);
           expect(l10n.connectionsRecentGames, isNotEmpty);
+          expect(l10n.connectionsStatNetworkLevel, isNotEmpty);
+          expect(l10n.connectionsStatBedwarsWins, isNotEmpty);
+          expect(l10n.connectionsStatBedwarsKills, isNotEmpty);
+          expect(l10n.connectionsStatKarma, isNotEmpty);
+          expect(l10n.connectionsStatAchievementPoints, isNotEmpty);
+          expect(l10n.connectionsMinecraftRemoteIdLabel, isNotEmpty);
+          expect(l10n.connectionsMinecraftRemoteIdHint, isNotEmpty);
+          expect(l10n.connectionsMinecraftRemoteIdRequired, isNotEmpty);
+          expect(l10n.connectionsMinecraftRank, isNotEmpty);
+          expect(l10n.connectionsMinecraftLevel, isNotEmpty);
+          expect(l10n.connectionsMinecraftKarma, isNotEmpty);
+          expect(l10n.connectionsMinecraftGameStats, isNotEmpty);
+          expect(l10n.connectionsMinecraftBedwars, isNotEmpty);
+          expect(l10n.connectionsMinecraftSkywars, isNotEmpty);
+          expect(l10n.connectionsMinecraftDuels, isNotEmpty);
+          expect(l10n.connectionsMinecraftWins, isNotEmpty);
+          expect(l10n.connectionsMinecraftKills, isNotEmpty);
+          expect(l10n.connectionsMinecraftFinalKills, isNotEmpty);
+          expect(l10n.connectionsMinecraftBedsBroken, isNotEmpty);
+          expect(l10n.connectionsMinecraftStar, isNotEmpty);
           expect(l10n.errorUpstreamNotFound, isNotEmpty);
           expect(l10n.errorUpstreamNotConnected, isNotEmpty);
           expect(l10n.errorUpstreamReconnect, isNotEmpty);
@@ -87,6 +107,25 @@ void main() {
       expect(pt.errorUpstreamNotFound, isNot(en.errorUpstreamNotFound));
       expect(es.errorUpstreamReconnect, isNot(en.errorUpstreamReconnect));
       expect(pt.errorUpstreamReconnect, isNot(en.errorUpstreamReconnect));
+      // Representative new Minecraft keys load per-locale copy rather than the
+      // template fallback. Brand mode names (Bed Wars, SkyWars) are
+      // intentionally identical across locales, so they are not asserted here.
+      expect(
+        es.connectionsMinecraftRemoteIdLabel,
+        isNot(en.connectionsMinecraftRemoteIdLabel),
+      );
+      expect(
+        pt.connectionsMinecraftRemoteIdLabel,
+        isNot(en.connectionsMinecraftRemoteIdLabel),
+      );
+      expect(
+        es.connectionsStatNetworkLevel,
+        isNot(en.connectionsStatNetworkLevel),
+      );
+      expect(
+        pt.connectionsStatNetworkLevel,
+        isNot(en.connectionsStatNetworkLevel),
+      );
     });
   });
 }

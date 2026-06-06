@@ -262,9 +262,14 @@
   "@connectionsEmpty": {
     "description": "Shown on the connections screen when the user has no linked accounts."
   },
-  "connectionsAddSteam": "Connect Steam",
-  "@connectionsAddSteam": {
-    "description": "Label for the add-Steam affordance on the connections screen."
+  "connectionsConnectPlatform": "Connect {platform}",
+  "@connectionsConnectPlatform": {
+    "description": "Header above a platform's link form on the connections screen. {platform} is the platform's brand display name.",
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
   },
   "connectionsSteamRemoteIdLabel": "Steam ID",
   "@connectionsSteamRemoteIdLabel": {
@@ -346,5 +351,85 @@
   "connectionsRecentGames": "Recent games",
   "@connectionsRecentGames": {
     "description": "Section heading for the Steam recent games block on the game card."
+  },
+  "connectionsStatNetworkLevel": "Network level",
+  "@connectionsStatNetworkLevel": {
+    "description": "Localized label for the network_level stat key (Minecraft Hypixel)."
+  },
+  "connectionsStatBedwarsWins": "Bed Wars wins",
+  "@connectionsStatBedwarsWins": {
+    "description": "Localized label for the bedwars_wins stat key (Minecraft Hypixel)."
+  },
+  "connectionsStatBedwarsKills": "Bed Wars kills",
+  "@connectionsStatBedwarsKills": {
+    "description": "Localized label for the bedwars_kills stat key (Minecraft Hypixel)."
+  },
+  "connectionsStatKarma": "Karma",
+  "@connectionsStatKarma": {
+    "description": "Localized label for the karma stat key (Minecraft Hypixel)."
+  },
+  "connectionsStatAchievementPoints": "Achievement points",
+  "@connectionsStatAchievementPoints": {
+    "description": "Localized label for the achievement_points stat key (Minecraft Hypixel)."
+  },
+  "connectionsMinecraftRemoteIdLabel": "Minecraft username",
+  "@connectionsMinecraftRemoteIdLabel": {
+    "description": "Label for the Minecraft (Hypixel) remote_id input field."
+  },
+  "connectionsMinecraftRemoteIdHint": "Enter your Minecraft username",
+  "@connectionsMinecraftRemoteIdHint": {
+    "description": "Placeholder hint for the Minecraft (Hypixel) remote_id input field."
+  },
+  "connectionsMinecraftRemoteIdRequired": "Minecraft username is required.",
+  "@connectionsMinecraftRemoteIdRequired": {
+    "description": "Shown on the Minecraft username field when the user submits an empty value."
+  },
+  "connectionsMinecraftRank": "Rank",
+  "@connectionsMinecraftRank": {
+    "description": "Label for the Minecraft (Hypixel) rank row on the game card data view."
+  },
+  "connectionsMinecraftLevel": "Network level",
+  "@connectionsMinecraftLevel": {
+    "description": "Label for the Minecraft (Hypixel) network level row on the game card data view."
+  },
+  "connectionsMinecraftKarma": "Karma",
+  "@connectionsMinecraftKarma": {
+    "description": "Label for the Minecraft (Hypixel) karma row on the game card data view."
+  },
+  "connectionsMinecraftGameStats": "Game stats",
+  "@connectionsMinecraftGameStats": {
+    "description": "Section heading above the Minecraft (Hypixel) per-mode game stats."
+  },
+  "connectionsMinecraftBedwars": "Bed Wars",
+  "@connectionsMinecraftBedwars": {
+    "description": "Heading for the Minecraft (Hypixel) Bed Wars mode block. Brand mode name."
+  },
+  "connectionsMinecraftSkywars": "SkyWars",
+  "@connectionsMinecraftSkywars": {
+    "description": "Heading for the Minecraft (Hypixel) SkyWars mode block. Brand mode name."
+  },
+  "connectionsMinecraftDuels": "Duels",
+  "@connectionsMinecraftDuels": {
+    "description": "Heading for the Minecraft (Hypixel) Duels mode block."
+  },
+  "connectionsMinecraftWins": "Wins",
+  "@connectionsMinecraftWins": {
+    "description": "Label for a wins value in a Minecraft (Hypixel) mode block."
+  },
+  "connectionsMinecraftKills": "Kills",
+  "@connectionsMinecraftKills": {
+    "description": "Label for a kills value in a Minecraft (Hypixel) mode block."
+  },
+  "connectionsMinecraftFinalKills": "Final kills",
+  "@connectionsMinecraftFinalKills": {
+    "description": "Label for the Bed Wars final kills value (Minecraft Hypixel)."
+  },
+  "connectionsMinecraftBedsBroken": "Beds broken",
+  "@connectionsMinecraftBedsBroken": {
+    "description": "Label for the Bed Wars beds broken value (Minecraft Hypixel)."
+  },
+  "connectionsMinecraftStar": "Star",
+  "@connectionsMinecraftStar": {
+    "description": "Label for the optional Bed Wars star/prestige value (Minecraft Hypixel)."
   }
 }
