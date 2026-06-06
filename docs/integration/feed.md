@@ -287,7 +287,8 @@ Platform value: `minecraft_hypixel`.
     "karma": 8750400,
     "game_stats": {
       "bedwars": { "wins": 2340, "kills": 18200, "final_kills": 9100, "beds_broken": 4750, "star": 142 },
-      "skywars": { "wins": 840, "kills": 5200, "final_kills": null, "beds_broken": null, "star": 35 }
+      "skywars": { "wins": 840, "kills": 5200 },
+      "duels":   { "wins": 410,  "kills": 2200 }
     }
   }
 }
@@ -295,7 +296,7 @@ Platform value: `minecraft_hypixel`.
 
 `widget_data` adds three stats beyond `feed_preview`: `bedwars_kills` (unit `count`), `karma` (unit `count`), `achievement_points` (unit `points`).
 
-`rank` is one of `DEFAULT` | `VIP` | `VIP_PLUS` | `MVP` | `MVP_PLUS` | `MVP_PLUS_PLUS` | `YOUTUBER` | `ADMIN` | `UNKNOWN`. Render an unknown rank token with a safe fallback. `rank_raw` is optional. Each block inside `game_stats` (e.g. `bedwars`, `skywars`, `duels`) is best-effort and may be absent; fields within a block may be `null`. `icon_image` is `null` and `hero_image` is `null` in v1 — skin render is deferred. Subtitle is `null`.
+`rank` is one of `DEFAULT` | `VIP` | `VIP_PLUS` | `MVP` | `MVP_PLUS` | `MVP_PLUS_PLUS` | `YOUTUBER` | `ADMIN` | `UNKNOWN`. Render an unknown rank token with a safe fallback. `rank_raw` is optional. Each block inside `game_stats` is best-effort and may be absent, and the blocks do NOT share a uniform shape: `bedwars` carries `{ wins, kills, final_kills, beds_broken, star? }` (`star` is optional); `skywars` and `duels` carry only `{ wins, kills }`. Do not expect `final_kills`, `beds_broken`, or `star` outside `bedwars`. `icon_image` is `null` and `hero_image` is `null` in v1 — skin render is deferred. Subtitle is `null`.
 
 #### gw2
 
@@ -424,7 +425,14 @@ Platform value: `wow_retail`.
     "mythic_plus": {
       "rating": 2840,
       "best_runs": [
-        { "dungeon": "Ara-Kara, City of Echoes", "level": 12, "completed_at": "2026-05-30T21:14:00Z" }
+        {
+          "keystone_level": 12,
+          "dungeon": { "name": "Ara-Kara, City of Echoes" },
+          "completed_timestamp": 1717101240000,
+          "duration": 1834000,
+          "is_completed_within_time": true,
+          "mythic_rating": { "rating": 245.6 }
+        }
       ]
     },
     "recent_achievements": [
@@ -437,7 +445,7 @@ Platform value: `wow_retail`.
 
 `widget_data` adds one stat beyond `feed_preview`: `mythic_plus_rating` — this stat carries no `unit` (the `rating` unit token belongs to `chess` and must not be applied here); it is present only when M+ data exists.
 
-`profile.spec` is best-effort and may be `null`. `mythic_plus.rating` is `null` or the `mythic_plus` block may be absent when M+ data is not available; render a safe fallback for absent M+ data. `profile.faction` is one of `ALLIANCE` | `HORDE`. `data.attribution` is the string `"Data provided by Blizzard"`, delivered in `widget_data.data`; show it conspicuously wherever the full card is rendered (any surface that reads `widget_data`). Apply a freshness gate: if `last_updated` is more than 30 days old, show a "stale — tap to refresh" state instead of the data. `icon_image` (avatar render) and `hero_image` (main character render) are absolute `https://` URLs or `null`. Subtitle is `realm-REGION`.
+`profile.spec` is best-effort and may be `null`. `mythic_plus.rating` is `null` or the `mythic_plus` block may be absent when M+ data is not available; render a safe fallback for absent M+ data. `mythic_plus.best_runs` is an array of at most 10 Mythic Keystone run objects in the game provider's native shape (the field names are the provider's; the objects are not normalized). Read these exact fields: `keystone_level` (integer), `dungeon.name` (string), `completed_timestamp` (epoch **milliseconds**, NOT an ISO string), `duration` (run time in ms), `is_completed_within_time` (boolean), and `mythic_rating.rating` (number). Other fields (e.g. `members`, `keystone_affixes`, `map_rating`) may be present but are not part of the v1 contract. Do NOT assume `level` or `completed_at` — those do not exist. `profile.faction` is one of `ALLIANCE` | `HORDE`. `data.attribution` is the string `"Data provided by Blizzard"`, delivered in `widget_data.data`; show it conspicuously wherever the full card is rendered (any surface that reads `widget_data`). Apply a freshness gate: if `last_updated` is more than 30 days old, show a "stale — tap to refresh" state instead of the data. `icon_image` (avatar render) and `hero_image` (main character render) are absolute `https://` URLs or `null`. Subtitle is `realm-REGION`.
 
 ## Cross-references
 
