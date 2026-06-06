@@ -19,5 +19,14 @@ extension FailureL10n on Failure {
     ModerationUnavailableFailure() => l10n.errorAvatarUnavailable,
     RateLimitFailure() => l10n.errorAvatarRateLimited,
     MediaProcessingFailure() => l10n.errorAvatarProcessing,
+    AlreadyLinkedFailure() => l10n.errorAlreadyLinked,
+    SyncCooldownFailure() => l10n.errorSyncCooldown,
+    UpstreamFailure(:final code) => switch (code) {
+      'UPSTREAM_NOT_FOUND' => l10n.errorUpstreamNotFound,
+      'LINKED_ACCOUNT_NOT_FOUND' => l10n.errorUpstreamNotConnected,
+      'MISSING_STORED_CREDENTIAL' ||
+      'INVALID_STORED_ROUTING' => l10n.errorUpstreamReconnect,
+      _ => l10n.errorUpstream,
+    },
   };
 }
