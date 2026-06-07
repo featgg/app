@@ -36,8 +36,9 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
         const UnexpectedFailure(message: 'no link builder for platform'),
       );
     }
+    late final Map<String, dynamic> body;
     try {
-      final body = builder(descriptor.wireValue, formInput);
+      body = builder(descriptor.wireValue, formInput);
       await _source.linkAccount(body);
       return right(unit);
     } on FunctionException catch (e, st) {
@@ -49,8 +50,7 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
         // slot. The code cannot distinguish them, so confirm the caller already
         // has THIS account linked before reporting success: a match means the
         // link intent is satisfied; no match means it did not occur.
-        final remoteId = formInput['remote_id'];
-        if (await _isAccountLinked(descriptor.wireValue, remoteId)) {
+        if (await _isSameAccountLinked(descriptor.wireValue, body)) {
           return right(unit);
         }
         return left(failure);
@@ -62,16 +62,33 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
     }
   }
 
-  /// Re-reads the caller's own connections and reports whether one already
-  /// exists for [wireValue] with the same [remoteId]. Disambiguates a 409: a
-  /// same-account re-link matches (idempotent success); a different or
-  /// already-claimed account does not (the link did not occur for the caller).
-  /// On any fetch fault, returns false so the caller surfaces the original
-  /// failure rather than a false success.
-  Future<bool> _isAccountLinked(String wireValue, String? remoteId) async {
+  /// Re-reads the caller's own connections and confirms the submitted identity
+  /// already occupies the [wireValue] slot — disambiguating a 409: a
+  /// same-account re-link returns true (idempotent success); a different
+  /// account, empty slot, or fetch fault returns false so the original failure
+  /// is surfaced.
+  ///
+  /// Matches on `remote_id` for remote-id platforms, or on `metadata` equality
+  /// for metadata platforms, keyed by [body] shape.
+  Future<bool> _isSameAccountLinked(
+    String wireValue,
+    Map<String, dynamic> body,
+  ) async {
     try {
       final dtos = await _source.fetchConnections();
-      return dtos.any((d) => d.platform == wireValue && d.remoteId == remoteId);
+      return dtos.any((d) {
+        if (d.platform != wireValue) return false;
+        if (body.containsKey('remote_id')) {
+          return d.remoteId == body['remote_id'];
+        }
+        if (body.containsKey('metadata')) {
+          final submitted = body['metadata'] as Map<String, dynamic>?;
+          if (submitted == null || d.metadata == null) return false;
+          // Compare every key in the submitted metadata against the stored map.
+          return submitted.entries.every((e) => d.metadata![e.key] == e.value);
+        }
+        return false;
+      });
     } catch (_) {
       return false;
     }

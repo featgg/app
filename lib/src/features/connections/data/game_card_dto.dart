@@ -82,6 +82,13 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
           return null;
         }
       },
+      Platform.leagueOfLegends: (data) {
+        try {
+          return leagueOfLegendsCardDataFromMap(data);
+        } catch (_) {
+          return null;
+        }
+      },
     };
 
 /// Parses the raw `widget_data.data` map for Steam into a [SteamCardData]
@@ -208,6 +215,64 @@ RetroAchievementsCardData retroAchievementsCardDataFromMap(
           ),
         )
         .toList(),
+  );
+}
+
+/// Parses the raw `widget_data.data` map for League of Legends into a
+/// [LeagueOfLegendsCardData] entity. `rank` is null when absent or null (unranked).
+/// `top_mastery` defaults to empty when absent. `challenges_details` and
+/// `summoner` are parsed when present. Throws on malformed required leaves;
+/// the registry wrapper catches and returns null (envelope-only).
+LeagueOfLegendsCardData leagueOfLegendsCardDataFromMap(
+  Map<String, dynamic> data,
+) {
+  final rankRaw = data['rank'] as Map<String, dynamic>?;
+  LolRank? rank;
+  if (rankRaw != null) {
+    rank = LolRank(
+      tier: rankRaw['tier'] as String,
+      division: rankRaw['division'] as String,
+      lp: (rankRaw['lp'] as num).toInt(),
+      wins: (rankRaw['wins'] as num).toInt(),
+      losses: (rankRaw['losses'] as num).toInt(),
+    );
+  }
+
+  final masteryRaw = data['top_mastery'] as List<dynamic>? ?? [];
+  final topMastery = masteryRaw
+      .whereType<Map<String, dynamic>>()
+      .map(
+        (e) => LolMasteryEntry(
+          championId: (e['champion_id'] as num).toInt(),
+          level: (e['level'] as num).toInt(),
+          points: (e['points'] as num).toInt(),
+        ),
+      )
+      .toList();
+
+  final challengesRaw = data['challenges_details'] as Map<String, dynamic>?;
+  LolChallenges? challenges;
+  if (challengesRaw != null) {
+    challenges = LolChallenges(
+      totalPoints: (challengesRaw['total_points'] as num).toInt(),
+      level: challengesRaw['level'] as String,
+    );
+  }
+
+  final summonerRaw = data['summoner'] as Map<String, dynamic>?;
+  LolSummoner? summoner;
+  if (summonerRaw != null) {
+    summoner = LolSummoner(
+      level: (summonerRaw['level'] as num).toInt(),
+      profileIconId: (summonerRaw['profile_icon_id'] as num).toInt(),
+    );
+  }
+
+  return LeagueOfLegendsCardData(
+    rank: rank,
+    topMastery: topMastery,
+    challenges: challenges,
+    summoner: summoner,
   );
 }
 

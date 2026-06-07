@@ -11,7 +11,7 @@ final class SupabaseConnectionsDataSource implements ConnectionsDataSource {
 
   static const _table = 'linked_accounts';
   static const _columns =
-      'platform, status, last_sync_at, created_at, remote_id';
+      'platform, status, last_sync_at, created_at, remote_id, metadata';
 
   @override
   Future<LinkSuccessDto> linkAccount(Map<String, dynamic> body) async {

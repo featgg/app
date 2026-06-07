@@ -355,6 +355,113 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — League of Legends widget_data example', () {
+    const lolWidgetData = {
+      'schema_version': 1,
+      'platform': 'league_of_legends',
+      'title': 'TestPlayer#NA1',
+      'subtitle': 'na1',
+      'icon_image': null,
+      'hero_image': null,
+      'profile_url': null,
+      'stats': [
+        {'key': 'rank_lp', 'value': 85, 'unit': 'count'},
+        {'key': 'winrate', 'value': 56.2, 'unit': 'percent'},
+        {'key': 'mastery_points', 'value': 1200000, 'unit': 'points'},
+        {'key': 'challenge_points', 'value': 45000, 'unit': 'points'},
+        {'key': 'summoner_level', 'value': 312, 'unit': 'count'},
+      ],
+      'last_updated': '2026-06-03T12:00:00Z',
+      'data': {
+        'rank': {
+          'tier': 'GOLD',
+          'division': 'II',
+          'lp': 85,
+          'wins': 120,
+          'losses': 94,
+        },
+        'top_mastery': [
+          {'champion_id': 157, 'level': 7, 'points': 850000},
+          {'champion_id': 64, 'level': 6, 'points': 350000},
+        ],
+        'challenges_details': {'total_points': 45000, 'level': 'GOLD'},
+        'summoner': {'level': 312, 'profile_icon_id': 4568},
+      },
+    };
+
+    test('parses the league_of_legends widget_data block', () {
+      final card = gameCardFromDto(
+        GameCardDto.fromJson(Map<String, dynamic>.from(lolWidgetData)),
+      );
+
+      expect(card.platform, Platform.leagueOfLegends);
+      expect(card.title, 'TestPlayer#NA1');
+      expect(card.subtitle, 'na1');
+      expect(card.iconImage, isNull);
+      expect(card.heroImage, isNull);
+      expect(card.profileUrl, isNull);
+      expect(card.stats, hasLength(5));
+
+      expect(card.data, isA<LeagueOfLegendsCardData>());
+      final data = card.data! as LeagueOfLegendsCardData;
+
+      expect(data.rank, isNotNull);
+      expect(data.rank!.tier, 'GOLD');
+      expect(data.rank!.division, 'II');
+      expect(data.rank!.lp, 85);
+      expect(data.rank!.wins, 120);
+      expect(data.rank!.losses, 94);
+
+      expect(data.topMastery, hasLength(2));
+      expect(data.topMastery[0].championId, 157);
+      expect(data.topMastery[0].level, 7);
+      expect(data.topMastery[0].points, 850000);
+
+      expect(data.challenges, isNotNull);
+      expect(data.challenges!.totalPoints, 45000);
+      expect(data.challenges!.level, 'GOLD');
+
+      expect(data.summoner, isNotNull);
+      expect(data.summoner!.level, 312);
+      expect(data.summoner!.profileIconId, 4568);
+    });
+
+    test('unranked rank parses to null', () {
+      final raw = Map<String, dynamic>.from(lolWidgetData);
+      raw['data'] = Map<String, dynamic>.from(
+        raw['data'] as Map<String, dynamic>,
+      )..['rank'] = null;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isA<LeagueOfLegendsCardData>());
+      final data = card.data! as LeagueOfLegendsCardData;
+      expect(data.rank, isNull);
+    });
+
+    test('absent top_mastery → empty list', () {
+      final raw = Map<String, dynamic>.from(lolWidgetData);
+      final dataBlock = Map<String, dynamic>.from(
+        raw['data'] as Map<String, dynamic>,
+      );
+      dataBlock.remove('top_mastery');
+      raw['data'] = dataBlock;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      final data = card.data! as LeagueOfLegendsCardData;
+      expect(data.topMastery, isEmpty);
+    });
+
+    test('malformed data degrades to envelope-only (null data)', () {
+      final raw = Map<String, dynamic>.from(lolWidgetData);
+      raw['data'] = <String, dynamic>{
+        'rank': {'tier': 'GOLD', 'division': 'II', 'lp': 'not-a-number'},
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isNull);
+    });
+  });
+
   group('gameCardFromDto — RetroAchievements defensive parsing', () {
     test('absent recent_games → empty list', () {
       final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);

@@ -243,4 +243,113 @@ void main() {
       expect(repo.linkCalls, 1);
     });
   });
+
+  group('LinkFormController.submitFields', () {
+    ProviderContainer lolContainer(_FakeConnectionsRepository repo) {
+      final container = ProviderContainer(
+        overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      container.listen(
+        linkFormControllerProvider(Platform.leagueOfLegends),
+        (_, _) {},
+      );
+      return container;
+    }
+
+    test('blank game_name sets fieldErrors, no backend call', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = lolContainer(repo);
+
+      await container
+          .read(linkFormControllerProvider(Platform.leagueOfLegends).notifier)
+          .submitFields({
+            'game_name': '   ',
+            'tag_line': 'NA1',
+            'region': 'na1',
+          });
+
+      final state = container.read(
+        linkFormControllerProvider(Platform.leagueOfLegends),
+      );
+      expect(state.fieldErrors, contains('game_name'));
+      expect(state.fieldErrors, isNot(contains('tag_line')));
+      expect(state.fieldErrors, isNot(contains('region')));
+      expect(state.linked, isFalse);
+      expect(repo.linkCalls, 0);
+    });
+
+    test('blank tag_line and region both appear in fieldErrors', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = lolContainer(repo);
+
+      await container
+          .read(linkFormControllerProvider(Platform.leagueOfLegends).notifier)
+          .submitFields({
+            'game_name': 'TestPlayer',
+            'tag_line': '',
+            'region': '',
+          });
+
+      final state = container.read(
+        linkFormControllerProvider(Platform.leagueOfLegends),
+      );
+      expect(state.fieldErrors, containsAll(['tag_line', 'region']));
+      expect(state.fieldErrors, isNot(contains('game_name')));
+      expect(repo.linkCalls, 0);
+    });
+
+    test(
+      'all fields present → linked, repo called once, fieldErrors cleared',
+      () async {
+        final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+        final container = lolContainer(repo);
+        container.listen(myConnectionsProvider, (_, _) {});
+
+        await container
+            .read(linkFormControllerProvider(Platform.leagueOfLegends).notifier)
+            .submitFields({
+              'game_name': 'TestPlayer',
+              'tag_line': 'NA1',
+              'region': 'na1',
+            });
+
+        final state = container.read(
+          linkFormControllerProvider(Platform.leagueOfLegends),
+        );
+        expect(state.linked, isTrue);
+        expect(state.failure, isNull);
+        expect(state.submitting, isFalse);
+        expect(state.fieldErrors, isEmpty);
+        expect(repo.linkCalls, 1);
+      },
+    );
+
+    test(
+      'InputFailure preserves state, no fieldErrors set by backend',
+      () async {
+        final repo = _FakeConnectionsRepository(
+          linkResult: () => left(const InputFailure(code: 'INVALID_REQUEST')),
+        );
+        final container = lolContainer(repo);
+
+        await container
+            .read(linkFormControllerProvider(Platform.leagueOfLegends).notifier)
+            .submitFields({
+              'game_name': 'TestPlayer',
+              'tag_line': 'NA1',
+              'region': 'na1',
+            });
+
+        final state = container.read(
+          linkFormControllerProvider(Platform.leagueOfLegends),
+        );
+        expect(state.failure, isA<InputFailure>());
+        expect(state.linked, isFalse);
+        expect(state.submitting, isFalse);
+        // Backend failures do not set per-field errors — that is client-only.
+        expect(state.fieldErrors, isEmpty);
+      },
+    );
+  });
 }

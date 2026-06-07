@@ -205,6 +205,72 @@ void main() {
       },
     );
 
+    test('ALREADY_LINKED with same metadata linked → Right(unit)', () async {
+      final source = _FakeConnectionsDataSource(
+        onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
+        onFetch: () async => [
+          ConnectionDto.fromJson({
+            'platform': 'league_of_legends',
+            'status': 'active',
+            'created_at': '2026-01-01T00:00:00Z',
+            'metadata': {
+              'game_name': 'TestPlayer',
+              'tag_line': 'NA1',
+              'region': 'na1',
+            },
+          }),
+        ],
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).link(
+        platform: Platform.leagueOfLegends,
+        formInput: {
+          'game_name': 'TestPlayer',
+          'tag_line': 'NA1',
+          'region': 'na1',
+        },
+      );
+
+      expect(result.isRight(), isTrue);
+      expect(reporter.reported, isEmpty);
+    });
+
+    test(
+      'ALREADY_LINKED with different metadata → Left(AlreadyLinkedFailure)',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
+          onFetch: () async => [
+            ConnectionDto.fromJson({
+              'platform': 'league_of_legends',
+              'status': 'active',
+              'created_at': '2026-01-01T00:00:00Z',
+              'metadata': {
+                'game_name': 'OtherPlayer',
+                'tag_line': 'EUW',
+                'region': 'euw1',
+              },
+            }),
+          ],
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).link(
+          platform: Platform.leagueOfLegends,
+          formInput: {
+            'game_name': 'TestPlayer',
+            'tag_line': 'NA1',
+            'region': 'na1',
+          },
+        );
+
+        result.fold(
+          (f) => expect(f, isA<AlreadyLinkedFailure>()),
+          (_) => fail('want Left'),
+        );
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
     test('INVALID_REQUEST / 400 → Left(InputFailure), not reported', () async {
       final source = _FakeConnectionsDataSource(
         onLink: (_) async => throw _fnEx(400, code: 'INVALID_REQUEST'),
@@ -414,6 +480,26 @@ void main() {
       );
       expect(reporter.reported, isEmpty);
     });
+
+    test(
+      'missing form-input key for LoL → Left(UnexpectedFailure), not a throw',
+      () async {
+        // The LoL builder uses null-assertion on required keys; an empty map
+        // triggers a TypeError. The repository must catch it and return Left
+        // rather than letting the throw escape the Either<Failure, T> contract.
+        final source = _FakeConnectionsDataSource();
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).link(platform: Platform.leagueOfLegends, formInput: {});
+
+        result.fold(
+          (f) => expect(f, isA<UnexpectedFailure>()),
+          (_) => fail('want Left'),
+        );
+      },
+    );
   });
 
   group('ConnectionsRepositoryImpl.unlink', () {

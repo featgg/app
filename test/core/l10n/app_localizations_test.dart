@@ -102,6 +102,34 @@ void main() {
           expect(l10n.errorUpstreamNotFound, isNotEmpty);
           expect(l10n.errorUpstreamNotConnected, isNotEmpty);
           expect(l10n.errorUpstreamReconnect, isNotEmpty);
+          // LoL form keys
+          expect(l10n.connectionsLolGameNameLabel, isNotEmpty);
+          expect(l10n.connectionsLolGameNameHint, isNotEmpty);
+          expect(l10n.connectionsLolGameNameRequired, isNotEmpty);
+          expect(l10n.connectionsLolTagLineLabel, isNotEmpty);
+          expect(l10n.connectionsLolTagLineHint, isNotEmpty);
+          expect(l10n.connectionsLolTagLineRequired, isNotEmpty);
+          expect(l10n.connectionsLolRegionLabel, isNotEmpty);
+          expect(l10n.connectionsLolRegionHint, isNotEmpty);
+          expect(l10n.connectionsLolRegionRequired, isNotEmpty);
+          // LoL card display keys
+          expect(l10n.connectionsLolRank, isNotEmpty);
+          expect(l10n.connectionsLolUnranked, isNotEmpty);
+          expect(l10n.connectionsLolLp, isNotEmpty);
+          expect(l10n.connectionsLolWins, isNotEmpty);
+          expect(l10n.connectionsLolLosses, isNotEmpty);
+          expect(l10n.connectionsLolSummonerLevel, isNotEmpty);
+          expect(l10n.connectionsLolChallenges, isNotEmpty);
+          expect(l10n.connectionsLolChallengeLevel, isNotEmpty);
+          expect(l10n.connectionsLolTopMastery, isNotEmpty);
+          expect(l10n.connectionsLolMasteryLevel, isNotEmpty);
+          expect(l10n.connectionsLolChampion, isNotEmpty);
+          // LoL stat row keys
+          expect(l10n.connectionsStatRankLp, isNotEmpty);
+          expect(l10n.connectionsStatWinrate, isNotEmpty);
+          expect(l10n.connectionsStatMasteryPoints, isNotEmpty);
+          expect(l10n.connectionsStatChallengePoints, isNotEmpty);
+          expect(l10n.connectionsStatSummonerLevel, isNotEmpty);
         }
       },
     );
@@ -157,6 +185,23 @@ void main() {
         pt.connectionsStatTotalAchievementPoints,
         isNot(en.connectionsStatTotalAchievementPoints),
       );
+      // Representative LoL keys load per-locale copy. Brand abbreviations
+      // (e.g. "Tag Line") are identical across locales and are not asserted.
+      // connectionsLolLp is "LP" in both en and es but "PdL" in pt — assert
+      // only pt≠en to avoid a false-identical failure on the es pair.
+      expect(
+        es.connectionsLolGameNameLabel,
+        isNot(en.connectionsLolGameNameLabel),
+      );
+      expect(
+        pt.connectionsLolGameNameLabel,
+        isNot(en.connectionsLolGameNameLabel),
+      );
+      expect(pt.connectionsLolLp, isNot(en.connectionsLolLp));
+      expect(es.connectionsStatRankLp, isNot(en.connectionsStatRankLp));
+      expect(pt.connectionsStatRankLp, isNot(en.connectionsStatRankLp));
+      expect(es.connectionsStatWinrate, isNot(en.connectionsStatWinrate));
+      expect(pt.connectionsStatWinrate, isNot(en.connectionsStatWinrate));
     });
   });
 }

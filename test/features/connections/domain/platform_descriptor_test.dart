@@ -38,6 +38,14 @@ void main() {
       },
     );
 
+    test('registers League of Legends with sync-league-of-legends', () {
+      final descriptor = platformDescriptors[Platform.leagueOfLegends]!;
+      expect(descriptor.platform, Platform.leagueOfLegends);
+      expect(descriptor.displayName, 'League of Legends');
+      expect(descriptor.wireValue, 'league_of_legends');
+      expect(descriptor.syncFunctionName, 'sync-league-of-legends');
+    });
+
     test('every descriptor is keyed by its own platform', () {
       for (final entry in platformDescriptors.entries) {
         expect(entry.value.platform, entry.key);

@@ -6,6 +6,7 @@ import '../../../core/core.dart';
 import '../domain/connection.dart';
 import '../domain/game_card.dart';
 import 'connections_provider.dart';
+import 'league_of_legends_card_data_view.dart';
 import 'minecraft_card_data_view.dart';
 import 'retroachievements_card_data_view.dart';
 import 'steam_card_data_view.dart';
@@ -25,6 +26,8 @@ final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
       MinecraftCardDataView(data: data as MinecraftCardData),
   Platform.retroachievements: (data) =>
       RetroAchievementsCardDataView(data: data as RetroAchievementsCardData),
+  Platform.leagueOfLegends: (data) =>
+      LeagueOfLegendsCardDataView(data: data as LeagueOfLegendsCardData),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
@@ -170,6 +173,11 @@ String _statLabel(String key, AppLocalizations l10n) => switch (key) {
   'total_achievement_points' => l10n.connectionsStatTotalAchievementPoints,
   'retro_rank' => l10n.connectionsStatRetroRank,
   'completion_pct' => l10n.connectionsStatCompletionPct,
+  'rank_lp' => l10n.connectionsStatRankLp,
+  'winrate' => l10n.connectionsStatWinrate,
+  'mastery_points' => l10n.connectionsStatMasteryPoints,
+  'challenge_points' => l10n.connectionsStatChallengePoints,
+  'summoner_level' => l10n.connectionsStatSummonerLevel,
   _ => key,
 };
 
