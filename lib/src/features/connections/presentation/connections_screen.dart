@@ -8,6 +8,7 @@ import 'connection_actions_controller.dart';
 import 'connections_provider.dart';
 import 'game_card_widget.dart';
 import 'minecraft_link_form.dart';
+import 'retroachievements_link_form.dart';
 import 'steam_link_form.dart';
 
 /// Presentation-side registry mapping each registered [Platform] to its
@@ -17,6 +18,7 @@ import 'steam_link_form.dart';
 const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
   Platform.steam: SteamLinkForm.new,
   Platform.minecraftHypixel: MinecraftLinkForm.new,
+  Platform.retroachievements: RetroAchievementsLinkForm.new,
 };
 
 class ConnectionsScreen extends ConsumerWidget {

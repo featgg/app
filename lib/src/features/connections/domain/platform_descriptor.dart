@@ -48,4 +48,10 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
     wireValue: 'minecraft_hypixel',
     syncFunctionName: 'sync-minecraft-hypixel',
   ),
+  Platform.retroachievements: PlatformDescriptor(
+    platform: Platform.retroachievements,
+    displayName: 'RetroAchievements',
+    wireValue: 'retroachievements',
+    syncFunctionName: 'sync-retroachievements',
+  ),
 };

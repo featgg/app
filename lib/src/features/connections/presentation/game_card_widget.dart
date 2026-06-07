@@ -7,6 +7,7 @@ import '../domain/connection.dart';
 import '../domain/game_card.dart';
 import 'connections_provider.dart';
 import 'minecraft_card_data_view.dart';
+import 'retroachievements_card_data_view.dart';
 import 'steam_card_data_view.dart';
 
 /// Widget-registry entry for a platform. Keyed by [Platform] in
@@ -22,6 +23,8 @@ final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
   Platform.steam: (data) => SteamCardDataView(data: data as SteamCardData),
   Platform.minecraftHypixel: (data) =>
       MinecraftCardDataView(data: data as MinecraftCardData),
+  Platform.retroachievements: (data) =>
+      RetroAchievementsCardDataView(data: data as RetroAchievementsCardData),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
@@ -164,6 +167,9 @@ String _statLabel(String key, AppLocalizations l10n) => switch (key) {
   'bedwars_kills' => l10n.connectionsStatBedwarsKills,
   'karma' => l10n.connectionsStatKarma,
   'achievement_points' => l10n.connectionsStatAchievementPoints,
+  'total_achievement_points' => l10n.connectionsStatTotalAchievementPoints,
+  'retro_rank' => l10n.connectionsStatRetroRank,
+  'completion_pct' => l10n.connectionsStatCompletionPct,
   _ => key,
 };
 

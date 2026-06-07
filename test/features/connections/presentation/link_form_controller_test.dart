@@ -195,5 +195,52 @@ void main() {
         LinkFormState.initial(),
       );
     });
+
+    test('RetroAchievements: blank remoteId sets remoteIdError without '
+        'calling the backend', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = ProviderContainer(
+        overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      container.listen(
+        linkFormControllerProvider(Platform.retroachievements),
+        (_, _) {},
+      );
+
+      await container
+          .read(linkFormControllerProvider(Platform.retroachievements).notifier)
+          .submit(remoteId: '   ');
+
+      final state = container.read(
+        linkFormControllerProvider(Platform.retroachievements),
+      );
+      expect(state.remoteIdError, isTrue);
+      expect(state.linked, isFalse);
+      expect(repo.linkCalls, 0);
+    });
+
+    test('RetroAchievements: success links and clears errors', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = ProviderContainer(
+        overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      container.listen(
+        linkFormControllerProvider(Platform.retroachievements),
+        (_, _) {},
+      );
+
+      await container
+          .read(linkFormControllerProvider(Platform.retroachievements).notifier)
+          .submit(remoteId: 'TestUser');
+
+      final state = container.read(
+        linkFormControllerProvider(Platform.retroachievements),
+      );
+      expect(state.linked, isTrue);
+      expect(state.failure, isNull);
+      expect(repo.linkCalls, 1);
+    });
   });
 }

@@ -26,5 +26,23 @@ void main() {
         'remote_id': 'TestPlayer',
       });
     });
+
+    test('registers RetroAchievements', () {
+      expect(linkBodyBuilders.containsKey(Platform.retroachievements), isTrue);
+    });
+
+    test(
+      'RetroAchievements builds the documented {platform, remote_id} body',
+      () {
+        final body = linkBodyBuilders[Platform.retroachievements]!(
+          'retroachievements',
+          {'remote_id': 'TestUser'},
+        );
+        expect(body, {
+          'platform': 'retroachievements',
+          'remote_id': 'TestUser',
+        });
+      },
+    );
   });
 }

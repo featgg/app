@@ -87,6 +87,18 @@ void main() {
           expect(l10n.connectionsMinecraftFinalKills, isNotEmpty);
           expect(l10n.connectionsMinecraftBedsBroken, isNotEmpty);
           expect(l10n.connectionsMinecraftStar, isNotEmpty);
+          expect(l10n.connectionsStatTotalAchievementPoints, isNotEmpty);
+          expect(l10n.connectionsStatRetroRank, isNotEmpty);
+          expect(l10n.connectionsStatCompletionPct, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsRemoteIdLabel, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsRemoteIdHint, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsRemoteIdRequired, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsRank, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsTotalPoints, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsTruePoints, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsSoftcorePoints, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsMemberSince, isNotEmpty);
+          expect(l10n.connectionsRetroAchievementsRecentGames, isNotEmpty);
           expect(l10n.errorUpstreamNotFound, isNotEmpty);
           expect(l10n.errorUpstreamNotConnected, isNotEmpty);
           expect(l10n.errorUpstreamReconnect, isNotEmpty);
@@ -125,6 +137,25 @@ void main() {
       expect(
         pt.connectionsStatNetworkLevel,
         isNot(en.connectionsStatNetworkLevel),
+      );
+      // Representative new RetroAchievements keys load per-locale copy. Brand
+      // terms (RetroPoints, the RetroAchievements proper noun) are identical
+      // across locales, so they are not asserted here.
+      expect(
+        es.connectionsRetroAchievementsRemoteIdLabel,
+        isNot(en.connectionsRetroAchievementsRemoteIdLabel),
+      );
+      expect(
+        pt.connectionsRetroAchievementsRemoteIdLabel,
+        isNot(en.connectionsRetroAchievementsRemoteIdLabel),
+      );
+      expect(
+        es.connectionsStatTotalAchievementPoints,
+        isNot(en.connectionsStatTotalAchievementPoints),
+      );
+      expect(
+        pt.connectionsStatTotalAchievementPoints,
+        isNot(en.connectionsStatTotalAchievementPoints),
       );
     });
   });
