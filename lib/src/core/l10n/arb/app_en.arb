@@ -724,5 +724,77 @@
   "connectionsStatPuzzleRush": "Puzzle Rush",
   "@connectionsStatPuzzleRush": {
     "description": "Localized label for the puzzle_rush stat key (Chess)."
+  },
+  "connectionsGw2ApiKeyLabel": "Guild Wars 2 API key",
+  "@connectionsGw2ApiKeyLabel": {
+    "description": "Label for the Guild Wars 2 API key input field on the link form."
+  },
+  "connectionsGw2ApiKeyHint": "Enter your Guild Wars 2 API key",
+  "@connectionsGw2ApiKeyHint": {
+    "description": "Hint for the Guild Wars 2 API key input field."
+  },
+  "connectionsGw2ApiKeyRequired": "Guild Wars 2 API key is required.",
+  "@connectionsGw2ApiKeyRequired": {
+    "description": "Shown on the Guild Wars 2 API key field when the user submits an empty value."
+  },
+  "connectionsGw2ApiKeyShow": "Show API key",
+  "@connectionsGw2ApiKeyShow": {
+    "description": "Tooltip and accessibility label for the button that reveals the obscured Guild Wars 2 API key."
+  },
+  "connectionsGw2ApiKeyHide": "Hide API key",
+  "@connectionsGw2ApiKeyHide": {
+    "description": "Tooltip and accessibility label for the button that re-obscures the Guild Wars 2 API key."
+  },
+  "connectionsGw2MainProfession": "Main profession",
+  "@connectionsGw2MainProfession": {
+    "description": "Label for the Guild Wars 2 main profession row on the game card data view."
+  },
+  "connectionsGw2AccountAge": "Account age (hours)",
+  "@connectionsGw2AccountAge": {
+    "description": "Label for the Guild Wars 2 account age row on the game card data view."
+  },
+  "connectionsGw2Veterancy": "Veterancy (years)",
+  "@connectionsGw2Veterancy": {
+    "description": "Label for the Guild Wars 2 veterancy row on the game card data view."
+  },
+  "connectionsGw2TotalAp": "Total AP",
+  "@connectionsGw2TotalAp": {
+    "description": "Label for the Guild Wars 2 total achievement points row on the game card data view. Scope-gated; omitted when null."
+  },
+  "connectionsGw2FractalLevel": "Fractal level",
+  "@connectionsGw2FractalLevel": {
+    "description": "Label for the Guild Wars 2 fractal level row on the game card data view. Scope-gated; omitted when null."
+  },
+  "connectionsGw2WvwRank": "WvW rank",
+  "@connectionsGw2WvwRank": {
+    "description": "Label for the Guild Wars 2 World vs. World rank row on the game card data view. Scope-gated; omitted when null."
+  },
+  "connectionsGw2HomeWorld": "Home world",
+  "@connectionsGw2HomeWorld": {
+    "description": "Label for the Guild Wars 2 home world row on the game card data view. Omitted when null."
+  },
+  "connectionsGw2Characters": "Characters",
+  "@connectionsGw2Characters": {
+    "description": "Section heading for the Guild Wars 2 top-characters list on the game card data view."
+  },
+  "connectionsStatWvwRank": "WvW rank",
+  "@connectionsStatWvwRank": {
+    "description": "Localized label for the wvw_rank stat key (Guild Wars 2)."
+  },
+  "connectionsStatFractalLevel": "Fractal level",
+  "@connectionsStatFractalLevel": {
+    "description": "Localized label for the fractal_level stat key (Guild Wars 2)."
+  },
+  "connectionsStatTotalAp": "Total AP",
+  "@connectionsStatTotalAp": {
+    "description": "Localized label for the total_ap stat key (Guild Wars 2)."
+  },
+  "connectionsStatAccountAgeHours": "Account age (hours)",
+  "@connectionsStatAccountAgeHours": {
+    "description": "Localized label for the account_age_hours stat key (Guild Wars 2)."
+  },
+  "connectionsStatVeterancyYears": "Veterancy (years)",
+  "@connectionsStatVeterancyYears": {
+    "description": "Localized label for the veterancy_years stat key (Guild Wars 2)."
   }
 }

@@ -97,5 +97,19 @@ void main() {
       });
       expect(body, {'platform': 'chess', 'remote_id': 'TestPlayer'});
     });
+
+    test('gw2 maps api_key into the link body', () {
+      expect(linkBodyBuilders.containsKey(Platform.gw2), isTrue);
+      final body = linkBodyBuilders[Platform.gw2]!('gw2', {
+        'api_key': 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXXXXXXXXX',
+      });
+      expect(body, {
+        'platform': 'gw2',
+        'api_key': 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXXXXXXXXX',
+      });
+      // api_key is the only wire field besides platform — no remote_id, no metadata
+      expect(body.containsKey('remote_id'), isFalse);
+      expect(body.containsKey('metadata'), isFalse);
+    });
   });
 }

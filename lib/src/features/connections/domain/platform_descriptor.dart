@@ -72,4 +72,10 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
     wireValue: 'chess',
     syncFunctionName: 'sync-chess',
   ),
+  Platform.gw2: PlatformDescriptor(
+    platform: Platform.gw2,
+    displayName: 'Guild Wars 2',
+    wireValue: 'gw2',
+    syncFunctionName: 'sync-gw2',
+  ),
 };

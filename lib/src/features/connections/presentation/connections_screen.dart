@@ -6,6 +6,7 @@ import '../domain/connection.dart';
 import '../domain/platform_descriptor.dart';
 import 'chess_link_form.dart';
 import 'connection_actions_controller.dart';
+import 'gw2_link_form.dart';
 import 'connections_provider.dart';
 import 'game_card_widget.dart';
 import 'league_of_legends_link_form.dart';
@@ -25,6 +26,7 @@ const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
   Platform.leagueOfLegends: LeagueOfLegendsLinkForm.new,
   Platform.wowRetail: WowRetailLinkForm.new,
   Platform.chess: ChessLinkForm.new,
+  Platform.gw2: Gw2LinkForm.new,
 };
 
 class ConnectionsScreen extends ConsumerWidget {

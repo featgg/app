@@ -393,4 +393,69 @@ void main() {
       },
     );
   });
+
+  group('LinkFormController.submitFields — GW2', () {
+    ProviderContainer gw2Container(_FakeConnectionsRepository repo) {
+      final container = ProviderContainer(
+        overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      container.listen(linkFormControllerProvider(Platform.gw2), (_, _) {});
+      return container;
+    }
+
+    test('blank api_key sets fieldErrors, no backend call', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = gw2Container(repo);
+
+      await container
+          .read(linkFormControllerProvider(Platform.gw2).notifier)
+          .submitFields({'api_key': '   '});
+
+      final state = container.read(linkFormControllerProvider(Platform.gw2));
+      expect(state.fieldErrors, contains('api_key'));
+      expect(state.linked, isFalse);
+      expect(repo.linkCalls, 0);
+    });
+
+    test('success links and clears errors', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = gw2Container(repo);
+      container.listen(myConnectionsProvider, (_, _) {});
+
+      await container
+          .read(linkFormControllerProvider(Platform.gw2).notifier)
+          .submitFields({
+            'api_key': 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXXXXXXXXX',
+          });
+
+      final state = container.read(linkFormControllerProvider(Platform.gw2));
+      expect(state.linked, isTrue);
+      expect(state.failure, isNull);
+      expect(state.submitting, isFalse);
+      expect(state.fieldErrors, isEmpty);
+      expect(repo.linkCalls, 1);
+    });
+
+    test(
+      'InputFailure preserves state, no fieldErrors set by backend',
+      () async {
+        final repo = _FakeConnectionsRepository(
+          linkResult: () => left(const InputFailure(code: 'INVALID_REQUEST')),
+        );
+        final container = gw2Container(repo);
+
+        await container
+            .read(linkFormControllerProvider(Platform.gw2).notifier)
+            .submitFields({'api_key': 'bad-key'});
+
+        final state = container.read(linkFormControllerProvider(Platform.gw2));
+        expect(state.failure, isA<InputFailure>());
+        expect(state.linked, isFalse);
+        expect(state.submitting, isFalse);
+        // Backend failures do not set per-field errors — that is client-only.
+        expect(state.fieldErrors, isEmpty);
+      },
+    );
+  });
 }

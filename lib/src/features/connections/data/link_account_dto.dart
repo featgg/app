@@ -20,6 +20,7 @@ const Map<Platform, LinkBodyBuilder> linkBodyBuilders = {
   Platform.leagueOfLegends: _leagueOfLegendsLinkBody,
   Platform.wowRetail: _wowRetailLinkBody,
   Platform.chess: _chessLinkBody,
+  Platform.gw2: _gw2LinkBody,
 };
 
 Map<String, dynamic> _steamLinkBody(
@@ -65,6 +66,11 @@ Map<String, dynamic> _chessLinkBody(
   String wireValue,
   Map<String, String> input,
 ) => {'platform': wireValue, 'remote_id': input['remote_id']!};
+
+Map<String, dynamic> _gw2LinkBody(
+  String wireValue,
+  Map<String, String> input,
+) => {'platform': wireValue, 'api_key': input['api_key']!};
 
 /// Success envelope returned by `link-account` and `unlink-account`.
 @JsonSerializable(createToJson: false)

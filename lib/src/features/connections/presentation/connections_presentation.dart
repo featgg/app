@@ -7,6 +7,8 @@ export 'connection_actions_controller.dart';
 export 'connections_provider.dart';
 export 'connections_screen.dart';
 export 'game_card_widget.dart';
+export 'gw2_card_data_view.dart';
+export 'gw2_link_form.dart';
 export 'league_of_legends_card_data_view.dart';
 export 'league_of_legends_link_form.dart';
 export 'link_form_controller.dart';

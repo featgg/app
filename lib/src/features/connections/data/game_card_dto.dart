@@ -103,6 +103,13 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
           return null;
         }
       },
+      Platform.gw2: (data) {
+        try {
+          return gw2CardDataFromMap(data);
+        } catch (_) {
+          return null;
+        }
+      },
     };
 
 /// Parses the raw `widget_data.data` map for Steam into a [SteamCardData]
@@ -387,6 +394,46 @@ ChessCardData chessCardDataFromMap(Map<String, dynamic> data) {
             title: titleRaw['title'] as String?,
           )
         : null,
+  );
+}
+
+/// Parses the raw `widget_data.data` map for Guild Wars 2 into a [Gw2CardData].
+/// The `account` block is required; `main_profession` and `top_characters` are
+/// optional. Scope-gated numerics (`total_ap`, `fractal_level`, `wvw_rank`)
+/// are parsed as null when absent — never coerced to 0. Throws on malformed
+/// required leaves; the registry wrapper catches → null (envelope-only).
+Gw2CardData gw2CardDataFromMap(Map<String, dynamic> data) {
+  final accountRaw = data['account'] as Map<String, dynamic>;
+  final account = Gw2Account(
+    accountAgeHours: (accountRaw['account_age_hours'] as num).toInt(),
+    veterancyYears: (accountRaw['veterancy_years'] as num).toInt(),
+    totalAp: (accountRaw['total_ap'] as num?)?.toInt(),
+    fractalLevel: (accountRaw['fractal_level'] as num?)?.toInt(),
+    wvwRank: (accountRaw['wvw_rank'] as num?)?.toInt(),
+    homeWorld: accountRaw['home_world'] as String?,
+  );
+
+  final topCharactersRaw =
+      data['top_characters'] as List<dynamic>? ?? <dynamic>[];
+  final topCharacters = topCharactersRaw
+      .whereType<Map<String, dynamic>>()
+      .map(
+        (e) => Gw2Character(
+          name: e['name'] as String,
+          race: e['race'] as String,
+          profession: e['profession'] as String,
+          level: (e['level'] as num).toInt(),
+          deaths: (e['deaths'] as num).toInt(),
+          hoursPlayed: (e['hours_played'] as num).toInt(),
+          isMain: e['is_main'] as bool,
+        ),
+      )
+      .toList();
+
+  return Gw2CardData(
+    mainProfession: data['main_profession'] as String?,
+    account: account,
+    topCharacters: topCharacters,
   );
 }
 

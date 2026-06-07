@@ -762,6 +762,135 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — GW2 widget_data example', () {
+    const gw2WidgetData = {
+      'schema_version': 1,
+      'platform': 'gw2',
+      'title': 'TestAccount',
+      'subtitle': 'Tarnished Coast',
+      'icon_image': null,
+      'hero_image': null,
+      'profile_url': null,
+      'stats': [
+        {'key': 'account_age_hours', 'value': 43800, 'unit': 'hours'},
+        {'key': 'veterancy_years', 'value': 5, 'unit': 'count'},
+        {'key': 'total_ap', 'value': 18500, 'unit': 'points'},
+        {'key': 'fractal_level', 'value': 100, 'unit': 'count'},
+        {'key': 'wvw_rank', 'value': 312, 'unit': 'count'},
+      ],
+      'last_updated': '2026-06-03T12:00:00Z',
+      'data': {
+        'main_profession': 'GUARDIAN',
+        'account': {
+          'account_age_hours': 43800,
+          'veterancy_years': 5,
+          'total_ap': 18500,
+          'fractal_level': 100,
+          'wvw_rank': 312,
+          'home_world': 'Tarnished Coast',
+        },
+        'top_characters': [
+          {
+            'name': 'TestChar',
+            'race': 'Human',
+            'profession': 'GUARDIAN',
+            'level': 80,
+            'deaths': 42,
+            'hours_played': 1200,
+            'is_main': true,
+          },
+        ],
+      },
+    };
+
+    late GameCard card;
+
+    setUp(() {
+      card = gameCardFromDto(
+        GameCardDto.fromJson(Map<String, dynamic>.from(gw2WidgetData)),
+      );
+    });
+
+    test('parses envelope fields', () {
+      expect(card.schemaVersion, 1);
+      expect(card.platform, Platform.gw2);
+      expect(card.title, 'TestAccount');
+      expect(card.subtitle, 'Tarnished Coast');
+      expect(card.iconImage, isNull);
+      expect(card.heroImage, isNull);
+      expect(card.profileUrl, isNull);
+      expect(card.lastUpdated, DateTime.parse('2026-06-03T12:00:00Z'));
+    });
+
+    test('parses the five GW2 stat keys', () {
+      expect(card.stats, hasLength(5));
+      expect(card.stats.map((s) => s.key).toList(), [
+        'account_age_hours',
+        'veterancy_years',
+        'total_ap',
+        'fractal_level',
+        'wvw_rank',
+      ]);
+      expect(card.stats[0].value, 43800);
+    });
+
+    test('parses Gw2CardData including account, mainProfession, and '
+        'topCharacters', () {
+      expect(card.data, isA<Gw2CardData>());
+      final data = card.data! as Gw2CardData;
+
+      expect(data.mainProfession, 'GUARDIAN');
+
+      expect(data.account.accountAgeHours, 43800);
+      expect(data.account.veterancyYears, 5);
+      expect(data.account.totalAp, 18500);
+      expect(data.account.fractalLevel, 100);
+      expect(data.account.wvwRank, 312);
+      expect(data.account.homeWorld, 'Tarnished Coast');
+
+      expect(data.topCharacters, hasLength(1));
+      final char = data.topCharacters.first;
+      expect(char.name, 'TestChar');
+      expect(char.race, 'Human');
+      expect(char.profession, 'GUARDIAN');
+      expect(char.level, 80);
+      expect(char.deaths, 42);
+      expect(char.hoursPlayed, 1200);
+      expect(char.isMain, isTrue);
+    });
+
+    test('scope-gated nullables parse as null when omitted', () {
+      final raw = Map<String, dynamic>.from(gw2WidgetData);
+      raw['data'] = <String, dynamic>{
+        'account': <String, dynamic>{
+          'account_age_hours': 100,
+          'veterancy_years': 1,
+          // total_ap, fractal_level, wvw_rank, home_world all omitted
+        },
+        'top_characters': <dynamic>[],
+      };
+      final sparse = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(sparse.data, isA<Gw2CardData>());
+      final data = sparse.data! as Gw2CardData;
+      expect(data.account.totalAp, isNull);
+      expect(data.account.fractalLevel, isNull);
+      expect(data.account.wvwRank, isNull);
+      expect(data.account.homeWorld, isNull);
+      expect(data.mainProfession, isNull);
+      expect(data.topCharacters, isEmpty);
+    });
+
+    test('malformed data block → data null (envelope-only)', () {
+      final raw = Map<String, dynamic>.from(gw2WidgetData);
+      // Remove the required account block to trigger a throw.
+      raw['data'] = <String, dynamic>{'main_profession': 'GUARDIAN'};
+      final bad = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(bad.data, isNull);
+    });
+  });
+
   group('gameCardFromDto — RetroAchievements defensive parsing', () {
     test('absent recent_games → empty list', () {
       final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
