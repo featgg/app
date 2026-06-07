@@ -139,6 +139,83 @@ final class SteamCardData extends Equatable implements CardData {
   List<Object?> get props => [libraryShowcase, recentGames];
 }
 
+/// Profile block in RetroAchievements `widget_data.data`. `memberSince` and
+/// `motto` are optional per the contract; the point/rank fields are required.
+final class RetroAchievementsProfile extends Equatable {
+  const RetroAchievementsProfile({
+    required this.totalPoints,
+    required this.truePoints,
+    required this.softcorePoints,
+    required this.rank,
+    this.memberSince,
+    this.motto,
+  });
+
+  final int totalPoints;
+  final int truePoints;
+  final int softcorePoints;
+  final int rank;
+
+  /// Null when the upstream profile omits it.
+  final DateTime? memberSince;
+  final String? motto;
+
+  @override
+  List<Object?> get props => [
+    totalPoints,
+    truePoints,
+    softcorePoints,
+    rank,
+    memberSince,
+    motto,
+  ];
+}
+
+/// A recently-played game entry in RetroAchievements `widget_data.data`.
+final class RetroAchievementsRecentGame extends Equatable {
+  const RetroAchievementsRecentGame({
+    required this.title,
+    required this.console,
+    required this.achieved,
+    required this.total,
+    required this.completionPct,
+    this.iconUrl,
+  });
+
+  final String title;
+  final String console;
+  final int achieved;
+  final int total;
+  final num completionPct;
+
+  /// Absolute https URL to per-game box-art, or null (envelope image rules).
+  final String? iconUrl;
+
+  @override
+  List<Object?> get props => [
+    title,
+    console,
+    achieved,
+    total,
+    completionPct,
+    iconUrl,
+  ];
+}
+
+/// RetroAchievements card data block.
+final class RetroAchievementsCardData extends Equatable implements CardData {
+  const RetroAchievementsCardData({
+    required this.profile,
+    required this.recentGames,
+  });
+
+  final RetroAchievementsProfile profile;
+  final List<RetroAchievementsRecentGame> recentGames;
+
+  @override
+  List<Object?> get props => [profile, recentGames];
+}
+
 /// A game card as read from `game_cards.widget_data`. The envelope is shared
 /// across all platforms; [data] carries the platform-specific block and is null
 /// when the schema version is unknown or the data block is absent.

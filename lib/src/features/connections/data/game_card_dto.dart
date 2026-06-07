@@ -75,6 +75,13 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
           return null;
         }
       },
+      Platform.retroachievements: (data) {
+        try {
+          return retroAchievementsCardDataFromMap(data);
+        } catch (_) {
+          return null;
+        }
+      },
     };
 
 /// Parses the raw `widget_data.data` map for Steam into a [SteamCardData]
@@ -161,6 +168,46 @@ MinecraftCardData minecraftCardDataFromMap(Map<String, dynamic> data) {
     bedwars: bedwars,
     skywars: skywars,
     duels: duels,
+  );
+}
+
+/// Parses the raw `widget_data.data` map for RetroAchievements into a
+/// [RetroAchievementsCardData] entity. The `profile` block and its point/rank
+/// fields are required; `member_since` parses leniently so a malformed
+/// timestamp degrades to null rather than failing the whole block, and
+/// `recent_games` defaults to empty when absent. Throws on unexpected shape;
+/// the registry wrapper catches and returns null.
+RetroAchievementsCardData retroAchievementsCardDataFromMap(
+  Map<String, dynamic> data,
+) {
+  final profileRaw = data['profile'] as Map<String, dynamic>;
+  final memberSinceRaw = profileRaw['member_since'] as String?;
+  final recentRaw = data['recent_games'] as List<dynamic>? ?? [];
+
+  return RetroAchievementsCardData(
+    profile: RetroAchievementsProfile(
+      totalPoints: (profileRaw['total_points'] as num).toInt(),
+      truePoints: (profileRaw['true_points'] as num).toInt(),
+      softcorePoints: (profileRaw['softcore_points'] as num).toInt(),
+      rank: (profileRaw['rank'] as num).toInt(),
+      memberSince: memberSinceRaw != null
+          ? DateTime.tryParse(memberSinceRaw)
+          : null,
+      motto: profileRaw['motto'] as String?,
+    ),
+    recentGames: recentRaw
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (e) => RetroAchievementsRecentGame(
+            title: e['title'] as String,
+            console: e['console'] as String,
+            achieved: (e['achieved'] as num).toInt(),
+            total: (e['total'] as num).toInt(),
+            completionPct: e['completion_pct'] as num,
+            iconUrl: e['icon_url'] as String?,
+          ),
+        )
+        .toList(),
   );
 }
 

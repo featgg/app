@@ -431,5 +431,53 @@
   "connectionsMinecraftStar": "Star",
   "@connectionsMinecraftStar": {
     "description": "Label for the optional Bed Wars star/prestige value (Minecraft Hypixel)."
+  },
+  "connectionsStatTotalAchievementPoints": "Achievement points",
+  "@connectionsStatTotalAchievementPoints": {
+    "description": "Localized label for the total_achievement_points stat key (RetroAchievements)."
+  },
+  "connectionsStatRetroRank": "Rank",
+  "@connectionsStatRetroRank": {
+    "description": "Localized label for the retro_rank stat key (RetroAchievements)."
+  },
+  "connectionsStatCompletionPct": "Completion",
+  "@connectionsStatCompletionPct": {
+    "description": "Localized label for the completion_pct stat key (RetroAchievements)."
+  },
+  "connectionsRetroAchievementsRemoteIdLabel": "RetroAchievements username",
+  "@connectionsRetroAchievementsRemoteIdLabel": {
+    "description": "Label for the RetroAchievements remote_id (username) input field."
+  },
+  "connectionsRetroAchievementsRemoteIdHint": "Enter your RetroAchievements username",
+  "@connectionsRetroAchievementsRemoteIdHint": {
+    "description": "Placeholder hint for the RetroAchievements remote_id (username) input field."
+  },
+  "connectionsRetroAchievementsRemoteIdRequired": "RetroAchievements username is required.",
+  "@connectionsRetroAchievementsRemoteIdRequired": {
+    "description": "Shown on the RetroAchievements username field when the user submits an empty value."
+  },
+  "connectionsRetroAchievementsRank": "Rank",
+  "@connectionsRetroAchievementsRank": {
+    "description": "Label for the RetroAchievements rank row on the game card data view."
+  },
+  "connectionsRetroAchievementsTotalPoints": "Total points",
+  "@connectionsRetroAchievementsTotalPoints": {
+    "description": "Label for the RetroAchievements total points row on the game card data view."
+  },
+  "connectionsRetroAchievementsTruePoints": "RetroPoints",
+  "@connectionsRetroAchievementsTruePoints": {
+    "description": "Label for the RetroAchievements true points (RetroPoints) row on the game card data view. RetroPoints is a brand term."
+  },
+  "connectionsRetroAchievementsSoftcorePoints": "Softcore points",
+  "@connectionsRetroAchievementsSoftcorePoints": {
+    "description": "Label for the RetroAchievements softcore points row on the game card data view."
+  },
+  "connectionsRetroAchievementsMemberSince": "Member since",
+  "@connectionsRetroAchievementsMemberSince": {
+    "description": "Label for the RetroAchievements membership start date row on the game card data view."
+  },
+  "connectionsRetroAchievementsRecentGames": "Recent games",
+  "@connectionsRetroAchievementsRecentGames": {
+    "description": "Section heading for the RetroAchievements recent games block on the game card."
   }
 }

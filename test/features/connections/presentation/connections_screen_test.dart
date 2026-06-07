@@ -211,6 +211,44 @@ void main() {
       expect(find.byKey(const Key('linkForm_minecraftHypixel')), findsNothing);
     });
 
+    testWidgets('shows a RetroAchievements link form when no RA connection '
+        'exists', (tester) async {
+      await _pump(tester, connections: right([]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('linkForm_retroachievements')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('retroachievementsLinkButton')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('renders a RetroAchievements connection tile and its card '
+        'slot', (tester) async {
+      final conn = Connection(
+        platform: Platform.retroachievements,
+        status: ConnectionStatus.active,
+        createdAt: DateTime(2026),
+        lastSyncAt: DateTime(2026, 6),
+        remoteId: 'TestUser',
+      );
+      await _pump(tester, connections: right([conn]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('connection_retroachievements')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('card_retroachievements')), findsOneWidget);
+      // A connected platform is not offered its link form again.
+      expect(find.byKey(const Key('linkForm_retroachievements')), findsNothing);
+    });
+
     testWidgets('refresh button is enabled when not on cooldown', (
       tester,
     ) async {

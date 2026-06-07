@@ -90,6 +90,22 @@ GameCard _minecraftCard({MinecraftCardData? data}) => GameCard(
   data: data,
 );
 
+GameCard _retroachievementsCard({RetroAchievementsCardData? data}) => GameCard(
+  schemaVersion: 1,
+  platform: Platform.retroachievements,
+  title: 'TestUser',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: 'https://retroachievements.org/user/TestUser',
+  stats: const [
+    CardStat(key: 'total_achievement_points', value: 48320, unit: 'points'),
+    CardStat(key: 'retro_rank', value: 1204, unit: 'count'),
+  ],
+  lastUpdated: DateTime(2026, 6, 3),
+  data: data,
+);
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -257,6 +273,35 @@ void main() {
       expect(find.byKey(const Key('minecraftRankLabel')), findsOneWidget);
       expect(find.byKey(const Key('minecraftBedwars')), findsOneWidget);
       expect(find.byKey(const Key('minecraftSkywars')), findsOneWidget);
+    });
+
+    testWidgets('renders RetroAchievementsCardDataView when '
+        'RetroAchievementsCardData is present', (tester) async {
+      final card = _retroachievementsCard(
+        data: const RetroAchievementsCardData(
+          profile: RetroAchievementsProfile(
+            totalPoints: 48320,
+            truePoints: 112500,
+            softcorePoints: 320,
+            rank: 1204,
+          ),
+          recentGames: [],
+        ),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const GameCardWidget(platform: Platform.retroachievements),
+          _FakeCardsRepository(right(card)),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('gameCardContent')), findsOneWidget);
+      expect(
+        find.byKey(const Key('retroachievementsRankLabel')),
+        findsOneWidget,
+      );
     });
   });
 }

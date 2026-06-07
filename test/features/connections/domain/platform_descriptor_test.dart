@@ -20,6 +20,24 @@ void main() {
       expect(descriptor.syncFunctionName, 'sync-minecraft-hypixel');
     });
 
+    test('registers RetroAchievements', () {
+      expect(
+        platformDescriptors.containsKey(Platform.retroachievements),
+        isTrue,
+      );
+    });
+
+    test(
+      'RetroAchievements descriptor carries the documented wire configuration',
+      () {
+        final descriptor = platformDescriptors[Platform.retroachievements]!;
+        expect(descriptor.platform, Platform.retroachievements);
+        expect(descriptor.displayName, 'RetroAchievements');
+        expect(descriptor.wireValue, 'retroachievements');
+        expect(descriptor.syncFunctionName, 'sync-retroachievements');
+      },
+    );
+
     test('every descriptor is keyed by its own platform', () {
       for (final entry in platformDescriptors.entries) {
         expect(entry.value.platform, entry.key);

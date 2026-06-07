@@ -16,6 +16,7 @@ typedef LinkBodyBuilder =
 const Map<Platform, LinkBodyBuilder> linkBodyBuilders = {
   Platform.steam: _steamLinkBody,
   Platform.minecraftHypixel: _minecraftLinkBody,
+  Platform.retroachievements: _retroachievementsLinkBody,
 };
 
 Map<String, dynamic> _steamLinkBody(
@@ -24,6 +25,11 @@ Map<String, dynamic> _steamLinkBody(
 ) => {'platform': wireValue, 'remote_id': input['remote_id']!};
 
 Map<String, dynamic> _minecraftLinkBody(
+  String wireValue,
+  Map<String, String> input,
+) => {'platform': wireValue, 'remote_id': input['remote_id']!};
+
+Map<String, dynamic> _retroachievementsLinkBody(
   String wireValue,
   Map<String, String> input,
 ) => {'platform': wireValue, 'remote_id': input['remote_id']!};

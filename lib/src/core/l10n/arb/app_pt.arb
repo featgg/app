@@ -102,5 +102,17 @@
   "connectionsMinecraftKills": "Abates",
   "connectionsMinecraftFinalKills": "Abates finais",
   "connectionsMinecraftBedsBroken": "Camas quebradas",
-  "connectionsMinecraftStar": "Estrela"
+  "connectionsMinecraftStar": "Estrela",
+  "connectionsStatTotalAchievementPoints": "Pontos de conquista",
+  "connectionsStatRetroRank": "Classificação",
+  "connectionsStatCompletionPct": "Conclusão",
+  "connectionsRetroAchievementsRemoteIdLabel": "Usuário do RetroAchievements",
+  "connectionsRetroAchievementsRemoteIdHint": "Digite seu usuário do RetroAchievements",
+  "connectionsRetroAchievementsRemoteIdRequired": "O usuário do RetroAchievements é obrigatório.",
+  "connectionsRetroAchievementsRank": "Classificação",
+  "connectionsRetroAchievementsTotalPoints": "Pontos totais",
+  "connectionsRetroAchievementsTruePoints": "RetroPoints",
+  "connectionsRetroAchievementsSoftcorePoints": "Pontos softcore",
+  "connectionsRetroAchievementsMemberSince": "Membro desde",
+  "connectionsRetroAchievementsRecentGames": "Jogos recentes"
 }

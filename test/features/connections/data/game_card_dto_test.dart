@@ -72,6 +72,43 @@ const _minecraftWidgetData = {
   },
 };
 
+/// A full RetroAchievements widget_data envelope used as a parse fixture.
+const _retroachievementsWidgetData = {
+  'schema_version': 1,
+  'platform': 'retroachievements',
+  'title': 'TestUser',
+  'subtitle': null,
+  'icon_image': 'https://media.retroachievements.org/UserPic/TestUser.png',
+  'hero_image': null,
+  'profile_url': 'https://retroachievements.org/user/TestUser',
+  'stats': [
+    {'key': 'total_achievement_points', 'value': 48320, 'unit': 'points'},
+    {'key': 'retro_rank', 'value': 1204, 'unit': 'count'},
+    {'key': 'completion_pct', 'value': 81.8, 'unit': 'percent'},
+  ],
+  'last_updated': '2026-06-03T12:00:00Z',
+  'data': {
+    'profile': {
+      'total_points': 48320,
+      'true_points': 112500,
+      'softcore_points': 320,
+      'rank': 1204,
+      'member_since': '2019-03-15T00:00:00Z',
+      'motto': 'Achievement hunter',
+    },
+    'recent_games': [
+      {
+        'title': 'Sonic the Hedgehog',
+        'console': 'Mega Drive',
+        'achieved': 18,
+        'total': 22,
+        'completion_pct': 81.8,
+        'icon_url': 'https://media.retroachievements.org/Images/001234.png',
+      },
+    ],
+  },
+};
+
 void main() {
   group('gameCardFromDto — Steam widget_data example', () {
     late GameCard card;
@@ -257,6 +294,142 @@ void main() {
 
     test('schema_version != 1 → no Minecraft parse (data null)', () {
       final raw = Map<String, dynamic>.from(_minecraftWidgetData);
+      raw['schema_version'] = 2;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.schemaVersion, 2);
+      expect(card.data, isNull);
+    });
+  });
+
+  group('gameCardFromDto — RetroAchievements widget_data example', () {
+    late GameCard card;
+
+    setUp(() {
+      card = gameCardFromDto(
+        GameCardDto.fromJson(
+          Map<String, dynamic>.from(_retroachievementsWidgetData),
+        ),
+      );
+    });
+
+    test('parses envelope fields (avatar + profile shown, hero/subtitle '
+        'null)', () {
+      expect(card.schemaVersion, 1);
+      expect(card.platform, Platform.retroachievements);
+      expect(card.title, 'TestUser');
+      expect(card.subtitle, isNull);
+      expect(card.iconImage, isNotNull);
+      expect(card.heroImage, isNull);
+      expect(card.profileUrl, isNotNull);
+    });
+
+    test('parses the RetroAchievements stat keys', () {
+      expect(card.stats.map((s) => s.key).toList(), [
+        'total_achievement_points',
+        'retro_rank',
+        'completion_pct',
+      ]);
+      expect(card.stats.first.value, 48320);
+    });
+
+    test('parses RetroAchievementsCardData incl. profile and recent games', () {
+      expect(card.data, isA<RetroAchievementsCardData>());
+      final data = card.data! as RetroAchievementsCardData;
+
+      expect(data.profile.totalPoints, 48320);
+      expect(data.profile.truePoints, 112500);
+      expect(data.profile.softcorePoints, 320);
+      expect(data.profile.rank, 1204);
+      expect(data.profile.memberSince, DateTime.parse('2019-03-15T00:00:00Z'));
+      expect(data.profile.motto, 'Achievement hunter');
+
+      expect(data.recentGames, hasLength(1));
+      final game = data.recentGames.first;
+      expect(game.title, 'Sonic the Hedgehog');
+      expect(game.console, 'Mega Drive');
+      expect(game.achieved, 18);
+      expect(game.total, 22);
+      expect(game.completionPct, 81.8);
+      expect(game.iconUrl, contains('001234'));
+    });
+  });
+
+  group('gameCardFromDto — RetroAchievements defensive parsing', () {
+    test('absent recent_games → empty list', () {
+      final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
+      raw['data'] = <String, dynamic>{
+        'profile': <String, dynamic>{
+          'total_points': 1,
+          'true_points': 2,
+          'softcore_points': 0,
+          'rank': 5,
+        },
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isA<RetroAchievementsCardData>());
+      final data = card.data! as RetroAchievementsCardData;
+      expect(data.recentGames, isEmpty);
+    });
+
+    test('null member_since / motto → fields null', () {
+      final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
+      raw['data'] = <String, dynamic>{
+        'profile': <String, dynamic>{
+          'total_points': 1,
+          'true_points': 2,
+          'softcore_points': 0,
+          'rank': 5,
+          'member_since': null,
+          'motto': null,
+        },
+        'recent_games': <dynamic>[],
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      final data = card.data! as RetroAchievementsCardData;
+      expect(data.profile.memberSince, isNull);
+      expect(data.profile.motto, isNull);
+    });
+
+    test('malformed member_since degrades to null without failing the '
+        'block', () {
+      final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
+      raw['data'] = <String, dynamic>{
+        'profile': <String, dynamic>{
+          'total_points': 1,
+          'true_points': 2,
+          'softcore_points': 0,
+          'rank': 5,
+          'member_since': 'not-a-date',
+        },
+        'recent_games': <dynamic>[],
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isA<RetroAchievementsCardData>());
+      final data = card.data! as RetroAchievementsCardData;
+      expect(data.profile.memberSince, isNull);
+    });
+
+    test('malformed data block → data is null (envelope-only)', () {
+      final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
+      raw['data'] = <String, dynamic>{
+        'profile': <String, dynamic>{
+          'total_points': 'not-a-number',
+          'true_points': 2,
+          'softcore_points': 0,
+          'rank': 5,
+        },
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isNull);
+    });
+
+    test('schema_version != 1 → no RetroAchievements parse (data null)', () {
+      final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
       raw['schema_version'] = 2;
       final card = gameCardFromDto(GameCardDto.fromJson(raw));
 

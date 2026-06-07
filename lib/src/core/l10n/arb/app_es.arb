@@ -102,5 +102,17 @@
   "connectionsMinecraftKills": "Bajas",
   "connectionsMinecraftFinalKills": "Bajas finales",
   "connectionsMinecraftBedsBroken": "Camas rotas",
-  "connectionsMinecraftStar": "Estrella"
+  "connectionsMinecraftStar": "Estrella",
+  "connectionsStatTotalAchievementPoints": "Puntos de logros",
+  "connectionsStatRetroRank": "Clasificación",
+  "connectionsStatCompletionPct": "Finalización",
+  "connectionsRetroAchievementsRemoteIdLabel": "Usuario de RetroAchievements",
+  "connectionsRetroAchievementsRemoteIdHint": "Ingresa tu usuario de RetroAchievements",
+  "connectionsRetroAchievementsRemoteIdRequired": "El usuario de RetroAchievements es obligatorio.",
+  "connectionsRetroAchievementsRank": "Clasificación",
+  "connectionsRetroAchievementsTotalPoints": "Puntos totales",
+  "connectionsRetroAchievementsTruePoints": "RetroPoints",
+  "connectionsRetroAchievementsSoftcorePoints": "Puntos softcore",
+  "connectionsRetroAchievementsMemberSince": "Miembro desde",
+  "connectionsRetroAchievementsRecentGames": "Juegos recientes"
 }
