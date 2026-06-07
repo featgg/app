@@ -58,6 +58,29 @@ void main() {
       expect(() => connectionFromDto(dto), throwsFormatException);
     });
 
+    test('maps a metadata row to Connection.metadata', () {
+      final dto = ConnectionDto.fromJson({
+        'platform': 'league_of_legends',
+        'status': 'active',
+        'created_at': '2026-01-01T00:00:00Z',
+        'metadata': {
+          'game_name': 'TestPlayer',
+          'tag_line': 'NA1',
+          'region': 'na1',
+        },
+      });
+
+      final conn = connectionFromDto(dto);
+
+      expect(conn.platform, Platform.leagueOfLegends);
+      expect(conn.metadata, {
+        'game_name': 'TestPlayer',
+        'tag_line': 'NA1',
+        'region': 'na1',
+      });
+      expect(conn.remoteId, isNull);
+    });
+
     test('maps all seven platform wire values', () {
       const platforms = {
         'steam': Platform.steam,

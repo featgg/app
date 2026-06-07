@@ -7,6 +7,7 @@ import '../domain/platform_descriptor.dart';
 import 'connection_actions_controller.dart';
 import 'connections_provider.dart';
 import 'game_card_widget.dart';
+import 'league_of_legends_link_form.dart';
 import 'minecraft_link_form.dart';
 import 'retroachievements_link_form.dart';
 import 'steam_link_form.dart';
@@ -19,6 +20,7 @@ const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
   Platform.steam: SteamLinkForm.new,
   Platform.minecraftHypixel: MinecraftLinkForm.new,
   Platform.retroachievements: RetroAchievementsLinkForm.new,
+  Platform.leagueOfLegends: LeagueOfLegendsLinkForm.new,
 };
 
 class ConnectionsScreen extends ConsumerWidget {

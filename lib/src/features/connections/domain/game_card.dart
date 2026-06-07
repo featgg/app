@@ -216,6 +216,91 @@ final class RetroAchievementsCardData extends Equatable implements CardData {
   List<Object?> get props => [profile, recentGames];
 }
 
+/// Ranked tier and standing for a League of Legends summoner.
+final class LolRank extends Equatable {
+  const LolRank({
+    required this.tier,
+    required this.division,
+    required this.lp,
+    required this.wins,
+    required this.losses,
+  });
+
+  /// Rank tier token, e.g. IRON, GOLD, CHALLENGER.
+  final String tier;
+
+  /// Division within the tier, e.g. I, II, III, IV.
+  final String division;
+  final int lp;
+  final int wins;
+  final int losses;
+
+  @override
+  List<Object?> get props => [tier, division, lp, wins, losses];
+}
+
+/// A single champion mastery entry from the top-mastery list.
+final class LolMasteryEntry extends Equatable {
+  const LolMasteryEntry({
+    required this.championId,
+    required this.level,
+    required this.points,
+  });
+
+  /// Numeric champion id; no name lookup in v1.
+  final int championId;
+  final int level;
+  final int points;
+
+  @override
+  List<Object?> get props => [championId, level, points];
+}
+
+/// Challenges summary for a League of Legends summoner.
+final class LolChallenges extends Equatable {
+  const LolChallenges({required this.totalPoints, required this.level});
+
+  final int totalPoints;
+
+  /// Challenge tier token, e.g. GOLD, PLATINUM.
+  final String level;
+
+  @override
+  List<Object?> get props => [totalPoints, level];
+}
+
+/// Basic summoner info from League of Legends.
+final class LolSummoner extends Equatable {
+  const LolSummoner({required this.level, required this.profileIconId});
+
+  final int level;
+
+  /// Numeric profile icon id; not a URL.
+  final int profileIconId;
+
+  @override
+  List<Object?> get props => [level, profileIconId];
+}
+
+/// League of Legends card data block.
+final class LeagueOfLegendsCardData extends Equatable implements CardData {
+  const LeagueOfLegendsCardData({
+    this.rank,
+    required this.topMastery,
+    this.challenges,
+    this.summoner,
+  });
+
+  /// Null when the summoner is unranked.
+  final LolRank? rank;
+  final List<LolMasteryEntry> topMastery;
+  final LolChallenges? challenges;
+  final LolSummoner? summoner;
+
+  @override
+  List<Object?> get props => [rank, topMastery, challenges, summoner];
+}
+
 /// A game card as read from `game_cards.widget_data`. The envelope is shared
 /// across all platforms; [data] carries the platform-specific block and is null
 /// when the schema version is unknown or the data block is absent.

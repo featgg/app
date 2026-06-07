@@ -17,6 +17,7 @@ const Map<Platform, LinkBodyBuilder> linkBodyBuilders = {
   Platform.steam: _steamLinkBody,
   Platform.minecraftHypixel: _minecraftLinkBody,
   Platform.retroachievements: _retroachievementsLinkBody,
+  Platform.leagueOfLegends: _leagueOfLegendsLinkBody,
 };
 
 Map<String, dynamic> _steamLinkBody(
@@ -33,6 +34,18 @@ Map<String, dynamic> _retroachievementsLinkBody(
   String wireValue,
   Map<String, String> input,
 ) => {'platform': wireValue, 'remote_id': input['remote_id']!};
+
+Map<String, dynamic> _leagueOfLegendsLinkBody(
+  String wireValue,
+  Map<String, String> input,
+) => {
+  'platform': wireValue,
+  'metadata': {
+    'game_name': input['game_name']!,
+    'tag_line': input['tag_line']!,
+    'region': input['region']!,
+  },
+};
 
 /// Success envelope returned by `link-account` and `unlink-account`.
 @JsonSerializable(createToJson: false)

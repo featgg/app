@@ -23,6 +23,7 @@ final class Connection extends Equatable {
     required this.createdAt,
     this.lastSyncAt,
     this.remoteId,
+    this.metadata,
   });
 
   final Platform platform;
@@ -37,6 +38,10 @@ final class Connection extends Equatable {
   /// for platforms that use metadata or an API key instead.
   final String? remoteId;
 
+  /// Key–value identity for platforms that link via metadata (e.g. League of
+  /// Legends `game_name`/`tag_line`/`region`). Null for remote_id platforms.
+  final Map<String, String>? metadata;
+
   @override
   List<Object?> get props => [
     platform,
@@ -44,5 +49,6 @@ final class Connection extends Equatable {
     createdAt,
     lastSyncAt,
     remoteId,
+    metadata,
   ];
 }

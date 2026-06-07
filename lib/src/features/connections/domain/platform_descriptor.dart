@@ -54,4 +54,10 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
     wireValue: 'retroachievements',
     syncFunctionName: 'sync-retroachievements',
   ),
+  Platform.leagueOfLegends: PlatformDescriptor(
+    platform: Platform.leagueOfLegends,
+    displayName: 'League of Legends',
+    wireValue: 'league_of_legends',
+    syncFunctionName: 'sync-league-of-legends',
+  ),
 };

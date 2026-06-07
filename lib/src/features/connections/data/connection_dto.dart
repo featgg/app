@@ -12,6 +12,7 @@ final class ConnectionDto {
     required this.createdAt,
     this.lastSyncAt,
     this.remoteId,
+    this.metadata,
   });
 
   final String platform;
@@ -22,6 +23,8 @@ final class ConnectionDto {
   final String? lastSyncAt;
   @JsonKey(name: 'remote_id')
   final String? remoteId;
+  @JsonKey(name: 'metadata')
+  final Map<String, dynamic>? metadata;
 
   factory ConnectionDto.fromJson(Map<String, dynamic> json) =>
       _$ConnectionDtoFromJson(json);
@@ -33,7 +36,22 @@ Connection connectionFromDto(ConnectionDto dto) => Connection(
   createdAt: DateTime.parse(dto.createdAt),
   lastSyncAt: dto.lastSyncAt != null ? DateTime.parse(dto.lastSyncAt!) : null,
   remoteId: dto.remoteId,
+  metadata: _coerceMetadata(dto.metadata),
 );
+
+/// Coerces a raw JSON metadata map to `Map<String, String>?`. Non-string
+/// values are dropped defensively so a malformed stored value never throws
+/// during the connections read.
+Map<String, String>? _coerceMetadata(Map<String, dynamic>? raw) {
+  if (raw == null) return null;
+  final result = <String, String>{};
+  for (final entry in raw.entries) {
+    if (entry.value is String) {
+      result[entry.key] = entry.value as String;
+    }
+  }
+  return result.isEmpty ? null : result;
+}
 
 Platform _platformFromWire(String value) => switch (value) {
   'steam' => Platform.steam,

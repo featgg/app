@@ -15,6 +15,7 @@ final class LinkFormState extends Equatable {
     this.remoteIdError = false,
     this.failure,
     this.linked = false,
+    this.fieldErrors = const {},
   });
 
   factory LinkFormState.initial() => const LinkFormState(submitting: false);
@@ -31,13 +32,19 @@ final class LinkFormState extends Equatable {
   /// True once the link call succeeded (or ALREADY_LINKED was returned).
   final bool linked;
 
+  /// Form-field keys that failed client-side required validation (multi-field
+  /// forms). Empty when all fields pass or validation has not run yet.
+  final Set<String> fieldErrors;
+
   LinkFormState copyWith({
     bool? submitting,
     bool? remoteIdError,
     Failure? failure,
     bool? linked,
+    Set<String>? fieldErrors,
     bool clearFailure = false,
     bool clearRemoteIdError = false,
+    bool clearFieldErrors = false,
   }) => LinkFormState(
     submitting: submitting ?? this.submitting,
     remoteIdError: clearRemoteIdError
@@ -45,16 +52,69 @@ final class LinkFormState extends Equatable {
         : (remoteIdError ?? this.remoteIdError),
     failure: clearFailure ? null : (failure ?? this.failure),
     linked: linked ?? this.linked,
+    fieldErrors: clearFieldErrors
+        ? const {}
+        : (fieldErrors ?? this.fieldErrors),
   );
 
   @override
-  List<Object?> get props => [submitting, remoteIdError, failure, linked];
+  List<Object?> get props => [
+    submitting,
+    remoteIdError,
+    failure,
+    linked,
+    fieldErrors,
+  ];
 }
 
 @riverpod
 class LinkFormController extends _$LinkFormController {
   @override
   LinkFormState build(Platform platform) => LinkFormState.initial();
+
+  /// Validates each entry in [fields]; any whose trimmed value is empty is
+  /// added to [LinkFormState.fieldErrors] and the backend is not called.
+  /// On success, links [platform] via the platform's wire body builder
+  /// (passing the trimmed [fields] as formInput), invalidates
+  /// [myConnectionsProvider], and sets [LinkFormState.linked]. The widget
+  /// owns the TextEditingControllers and is never reset here.
+  Future<void> submitFields(Map<String, String> fields) async {
+    final blanks = fields.entries
+        .where((e) => e.value.trim().isEmpty)
+        .map((e) => e.key)
+        .toSet();
+    if (blanks.isNotEmpty) {
+      state = state.copyWith(fieldErrors: blanks, clearFailure: true);
+      return;
+    }
+
+    state = state.copyWith(
+      submitting: true,
+      clearFailure: true,
+      clearFieldErrors: true,
+    );
+
+    final trimmed = {for (final e in fields.entries) e.key: e.value.trim()};
+    final repo = ref.read(connectionsRepositoryProvider);
+    final result = await repo.link(platform: platform, formInput: trimmed);
+
+    if (!ref.mounted) return;
+
+    result.fold(
+      (failure) {
+        state = state.copyWith(submitting: false, failure: failure);
+      },
+      (_) {
+        ref.invalidate(myConnectionsProvider);
+        state = state.copyWith(
+          submitting: false,
+          linked: true,
+          clearFailure: true,
+          clearFieldErrors: true,
+        );
+      },
+    );
+  }
 
   /// Validates [remoteId] and links [platform]. On success, invalidates
   /// [myConnectionsProvider] and sets [LinkFormState.linked]. On

@@ -479,5 +479,105 @@
   "connectionsRetroAchievementsRecentGames": "Recent games",
   "@connectionsRetroAchievementsRecentGames": {
     "description": "Section heading for the RetroAchievements recent games block on the game card."
+  },
+  "connectionsLolGameNameLabel": "Game Name",
+  "@connectionsLolGameNameLabel": {
+    "description": "Label for the League of Legends game_name (Riot ID name part) input field."
+  },
+  "connectionsLolGameNameHint": "Enter your Riot game name",
+  "@connectionsLolGameNameHint": {
+    "description": "Placeholder hint for the League of Legends game_name input field."
+  },
+  "connectionsLolGameNameRequired": "Game name is required.",
+  "@connectionsLolGameNameRequired": {
+    "description": "Shown on the game_name field when the user submits an empty value."
+  },
+  "connectionsLolTagLineLabel": "Tag Line",
+  "@connectionsLolTagLineLabel": {
+    "description": "Label for the League of Legends tag_line (Riot ID tag part, without the #) input field."
+  },
+  "connectionsLolTagLineHint": "Enter your Riot tag line",
+  "@connectionsLolTagLineHint": {
+    "description": "Placeholder hint for the League of Legends tag_line input field."
+  },
+  "connectionsLolTagLineRequired": "Tag line is required.",
+  "@connectionsLolTagLineRequired": {
+    "description": "Shown on the tag_line field when the user submits an empty value."
+  },
+  "connectionsLolRegionLabel": "Region",
+  "@connectionsLolRegionLabel": {
+    "description": "Label for the League of Legends region input field."
+  },
+  "connectionsLolRegionHint": "Enter your region (e.g. na1)",
+  "@connectionsLolRegionHint": {
+    "description": "Placeholder hint for the League of Legends region input field."
+  },
+  "connectionsLolRegionRequired": "Region is required.",
+  "@connectionsLolRegionRequired": {
+    "description": "Shown on the region field when the user submits an empty value."
+  },
+  "connectionsLolRank": "Rank",
+  "@connectionsLolRank": {
+    "description": "Label for the League of Legends rank row on the game card data view."
+  },
+  "connectionsLolUnranked": "Unranked",
+  "@connectionsLolUnranked": {
+    "description": "Shown on the League of Legends card when the summoner has no ranked placement."
+  },
+  "connectionsLolLp": "LP",
+  "@connectionsLolLp": {
+    "description": "Label for the League of Legends league points value on the game card data view."
+  },
+  "connectionsLolWins": "Wins",
+  "@connectionsLolWins": {
+    "description": "Label for the wins value on the League of Legends game card data view."
+  },
+  "connectionsLolLosses": "Losses",
+  "@connectionsLolLosses": {
+    "description": "Label for the losses value on the League of Legends game card data view."
+  },
+  "connectionsLolSummonerLevel": "Summoner level",
+  "@connectionsLolSummonerLevel": {
+    "description": "Label for the summoner level row on the League of Legends game card data view."
+  },
+  "connectionsLolChallenges": "Challenges",
+  "@connectionsLolChallenges": {
+    "description": "Section heading for the League of Legends challenges block on the game card data view."
+  },
+  "connectionsLolChallengeLevel": "Challenge level",
+  "@connectionsLolChallengeLevel": {
+    "description": "Label for the challenge tier level on the League of Legends game card data view."
+  },
+  "connectionsLolTopMastery": "Top mastery",
+  "@connectionsLolTopMastery": {
+    "description": "Section heading for the League of Legends top champion mastery list on the game card data view."
+  },
+  "connectionsLolMasteryLevel": "Mastery level",
+  "@connectionsLolMasteryLevel": {
+    "description": "Label for the mastery level column in the League of Legends top mastery list."
+  },
+  "connectionsLolChampion": "Champion",
+  "@connectionsLolChampion": {
+    "description": "Label for the champion id column in the League of Legends top mastery list."
+  },
+  "connectionsStatRankLp": "Rank LP",
+  "@connectionsStatRankLp": {
+    "description": "Localized label for the rank_lp stat key (League of Legends)."
+  },
+  "connectionsStatWinrate": "Win rate",
+  "@connectionsStatWinrate": {
+    "description": "Localized label for the winrate stat key (League of Legends)."
+  },
+  "connectionsStatMasteryPoints": "Mastery points",
+  "@connectionsStatMasteryPoints": {
+    "description": "Localized label for the mastery_points stat key (League of Legends)."
+  },
+  "connectionsStatChallengePoints": "Challenge points",
+  "@connectionsStatChallengePoints": {
+    "description": "Localized label for the challenge_points stat key (League of Legends)."
+  },
+  "connectionsStatSummonerLevel": "Summoner level",
+  "@connectionsStatSummonerLevel": {
+    "description": "Localized label for the summoner_level stat key (League of Legends)."
   }
 }

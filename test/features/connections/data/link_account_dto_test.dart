@@ -44,5 +44,27 @@ void main() {
         });
       },
     );
+
+    test('registers League of Legends', () {
+      expect(linkBodyBuilders.containsKey(Platform.leagueOfLegends), isTrue);
+    });
+
+    test(
+      'League of Legends builds the documented {platform, metadata{...}} body',
+      () {
+        final body = linkBodyBuilders[Platform.leagueOfLegends]!(
+          'league_of_legends',
+          {'game_name': 'TestPlayer', 'tag_line': 'NA1', 'region': 'na1'},
+        );
+        expect(body, {
+          'platform': 'league_of_legends',
+          'metadata': {
+            'game_name': 'TestPlayer',
+            'tag_line': 'NA1',
+            'region': 'na1',
+          },
+        });
+      },
+    );
   });
 }

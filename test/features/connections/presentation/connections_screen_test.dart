@@ -284,11 +284,23 @@ void main() {
       expect(find.byKey(const Key('cooldownHint')), findsOneWidget);
     });
 
+    testWidgets('shows a League of Legends link form when no LoL connection '
+        'exists', (tester) async {
+      await _pump(tester, connections: right([]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('linkForm_leagueOfLegends')), findsOneWidget);
+      expect(find.byKey(const Key('lolLinkButton')), findsOneWidget);
+    });
+
     testWidgets(
       'does not render a tile for a platform without a registered descriptor',
       (tester) async {
+        // wowRetail has no registered descriptor yet; its connection must be
+        // silently ignored so the screen does not crash or show a stale tile.
         final conn = Connection(
-          platform: Platform.leagueOfLegends,
+          platform: Platform.wowRetail,
           status: ConnectionStatus.active,
           createdAt: DateTime(2026),
         );
@@ -296,14 +308,8 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(
-          find.byKey(const Key('connection_leagueOfLegends')),
-          findsNothing,
-        );
-        expect(
-          find.byKey(const Key('refreshButton_leagueOfLegends')),
-          findsNothing,
-        );
+        expect(find.byKey(const Key('connection_wowRetail')), findsNothing);
+        expect(find.byKey(const Key('refreshButton_wowRetail')), findsNothing);
         // Empty state shows because no descriptor-registered connections exist.
         expect(find.byKey(const Key('connectionsEmpty')), findsOneWidget);
       },
