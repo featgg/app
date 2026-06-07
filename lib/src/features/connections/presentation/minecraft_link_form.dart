@@ -6,7 +6,7 @@ import '../domain/connection.dart';
 import 'link_form_controller.dart';
 
 /// Minecraft (Hypixel) link form. Submits `Platform.minecraftHypixel` with
-/// the user's Minecraft username as `remote_id`.
+/// the user's Minecraft player UUID as `remote_id`.
 class MinecraftLinkForm extends ConsumerStatefulWidget {
   const MinecraftLinkForm({super.key});
 

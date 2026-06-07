@@ -66,7 +66,7 @@ final class ProfileRepositoryImpl implements ProfileRepository {
     }
     if (error is PostgrestException) {
       final code = error.code;
-      // PostgREST surfaces RLS denial / JWT problems in the 401/403 class.
+      // PostgREST surfaces access denials / auth-token problems as 401/403.
       if (code == '401' || code == '403' || code == 'PGRST301') {
         return const AuthFailure();
       }

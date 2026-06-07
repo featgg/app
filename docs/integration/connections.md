@@ -47,7 +47,10 @@ retry). These are omitted from the per-operation tables below.
   - `platform: string, required — one of the supported platform values`
   - Steam, Minecraft (Hypixel), Chess.com, RetroAchievements:
     `remote_id: string, required — the user's canonical identifier on
-    that platform`
+    that platform`. Confirmed identifiers: Steam = SteamID64 (the 64-bit
+    numeric ID); Minecraft (Hypixel) = the player UUID. Chess.com and
+    RetroAchievements use each platform's canonical account identifier
+    (specific form to confirm).
   - League of Legends:
     `metadata: object, required — { game_name: string, tag_line: string,
     region: string }`
@@ -62,7 +65,7 @@ retry). These are omitted from the per-operation tables below.
 
   | Code                 | Status | Client-UX consequence                                  |
   | -------------------- | -----: | ------------------------------------------------------ |
-  | `ALREADY_LINKED`     |    409 | Tell the user this platform is already connected.      |
+  | `ALREADY_LINKED`     |    409 | Already linked; see Idempotency below.      |
   | `INVALID_REQUEST`    |    400 | Highlight the invalid field; the input was malformed.  |
   | `UPSTREAM_NOT_FOUND` |    404 | Identity not found on the platform; ask to re-check.   |
   | `UPSTREAM_RATE_LIMIT`|    429 | Platform is busy; ask the user to retry shortly.       |
@@ -71,9 +74,13 @@ retry). These are omitted from the per-operation tables below.
 
   For Guild Wars 2, an invalid or unauthorized API key is reported as
   `INVALID_REQUEST` (400), not `UPSTREAM_NOT_FOUND`.
-- **Idempotency and retry semantics.** Not idempotent. A retry after a
-  successful link returns `ALREADY_LINKED`; treat that as
-  success-equivalent when the user's intent was to link.
+- **Idempotency and retry semantics.** Not idempotent. `ALREADY_LINKED` is
+  returned both when the caller re-links the same account (a retry after a
+  successful link) and when the submitted account is linked elsewhere — to a
+  different profile, or a different account already occupies the caller's single
+  per-platform slot. Treat it as success only when the caller already has that
+  same account linked (intent satisfied); otherwise the link did not occur, so
+  show an "already linked" error rather than reporting success.
 - **Latency / timeout expectation.** Validates the identity against the
   third-party platform; may take a few seconds. Recommended client
   timeout ~15s.

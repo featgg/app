@@ -73,48 +73,51 @@ class _ConnectionsBody extends ConsumerWidget {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (visible.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Text(
-                key: const Key('connectionsEmpty'),
-                l10n.connectionsEmpty,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Text(
+                  key: const Key('connectionsEmpty'),
+                  l10n.connectionsEmpty,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-          for (final c in visible) ...[
-            Padding(
-              key: Key('connection_${c.platform.name}'),
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: _ConnectionTile(connection: c),
-            ),
-            GameCardWidget(
-              key: Key('card_${c.platform.name}'),
-              platform: c.platform,
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-          for (final descriptor in platformDescriptors.values)
-            if (!connectedPlatforms.contains(descriptor.platform)) ...[
+            for (final c in visible) ...[
+              Padding(
+                key: Key('connection_${c.platform.name}'),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _ConnectionTile(connection: c),
+              ),
+              GameCardWidget(
+                key: Key('card_${c.platform.name}'),
+                platform: c.platform,
+              ),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                l10n.connectionsConnectPlatform(descriptor.displayName),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _linkFormRegistry[descriptor.platform]!(
-                key: Key('linkForm_${descriptor.platform.name}'),
-              ),
             ],
-        ],
+            for (final descriptor in platformDescriptors.values)
+              if (!connectedPlatforms.contains(descriptor.platform)) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  l10n.connectionsConnectPlatform(descriptor.displayName),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _linkFormRegistry[descriptor.platform]!(
+                  key: Key('linkForm_${descriptor.platform.name}'),
+                ),
+              ],
+          ],
+        ),
       ),
     );
   }

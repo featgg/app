@@ -110,19 +110,100 @@ void main() {
       expect(reporter.reported, isEmpty);
     });
 
-    test('ALREADY_LINKED → Right(unit), not reported', () async {
-      final source = _FakeConnectionsDataSource(
-        onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
-      );
-      final reporter = _RecordingReporter();
-      final result = await _repo(
-        source,
-        reporter,
-      ).link(platform: Platform.steam, formInput: {'remote_id': '12345'});
+    test(
+      'ALREADY_LINKED with the same account already linked → Right(unit), not reported',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
+          onFetch: () async => [
+            ConnectionDto.fromJson({
+              'platform': 'steam',
+              'status': 'active',
+              'created_at': '2026-01-01T00:00:00Z',
+              'remote_id': '12345',
+            }),
+          ],
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).link(platform: Platform.steam, formInput: {'remote_id': '12345'});
 
-      expect(result.isRight(), isTrue);
-      expect(reporter.reported, isEmpty);
-    });
+        expect(result.isRight(), isTrue);
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'ALREADY_LINKED with a different account in the slot → Left(AlreadyLinkedFailure)',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
+          onFetch: () async => [
+            ConnectionDto.fromJson({
+              'platform': 'steam',
+              'status': 'active',
+              'created_at': '2026-01-01T00:00:00Z',
+              'remote_id': '99999',
+            }),
+          ],
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).link(platform: Platform.steam, formInput: {'remote_id': '12345'});
+
+        result.fold(
+          (f) => expect(f, isA<AlreadyLinkedFailure>()),
+          (_) => fail('want Left'),
+        );
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'ALREADY_LINKED with the platform NOT linked for this user → Left(AlreadyLinkedFailure), not reported',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
+          onFetch: () async => [],
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).link(platform: Platform.steam, formInput: {'remote_id': '12345'});
+
+        result.fold(
+          (f) => expect(f, isA<AlreadyLinkedFailure>()),
+          (_) => fail('want Left'),
+        );
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'ALREADY_LINKED with a failing verify-fetch → Left(AlreadyLinkedFailure)',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onLink: (_) async => throw _fnEx(409, code: 'ALREADY_LINKED'),
+          onFetch: () async => throw Exception('fetch failed'),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).link(platform: Platform.steam, formInput: {'remote_id': '12345'});
+
+        result.fold(
+          (f) => expect(f, isA<AlreadyLinkedFailure>()),
+          (_) => fail('want Left'),
+        );
+        expect(reporter.reported, isEmpty);
+      },
+    );
 
     test('INVALID_REQUEST / 400 → Left(InputFailure), not reported', () async {
       final source = _FakeConnectionsDataSource(

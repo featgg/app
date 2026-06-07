@@ -226,9 +226,9 @@
   "@asyncRetry": {
     "description": "Label for the Retry action in the AsyncValueWidget error state."
   },
-  "errorAlreadyLinked": "This platform is already connected.",
+  "errorAlreadyLinked": "This account is already linked to another profile.",
   "@errorAlreadyLinked": {
-    "description": "Shown when a link attempt returns ALREADY_LINKED (409). Expected control flow."
+    "description": "Shown when a link attempt returns ALREADY_LINKED (409) and the platform is NOT found in the caller's connections (cross-user collision). Expected control flow."
   },
   "errorSyncCooldown": "Refresh is on cooldown. Try again shortly.",
   "@errorSyncCooldown": {
@@ -271,17 +271,17 @@
       }
     }
   },
-  "connectionsSteamRemoteIdLabel": "Steam ID",
+  "connectionsSteamRemoteIdLabel": "SteamID64",
   "@connectionsSteamRemoteIdLabel": {
-    "description": "Label for the Steam remote_id input field."
+    "description": "Label for the Steam remote_id (SteamID64) input field."
   },
-  "connectionsSteamRemoteIdHint": "Enter your Steam ID",
+  "connectionsSteamRemoteIdHint": "Enter your SteamID64",
   "@connectionsSteamRemoteIdHint": {
-    "description": "Placeholder hint for the Steam remote_id input field."
+    "description": "Placeholder hint for the Steam remote_id (SteamID64) input field."
   },
-  "connectionsRemoteIdRequired": "Steam ID is required.",
+  "connectionsRemoteIdRequired": "SteamID64 is required.",
   "@connectionsRemoteIdRequired": {
-    "description": "Shown on the Steam ID field when the user submits an empty value."
+    "description": "Shown on the SteamID64 field when the user submits an empty value."
   },
   "connectionsLink": "Connect",
   "@connectionsLink": {
@@ -372,17 +372,17 @@
   "@connectionsStatAchievementPoints": {
     "description": "Localized label for the achievement_points stat key (Minecraft Hypixel)."
   },
-  "connectionsMinecraftRemoteIdLabel": "Minecraft username",
+  "connectionsMinecraftRemoteIdLabel": "Minecraft UUID",
   "@connectionsMinecraftRemoteIdLabel": {
-    "description": "Label for the Minecraft (Hypixel) remote_id input field."
+    "description": "Label for the Minecraft (Hypixel) remote_id (player UUID) input field."
   },
-  "connectionsMinecraftRemoteIdHint": "Enter your Minecraft username",
+  "connectionsMinecraftRemoteIdHint": "Enter your Minecraft player UUID",
   "@connectionsMinecraftRemoteIdHint": {
-    "description": "Placeholder hint for the Minecraft (Hypixel) remote_id input field."
+    "description": "Placeholder hint for the Minecraft (Hypixel) remote_id (player UUID) input field."
   },
-  "connectionsMinecraftRemoteIdRequired": "Minecraft username is required.",
+  "connectionsMinecraftRemoteIdRequired": "Minecraft UUID is required.",
   "@connectionsMinecraftRemoteIdRequired": {
-    "description": "Shown on the Minecraft username field when the user submits an empty value."
+    "description": "Shown on the Minecraft UUID field when the user submits an empty value."
   },
   "connectionsMinecraftRank": "Rank",
   "@connectionsMinecraftRank": {

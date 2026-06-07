@@ -42,12 +42,38 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
       return right(unit);
     } on FunctionException catch (e, st) {
       final failure = _mapFunctionException(e);
-      // ALREADY_LINKED is success-equivalent at this boundary (idempotent-by-intent).
-      if (failure is AlreadyLinkedFailure) return right(unit);
+      if (failure is AlreadyLinkedFailure) {
+        // ALREADY_LINKED covers both a same-account re-link (idempotent success)
+        // and the submitted account being linked elsewhere — to another profile,
+        // or a different account already holding the caller's single per-platform
+        // slot. The code cannot distinguish them, so confirm the caller already
+        // has THIS account linked before reporting success: a match means the
+        // link intent is satisfied; no match means it did not occur.
+        final remoteId = formInput['remote_id'];
+        if (await _isAccountLinked(descriptor.wireValue, remoteId)) {
+          return right(unit);
+        }
+        return left(failure);
+      }
       if (!failure.isExpected) _crashReporter.reportError(e, st);
       return left(failure);
     } catch (e, st) {
       return left(_handleNonFunctionError(e, st));
+    }
+  }
+
+  /// Re-reads the caller's own connections and reports whether one already
+  /// exists for [wireValue] with the same [remoteId]. Disambiguates a 409: a
+  /// same-account re-link matches (idempotent success); a different or
+  /// already-claimed account does not (the link did not occur for the caller).
+  /// On any fetch fault, returns false so the caller surfaces the original
+  /// failure rather than a false success.
+  Future<bool> _isAccountLinked(String wireValue, String? remoteId) async {
+    try {
+      final dtos = await _source.fetchConnections();
+      return dtos.any((d) => d.platform == wireValue && d.remoteId == remoteId);
+    } catch (_) {
+      return false;
     }
   }
 
