@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../domain/connection.dart';
 import '../domain/game_card.dart';
+import 'chess_card_data_view.dart';
 import 'connections_provider.dart';
 import 'league_of_legends_card_data_view.dart';
 import 'minecraft_card_data_view.dart';
@@ -38,6 +39,7 @@ final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
     data: data as WowRetailCardData,
     lastUpdated: lastUpdated,
   ),
+  Platform.chess: (data, _) => ChessCardDataView(data: data as ChessCardData),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
@@ -190,6 +192,9 @@ String _statLabel(String key, AppLocalizations l10n) => switch (key) {
   'summoner_level' => l10n.connectionsStatSummonerLevel,
   'item_level' => l10n.connectionsStatItemLevel,
   'mythic_plus_rating' => l10n.connectionsStatMythicPlusRating,
+  'rating' => l10n.connectionsStatRating,
+  'followers' => l10n.connectionsStatFollowers,
+  'puzzle_rush' => l10n.connectionsStatPuzzleRush,
   _ => key,
 };
 

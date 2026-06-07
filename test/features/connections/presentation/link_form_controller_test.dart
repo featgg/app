@@ -242,6 +242,47 @@ void main() {
       expect(state.failure, isNull);
       expect(repo.linkCalls, 1);
     });
+
+    test(
+      'Chess: blank remoteId sets remoteIdError without calling the backend',
+      () async {
+        final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+        final container = ProviderContainer(
+          overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+        container.listen(linkFormControllerProvider(Platform.chess), (_, _) {});
+
+        await container
+            .read(linkFormControllerProvider(Platform.chess).notifier)
+            .submit(remoteId: '   ');
+
+        final state = container.read(
+          linkFormControllerProvider(Platform.chess),
+        );
+        expect(state.remoteIdError, isTrue);
+        expect(state.linked, isFalse);
+        expect(repo.linkCalls, 0);
+      },
+    );
+
+    test('Chess: success links and clears errors', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = ProviderContainer(
+        overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      container.listen(linkFormControllerProvider(Platform.chess), (_, _) {});
+
+      await container
+          .read(linkFormControllerProvider(Platform.chess).notifier)
+          .submit(remoteId: 'TestPlayer');
+
+      final state = container.read(linkFormControllerProvider(Platform.chess));
+      expect(state.linked, isTrue);
+      expect(state.failure, isNull);
+      expect(repo.linkCalls, 1);
+    });
   });
 
   group('LinkFormController.submitFields', () {

@@ -96,6 +96,13 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
           return null;
         }
       },
+      Platform.chess: (data) {
+        try {
+          return chessCardDataFromMap(data);
+        } catch (_) {
+          return null;
+        }
+      },
     };
 
 /// Parses the raw `widget_data.data` map for Steam into a [SteamCardData]
@@ -339,6 +346,47 @@ WowRetailCardData wowRetailCardDataFromMap(Map<String, dynamic> data) {
     mythicPlus: mythicPlus,
     recentAchievements: recentAchievements,
     attribution: data['attribution'] as String? ?? '',
+  );
+}
+
+/// Parses the raw `widget_data.data` map for Chess into a [ChessCardData].
+/// `primary_mode` and `ratings` are required; `ratings` is keyed by lowercase
+/// mode tokens and each entry carries `current`/`best` with an optional
+/// `record`. `puzzle_rush_score`, `tactics_best`, `fide`, and `title_flags` are
+/// optional. Throws on unexpected shape; the registry wrapper catches → null.
+ChessCardData chessCardDataFromMap(Map<String, dynamic> data) {
+  final ratingsRaw = data['ratings'] as Map<String, dynamic>? ?? {};
+  final ratings = <String, ChessModeRating>{};
+  for (final entry in ratingsRaw.entries) {
+    final mode = entry.value as Map<String, dynamic>;
+    final recordRaw = mode['record'] as Map<String, dynamic>?;
+    ratings[entry.key] = ChessModeRating(
+      current: (mode['current'] as num).toInt(),
+      best: (mode['best'] as num).toInt(),
+      record: recordRaw != null
+          ? ChessRecord(
+              win: (recordRaw['win'] as num).toInt(),
+              loss: (recordRaw['loss'] as num).toInt(),
+              draw: (recordRaw['draw'] as num).toInt(),
+            )
+          : null,
+    );
+  }
+
+  final titleRaw = data['title_flags'] as Map<String, dynamic>?;
+
+  return ChessCardData(
+    primaryMode: data['primary_mode'] as String,
+    ratings: ratings,
+    puzzleRushScore: (data['puzzle_rush_score'] as num?)?.toInt(),
+    tacticsBest: (data['tactics_best'] as num?)?.toInt(),
+    fide: (data['fide'] as num?)?.toInt(),
+    titleFlags: titleRaw != null
+        ? ChessTitleFlags(
+            isTitled: titleRaw['is_titled'] as bool,
+            title: titleRaw['title'] as String?,
+          )
+        : null,
   );
 }
 

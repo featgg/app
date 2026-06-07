@@ -663,5 +663,66 @@
   "connectionsStatMythicPlusRating": "Mythic+ rating",
   "@connectionsStatMythicPlusRating": {
     "description": "Localized label for the mythic_plus_rating stat key (WoW Retail)."
+  },
+  "connectionsChessRemoteIdLabel": "Chess.com username",
+  "@connectionsChessRemoteIdLabel": {
+    "description": "Label for the Chess remote_id (username) input field."
+  },
+  "connectionsChessRemoteIdHint": "Enter your Chess.com username",
+  "@connectionsChessRemoteIdHint": {
+    "description": "Hint for the Chess remote_id input field."
+  },
+  "connectionsChessRemoteIdRequired": "Chess.com username is required.",
+  "@connectionsChessRemoteIdRequired": {
+    "description": "Shown on the Chess username field when the user submits an empty value."
+  },
+  "connectionsChessPrimaryMode": "Primary mode",
+  "@connectionsChessPrimaryMode": {
+    "description": "Label for the Chess primary-mode row."
+  },
+  "connectionsChessRatingFor": "{mode} rating",
+  "@connectionsChessRatingFor": {
+    "description": "Parameterized label for a per-mode rating row; mode is the raw mode token.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionsChessBest": "best",
+  "@connectionsChessBest": {
+    "description": "Inline prefix for the best rating value."
+  },
+  "connectionsChessRecord": "Record (W/L/D)",
+  "@connectionsChessRecord": {
+    "description": "Label for the Chess primary mode win/loss/draw record row."
+  },
+  "connectionsChessTitle": "Title",
+  "@connectionsChessTitle": {
+    "description": "Label for the Chess title row."
+  },
+  "connectionsChessFide": "FIDE rating",
+  "@connectionsChessFide": {
+    "description": "Label for the Chess FIDE rating row."
+  },
+  "connectionsChessPuzzleRush": "Puzzle Rush",
+  "@connectionsChessPuzzleRush": {
+    "description": "Label for the Chess Puzzle Rush score row."
+  },
+  "connectionsChessTactics": "Tactics best",
+  "@connectionsChessTactics": {
+    "description": "Label for the Chess best tactics rating row."
+  },
+  "connectionsStatRating": "Rating",
+  "@connectionsStatRating": {
+    "description": "Localized label for the rating stat key (Chess)."
+  },
+  "connectionsStatFollowers": "Followers",
+  "@connectionsStatFollowers": {
+    "description": "Localized label for the followers stat key (Chess)."
+  },
+  "connectionsStatPuzzleRush": "Puzzle Rush",
+  "@connectionsStatPuzzleRush": {
+    "description": "Localized label for the puzzle_rush stat key (Chess)."
   }
 }

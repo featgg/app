@@ -54,6 +54,14 @@ void main() {
       expect(descriptor.syncFunctionName, 'sync-wow-retail');
     });
 
+    test('registers Chess.com with sync-chess', () {
+      final descriptor = platformDescriptors[Platform.chess]!;
+      expect(descriptor.platform, Platform.chess);
+      expect(descriptor.displayName, 'Chess.com');
+      expect(descriptor.wireValue, 'chess');
+      expect(descriptor.syncFunctionName, 'sync-chess');
+    });
+
     test('every descriptor is keyed by its own platform', () {
       for (final entry in platformDescriptors.entries) {
         expect(entry.value.platform, entry.key);

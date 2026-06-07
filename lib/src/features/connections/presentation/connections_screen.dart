@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../domain/connection.dart';
 import '../domain/platform_descriptor.dart';
+import 'chess_link_form.dart';
 import 'connection_actions_controller.dart';
 import 'connections_provider.dart';
 import 'game_card_widget.dart';
@@ -23,6 +24,7 @@ const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
   Platform.retroachievements: RetroAchievementsLinkForm.new,
   Platform.leagueOfLegends: LeagueOfLegendsLinkForm.new,
   Platform.wowRetail: WowRetailLinkForm.new,
+  Platform.chess: ChessLinkForm.new,
 };
 
 class ConnectionsScreen extends ConsumerWidget {

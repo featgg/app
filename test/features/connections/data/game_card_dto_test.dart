@@ -591,6 +591,177 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — Chess widget_data example', () {
+    const chessWidgetData = {
+      'schema_version': 1,
+      'platform': 'chess',
+      'title': 'TestPlayer',
+      'subtitle': 'US',
+      'icon_image': 'https://images.chess.com/upload/user/testplayer.png',
+      'hero_image': null,
+      'profile_url': 'https://www.chess.com/member/testplayer',
+      'stats': [
+        {'key': 'rating', 'value': 1842, 'unit': 'rating'},
+        {'key': 'followers', 'value': 530, 'unit': 'count'},
+        {'key': 'puzzle_rush', 'value': 37, 'unit': 'count'},
+      ],
+      'last_updated': '2026-06-03T12:00:00Z',
+      'data': {
+        'primary_mode': 'RAPID',
+        'ratings': {
+          'rapid': {
+            'current': 1842,
+            'best': 1901,
+            'record': {'win': 312, 'loss': 198, 'draw': 44},
+          },
+          'blitz': {'current': 1654, 'best': 1720},
+          'bullet': {'current': 1580, 'best': 1612},
+        },
+        'puzzle_rush_score': 37,
+        'tactics_best': 2150,
+        'fide': 1900,
+        'title_flags': {'is_titled': true, 'title': 'FM'},
+      },
+    };
+
+    late GameCard card;
+
+    setUp(() {
+      card = gameCardFromDto(
+        GameCardDto.fromJson(Map<String, dynamic>.from(chessWidgetData)),
+      );
+    });
+
+    test('parses envelope fields (avatar shown, hero null, profile_url shown, '
+        'subtitle = country token)', () {
+      expect(card.schemaVersion, 1);
+      expect(card.platform, Platform.chess);
+      expect(card.title, 'TestPlayer');
+      expect(card.subtitle, 'US');
+      expect(card.iconImage, isNotNull);
+      expect(card.heroImage, isNull);
+      expect(card.profileUrl, isNotNull);
+      expect(card.lastUpdated, DateTime.parse('2026-06-03T12:00:00Z'));
+    });
+
+    test('parses the Chess stat keys (rating, followers, puzzle_rush)', () {
+      expect(card.stats, hasLength(3));
+      expect(card.stats.map((s) => s.key).toList(), [
+        'rating',
+        'followers',
+        'puzzle_rush',
+      ]);
+      expect(card.stats[0].value, 1842);
+      expect(card.stats[1].value, 530);
+      expect(card.stats[2].value, 37);
+    });
+
+    test('parses ChessCardData: primary_mode, ratings with record, optional '
+        'fields', () {
+      expect(card.data, isA<ChessCardData>());
+      final data = card.data! as ChessCardData;
+
+      expect(data.primaryMode, 'RAPID');
+
+      expect(data.ratings.containsKey('rapid'), isTrue);
+      expect(data.ratings['rapid']!.current, 1842);
+      expect(data.ratings['rapid']!.best, 1901);
+      expect(data.ratings['rapid']!.record, isNotNull);
+      expect(data.ratings['rapid']!.record!.win, 312);
+      expect(data.ratings['rapid']!.record!.loss, 198);
+      expect(data.ratings['rapid']!.record!.draw, 44);
+
+      expect(data.ratings.containsKey('blitz'), isTrue);
+      expect(data.ratings['blitz']!.current, 1654);
+      expect(data.ratings['blitz']!.record, isNull);
+
+      expect(data.ratings.containsKey('bullet'), isTrue);
+
+      expect(data.puzzleRushScore, 37);
+      expect(data.tacticsBest, 2150);
+      expect(data.fide, 1900);
+      expect(data.titleFlags, isNotNull);
+      expect(data.titleFlags!.isTitled, isTrue);
+      expect(data.titleFlags!.title, 'FM');
+    });
+  });
+
+  group('gameCardFromDto — Chess defensive parsing', () {
+    const chessWidgetData = {
+      'schema_version': 1,
+      'platform': 'chess',
+      'title': 'TestPlayer',
+      'subtitle': 'US',
+      'icon_image': 'https://images.chess.com/upload/user/testplayer.png',
+      'hero_image': null,
+      'profile_url': 'https://www.chess.com/member/testplayer',
+      'stats': [
+        {'key': 'rating', 'value': 1842, 'unit': 'rating'},
+        {'key': 'followers', 'value': 530, 'unit': 'count'},
+      ],
+      'last_updated': '2026-06-03T12:00:00Z',
+      'data': {
+        'primary_mode': 'RAPID',
+        'ratings': {
+          'rapid': {
+            'current': 1842,
+            'best': 1901,
+            'record': {'win': 312, 'loss': 198, 'draw': 44},
+          },
+        },
+        'puzzle_rush_score': 37,
+        'tactics_best': 2150,
+        'fide': 1900,
+        'title_flags': {'is_titled': true, 'title': 'FM'},
+      },
+    };
+
+    test('absent ratings → empty map, still parses', () {
+      final raw = Map<String, dynamic>.from(chessWidgetData);
+      raw['data'] = <String, dynamic>{'primary_mode': 'RAPID'};
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isA<ChessCardData>());
+      final data = card.data! as ChessCardData;
+      expect(data.ratings, isEmpty);
+    });
+
+    test('absent optional fields → null', () {
+      final raw = Map<String, dynamic>.from(chessWidgetData);
+      raw['data'] = <String, dynamic>{
+        'primary_mode': 'BLITZ',
+        'ratings': <String, dynamic>{
+          'blitz': <String, dynamic>{'current': 1600, 'best': 1650},
+        },
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isA<ChessCardData>());
+      final data = card.data! as ChessCardData;
+      expect(data.puzzleRushScore, isNull);
+      expect(data.tacticsBest, isNull);
+      expect(data.fide, isNull);
+      expect(data.titleFlags, isNull);
+    });
+
+    test('malformed data block → data null (envelope-only)', () {
+      final raw = Map<String, dynamic>.from(chessWidgetData);
+      raw['data'] = <String, dynamic>{'primary_mode': 123};
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isNull);
+    });
+
+    test('schema_version != 1 → data null', () {
+      final raw = Map<String, dynamic>.from(chessWidgetData);
+      raw['schema_version'] = 2;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.schemaVersion, 2);
+      expect(card.data, isNull);
+    });
+  });
+
   group('gameCardFromDto — RetroAchievements defensive parsing', () {
     test('absent recent_games → empty list', () {
       final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);
