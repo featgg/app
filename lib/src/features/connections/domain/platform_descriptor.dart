@@ -32,13 +32,20 @@ final class PlatformDescriptor {
   final String syncFunctionName;
 }
 
-/// All registered platform descriptors. Only `steam` is wired in this story;
-/// later stories each add one entry here.
+/// All registered platform descriptors. Each story adds one entry here
+/// (alongside the data-layer card-parser registry and presentation widget
+/// registry) — additive and conflict-free across parallel worktrees.
 const Map<Platform, PlatformDescriptor> platformDescriptors = {
   Platform.steam: PlatformDescriptor(
     platform: Platform.steam,
     displayName: 'Steam',
     wireValue: 'steam',
     syncFunctionName: 'sync-steam',
+  ),
+  Platform.minecraftHypixel: PlatformDescriptor(
+    platform: Platform.minecraftHypixel,
+    displayName: 'Minecraft (Hypixel)',
+    wireValue: 'minecraft_hypixel',
+    syncFunctionName: 'sync-minecraft-hypixel',
   ),
 };

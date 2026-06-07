@@ -74,6 +74,22 @@ GameCard _steamCard({
   data: data,
 );
 
+GameCard _minecraftCard({MinecraftCardData? data}) => GameCard(
+  schemaVersion: 1,
+  platform: Platform.minecraftHypixel,
+  title: 'TestPlayer',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [
+    CardStat(key: 'network_level', value: 142, unit: 'count'),
+    CardStat(key: 'bedwars_wins', value: 2340, unit: 'count'),
+  ],
+  lastUpdated: DateTime(2026, 6, 3),
+  data: data,
+);
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -84,7 +100,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(null))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(null)),
+        ),
       );
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
@@ -92,7 +111,7 @@ void main() {
     testWidgets('shows error state on Left(NetworkFailure)', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          const GameCardWidget(),
+          const GameCardWidget(platform: Platform.steam),
           _FakeCardsRepository(left(const NetworkFailure())),
         ),
       );
@@ -106,7 +125,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(null))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(null)),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -117,7 +139,10 @@ void main() {
     testWidgets('renders envelope fields when card is present', (tester) async {
       final card = _steamCard();
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(card))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(card)),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -132,7 +157,10 @@ void main() {
     ) async {
       final card = _steamCard(iconImage: null);
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(card))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(card)),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -145,7 +173,10 @@ void main() {
     ) async {
       final card = _steamCard(heroImage: null);
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(card))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(card)),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -165,7 +196,10 @@ void main() {
         ),
       );
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(card))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(card)),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -181,12 +215,48 @@ void main() {
     ) async {
       final card = _steamCard();
       await tester.pumpWidget(
-        _wrap(const GameCardWidget(), _FakeCardsRepository(right(card))),
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(card)),
+        ),
       );
       await tester.pump();
       await tester.pump();
 
       expect(find.byKey(const Key('gameCardProfileLink')), findsOneWidget);
+    });
+
+    testWidgets('renders MinecraftCardDataView when MinecraftCardData is '
+        'present', (tester) async {
+      final card = _minecraftCard(
+        data: const MinecraftCardData(
+          rank: 'MVP_PLUS',
+          rankRaw: 'MVP+',
+          level: 142,
+          karma: 8750400,
+          bedwars: MinecraftBedwarsStats(
+            wins: 2340,
+            kills: 18200,
+            finalKills: 9100,
+            bedsBroken: 4750,
+            star: 142,
+          ),
+          skywars: MinecraftModeStats(wins: 840, kills: 5200),
+        ),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const GameCardWidget(platform: Platform.minecraftHypixel),
+          _FakeCardsRepository(right(card)),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('gameCardContent')), findsOneWidget);
+      expect(find.byKey(const Key('minecraftRankLabel')), findsOneWidget);
+      expect(find.byKey(const Key('minecraftBedwars')), findsOneWidget);
+      expect(find.byKey(const Key('minecraftSkywars')), findsOneWidget);
     });
   });
 }

@@ -59,7 +59,10 @@ ProviderContainer _container(_FakeConnectionsRepository repo) {
     overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
   );
   addTearDown(container.dispose);
-  container.listen(connectionActionsControllerProvider, (_, _) {});
+  container.listen(
+    connectionActionsControllerProvider(Platform.steam),
+    (_, _) {},
+  );
   return container;
 }
 
@@ -76,10 +79,12 @@ void main() {
       final container = _container(repo);
 
       await container
-          .read(connectionActionsControllerProvider.notifier)
-          .refresh(Platform.steam);
+          .read(connectionActionsControllerProvider(Platform.steam).notifier)
+          .refresh();
 
-      final state = container.read(connectionActionsControllerProvider);
+      final state = container.read(
+        connectionActionsControllerProvider(Platform.steam),
+      );
       expect(state.refreshSkipped, isFalse);
       expect(state.failure, isNull);
       expect(state.refreshing, isFalse);
@@ -92,10 +97,12 @@ void main() {
       final container = _container(repo);
 
       await container
-          .read(connectionActionsControllerProvider.notifier)
-          .refresh(Platform.steam);
+          .read(connectionActionsControllerProvider(Platform.steam).notifier)
+          .refresh();
 
-      final state = container.read(connectionActionsControllerProvider);
+      final state = container.read(
+        connectionActionsControllerProvider(Platform.steam),
+      );
       expect(state.refreshSkipped, isTrue);
       expect(state.failure, isNull);
     });
@@ -109,11 +116,11 @@ void main() {
         final container = _container(repo);
 
         await container
-            .read(connectionActionsControllerProvider.notifier)
-            .refresh(Platform.steam);
+            .read(connectionActionsControllerProvider(Platform.steam).notifier)
+            .refresh();
 
         final stateAfterCooldown = container.read(
-          connectionActionsControllerProvider,
+          connectionActionsControllerProvider(Platform.steam),
         );
         expect(stateAfterCooldown.failure, isA<SyncCooldownFailure>());
         expect(stateAfterCooldown.onCooldown, isTrue);
@@ -125,8 +132,8 @@ void main() {
 
         // A second attempt before cooldown elapses is short-circuited.
         await container
-            .read(connectionActionsControllerProvider.notifier)
-            .refresh(Platform.steam);
+            .read(connectionActionsControllerProvider(Platform.steam).notifier)
+            .refresh();
 
         // syncCalls is still 1 — the second attempt was blocked.
         expect(repo.syncCalls, 1);
@@ -140,15 +147,17 @@ void main() {
       await container.read(myConnectionsProvider.future);
 
       await container
-          .read(connectionActionsControllerProvider.notifier)
-          .refresh(Platform.steam);
+          .read(connectionActionsControllerProvider(Platform.steam).notifier)
+          .refresh();
 
       // Provider was invalidated; next read triggers a fetch.
       await container.read(myConnectionsProvider.future);
       // repo.fetchMyConnections is not wired here, but the invalidation path
       // exercises without throwing.
       expect(
-        container.read(connectionActionsControllerProvider).failure,
+        container
+            .read(connectionActionsControllerProvider(Platform.steam))
+            .failure,
         isNull,
       );
     });
@@ -160,10 +169,12 @@ void main() {
       final container = _container(repo);
 
       await container
-          .read(connectionActionsControllerProvider.notifier)
-          .unlink(Platform.steam);
+          .read(connectionActionsControllerProvider(Platform.steam).notifier)
+          .unlink();
 
-      final state = container.read(connectionActionsControllerProvider);
+      final state = container.read(
+        connectionActionsControllerProvider(Platform.steam),
+      );
       expect(state.unlinked, isTrue);
       expect(state.failure, isNull);
       expect(state.unlinking, isFalse);
@@ -176,10 +187,12 @@ void main() {
       final container = _container(repo);
 
       await container
-          .read(connectionActionsControllerProvider.notifier)
-          .unlink(Platform.steam);
+          .read(connectionActionsControllerProvider(Platform.steam).notifier)
+          .unlink();
 
-      final state = container.read(connectionActionsControllerProvider);
+      final state = container.read(
+        connectionActionsControllerProvider(Platform.steam),
+      );
       expect(state.failure, isA<ServerFailure>());
       expect(state.unlinked, isFalse);
     });
@@ -195,13 +208,15 @@ void main() {
 
         // Trigger the cooldown (refresh runs async; pump the microtask queue).
         container
-            .read(connectionActionsControllerProvider.notifier)
-            .refresh(Platform.steam);
+            .read(connectionActionsControllerProvider(Platform.steam).notifier)
+            .refresh();
         async.flushMicrotasks();
 
         // Verify cooldown is active immediately after the async work settles.
         expect(
-          container.read(connectionActionsControllerProvider).onCooldown,
+          container
+              .read(connectionActionsControllerProvider(Platform.steam))
+              .onCooldown,
           isTrue,
         );
 
@@ -210,16 +225,52 @@ void main() {
 
         // Cooldown should have cleared.
         expect(
-          container.read(connectionActionsControllerProvider).onCooldown,
+          container
+              .read(connectionActionsControllerProvider(Platform.steam))
+              .onCooldown,
           isFalse,
         );
         expect(
-          container.read(connectionActionsControllerProvider).cooldownUntil,
+          container
+              .read(connectionActionsControllerProvider(Platform.steam))
+              .cooldownUntil,
           isNull,
         );
 
         container.dispose();
       });
+    });
+  });
+
+  group('ConnectionActionsController isolation', () {
+    test("one platform's action state does not affect another's", () async {
+      final repo = _FakeConnectionsRepository(
+        syncResult: () => left(const SyncCooldownFailure()),
+      );
+      final container = _container(repo);
+      container.listen(
+        connectionActionsControllerProvider(Platform.minecraftHypixel),
+        (_, _) {},
+      );
+
+      // Drive the Steam instance into a cooldown/failure state.
+      await container
+          .read(connectionActionsControllerProvider(Platform.steam).notifier)
+          .refresh();
+
+      expect(
+        container
+            .read(connectionActionsControllerProvider(Platform.steam))
+            .onCooldown,
+        isTrue,
+      );
+      // The Minecraft instance keeps its own initial state — no contamination.
+      expect(
+        container.read(
+          connectionActionsControllerProvider(Platform.minecraftHypixel),
+        ),
+        ConnectionActionsState.initial(),
+      );
     });
   });
 }

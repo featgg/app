@@ -68,6 +68,13 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
           return null;
         }
       },
+      Platform.minecraftHypixel: (data) {
+        try {
+          return minecraftCardDataFromMap(data);
+        } catch (_) {
+          return null;
+        }
+      },
     };
 
 /// Parses the raw `widget_data.data` map for Steam into a [SteamCardData]
@@ -99,6 +106,61 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
           ),
         )
         .toList(),
+  );
+}
+
+/// Parses the raw `widget_data.data` map for Minecraft (Hypixel) into a
+/// [MinecraftCardData] entity. Absent optional fields degrade gracefully.
+/// Throws on unexpected shape; the registry wrapper catches and returns null.
+MinecraftCardData minecraftCardDataFromMap(Map<String, dynamic> data) {
+  final rank = data['rank'] as String? ?? 'UNKNOWN';
+  final rankRaw = data['rank_raw'] as String?;
+  final level = data['level'] != null ? (data['level'] as num).toInt() : 0;
+  final karma = data['karma'] != null ? (data['karma'] as num).toInt() : 0;
+
+  final gameStatsRaw = data['game_stats'] as Map<String, dynamic>?;
+
+  MinecraftBedwarsStats? bedwars;
+  MinecraftModeStats? skywars;
+  MinecraftModeStats? duels;
+
+  if (gameStatsRaw != null) {
+    final bw = gameStatsRaw['bedwars'] as Map<String, dynamic>?;
+    if (bw != null) {
+      bedwars = MinecraftBedwarsStats(
+        wins: (bw['wins'] as num).toInt(),
+        kills: (bw['kills'] as num).toInt(),
+        finalKills: (bw['final_kills'] as num).toInt(),
+        bedsBroken: (bw['beds_broken'] as num).toInt(),
+        star: bw['star'] != null ? (bw['star'] as num).toInt() : null,
+      );
+    }
+
+    final sw = gameStatsRaw['skywars'] as Map<String, dynamic>?;
+    if (sw != null) {
+      skywars = MinecraftModeStats(
+        wins: (sw['wins'] as num).toInt(),
+        kills: (sw['kills'] as num).toInt(),
+      );
+    }
+
+    final du = gameStatsRaw['duels'] as Map<String, dynamic>?;
+    if (du != null) {
+      duels = MinecraftModeStats(
+        wins: (du['wins'] as num).toInt(),
+        kills: (du['kills'] as num).toInt(),
+      );
+    }
+  }
+
+  return MinecraftCardData(
+    rank: rank,
+    rankRaw: rankRaw,
+    level: level,
+    karma: karma,
+    bedwars: bedwars,
+    skywars: skywars,
+    duels: duels,
   );
 }
 

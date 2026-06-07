@@ -19,6 +19,6 @@ abstract interface class ConnectionsDataSource {
   Future<SyncResultDto> syncPlatform(String functionName);
 
   /// Reads all `linked_accounts` rows for the caller ordered by `created_at`.
-  /// Owner-only RLS scopes the result server-side; no client-side user filter.
+  /// Results are scoped to the caller server-side; no client-side user filter.
   Future<List<ConnectionDto>> fetchConnections();
 }

@@ -54,16 +54,15 @@ final class LinkFormState extends Equatable {
 @riverpod
 class LinkFormController extends _$LinkFormController {
   @override
-  LinkFormState build() => LinkFormState.initial();
+  LinkFormState build(Platform platform) => LinkFormState.initial();
 
-  /// Validates [remoteId] and links the platform. On success, invalidates
+  /// Validates [remoteId] and links [platform]. On success, invalidates
   /// [myConnectionsProvider] and sets [LinkFormState.linked]. On
   /// [InputFailure], preserves the typed input (the widget owns the
-  /// TextEditingController and is never reset here).
-  Future<void> submit({
-    required Platform platform,
-    required String remoteId,
-  }) async {
+  /// TextEditingController and is never reset here). State is isolated per
+  /// [platform] (this controller is a family), so forms rendered side by side
+  /// never share submitting / error / linked flags.
+  Future<void> submit({required String remoteId}) async {
     // Client-side validation — blank input never reaches the backend.
     if (remoteId.trim().isEmpty) {
       state = state.copyWith(remoteIdError: true, clearFailure: true);

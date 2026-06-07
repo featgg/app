@@ -6,5 +6,7 @@ export 'connections_provider.dart';
 export 'connections_screen.dart';
 export 'game_card_widget.dart';
 export 'link_form_controller.dart';
+export 'minecraft_card_data_view.dart';
+export 'minecraft_link_form.dart';
 export 'steam_card_data_view.dart';
 export 'steam_link_form.dart';

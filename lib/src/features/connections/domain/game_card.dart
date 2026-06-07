@@ -60,6 +60,71 @@ final class RecentGameEntry extends Equatable {
   List<Object?> get props => [appId, title, hours2Weeks];
 }
 
+/// Bedwars block in Minecraft `widget_data.data.game_stats`. `star` is optional.
+final class MinecraftBedwarsStats extends Equatable {
+  const MinecraftBedwarsStats({
+    required this.wins,
+    required this.kills,
+    required this.finalKills,
+    required this.bedsBroken,
+    this.star,
+  });
+
+  final int wins;
+  final int kills;
+  final int finalKills;
+  final int bedsBroken;
+  final int? star;
+
+  @override
+  List<Object?> get props => [wins, kills, finalKills, bedsBroken, star];
+}
+
+/// A simple {wins, kills} mode block (skywars, duels).
+final class MinecraftModeStats extends Equatable {
+  const MinecraftModeStats({required this.wins, required this.kills});
+
+  final int wins;
+  final int kills;
+
+  @override
+  List<Object?> get props => [wins, kills];
+}
+
+/// Minecraft (Hypixel) card data block.
+final class MinecraftCardData extends Equatable implements CardData {
+  const MinecraftCardData({
+    required this.rank,
+    required this.level,
+    required this.karma,
+    this.rankRaw,
+    this.bedwars,
+    this.skywars,
+    this.duels,
+  });
+
+  /// Raw rank token (e.g. `MVP_PLUS`, `DEFAULT`, `UNKNOWN`). Presentation maps
+  /// it to a label and falls back for an unknown token. Never localized here.
+  final String rank;
+  final String? rankRaw;
+  final int level;
+  final int karma;
+  final MinecraftBedwarsStats? bedwars;
+  final MinecraftModeStats? skywars;
+  final MinecraftModeStats? duels;
+
+  @override
+  List<Object?> get props => [
+    rank,
+    rankRaw,
+    level,
+    karma,
+    bedwars,
+    skywars,
+    duels,
+  ];
+}
+
 /// Steam-specific card data block.
 final class SteamCardData extends Equatable implements CardData {
   const SteamCardData({

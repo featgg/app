@@ -7,7 +7,17 @@ import '../domain/platform_descriptor.dart';
 import 'connection_actions_controller.dart';
 import 'connections_provider.dart';
 import 'game_card_widget.dart';
+import 'minecraft_link_form.dart';
 import 'steam_link_form.dart';
+
+/// Presentation-side registry mapping each registered [Platform] to its
+/// link-form builder. Lives here (its only consumer) so the screen can select
+/// a form without a switch. A later platform adds one entry here alongside its
+/// descriptor, card-parser, and card-view registry entries.
+const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
+  Platform.steam: SteamLinkForm.new,
+  Platform.minecraftHypixel: MinecraftLinkForm.new,
+};
 
 class ConnectionsScreen extends ConsumerWidget {
   const ConnectionsScreen({super.key});
@@ -16,29 +26,6 @@ class ConnectionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final connectionsState = ref.watch(myConnectionsProvider);
-
-    // Show snackbars for refresh / unlink outcomes.
-    ref.listen<ConnectionActionsState>(connectionActionsControllerProvider, (
-      prev,
-      next,
-    ) {
-      if (!context.mounted) return;
-      if (next.unlinked && !(prev?.unlinked ?? false)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.connectionsUnlinked)));
-      } else if (!next.refreshing &&
-          (prev?.refreshing ?? false) &&
-          next.failure == null &&
-          !next.refreshSkipped) {
-        // Refresh succeeded with fresh data — no explicit snackbar needed;
-        // the card re-renders from the invalidated provider.
-      } else if (next.refreshSkipped && !(prev?.refreshSkipped ?? false)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.connectionsRefreshSkipped)));
-      }
-    });
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.connectionsTitle)),
@@ -62,47 +49,75 @@ class _ConnectionsBody extends ConsumerWidget {
     final visible = connections
         .where((c) => platformDescriptors.containsKey(c.platform))
         .toList();
-    final hasSteam = visible.any((c) => c.platform == Platform.steam);
+    final connectedPlatforms = {for (final c in visible) c.platform};
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (visible.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Text(
-                key: const Key('connectionsEmpty'),
-                l10n.connectionsEmpty,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+    // Per-platform snackbars for refresh / unlink outcomes. Registered against
+    // the stable descriptor set (not the async visible list) so the listener
+    // count is fixed per build. Lives here rather than in _ConnectionTile so
+    // the unlink snackbar fires even after the tile unmounts.
+    for (final platform in platformDescriptors.keys) {
+      ref.listen<ConnectionActionsState>(
+        connectionActionsControllerProvider(platform),
+        (prev, next) {
+          if (!context.mounted) return;
+          if (next.unlinked && !(prev?.unlinked ?? false)) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.connectionsUnlinked)));
+          } else if (next.refreshSkipped && !(prev?.refreshSkipped ?? false)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.connectionsRefreshSkipped)),
+            );
+          }
+        },
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Text(
+                  key: const Key('connectionsEmpty'),
+                  l10n.connectionsEmpty,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-          ...visible.map(
-            (c) => Padding(
-              key: Key('connection_${c.platform.name}'),
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: _ConnectionTile(connection: c),
-            ),
-          ),
-          if (hasSteam) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const GameCardWidget(key: Key('steamCardWidget')),
-            const SizedBox(height: AppSpacing.md),
+            for (final c in visible) ...[
+              Padding(
+                key: Key('connection_${c.platform.name}'),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _ConnectionTile(connection: c),
+              ),
+              GameCardWidget(
+                key: Key('card_${c.platform.name}'),
+                platform: c.platform,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            for (final descriptor in platformDescriptors.values)
+              if (!connectedPlatforms.contains(descriptor.platform)) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  l10n.connectionsConnectPlatform(descriptor.displayName),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _linkFormRegistry[descriptor.platform]!(
+                  key: Key('linkForm_${descriptor.platform.name}'),
+                ),
+              ],
           ],
-          if (!hasSteam) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.connectionsAddSteam,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const SteamLinkForm(),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -116,9 +131,11 @@ class _ConnectionTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final actionsState = ref.watch(connectionActionsControllerProvider);
+    final actionsState = ref.watch(
+      connectionActionsControllerProvider(connection.platform),
+    );
     final actionsNotifier = ref.read(
-      connectionActionsControllerProvider.notifier,
+      connectionActionsControllerProvider(connection.platform).notifier,
     );
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -200,7 +217,7 @@ class _ConnectionTile extends ConsumerWidget {
                       tooltip: l10n.connectionsRefresh,
                       onPressed: (isRefreshing || onCooldown)
                           ? null
-                          : () => actionsNotifier.refresh(connection.platform),
+                          : () => actionsNotifier.refresh(),
                     ),
                     IconButton(
                       key: Key('unlinkButton_${connection.platform.name}'),
@@ -216,7 +233,7 @@ class _ConnectionTile extends ConsumerWidget {
                       tooltip: l10n.connectionsUnlink,
                       onPressed: isUnlinking
                           ? null
-                          : () => actionsNotifier.unlink(connection.platform),
+                          : () => actionsNotifier.unlink(),
                     ),
                   ],
                 ),

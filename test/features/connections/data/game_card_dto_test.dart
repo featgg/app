@@ -36,6 +36,42 @@ const _steamWidgetData = {
   },
 };
 
+/// A full Minecraft (Hypixel) widget_data envelope used as a parse fixture.
+const _minecraftWidgetData = {
+  'schema_version': 1,
+  'platform': 'minecraft_hypixel',
+  'title': 'TestPlayer',
+  'subtitle': null,
+  'icon_image': null,
+  'hero_image': null,
+  'profile_url': null,
+  'stats': [
+    {'key': 'network_level', 'value': 142, 'unit': 'count'},
+    {'key': 'bedwars_wins', 'value': 2340, 'unit': 'count'},
+    {'key': 'bedwars_kills', 'value': 18200, 'unit': 'count'},
+    {'key': 'karma', 'value': 8750400, 'unit': 'count'},
+    {'key': 'achievement_points', 'value': 9230, 'unit': 'points'},
+  ],
+  'last_updated': '2026-06-03T12:00:00Z',
+  'data': {
+    'rank': 'MVP_PLUS',
+    'rank_raw': 'MVP+',
+    'level': 142,
+    'karma': 8750400,
+    'game_stats': {
+      'bedwars': {
+        'wins': 2340,
+        'kills': 18200,
+        'final_kills': 9100,
+        'beds_broken': 4750,
+        'star': 142,
+      },
+      'skywars': {'wins': 840, 'kills': 5200},
+      'duels': {'wins': 410, 'kills': 2200},
+    },
+  },
+};
+
 void main() {
   group('gameCardFromDto — Steam widget_data example', () {
     late GameCard card;
@@ -109,6 +145,123 @@ void main() {
         () => gameCardFromDto(GameCardDto.fromJson(raw)),
         throwsFormatException,
       );
+    });
+  });
+
+  group('gameCardFromDto — Minecraft widget_data example', () {
+    late GameCard card;
+
+    setUp(() {
+      card = gameCardFromDto(
+        GameCardDto.fromJson(Map<String, dynamic>.from(_minecraftWidgetData)),
+      );
+    });
+
+    test('parses envelope fields (images / subtitle / profile null in v1)', () {
+      expect(card.schemaVersion, 1);
+      expect(card.platform, Platform.minecraftHypixel);
+      expect(card.title, 'TestPlayer');
+      expect(card.subtitle, isNull);
+      expect(card.iconImage, isNull);
+      expect(card.heroImage, isNull);
+      expect(card.profileUrl, isNull);
+    });
+
+    test('parses the five Minecraft stat keys', () {
+      expect(card.stats, hasLength(5));
+      expect(card.stats.map((s) => s.key).toList(), [
+        'network_level',
+        'bedwars_wins',
+        'bedwars_kills',
+        'karma',
+        'achievement_points',
+      ]);
+      expect(card.stats.first.value, 142);
+    });
+
+    test('parses MinecraftCardData incl. asymmetric game_stats', () {
+      expect(card.data, isA<MinecraftCardData>());
+      final data = card.data! as MinecraftCardData;
+      expect(data.rank, 'MVP_PLUS');
+      expect(data.rankRaw, 'MVP+');
+      expect(data.level, 142);
+      expect(data.karma, 8750400);
+
+      expect(data.bedwars, isNotNull);
+      expect(data.bedwars!.wins, 2340);
+      expect(data.bedwars!.kills, 18200);
+      expect(data.bedwars!.finalKills, 9100);
+      expect(data.bedwars!.bedsBroken, 4750);
+      expect(data.bedwars!.star, 142);
+
+      expect(data.skywars, isNotNull);
+      expect(data.skywars!.wins, 840);
+      expect(data.skywars!.kills, 5200);
+
+      expect(data.duels, isNotNull);
+      expect(data.duels!.wins, 410);
+      expect(data.duels!.kills, 2200);
+    });
+  });
+
+  group('gameCardFromDto — Minecraft defensive parsing', () {
+    test('absent game_stats → null mode blocks', () {
+      final raw = Map<String, dynamic>.from(_minecraftWidgetData);
+      raw['data'] = <String, dynamic>{
+        'rank': 'DEFAULT',
+        'level': 5,
+        'karma': 100,
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isA<MinecraftCardData>());
+      final data = card.data! as MinecraftCardData;
+      expect(data.bedwars, isNull);
+      expect(data.skywars, isNull);
+      expect(data.duels, isNull);
+    });
+
+    test('bedwars without star → star is null', () {
+      final raw = Map<String, dynamic>.from(_minecraftWidgetData);
+      raw['data'] = <String, dynamic>{
+        'rank': 'VIP',
+        'level': 10,
+        'karma': 200,
+        'game_stats': <String, dynamic>{
+          'bedwars': <String, dynamic>{
+            'wins': 1,
+            'kills': 2,
+            'final_kills': 3,
+            'beds_broken': 4,
+          },
+        },
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      final data = card.data! as MinecraftCardData;
+      expect(data.bedwars, isNotNull);
+      expect(data.bedwars!.star, isNull);
+    });
+
+    test('malformed data block → data is null (envelope-only)', () {
+      final raw = Map<String, dynamic>.from(_minecraftWidgetData);
+      raw['data'] = <String, dynamic>{
+        'rank': 'MVP',
+        'level': 'not-a-number',
+        'karma': 1,
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isNull);
+    });
+
+    test('schema_version != 1 → no Minecraft parse (data null)', () {
+      final raw = Map<String, dynamic>.from(_minecraftWidgetData);
+      raw['schema_version'] = 2;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.schemaVersion, 2);
+      expect(card.data, isNull);
     });
   });
 }
