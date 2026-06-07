@@ -66,4 +66,10 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
     wireValue: 'wow_retail',
     syncFunctionName: 'sync-wow-retail',
   ),
+  Platform.chess: PlatformDescriptor(
+    platform: Platform.chess,
+    displayName: 'Chess.com',
+    wireValue: 'chess',
+    syncFunctionName: 'sync-chess',
+  ),
 };

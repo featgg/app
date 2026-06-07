@@ -433,6 +433,81 @@ final class WowRetailCardData extends Equatable implements CardData {
   ];
 }
 
+/// One mode's rating block in Chess `widget_data.data.ratings`. `record` is
+/// best-effort and may be null.
+final class ChessModeRating extends Equatable {
+  const ChessModeRating({
+    required this.current,
+    required this.best,
+    this.record,
+  });
+  final int current;
+  final int best;
+  final ChessRecord? record;
+  @override
+  List<Object?> get props => [current, best, record];
+}
+
+/// Win/loss/draw record for a Chess mode. Best-effort; absent when the mode
+/// omits it.
+final class ChessRecord extends Equatable {
+  const ChessRecord({
+    required this.win,
+    required this.loss,
+    required this.draw,
+  });
+  final int win;
+  final int loss;
+  final int draw;
+  @override
+  List<Object?> get props => [win, loss, draw];
+}
+
+/// Titled-player flag block in Chess `widget_data.data.title_flags`.
+final class ChessTitleFlags extends Equatable {
+  const ChessTitleFlags({required this.isTitled, this.title});
+  final bool isTitled;
+
+  /// FIDE/chess.com title token (e.g. 'FM', 'GM'); null when not titled.
+  final String? title;
+  @override
+  List<Object?> get props => [isTitled, title];
+}
+
+/// Chess.com card data block.
+final class ChessCardData extends Equatable implements CardData {
+  const ChessCardData({
+    required this.primaryMode,
+    required this.ratings,
+    this.puzzleRushScore,
+    this.tacticsBest,
+    this.fide,
+    this.titleFlags,
+  });
+
+  /// Uppercase main-mode token: RAPID | BLITZ | BULLET | DAILY. Never localized.
+  final String primaryMode;
+
+  /// Ratings keyed by the lowercase mode token (rapid|blitz|bullet|daily); a
+  /// subset — not all modes are guaranteed present.
+  final Map<String, ChessModeRating> ratings;
+
+  final int? puzzleRushScore;
+  final int? tacticsBest;
+  final int? fide;
+  final ChessTitleFlags? titleFlags;
+
+  @override
+  List<Object?> get props => [
+    primaryMode,
+    ratings,
+    puzzleRushScore,
+    tacticsBest,
+    fide,
+    titleFlags,
+  ];
+}
+
 /// A game card as read from `game_cards.widget_data`. The envelope is shared
 /// across all platforms; [data] carries the platform-specific block and is null
 /// when the schema version is unknown or the data block is absent.

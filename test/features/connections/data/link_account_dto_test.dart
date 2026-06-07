@@ -89,5 +89,13 @@ void main() {
         });
       },
     );
+
+    test('chess maps remote_id into the link body', () {
+      expect(linkBodyBuilders.containsKey(Platform.chess), isTrue);
+      final body = linkBodyBuilders[Platform.chess]!('chess', {
+        'remote_id': 'TestPlayer',
+      });
+      expect(body, {'platform': 'chess', 'remote_id': 'TestPlayer'});
+    });
   });
 }

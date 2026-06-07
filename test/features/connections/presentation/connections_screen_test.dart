@@ -297,10 +297,10 @@ void main() {
     testWidgets(
       'does not render a tile for a platform without a registered descriptor',
       (tester) async {
-        // chess has no registered descriptor; its connection must be silently
+        // gw2 has no registered descriptor; its connection must be silently
         // ignored so the screen does not crash or show a stale tile.
         final conn = Connection(
-          platform: Platform.chess,
+          platform: Platform.gw2,
           status: ConnectionStatus.active,
           createdAt: DateTime(2026),
         );
@@ -308,12 +308,23 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.byKey(const Key('connection_chess')), findsNothing);
-        expect(find.byKey(const Key('refreshButton_chess')), findsNothing);
+        expect(find.byKey(const Key('connection_gw2')), findsNothing);
+        expect(find.byKey(const Key('refreshButton_gw2')), findsNothing);
         // Empty state shows because no descriptor-registered connections exist.
         expect(find.byKey(const Key('connectionsEmpty')), findsOneWidget);
       },
     );
+
+    testWidgets('shows a Chess link form when no Chess connection exists', (
+      tester,
+    ) async {
+      await _pump(tester, connections: right([]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('linkForm_chess')), findsOneWidget);
+      expect(find.byKey(const Key('chessLinkButton')), findsOneWidget);
+    });
 
     testWidgets('shows a WoW link form when no WoW connection exists', (
       tester,

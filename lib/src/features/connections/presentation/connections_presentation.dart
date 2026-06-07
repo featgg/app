@@ -1,6 +1,8 @@
 /// Presentation layer of the connections feature.
 library;
 
+export 'chess_card_data_view.dart';
+export 'chess_link_form.dart';
 export 'connection_actions_controller.dart';
 export 'connections_provider.dart';
 export 'connections_screen.dart';

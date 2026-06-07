@@ -160,5 +160,19 @@
   "connectionsWowAttribution": "Data provided by Blizzard",
   "connectionsWowStale": "Los datos tienen más de 30 días. Actualiza para ver los datos más recientes.",
   "connectionsStatItemLevel": "Nivel de objeto",
-  "connectionsStatMythicPlusRating": "Puntuación Mítica+"
+  "connectionsStatMythicPlusRating": "Puntuación Mítica+",
+  "connectionsChessRemoteIdLabel": "Usuario de Chess.com",
+  "connectionsChessRemoteIdHint": "Ingresa tu usuario de Chess.com",
+  "connectionsChessRemoteIdRequired": "El usuario de Chess.com es obligatorio.",
+  "connectionsChessPrimaryMode": "Modo principal",
+  "connectionsChessRatingFor": "Puntuación de {mode}",
+  "connectionsChessBest": "mejor",
+  "connectionsChessRecord": "Récord (V/D/E)",
+  "connectionsChessTitle": "Título",
+  "connectionsChessFide": "Puntuación FIDE",
+  "connectionsChessPuzzleRush": "Puzzle Rush",
+  "connectionsChessTactics": "Mejor táctica",
+  "connectionsStatRating": "Puntuación",
+  "connectionsStatFollowers": "Seguidores",
+  "connectionsStatPuzzleRush": "Puzzle Rush"
 }
