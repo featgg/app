@@ -10,24 +10,34 @@ import 'league_of_legends_card_data_view.dart';
 import 'minecraft_card_data_view.dart';
 import 'retroachievements_card_data_view.dart';
 import 'steam_card_data_view.dart';
+import 'wow_retail_card_data_view.dart';
 
 /// Widget-registry entry for a platform. Keyed by [Platform] in
 /// [_cardDataWidgetRegistry]; this is the presentation-side half of the
 /// descriptor split (domain holds wire logic, presentation holds widget
 /// builders).
-typedef CardDataViewBuilder = Widget Function(CardData data);
+///
+/// The second argument carries `lastUpdated` so views that require a freshness
+/// gate (e.g. WoW Retail) can act on it without a separate registry.
+/// Platforms that don't need it ignore the argument.
+typedef CardDataViewBuilder =
+    Widget Function(CardData data, DateTime lastUpdated);
 
 /// Presentation-side registry mapping a [Platform] to its data-block view
 /// builder. A missing entry falls back to rendering the envelope only (safe
 /// degradation asserted in tests).
 final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
-  Platform.steam: (data) => SteamCardDataView(data: data as SteamCardData),
-  Platform.minecraftHypixel: (data) =>
+  Platform.steam: (data, _) => SteamCardDataView(data: data as SteamCardData),
+  Platform.minecraftHypixel: (data, _) =>
       MinecraftCardDataView(data: data as MinecraftCardData),
-  Platform.retroachievements: (data) =>
+  Platform.retroachievements: (data, _) =>
       RetroAchievementsCardDataView(data: data as RetroAchievementsCardData),
-  Platform.leagueOfLegends: (data) =>
+  Platform.leagueOfLegends: (data, _) =>
       LeagueOfLegendsCardDataView(data: data as LeagueOfLegendsCardData),
+  Platform.wowRetail: (data, lastUpdated) => WowRetailCardDataView(
+    data: data as WowRetailCardData,
+    lastUpdated: lastUpdated,
+  ),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
@@ -155,7 +165,7 @@ class _CardContent extends StatelessWidget {
   Widget _buildDataView(CardData data) {
     final builder = _cardDataWidgetRegistry[card.platform];
     if (builder == null) return const SizedBox.shrink();
-    return builder(data);
+    return builder(data, card.lastUpdated);
   }
 }
 
@@ -178,6 +188,8 @@ String _statLabel(String key, AppLocalizations l10n) => switch (key) {
   'mastery_points' => l10n.connectionsStatMasteryPoints,
   'challenge_points' => l10n.connectionsStatChallengePoints,
   'summoner_level' => l10n.connectionsStatSummonerLevel,
+  'item_level' => l10n.connectionsStatItemLevel,
+  'mythic_plus_rating' => l10n.connectionsStatMythicPlusRating,
   _ => key,
 };
 

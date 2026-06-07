@@ -60,4 +60,10 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
     wireValue: 'league_of_legends',
     syncFunctionName: 'sync-league-of-legends',
   ),
+  Platform.wowRetail: PlatformDescriptor(
+    platform: Platform.wowRetail,
+    displayName: 'World of Warcraft (Retail)',
+    wireValue: 'wow_retail',
+    syncFunctionName: 'sync-wow-retail',
+  ),
 };

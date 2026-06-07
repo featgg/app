@@ -462,6 +462,135 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — WoW (Retail) widget_data example', () {
+    const wowWidgetData = {
+      'schema_version': 1,
+      'platform': 'wow_retail',
+      'title': 'Thrall',
+      'subtitle': 'stormrage-US',
+      'icon_image': null,
+      'hero_image': null,
+      'profile_url': null,
+      'stats': [
+        {'key': 'item_level', 'value': 489, 'unit': 'count'},
+        {'key': 'achievement_points', 'value': 24500, 'unit': 'points'},
+      ],
+      'last_updated': '2026-06-03T12:00:00Z',
+      'data': {
+        'profile': {
+          'race': 'Orc',
+          'faction': 'HORDE',
+          'class': 'Shaman',
+          'spec': 'Enhancement',
+          'level': 70,
+          'ilvl_avg': 492,
+          'ilvl_equipped': 489,
+        },
+        'mythic_plus': {
+          'rating': 2450.5,
+          'best_runs': [
+            {
+              'keystone_level': 20,
+              'dungeon': {'name': 'Dawn of the Infinite'},
+              'completed_timestamp': 1717200000000,
+              'duration': 1920000,
+              'is_completed_within_time': true,
+              'mythic_rating': {'rating': 245.5},
+            },
+          ],
+        },
+        'recent_achievements': [
+          {
+            'id': 12345,
+            'name': 'Keystone Master',
+            'completed_at': '2026-05-01T10:00:00Z',
+          },
+        ],
+        'attribution': 'Data provided by Blizzard',
+      },
+    };
+
+    test('parses the wow_retail widget_data block', () {
+      final card = gameCardFromDto(
+        GameCardDto.fromJson(Map<String, dynamic>.from(wowWidgetData)),
+      );
+
+      expect(card.platform, Platform.wowRetail);
+      expect(card.title, 'Thrall');
+      expect(card.subtitle, 'stormrage-US');
+      expect(card.stats, hasLength(2));
+      expect(card.data, isA<WowRetailCardData>());
+
+      final data = card.data! as WowRetailCardData;
+      expect(data.profile.race, 'Orc');
+      expect(data.profile.faction, 'HORDE');
+      expect(data.profile.className, 'Shaman');
+      expect(data.profile.spec, 'Enhancement');
+      expect(data.profile.level, 70);
+      expect(data.profile.ilvlAvg, 492);
+      expect(data.profile.ilvlEquipped, 489);
+
+      expect(data.mythicPlus, isNotNull);
+      expect(data.mythicPlus!.rating, 2450.5);
+      expect(data.mythicPlus!.bestRuns, hasLength(1));
+
+      final run = data.mythicPlus!.bestRuns.first;
+      expect(run.keystoneLevel, 20);
+      expect(run.dungeonName, 'Dawn of the Infinite');
+      // completed_timestamp is epoch milliseconds
+      expect(
+        run.completedTimestamp,
+        DateTime.fromMillisecondsSinceEpoch(1717200000000, isUtc: true),
+      );
+      expect(run.durationMs, 1920000);
+      expect(run.isCompletedWithinTime, isTrue);
+      expect(run.rating, 245.5);
+
+      expect(data.recentAchievements, hasLength(1));
+      final ach = data.recentAchievements.first;
+      expect(ach.id, 12345);
+      expect(ach.name, 'Keystone Master');
+      expect(ach.completedAt, DateTime.parse('2026-05-01T10:00:00Z'));
+
+      expect(data.attribution, 'Data provided by Blizzard');
+    });
+
+    test('absent mythic_plus block → mythicPlus is null', () {
+      final raw = Map<String, dynamic>.from(wowWidgetData);
+      final dataBlock = Map<String, dynamic>.from(
+        raw['data'] as Map<String, dynamic>,
+      )..remove('mythic_plus');
+      raw['data'] = dataBlock;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      final data = card.data! as WowRetailCardData;
+      expect(data.mythicPlus, isNull);
+    });
+
+    test('absent recent_achievements → empty list', () {
+      final raw = Map<String, dynamic>.from(wowWidgetData);
+      final dataBlock = Map<String, dynamic>.from(
+        raw['data'] as Map<String, dynamic>,
+      )..remove('recent_achievements');
+      raw['data'] = dataBlock;
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      final data = card.data! as WowRetailCardData;
+      expect(data.recentAchievements, isEmpty);
+    });
+
+    test('wow_retail degrades to envelope-only on a malformed data block', () {
+      final raw = Map<String, dynamic>.from(wowWidgetData);
+      // Remove the required profile block to trigger a throw.
+      raw['data'] = <String, dynamic>{
+        'attribution': 'Data provided by Blizzard',
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+      expect(card.data, isNull);
+    });
+  });
+
   group('gameCardFromDto — RetroAchievements defensive parsing', () {
     test('absent recent_games → empty list', () {
       final raw = Map<String, dynamic>.from(_retroachievementsWidgetData);

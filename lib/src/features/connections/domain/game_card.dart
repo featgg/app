@@ -301,6 +301,138 @@ final class LeagueOfLegendsCardData extends Equatable implements CardData {
   List<Object?> get props => [rank, topMastery, challenges, summoner];
 }
 
+/// Character profile in a WoW (Retail) `widget_data.data` block.
+final class WowProfile extends Equatable {
+  const WowProfile({
+    required this.race,
+    required this.faction,
+    required this.className,
+    required this.level,
+    required this.ilvlAvg,
+    required this.ilvlEquipped,
+    this.spec,
+  });
+
+  final String race;
+
+  /// Raw faction token: 'ALLIANCE' or 'HORDE'. Not localized here.
+  final String faction;
+
+  /// Maps the wire `class` field; `class` is a Dart keyword.
+  final String className;
+
+  /// Best-effort active specialization; may be null when absent.
+  final String? spec;
+  final int level;
+  final int ilvlAvg;
+  final int ilvlEquipped;
+
+  @override
+  List<Object?> get props => [
+    race,
+    faction,
+    className,
+    spec,
+    level,
+    ilvlAvg,
+    ilvlEquipped,
+  ];
+}
+
+/// A single Mythic+ dungeon run from the best-runs list.
+final class WowMythicRun extends Equatable {
+  const WowMythicRun({
+    required this.keystoneLevel,
+    required this.dungeonName,
+    required this.completedTimestamp,
+    required this.durationMs,
+    required this.isCompletedWithinTime,
+    required this.rating,
+  });
+
+  final int keystoneLevel;
+  final String dungeonName;
+
+  /// Epoch milliseconds timestamp; parsed with fromMillisecondsSinceEpoch.
+  final DateTime completedTimestamp;
+
+  /// Run duration in milliseconds.
+  final int durationMs;
+  final bool isCompletedWithinTime;
+  final double rating;
+
+  @override
+  List<Object?> get props => [
+    keystoneLevel,
+    dungeonName,
+    completedTimestamp,
+    durationMs,
+    isCompletedWithinTime,
+    rating,
+  ];
+}
+
+/// Mythic+ block in a WoW (Retail) `widget_data.data` block.
+final class WowMythicPlus extends Equatable {
+  const WowMythicPlus({this.rating, required this.bestRuns});
+
+  /// Null when the character has no Mythic+ rating.
+  final num? rating;
+
+  /// Up to 10 best runs; empty when the block is absent.
+  final List<WowMythicRun> bestRuns;
+
+  @override
+  List<Object?> get props => [rating, bestRuns];
+}
+
+/// A recently-earned achievement entry.
+final class WowRecentAchievement extends Equatable {
+  const WowRecentAchievement({
+    required this.id,
+    required this.name,
+    required this.completedAt,
+  });
+
+  final int id;
+
+  /// Upstream achievement name; not localized.
+  final String name;
+
+  /// ISO timestamp; parsed with DateTime.parse.
+  final DateTime completedAt;
+
+  @override
+  List<Object?> get props => [id, name, completedAt];
+}
+
+/// WoW (Retail) card data block.
+final class WowRetailCardData extends Equatable implements CardData {
+  const WowRetailCardData({
+    required this.profile,
+    this.mythicPlus,
+    required this.recentAchievements,
+    required this.attribution,
+  });
+
+  final WowProfile profile;
+
+  /// Null when the mythic_plus block is absent.
+  final WowMythicPlus? mythicPlus;
+  final List<WowRecentAchievement> recentAchievements;
+
+  /// Attribution string from the payload (e.g. 'Data provided by Blizzard').
+  final String attribution;
+
+  @override
+  List<Object?> get props => [
+    profile,
+    mythicPlus,
+    recentAchievements,
+    attribution,
+  ];
+}
+
 /// A game card as read from `game_cards.widget_data`. The envelope is shared
 /// across all platforms; [data] carries the platform-specific block and is null
 /// when the schema version is unknown or the data block is absent.

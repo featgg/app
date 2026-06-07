@@ -46,6 +46,14 @@ void main() {
       expect(descriptor.syncFunctionName, 'sync-league-of-legends');
     });
 
+    test('registers WoW (Retail) with sync-wow-retail', () {
+      final descriptor = platformDescriptors[Platform.wowRetail]!;
+      expect(descriptor.platform, Platform.wowRetail);
+      expect(descriptor.displayName, 'World of Warcraft (Retail)');
+      expect(descriptor.wireValue, 'wow_retail');
+      expect(descriptor.syncFunctionName, 'sync-wow-retail');
+    });
+
     test('every descriptor is keyed by its own platform', () {
       for (final entry in platformDescriptors.entries) {
         expect(entry.value.platform, entry.key);

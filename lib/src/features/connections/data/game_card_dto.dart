@@ -89,6 +89,13 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
           return null;
         }
       },
+      Platform.wowRetail: (data) {
+        try {
+          return wowRetailCardDataFromMap(data);
+        } catch (_) {
+          return null;
+        }
+      },
     };
 
 /// Parses the raw `widget_data.data` map for Steam into a [SteamCardData]
@@ -273,6 +280,65 @@ LeagueOfLegendsCardData leagueOfLegendsCardDataFromMap(
     topMastery: topMastery,
     challenges: challenges,
     summoner: summoner,
+  );
+}
+
+/// Parses the raw `widget_data.data` map for WoW (Retail) into a
+/// [WowRetailCardData] entity. The `profile` block is required; the
+/// `mythic_plus` block is optional. `completed_timestamp` on runs is epoch
+/// milliseconds; `completed_at` on achievements is an ISO string. Throws on
+/// malformed required leaves; the registry wrapper catches and returns null.
+WowRetailCardData wowRetailCardDataFromMap(Map<String, dynamic> data) {
+  final profileRaw = data['profile'] as Map<String, dynamic>;
+  final profile = WowProfile(
+    race: profileRaw['race'] as String,
+    faction: profileRaw['faction'] as String,
+    className: profileRaw['class'] as String,
+    spec: profileRaw['spec'] as String?,
+    level: (profileRaw['level'] as num).toInt(),
+    ilvlAvg: (profileRaw['ilvl_avg'] as num).toInt(),
+    ilvlEquipped: (profileRaw['ilvl_equipped'] as num).toInt(),
+  );
+
+  WowMythicPlus? mythicPlus;
+  final mpRaw = data['mythic_plus'] as Map<String, dynamic>?;
+  if (mpRaw != null) {
+    final rating = mpRaw['rating'] as num?;
+    final runsRaw = mpRaw['best_runs'] as List<dynamic>? ?? [];
+    final bestRuns = runsRaw.whereType<Map<String, dynamic>>().map((r) {
+      final dungeon = r['dungeon'] as Map<String, dynamic>;
+      return WowMythicRun(
+        keystoneLevel: (r['keystone_level'] as num).toInt(),
+        dungeonName: dungeon['name'] as String,
+        completedTimestamp: DateTime.fromMillisecondsSinceEpoch(
+          (r['completed_timestamp'] as num).toInt(),
+          isUtc: true,
+        ),
+        durationMs: (r['duration'] as num).toInt(),
+        isCompletedWithinTime: r['is_completed_within_time'] as bool,
+        rating: (r['mythic_rating']['rating'] as num).toDouble(),
+      );
+    }).toList();
+    mythicPlus = WowMythicPlus(rating: rating, bestRuns: bestRuns);
+  }
+
+  final achievementsRaw = data['recent_achievements'] as List<dynamic>? ?? [];
+  final recentAchievements = achievementsRaw
+      .whereType<Map<String, dynamic>>()
+      .map(
+        (a) => WowRecentAchievement(
+          id: (a['id'] as num).toInt(),
+          name: a['name'] as String,
+          completedAt: DateTime.parse(a['completed_at'] as String),
+        ),
+      )
+      .toList();
+
+  return WowRetailCardData(
+    profile: profile,
+    mythicPlus: mythicPlus,
+    recentAchievements: recentAchievements,
+    attribution: data['attribution'] as String? ?? '',
   );
 }
 

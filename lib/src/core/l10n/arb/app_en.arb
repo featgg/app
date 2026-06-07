@@ -579,5 +579,89 @@
   "connectionsStatSummonerLevel": "Summoner level",
   "@connectionsStatSummonerLevel": {
     "description": "Localized label for the summoner_level stat key (League of Legends)."
+  },
+  "connectionsWowRegionLabel": "Region",
+  "@connectionsWowRegionLabel": {
+    "description": "Label for the WoW (Retail) region input field."
+  },
+  "connectionsWowRegionHint": "Enter your region (e.g. us)",
+  "@connectionsWowRegionHint": {
+    "description": "Placeholder hint for the WoW (Retail) region input field."
+  },
+  "connectionsWowRegionRequired": "Region is required.",
+  "@connectionsWowRegionRequired": {
+    "description": "Shown on the WoW region field when the user submits an empty value."
+  },
+  "connectionsWowRealmLabel": "Realm",
+  "@connectionsWowRealmLabel": {
+    "description": "Label for the WoW (Retail) realm input field."
+  },
+  "connectionsWowRealmHint": "Enter your realm (e.g. stormrage)",
+  "@connectionsWowRealmHint": {
+    "description": "Placeholder hint for the WoW (Retail) realm input field."
+  },
+  "connectionsWowRealmRequired": "Realm is required.",
+  "@connectionsWowRealmRequired": {
+    "description": "Shown on the WoW realm field when the user submits an empty value."
+  },
+  "connectionsWowCharacterLabel": "Character name",
+  "@connectionsWowCharacterLabel": {
+    "description": "Label for the WoW (Retail) character name input field."
+  },
+  "connectionsWowCharacterHint": "Enter your character name",
+  "@connectionsWowCharacterHint": {
+    "description": "Placeholder hint for the WoW (Retail) character name input field."
+  },
+  "connectionsWowCharacterRequired": "Character name is required.",
+  "@connectionsWowCharacterRequired": {
+    "description": "Shown on the WoW character name field when the user submits an empty value."
+  },
+  "connectionsWowItemLevel": "Item level",
+  "@connectionsWowItemLevel": {
+    "description": "Label for the WoW item level row on the game card data view."
+  },
+  "connectionsWowFaction": "Faction",
+  "@connectionsWowFaction": {
+    "description": "Label for the WoW faction row on the game card data view."
+  },
+  "connectionsWowClass": "Class",
+  "@connectionsWowClass": {
+    "description": "Label for the WoW class row on the game card data view."
+  },
+  "connectionsWowSpec": "Spec",
+  "@connectionsWowSpec": {
+    "description": "Label for the WoW specialization row on the game card data view."
+  },
+  "connectionsWowLevel": "Level",
+  "@connectionsWowLevel": {
+    "description": "Label for the WoW character level row on the game card data view."
+  },
+  "connectionsWowMythicRating": "Mythic+ rating",
+  "@connectionsWowMythicRating": {
+    "description": "Section heading / label for the WoW Mythic+ rating on the game card data view."
+  },
+  "connectionsWowBestRuns": "Best runs",
+  "@connectionsWowBestRuns": {
+    "description": "Section heading for the WoW Mythic+ best runs list on the game card data view."
+  },
+  "connectionsWowRecentAchievements": "Recent achievements",
+  "@connectionsWowRecentAchievements": {
+    "description": "Section heading for the WoW recent achievements list on the game card data view."
+  },
+  "connectionsWowAttribution": "Data provided by Blizzard",
+  "@connectionsWowAttribution": {
+    "description": "Attribution line shown on the WoW card. Proper-noun attribution string; intentionally not translated."
+  },
+  "connectionsWowStale": "Data is more than 30 days old. Refresh to update.",
+  "@connectionsWowStale": {
+    "description": "Shown on the WoW card when last_updated is more than 30 days ago."
+  },
+  "connectionsStatItemLevel": "Item level",
+  "@connectionsStatItemLevel": {
+    "description": "Localized label for the item_level stat key (WoW Retail)."
+  },
+  "connectionsStatMythicPlusRating": "Mythic+ rating",
+  "@connectionsStatMythicPlusRating": {
+    "description": "Localized label for the mythic_plus_rating stat key (WoW Retail)."
   }
 }
