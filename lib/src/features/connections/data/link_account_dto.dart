@@ -18,6 +18,7 @@ const Map<Platform, LinkBodyBuilder> linkBodyBuilders = {
   Platform.minecraftHypixel: _minecraftLinkBody,
   Platform.retroachievements: _retroachievementsLinkBody,
   Platform.leagueOfLegends: _leagueOfLegendsLinkBody,
+  Platform.wowRetail: _wowRetailLinkBody,
 };
 
 Map<String, dynamic> _steamLinkBody(
@@ -44,6 +45,18 @@ Map<String, dynamic> _leagueOfLegendsLinkBody(
     'game_name': input['game_name']!,
     'tag_line': input['tag_line']!,
     'region': input['region']!,
+  },
+};
+
+Map<String, dynamic> _wowRetailLinkBody(
+  String wireValue,
+  Map<String, String> input,
+) => {
+  'platform': wireValue,
+  'metadata': {
+    'region': input['region']!,
+    'realm': input['realm']!,
+    'character': input['character']!,
   },
 };
 

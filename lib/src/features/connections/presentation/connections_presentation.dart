@@ -14,3 +14,5 @@ export 'retroachievements_card_data_view.dart';
 export 'retroachievements_link_form.dart';
 export 'steam_card_data_view.dart';
 export 'steam_link_form.dart';
+export 'wow_retail_card_data_view.dart';
+export 'wow_retail_link_form.dart';

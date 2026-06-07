@@ -11,6 +11,7 @@ import 'league_of_legends_link_form.dart';
 import 'minecraft_link_form.dart';
 import 'retroachievements_link_form.dart';
 import 'steam_link_form.dart';
+import 'wow_retail_link_form.dart';
 
 /// Presentation-side registry mapping each registered [Platform] to its
 /// link-form builder. Lives here (its only consumer) so the screen can select
@@ -21,6 +22,7 @@ const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
   Platform.minecraftHypixel: MinecraftLinkForm.new,
   Platform.retroachievements: RetroAchievementsLinkForm.new,
   Platform.leagueOfLegends: LeagueOfLegendsLinkForm.new,
+  Platform.wowRetail: WowRetailLinkForm.new,
 };
 
 class ConnectionsScreen extends ConsumerWidget {

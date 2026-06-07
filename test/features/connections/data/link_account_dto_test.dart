@@ -66,5 +66,28 @@ void main() {
         });
       },
     );
+
+    test('registers WoW (Retail)', () {
+      expect(linkBodyBuilders.containsKey(Platform.wowRetail), isTrue);
+    });
+
+    test(
+      'WoW builds the documented {platform, metadata{region, realm, character}} body',
+      () {
+        final body = linkBodyBuilders[Platform.wowRetail]!('wow_retail', {
+          'region': 'us',
+          'realm': 'stormrage',
+          'character': 'Thrall',
+        });
+        expect(body, {
+          'platform': 'wow_retail',
+          'metadata': {
+            'region': 'us',
+            'realm': 'stormrage',
+            'character': 'Thrall',
+          },
+        });
+      },
+    );
   });
 }
