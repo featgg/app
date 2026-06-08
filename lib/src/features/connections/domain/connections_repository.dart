@@ -38,4 +38,13 @@ abstract interface class ConnectionsRepository {
   /// Reads the signed-in user's own connections from `linked_accounts`.
   /// Returns `Right([])` when none exist.
   Future<Either<Failure, List<Connection>>> fetchMyConnections();
+
+  /// Bulk-refreshes every connected platform via `refresh-all`
+  /// (`{"action":"refresh"}`). Returns `Right(RefreshAllResult)` on 200
+  /// (including an empty result for zero connections);
+  /// `Left(SyncCooldownFailure)` (carrying `retryAfterSeconds` when the
+  /// body provides it) when every platform is on cooldown (429);
+  /// `Left(...)` for whole-call errors. A single platform's failure is
+  /// not a Left — it appears as `RefreshStatus.failed` in the result.
+  Future<Either<Failure, RefreshAllResult>> refreshAll();
 }
