@@ -777,6 +777,10 @@
   "@connectionsGw2Characters": {
     "description": "Section heading for the Guild Wars 2 top-characters list on the game card data view."
   },
+  "connectionsGw2CharacterLevel": "Lv.",
+  "@connectionsGw2CharacterLevel": {
+    "description": "Abbreviated 'level' label shown before a Guild Wars 2 character's level in the top-characters list (e.g. 'Lv. 80')."
+  },
   "connectionsStatWvwRank": "WvW rank",
   "@connectionsStatWvwRank": {
     "description": "Localized label for the wvw_rank stat key (Guild Wars 2)."

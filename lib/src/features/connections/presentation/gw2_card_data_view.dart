@@ -103,7 +103,7 @@ class Gw2CardDataView extends StatelessWidget {
               key: Key('gw2Character_${entry.key}'),
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Text(
-                '${entry.value.name} · ${entry.value.profession} · Lv. ${entry.value.level}',
+                '${entry.value.name} · ${entry.value.profession} · ${l10n.connectionsGw2CharacterLevel} ${entry.value.level}',
                 style: textTheme.bodySmall,
               ),
             ),
