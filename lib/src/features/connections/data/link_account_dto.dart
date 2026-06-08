@@ -93,3 +93,27 @@ final class SyncResultDto {
   factory SyncResultDto.fromJson(Map<String, dynamic> json) =>
       _$SyncResultDtoFromJson(json);
 }
+
+/// Success envelope returned by `refresh-all`.
+@JsonSerializable(createToJson: false)
+final class RefreshAllResultDto {
+  const RefreshAllResultDto({required this.success, required this.results});
+
+  final bool success;
+  final List<RefreshResultEntryDto> results;
+
+  factory RefreshAllResultDto.fromJson(Map<String, dynamic> json) =>
+      _$RefreshAllResultDtoFromJson(json);
+}
+
+/// One platform's entry within a `refresh-all` 200 response.
+@JsonSerializable(createToJson: false)
+final class RefreshResultEntryDto {
+  const RefreshResultEntryDto({required this.platform, required this.status});
+
+  final String platform;
+  final String status;
+
+  factory RefreshResultEntryDto.fromJson(Map<String, dynamic> json) =>
+      _$RefreshResultEntryDtoFromJson(json);
+}

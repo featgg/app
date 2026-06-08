@@ -142,6 +142,51 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async {
+    try {
+      final dto = await _source.refreshAll();
+      final outcomes = <RefreshOutcome>[];
+      for (final entry in dto.results) {
+        final platform = _platformFromWire(entry.platform);
+        if (platform == null) continue; // drop unknown platforms defensively
+        outcomes.add(
+          RefreshOutcome(
+            platform: platform,
+            status: _refreshStatusFromWire(entry.status),
+          ),
+        );
+      }
+      return right(RefreshAllResult(outcomes: outcomes));
+    } on FunctionException catch (e, st) {
+      final failure = _mapFunctionException(e);
+      if (!failure.isExpected) _crashReporter.reportError(e, st);
+      return left(failure);
+    } catch (e, st) {
+      return left(_handleNonFunctionError(e, st));
+    }
+  }
+
+  /// Reverse-maps a wire platform token to the [Platform] enum value, or null
+  /// when the token is unrecognised (forward-compat: drop unknown platforms).
+  Platform? _platformFromWire(String wire) {
+    for (final entry in platformDescriptors.entries) {
+      if (entry.value.wireValue == wire) return entry.key;
+    }
+    return null;
+  }
+
+  /// Maps a wire `status` token to [RefreshStatus]. Unknown tokens map to
+  /// [RefreshStatus.failed] so a future new status never crashes the
+  /// background path.
+  RefreshStatus _refreshStatusFromWire(String wire) => switch (wire) {
+    'refreshed' => RefreshStatus.refreshed,
+    'skipped_unchanged' => RefreshStatus.skippedUnchanged,
+    'skipped_cooldown' => RefreshStatus.skippedCooldown,
+    'failed' => RefreshStatus.failed,
+    _ => RefreshStatus.failed,
+  };
+
   Failure _handleNonFunctionError(Object error, StackTrace st) {
     final failure = _mapNonFunctionError(error);
     if (!failure.isExpected) _crashReporter.reportError(error, st);
@@ -174,6 +219,21 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
     final status = e.status;
     final message = details is Map ? details['message'] as String? : null;
 
+    // Response headers are discarded by the SDK (FunctionException exposes only
+    // status, details, and reasonPhrase). `details` IS the decoded JSON body for
+    // application/json responses, so `retry_after` is readable from it when
+    // present. The `refresh-all` contract documents `retry_after` in the body;
+    // `sync-<platform>` documents `Retry-After` only as a header (no body field).
+    // Read `retry_after` when present and use it; fall back to the caller's fixed
+    // window when absent.
+    final retryAfterRaw = details is Map ? details['retry_after'] : null;
+    final retryAfterSeconds = switch (retryAfterRaw) {
+      int v => v,
+      num v => v.toInt(),
+      String v => int.tryParse(v),
+      _ => null,
+    };
+
     if (code == 'ALREADY_LINKED' || status == 409) {
       return AlreadyLinkedFailure(code: code, message: message);
     }
@@ -188,8 +248,12 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
     if (code == 'UNAUTHORIZED' || status == 401) {
       return AuthFailure(code: code, message: message);
     }
-    if (code == 'SYNC_COOLDOWN') {
-      return SyncCooldownFailure(code: code, message: message);
+    if (code == 'SYNC_COOLDOWN' || code == 'REFRESH_COOLDOWN') {
+      return SyncCooldownFailure(
+        code: code,
+        message: message,
+        retryAfterSeconds: retryAfterSeconds,
+      );
     }
     if (code == 'UPSTREAM_NOT_FOUND' ||
         code == 'UPSTREAM_RATE_LIMIT' ||
@@ -209,9 +273,14 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
       return ServerFailure(code: code, message: message);
     }
     // 429 with no recognized code — treat as cooldown (belt-and-suspenders for
-    // the SYNC_COOLDOWN path where code may be absent in edge cases).
+    // the SYNC_COOLDOWN/REFRESH_COOLDOWN path where code may be absent in edge
+    // cases).
     if (status == 429) {
-      return SyncCooldownFailure(code: code, message: message);
+      return SyncCooldownFailure(
+        code: code,
+        message: message,
+        retryAfterSeconds: retryAfterSeconds,
+      );
     }
     return UnexpectedFailure(message: e.toString());
   }
