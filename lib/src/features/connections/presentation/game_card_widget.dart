@@ -7,6 +7,7 @@ import '../domain/connection.dart';
 import '../domain/game_card.dart';
 import 'chess_card_data_view.dart';
 import 'connections_provider.dart';
+import 'gw2_card_data_view.dart';
 import 'league_of_legends_card_data_view.dart';
 import 'minecraft_card_data_view.dart';
 import 'retroachievements_card_data_view.dart';
@@ -40,6 +41,7 @@ final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
     lastUpdated: lastUpdated,
   ),
   Platform.chess: (data, _) => ChessCardDataView(data: data as ChessCardData),
+  Platform.gw2: (data, _) => Gw2CardDataView(data: data as Gw2CardData),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
@@ -195,6 +197,11 @@ String _statLabel(String key, AppLocalizations l10n) => switch (key) {
   'rating' => l10n.connectionsStatRating,
   'followers' => l10n.connectionsStatFollowers,
   'puzzle_rush' => l10n.connectionsStatPuzzleRush,
+  'wvw_rank' => l10n.connectionsStatWvwRank,
+  'fractal_level' => l10n.connectionsStatFractalLevel,
+  'total_ap' => l10n.connectionsStatTotalAp,
+  'account_age_hours' => l10n.connectionsStatAccountAgeHours,
+  'veterancy_years' => l10n.connectionsStatVeterancyYears,
   _ => key,
 };
 

@@ -295,10 +295,12 @@ void main() {
     });
 
     testWidgets(
-      'does not render a tile for a platform without a registered descriptor',
+      'renders a Guild Wars 2 connection tile when a gw2 connection exists',
       (tester) async {
-        // gw2 has no registered descriptor; its connection must be silently
-        // ignored so the screen does not crash or show a stale tile.
+        // gw2 now has a registered descriptor; its connection tile must appear.
+        // The screen filters on platformDescriptors, so a registered connection
+        // is shown and an unregistered one is silently ignored (code path
+        // preserved; no enum value is currently unregistered).
         final conn = Connection(
           platform: Platform.gw2,
           status: ConnectionStatus.active,
@@ -308,10 +310,10 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.byKey(const Key('connection_gw2')), findsNothing);
-        expect(find.byKey(const Key('refreshButton_gw2')), findsNothing);
-        // Empty state shows because no descriptor-registered connections exist.
-        expect(find.byKey(const Key('connectionsEmpty')), findsOneWidget);
+        expect(find.byKey(const Key('connection_gw2')), findsOneWidget);
+        expect(find.byKey(const Key('refreshButton_gw2')), findsOneWidget);
+        // No empty state — one registered connection is visible.
+        expect(find.byKey(const Key('connectionsEmpty')), findsNothing);
       },
     );
 

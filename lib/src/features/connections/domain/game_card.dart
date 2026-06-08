@@ -508,6 +508,94 @@ final class ChessCardData extends Equatable implements CardData {
   ];
 }
 
+/// Account-level info from Guild Wars 2 `widget_data.data.account`. Scope-gated
+/// numerics (`totalAp`, `fractalLevel`, `wvwRank`) are nullable — absent means
+/// the account does not have the relevant progression, never 0.
+final class Gw2Account extends Equatable {
+  const Gw2Account({
+    required this.accountAgeHours,
+    required this.veterancyYears,
+    this.totalAp,
+    this.fractalLevel,
+    this.wvwRank,
+    this.homeWorld,
+  });
+
+  final int accountAgeHours;
+  final int veterancyYears;
+
+  /// Null when the scope gate is not met (account has not unlocked the path).
+  final int? totalAp;
+  final int? fractalLevel;
+  final int? wvwRank;
+
+  /// May be null when the upstream omits the world field.
+  final String? homeWorld;
+
+  @override
+  List<Object?> get props => [
+    accountAgeHours,
+    veterancyYears,
+    totalAp,
+    fractalLevel,
+    wvwRank,
+    homeWorld,
+  ];
+}
+
+/// A character entry from Guild Wars 2 `widget_data.data.top_characters`.
+final class Gw2Character extends Equatable {
+  const Gw2Character({
+    required this.name,
+    required this.race,
+    required this.profession,
+    required this.level,
+    required this.deaths,
+    required this.hoursPlayed,
+    required this.isMain,
+  });
+
+  final String name;
+  final String race;
+
+  /// Profession token (GUARDIAN | WARRIOR | … | REVENANT). Never localized
+  /// here; the view renders the raw token.
+  final String profession;
+  final int level;
+  final int deaths;
+  final int hoursPlayed;
+  final bool isMain;
+
+  @override
+  List<Object?> get props => [
+    name,
+    race,
+    profession,
+    level,
+    deaths,
+    hoursPlayed,
+    isMain,
+  ];
+}
+
+/// Guild Wars 2 card data block.
+final class Gw2CardData extends Equatable implements CardData {
+  const Gw2CardData({
+    this.mainProfession,
+    required this.account,
+    required this.topCharacters,
+  });
+
+  /// Profession token of the main character, or null when the account has no
+  /// character. Never localized here; the view falls back for unknown/null.
+  final String? mainProfession;
+  final Gw2Account account;
+  final List<Gw2Character> topCharacters;
+
+  @override
+  List<Object?> get props => [mainProfession, account, topCharacters];
+}
+
 /// A game card as read from `game_cards.widget_data`. The envelope is shared
 /// across all platforms; [data] carries the platform-specific block and is null
 /// when the schema version is unknown or the data block is absent.
