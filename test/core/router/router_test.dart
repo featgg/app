@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:featgg/main.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/home/presentation/home_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
@@ -51,10 +54,38 @@ final class _PendingProfileRepository implements ProfileRepository {
       _completer.future;
 }
 
+/// Connections repository stub that satisfies the cold-start refresh-all
+/// triggered by the signed-in App lifecycle observer.
+final class _StubConnectionsRepository implements ConnectionsRepository {
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([]);
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
+
 Widget _signedInApp() {
   final container = ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(_SignedInAuthRepository()),
+      connectionsRepositoryProvider.overrideWithValue(
+        _StubConnectionsRepository(),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -66,6 +97,9 @@ Widget _signedInAppWithProfile() {
     overrides: [
       authRepositoryProvider.overrideWithValue(_SignedInAuthRepository()),
       profileRepositoryProvider.overrideWithValue(_PendingProfileRepository()),
+      connectionsRepositoryProvider.overrideWithValue(
+        _StubConnectionsRepository(),
+      ),
     ],
   );
   addTearDown(container.dispose);

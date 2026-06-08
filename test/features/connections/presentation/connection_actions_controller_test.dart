@@ -48,6 +48,10 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
   @override
   Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
       right([]);
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +244,49 @@ void main() {
         container.dispose();
       });
     });
+
+    test(
+      'SyncCooldownFailure with retryAfterSeconds seeds that window, not the fallback',
+      () {
+        FakeAsync().run((async) {
+          final repo = _FakeConnectionsRepository(
+            syncResult: () =>
+                left(const SyncCooldownFailure(retryAfterSeconds: 5)),
+          );
+          final container = _container(repo);
+
+          container
+              .read(
+                connectionActionsControllerProvider(Platform.steam).notifier,
+              )
+              .refresh();
+          async.flushMicrotasks();
+
+          final state = container.read(
+            connectionActionsControllerProvider(Platform.steam),
+          );
+          expect(state.onCooldown, isTrue);
+          // cooldownUntil should be ~5s from now, not 60s.
+          expect(
+            state.cooldownUntil!.isBefore(
+              DateTime.now().add(const Duration(seconds: 10)),
+            ),
+            isTrue,
+          );
+
+          // Advance past 5s — cooldown should clear.
+          async.elapse(const Duration(seconds: 6));
+          expect(
+            container
+                .read(connectionActionsControllerProvider(Platform.steam))
+                .onCooldown,
+            isFalse,
+          );
+
+          container.dispose();
+        });
+      },
+    );
   });
 
   group('ConnectionActionsController isolation', () {

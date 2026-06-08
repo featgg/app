@@ -39,6 +39,10 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
   @override
   Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
       right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
 }
 
 final class _FakeCardsRepository implements CardsRepository {
