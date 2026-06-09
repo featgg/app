@@ -19,6 +19,12 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         actions: [
           IconButton(
+            key: const Key('feedEntryButton'),
+            icon: const Icon(Icons.explore_outlined),
+            tooltip: l10n.feedEntry,
+            onPressed: () => context.push('/feed'),
+          ),
+          IconButton(
             key: const Key('connectionsEntryButton'),
             icon: const Icon(Icons.link),
             tooltip: l10n.connectionsEntry,

@@ -32,6 +32,26 @@ profile is private — with their session token (see `auth.md`).
   `last_updated_at` (most recent first) and page with a limit; the data API
   caps result-set size, so always paginate discovery reads.
 
+  **Discovery feed — client query contract (first consumer):**
+
+  - **Keyset pagination** over `last_updated_at` descending with `user_id` as
+    the stable tiebreaker (not offset paging, which drifts under concurrent
+    updates). The cursor predicate for page 2+ is:
+    `last_updated_at < curISO OR (last_updated_at = curISO AND user_id < curUserId)`.
+    In PostgREST `or()` notation:
+    `last_updated_at.lt.<curISO>,and(last_updated_at.eq.<curISO>,user_id.lt.<curUserId>)`.
+  - **Own-card exclusion is client-side:** the access rule permits reading the
+    viewer's own cards, but discovery hides them via
+    `user_id != <viewerId>` (`.neq('user_id', viewerId)`). If the server later
+    excludes the viewer too, the client predicate is a harmless no-op.
+  - **Stale WoW (Retail) exclusion:** feed queries filter out cards where
+    `platform = 'wow_retail'` AND `last_updated_at < now-minus-30-days-UTC-ISO`.
+    PostgREST predicate:
+    `or=(platform.neq.wow_retail,last_updated_at.gte.<cutoff_30d_iso>)`.
+    `cutoff_30d_iso` is `clock.now().toUtc().subtract(Duration(days: 30)).toIso8601String()`.
+  - **Page size** is a client choice under the data API's result-set cap; no
+    specific number is required by the backend.
+
 ## Payload shape
 
 The `feed_preview` and `widget_data` columns from Shape 2 are JSON

@@ -8,6 +8,8 @@ import 'src/features/auth/domain/auth_domain.dart';
 import 'src/features/connections/data/connections_data.dart';
 import 'src/features/connections/domain/connections_providers.dart';
 import 'src/features/connections/presentation/connections_presentation.dart';
+import 'src/features/feed/data/feed_data.dart';
+import 'src/features/feed/domain/feed_providers.dart';
 import 'src/features/profile/data/profile_data.dart';
 import 'src/features/profile/domain/profile_domain.dart';
 import 'src/features/profile/presentation/avatar_picker.dart';
@@ -28,6 +30,7 @@ Future<void> main() async {
             buildConnectionsRepository,
           ),
           cardsRepositoryProvider.overrideWith(buildCardsRepository),
+          feedRepositoryProvider.overrideWith(buildFeedRepository),
         ],
         child: const App(),
       ),
