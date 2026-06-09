@@ -119,10 +119,17 @@ final class ModerationUnavailableFailure extends Failure {
 /// A rate-limited server operation (HTTP 429 class). Expected control flow:
 /// the UI surfaces a "try again shortly" message and the user may retry.
 final class RateLimitFailure extends Failure {
-  const RateLimitFailure({super.message, super.code});
+  const RateLimitFailure({super.message, super.code, this.retryAfterSeconds});
+
+  /// Server-provided remaining cooldown seconds, when the response body
+  /// carried `retry_after`; null when absent (caller applies its fallback).
+  final int? retryAfterSeconds;
 
   @override
   bool get isExpected => true;
+
+  @override
+  List<Object?> get props => [...super.props, retryAfterSeconds];
 }
 
 /// A local image decode/crop step failed before any upload (the bytes could

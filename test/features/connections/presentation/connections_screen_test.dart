@@ -15,6 +15,25 @@ import 'package:fpdart/fpdart.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
+// Helpers shared across cooldown-timer tests
+// ---------------------------------------------------------------------------
+
+Widget _connectionScreenWidget(ProviderContainer container) =>
+    UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: [Locale('en')],
+        home: ConnectionsScreen(),
+      ),
+    );
+
+// ---------------------------------------------------------------------------
 // Fake repositories
 // ---------------------------------------------------------------------------
 
@@ -39,6 +58,36 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
   @override
   Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
       right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
+
+/// Connections repository whose refresh always returns a 5-second cooldown.
+/// Used to seed a real [ConnectionActionsController] into the cooldown state
+/// without relying on the stub controller's fixed deadline.
+final class _CooldownConnectionsRepository implements ConnectionsRepository {
+  _CooldownConnectionsRepository({required this.connectionsResult});
+
+  final Either<Failure, List<Connection>> connectionsResult;
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      connectionsResult;
+
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      left(const SyncCooldownFailure(retryAfterSeconds: 5));
 
   @override
   Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
@@ -342,5 +391,99 @@ void main() {
       expect(find.byKey(const Key('linkForm_wowRetail')), findsOneWidget);
       expect(find.byKey(const Key('wowLinkButton')), findsOneWidget);
     });
+
+    testWidgets(
+      'while on cooldown: countdown affordance present, refresh button disabled',
+      (tester) async {
+        final conn = Connection(
+          platform: Platform.steam,
+          status: ConnectionStatus.active,
+          createdAt: DateTime(2026),
+        );
+        await _pump(tester, connections: right([conn]), onCooldown: true);
+        await tester.pump();
+        await tester.pump();
+
+        // The CooldownCountdown widget (key: cooldownHint) is visible.
+        expect(find.byKey(const Key('cooldownHint')), findsOneWidget);
+        // The refresh button is disabled while on cooldown.
+        final refreshBtn = tester.widget<IconButton>(
+          find.byKey(const Key('refreshButton_steam')),
+        );
+        expect(refreshBtn.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'after the cooldown window elapses the refresh button re-enables',
+      (tester) async {
+        // Use the real ConnectionActionsController with a repo that returns a
+        // 5-second SyncCooldownFailure. Trigger the cooldown on the notifier
+        // before rendering the screen so the widget builds in cooldown state.
+        final conn = Connection(
+          platform: Platform.steam,
+          status: ConnectionStatus.active,
+          createdAt: DateTime(2026),
+        );
+        final cooldownRepo = _CooldownConnectionsRepository(
+          connectionsResult: right([conn]),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            connectionsRepositoryProvider.overrideWithValue(cooldownRepo),
+            cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository()),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // Subscribe so the auto-dispose controller stays alive.
+        container.listen(
+          connectionActionsControllerProvider(Platform.steam),
+          (_, _) {},
+        );
+
+        // Trigger the refresh → seeds a 5-second cooldown window.
+        await container
+            .read(connectionActionsControllerProvider(Platform.steam).notifier)
+            .refresh();
+
+        // Verify cooldown is active before rendering.
+        expect(
+          container
+              .read(connectionActionsControllerProvider(Platform.steam))
+              .onCooldown,
+          isTrue,
+        );
+
+        await tester.pumpWidget(_connectionScreenWidget(container));
+        await tester.pump();
+        await tester.pump();
+
+        // Refresh button is disabled while on cooldown.
+        expect(
+          tester
+              .widget<IconButton>(find.byKey(const Key('refreshButton_steam')))
+              .onPressed,
+          isNull,
+        );
+
+        // The cooldown is conveyed only by the countdown; the redundant
+        // SyncCooldownFailure error text is suppressed.
+        expect(find.byKey(const Key('cooldownHint')), findsOneWidget);
+        expect(find.byKey(const Key('actionsError')), findsNothing);
+
+        // Advance past the 5-second window; the controller's Timer fires and
+        // clears cooldownUntil.
+        await tester.pump(const Duration(seconds: 6));
+
+        // Refresh button re-enables.
+        expect(
+          tester
+              .widget<IconButton>(find.byKey(const Key('refreshButton_steam')))
+              .onPressed,
+          isNotNull,
+        );
+      },
+    );
   });
 }

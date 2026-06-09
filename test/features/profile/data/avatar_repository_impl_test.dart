@@ -44,11 +44,13 @@ FunctionException _fnEx(
   String? code,
   String? message,
   List<String>? categories,
+  Object? retryAfter,
 }) {
   final details = <String, dynamic>{};
   if (code != null) details['code'] = code;
   if (message != null) details['message'] = message;
   if (categories != null) details['categories'] = categories;
+  if (retryAfter != null) details['retry_after'] = retryAfter;
   return FunctionException(
     status: status,
     details: details.isEmpty ? null : details,
@@ -206,6 +208,71 @@ void main() {
       }, (_) => fail('expected Left'));
       expect(reporter.reported, isEmpty);
     });
+
+    test(
+      "AVATAR_COOLDOWN / 429 with details['retry_after']=5 → retryAfterSeconds == 5",
+      () async {
+        final source = _FakeUploadSource(
+          (_, _) async =>
+              throw _fnEx(429, code: 'AVATAR_COOLDOWN', retryAfter: 5),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).uploadAvatar(bytes: Uint8List(1), contentType: 'image/jpeg');
+
+        result.fold((f) {
+          expect(f, isA<RateLimitFailure>());
+          expect((f as RateLimitFailure).retryAfterSeconds, 5);
+        }, (_) => fail('expected Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      "AVATAR_COOLDOWN / 429 without retry_after → retryAfterSeconds == null",
+      () async {
+        final source = _FakeUploadSource(
+          (_, _) async => throw _fnEx(429, code: 'AVATAR_COOLDOWN'),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).uploadAvatar(bytes: Uint8List(1), contentType: 'image/jpeg');
+
+        result.fold((f) {
+          expect(f, isA<RateLimitFailure>());
+          expect((f as RateLimitFailure).retryAfterSeconds, isNull);
+        }, (_) => fail('expected Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      "AVATAR_COOLDOWN / 429 with malformed retry_after (non-int) → retryAfterSeconds == null",
+      () async {
+        final source = _FakeUploadSource(
+          (_, _) async => throw _fnEx(
+            429,
+            code: 'AVATAR_COOLDOWN',
+            retryAfter: 'not-a-number',
+          ),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(
+          source,
+          reporter,
+        ).uploadAvatar(bytes: Uint8List(1), contentType: 'image/jpeg');
+
+        result.fold((f) {
+          expect(f, isA<RateLimitFailure>());
+          expect((f as RateLimitFailure).retryAfterSeconds, isNull);
+        }, (_) => fail('expected Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
 
     test(
       '429 detected by status alone (no code) → RateLimitFailure, not reported',

@@ -63,8 +63,12 @@ This surface enforces a per-user upload throttle: a burst of 3 uploads is
 allowed, then roughly 1 per 60 seconds (the allowance refills one slot per
 minute, up to 3). In normal use it is almost never hit. When it is, the
 endpoint returns `429 AVATAR_COOLDOWN`. The client treats the 429 as a
-retryable error and surfaces a static "try again shortly" message; the avatar
-is unchanged.
+retryable error and shows a live countdown until it may retry, re-enabling the
+action at zero. It derives the remaining seconds from the documented ~60s
+refill window; if the 429 body happens to carry a numeric `retry_after`
+(seconds) under `details`, the client uses that instead. `retry_after` is not a
+guaranteed field of this surface — it is read defensively, with the 60s refill
+as the fallback. The avatar is unchanged.
 
 ## Cross-references
 

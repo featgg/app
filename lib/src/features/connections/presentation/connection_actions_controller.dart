@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -52,7 +53,7 @@ final class ConnectionActionsState extends Equatable {
 
   /// Whether the refresh action is currently on cooldown.
   bool get onCooldown =>
-      cooldownUntil != null && DateTime.now().isBefore(cooldownUntil!);
+      cooldownUntil != null && clock.now().isBefore(cooldownUntil!);
 
   ConnectionActionsState copyWith({
     bool? refreshing,
@@ -107,7 +108,9 @@ class ConnectionActionsController extends _$ConnectionActionsController {
   /// connections and card reads. On [SyncCooldownFailure], sets a fixed
   /// cooldown-until timestamp.
   Future<void> refresh() async {
-    if (state.onCooldown) return;
+    // Short-circuit if a refresh is already in flight or we're on cooldown, so
+    // repeated taps can't start a second backend sync.
+    if (state.refreshing || state.onCooldown) return;
 
     state = state.copyWith(
       refreshing: true,
@@ -129,7 +132,7 @@ class ConnectionActionsController extends _$ConnectionActionsController {
           state = state.copyWith(
             refreshing: false,
             failure: failure,
-            cooldownUntil: DateTime.now().add(cooldown),
+            cooldownUntil: clock.now().add(cooldown),
           );
           _scheduleCooldownTimer(cooldown);
         } else {

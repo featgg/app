@@ -122,6 +122,9 @@ final class _ProcessingFailurePicker implements AvatarPicker {
 }
 
 /// Fake avatar repository that always returns the cooldown rate-limit failure.
+/// retryAfterSeconds: 5 keeps the deadline short so the periodic timer fires
+/// within the test's wall-clock budget; the controller seeds cooldownUntil ~5s
+/// out, so onCooldown is immediately true.
 final class _CooldownAvatarRepository implements AvatarRepository {
   const _CooldownAvatarRepository();
 
@@ -129,7 +132,25 @@ final class _CooldownAvatarRepository implements AvatarRepository {
   Future<Either<Failure, String>> uploadAvatar({
     required Uint8List bytes,
     required String contentType,
-  }) async => left(const RateLimitFailure());
+  }) async => left(const RateLimitFailure(retryAfterSeconds: 5));
+}
+
+/// Succeeds on the first upload, then returns the cooldown rate-limit failure —
+/// used to verify a stale success snackbar is dismissed when a cooldown hits.
+final class _SucceedThenCooldownAvatarRepository implements AvatarRepository {
+  int _calls = 0;
+
+  @override
+  Future<Either<Failure, String>> uploadAvatar({
+    required Uint8List bytes,
+    required String contentType,
+  }) async {
+    _calls++;
+    if (_calls == 1) {
+      return right(_SucceedingAvatarRepository.uploadedUrl);
+    }
+    return left(const RateLimitFailure(retryAfterSeconds: 5));
+  }
 }
 
 Widget _screen(
@@ -231,22 +252,78 @@ void main() {
     expect(find.byKey(const Key('avatarUploadErrorSnackBar')), findsOneWidget);
   });
 
-  testWidgets('a 429 surfaces a keyed error snackbar', (tester) async {
-    await tester.pumpWidget(
-      _screen(
-        _FakeRepository(updateResult: () => right(_profile)),
-        avatarPicker: const _ImmediatePicker(),
-        avatarRepo: const _CooldownAvatarRepository(),
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'a 429 renders an inline cooldown countdown and disables the avatar field',
+    (tester) async {
+      await tester.pumpWidget(
+        _screen(
+          _FakeRepository(updateResult: () => right(_profile)),
+          avatarPicker: const _ImmediatePicker(),
+          avatarRepo: const _CooldownAvatarRepository(),
+        ),
+      );
+      await tester.pump();
 
-    await tester.tap(find.byKey(const Key('avatarUploadField')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('avatarUploadField')));
+      await tester.pumpAndSettle();
 
-    // A 429 surfaces through the same keyed error snackbar as a rejection.
-    expect(find.byKey(const Key('avatarUploadErrorSnackBar')), findsOneWidget);
-  });
+      // RateLimitFailure: inline countdown affordance is shown.
+      expect(find.byKey(const Key('avatarCooldownCountdown')), findsOneWidget);
+      // RateLimitFailure: no transient error snackbar (the countdown is the
+      // affordance; the screen explicitly skips the snackbar path for cooldowns).
+      expect(find.byKey(const Key('avatarUploadErrorSnackBar')), findsNothing);
+      // The avatar field's GestureDetector has onTap == null while onCooldown.
+      final gesture = tester.widget<GestureDetector>(
+        find
+            .descendant(
+              of: find.byKey(const Key('avatarUploadField')),
+              matching: find.byType(GestureDetector),
+            )
+            .first,
+      );
+      expect(gesture.onTap, isNull);
+
+      // Drain the controller's 5-second cooldown timer before teardown.
+      await tester.pump(const Duration(seconds: 6));
+    },
+  );
+
+  testWidgets(
+    'a cooldown dismisses a still-visible success snackbar (no stale message)',
+    (tester) async {
+      await tester.pumpWidget(
+        _screen(
+          _FakeRepository(updateResult: () => right(_profile)),
+          avatarPicker: const _ImmediatePicker(),
+          avatarRepo: _SucceedThenCooldownAvatarRepository(),
+        ),
+      );
+      await tester.pump();
+
+      // First upload succeeds → success snackbar appears.
+      await tester.tap(find.byKey(const Key('avatarUploadField')));
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.byKey(const Key('avatarUploadSuccessSnackBar')),
+        findsOneWidget,
+      );
+
+      // Second upload hits a 429 cooldown → the still-visible success snackbar
+      // is dismissed and the inline countdown is shown instead.
+      await tester.tap(find.byKey(const Key('avatarUploadField')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        find.byKey(const Key('avatarUploadSuccessSnackBar')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('avatarCooldownCountdown')), findsOneWidget);
+
+      // Drain the remaining cooldown timer before teardown.
+      await tester.pump(const Duration(seconds: 6));
+    },
+  );
 
   testWidgets(
     'a backend save failure shows a localized message and keeps input',

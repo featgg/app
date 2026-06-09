@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
+import '../../../core/error/failure.dart';
 import '../domain/connection.dart';
 import '../domain/platform_descriptor.dart';
 import 'chess_link_form.dart';
@@ -111,6 +112,7 @@ class _ConnectionsBody extends ConsumerWidget {
               GameCardWidget(
                 key: Key('card_${c.platform.name}'),
                 platform: c.platform,
+                isOwner: true,
               ),
               const SizedBox(height: AppSpacing.md),
             ],
@@ -249,18 +251,22 @@ class _ConnectionTile extends ConsumerWidget {
                 ),
               ],
             ),
-            if (onCooldown)
+            if (onCooldown && actionsState.cooldownUntil != null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Text(
+                child: CooldownCountdown(
                   key: const Key('cooldownHint'),
-                  l10n.connectionsRefreshCooldown,
+                  until: actionsState.cooldownUntil!,
+                  label: (s) => l10n.connectionsRefreshCooldownCountdown(s),
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-            if (actionsState.failure != null)
+            // A cooldown is already conveyed by the countdown above; suppress
+            // its redundant error text. Other failures still surface here.
+            if (actionsState.failure != null &&
+                actionsState.failure is! SyncCooldownFailure)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(

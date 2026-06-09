@@ -26,3 +26,17 @@ final class AvatarModerationDetailsDto {
   factory AvatarModerationDetailsDto.fromJson(Map<String, dynamic> json) =>
       _$AvatarModerationDetailsDtoFromJson(json);
 }
+
+/// The `details` body of an AVATAR_COOLDOWN (429) error response.
+/// [retryAfter] is read defensively — the brief does not promise this field;
+/// null when absent or unparseable. The fallback 60s window applies.
+@JsonSerializable(createToJson: false)
+final class AvatarCooldownDetailsDto {
+  const AvatarCooldownDetailsDto({this.retryAfter});
+
+  @JsonKey(name: 'retry_after')
+  final int? retryAfter;
+
+  factory AvatarCooldownDetailsDto.fromJson(Map<String, dynamic> json) =>
+      _$AvatarCooldownDetailsDtoFromJson(json);
+}

@@ -596,6 +596,19 @@ final class Gw2CardData extends Equatable implements CardData {
   List<Object?> get props => [mainProfession, account, topCharacters];
 }
 
+/// The single freshness threshold for cards that are freshness-gated.
+/// Only WoW (Retail) is gated in v1 (see feed brief); other platforms are
+/// always fresh.
+const Duration kCardStaleThreshold = Duration(days: 30);
+
+extension GameCardFreshness on GameCard {
+  /// True when this card is past the freshness threshold *and* its platform
+  /// is freshness-gated. Non-gated platforms are never stale.
+  bool isStaleAt(DateTime now) =>
+      platform == Platform.wowRetail &&
+      now.difference(lastUpdated) > kCardStaleThreshold;
+}
+
 /// A game card as read from `game_cards.widget_data`. The envelope is shared
 /// across all platforms; [data] carries the platform-specific block and is null
 /// when the schema version is unknown or the data block is absent.

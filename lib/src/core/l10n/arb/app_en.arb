@@ -800,5 +800,23 @@
   "connectionsStatVeterancyYears": "Veterancy (years)",
   "@connectionsStatVeterancyYears": {
     "description": "Localized label for the veterancy_years stat key (Guild Wars 2)."
+  },
+  "connectionsRefreshCooldownCountdown": "Refresh available in {seconds, plural, =1{1 second} other{{seconds} seconds}}",
+  "@connectionsRefreshCooldownCountdown": {
+    "description": "Live countdown shown on the connection tile while a sync cooldown is active. {seconds} is the remaining seconds; uses ICU plural for 1 vs many.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "profileAvatarCooldownCountdown": "You can change your photo again in {seconds, plural, =1{1 second} other{{seconds} seconds}}",
+  "@profileAvatarCooldownCountdown": {
+    "description": "Live countdown shown on the profile-edit screen while an avatar upload cooldown is active. {seconds} is the remaining seconds; uses ICU plural for 1 vs many.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
+import '../../../core/error/failure.dart';
 import '../domain/profile.dart';
 import 'avatar_picker.dart';
 import 'avatar_upload_controller.dart';
@@ -110,7 +111,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
           );
       } else if (next.status == AvatarUploadStatus.error &&
-          next.failure != null) {
+          next.failure != null &&
+          next.failure is! RateLimitFailure) {
+        // Cooldown (RateLimitFailure) renders an inline countdown affordance
+        // instead of a transient snackbar — do not snackbar on cooldown.
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
@@ -119,6 +123,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               content: Text(next.failure!.localizedMessage(l10n)),
             ),
           );
+      } else if (next.status == AvatarUploadStatus.error &&
+          next.failure is RateLimitFailure) {
+        // Cooldown shows an inline countdown; dismiss any lingering snackbar so
+        // a stale success/error message doesn't sit alongside the countdown.
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
     });
 
@@ -172,6 +181,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                                   .pickAndCrop(context),
                             ),
                       ),
+                      if (uploadState.onCooldown &&
+                          uploadState.cooldownUntil != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        CooldownCountdown(
+                          key: const Key('avatarCooldownCountdown'),
+                          until: uploadState.cooldownUntil!,
+                          label: (s) => l10n.profileAvatarCooldownCountdown(s),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       TextFormField(
                         key: const Key('profileDisplayNameField'),
@@ -262,7 +286,7 @@ class _AvatarUploadField extends StatelessWidget {
   final String? avatarUrl;
   final AvatarUploadState uploadState;
   final AppLocalizations l10n;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   bool get _inFlight =>
       uploadState.status == AvatarUploadStatus.picking ||
@@ -304,7 +328,7 @@ class _AvatarUploadField extends StatelessWidget {
       );
     }
 
-    final bool disabled = _inFlight;
+    final bool disabled = _inFlight || uploadState.onCooldown;
 
     return Align(
       child: GestureDetector(
