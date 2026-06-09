@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:featgg/src/core/error/failure.dart';
@@ -129,10 +130,7 @@ void main() {
         expect(stateAfterCooldown.failure, isA<SyncCooldownFailure>());
         expect(stateAfterCooldown.onCooldown, isTrue);
         expect(stateAfterCooldown.cooldownUntil, isNotNull);
-        expect(
-          stateAfterCooldown.cooldownUntil!.isAfter(DateTime.now()),
-          isTrue,
-        );
+        expect(stateAfterCooldown.cooldownUntil!.isAfter(clock.now()), isTrue);
 
         // A second attempt before cooldown elapses is short-circuited.
         await container
@@ -140,6 +138,25 @@ void main() {
             .refresh();
 
         // syncCalls is still 1 — the second attempt was blocked.
+        expect(repo.syncCalls, 1);
+      },
+    );
+
+    test(
+      'a second refresh while one is in flight does not start another sync',
+      () async {
+        final repo = _FakeConnectionsRepository();
+        final container = _container(repo);
+        final notifier = container.read(
+          connectionActionsControllerProvider(Platform.steam).notifier,
+        );
+
+        // Fire two refreshes without awaiting the first; the second must be
+        // short-circuited because a refresh is already in flight.
+        final f1 = notifier.refresh();
+        final f2 = notifier.refresh();
+        await Future.wait<void>([f1, f2]);
+
         expect(repo.syncCalls, 1);
       },
     );
