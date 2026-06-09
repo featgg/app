@@ -136,7 +136,23 @@ final class ConnectionsRepositoryImpl implements ConnectionsRepository {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
       final dtos = await _source.fetchConnections();
-      return right(dtos.map(connectionFromDto).toList());
+      final connections = <Connection>[];
+      for (final dto in dtos) {
+        final connection = connectionFromDtoOrNull(dto);
+        if (connection == null) {
+          // An unrecognised platform token is undocumented backend drift, not a
+          // user error. Drop the row so the remaining connections still render
+          // (one bad row must not blank the whole screen), but report it so the
+          // drift stays observable instead of vanishing silently.
+          _crashReporter.reportError(
+            FormatException('unknown connection platform: ${dto.platform}'),
+            StackTrace.current,
+          );
+          continue;
+        }
+        connections.add(connection);
+      }
+      return right(connections);
     } catch (e, st) {
       return left(_handleNonFunctionError(e, st));
     }
