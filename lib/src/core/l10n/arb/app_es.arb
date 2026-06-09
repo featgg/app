@@ -193,5 +193,7 @@
   "connectionsStatFractalLevel": "Nivel de fractal",
   "connectionsStatTotalAp": "PA totales",
   "connectionsStatAccountAgeHours": "Edad de la cuenta (horas)",
-  "connectionsStatVeterancyYears": "Veteranía (años)"
+  "connectionsStatVeterancyYears": "Veteranía (años)",
+  "connectionsRefreshCooldownCountdown": "Actualización disponible en {seconds, plural, =1{1 segundo} other{{seconds} segundos}}",
+  "profileAvatarCooldownCountdown": "Puedes cambiar tu foto de nuevo en {seconds, plural, =1{1 segundo} other{{seconds} segundos}}"
 }

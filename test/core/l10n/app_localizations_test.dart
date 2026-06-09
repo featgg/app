@@ -33,103 +33,128 @@ void main() {
       },
     );
 
+    test('new connections keys exist and are non-empty in all locales', () async {
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+      final es = await AppLocalizations.delegate.load(const Locale('es'));
+      final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+
+      for (final l10n in [en, es, pt]) {
+        expect(l10n.errorAlreadyLinked, isNotEmpty);
+        expect(l10n.errorSyncCooldown, isNotEmpty);
+        expect(l10n.errorUpstream, isNotEmpty);
+        expect(l10n.connectionsTitle, isNotEmpty);
+        expect(l10n.connectionsEntry, isNotEmpty);
+        expect(l10n.connectionsEmpty, isNotEmpty);
+        expect(l10n.connectionsConnectPlatform('Steam'), isNotEmpty);
+        expect(l10n.connectionsSteamRemoteIdLabel, isNotEmpty);
+        expect(l10n.connectionsSteamRemoteIdHint, isNotEmpty);
+        expect(l10n.connectionsRemoteIdRequired, isNotEmpty);
+        expect(l10n.connectionsLink, isNotEmpty);
+        expect(l10n.connectionsLinked, isNotEmpty);
+        expect(l10n.connectionsRefresh, isNotEmpty);
+        expect(l10n.connectionsRefreshSkipped, isNotEmpty);
+        expect(l10n.connectionsRefreshCooldown, isNotEmpty);
+        expect(l10n.connectionsUnlink, isNotEmpty);
+        expect(l10n.connectionsUnlinked, isNotEmpty);
+        expect(l10n.connectionsStatusActive, isNotEmpty);
+        expect(l10n.connectionsStatusError, isNotEmpty);
+        expect(l10n.connectionsLastSyncNever, isNotEmpty);
+        expect(l10n.connectionsCardProfileLink, isNotEmpty);
+        expect(l10n.connectionsStatHoursPlayed, isNotEmpty);
+        expect(l10n.connectionsStatGamesOwned, isNotEmpty);
+        expect(l10n.connectionsLastSync('2026-06-05'), isNotEmpty);
+        expect(l10n.connectionsLibraryShowcase, isNotEmpty);
+        expect(l10n.connectionsRecentGames, isNotEmpty);
+        expect(l10n.connectionsStatNetworkLevel, isNotEmpty);
+        expect(l10n.connectionsStatBedwarsWins, isNotEmpty);
+        expect(l10n.connectionsStatBedwarsKills, isNotEmpty);
+        expect(l10n.connectionsStatKarma, isNotEmpty);
+        expect(l10n.connectionsStatAchievementPoints, isNotEmpty);
+        expect(l10n.connectionsMinecraftRemoteIdLabel, isNotEmpty);
+        expect(l10n.connectionsMinecraftRemoteIdHint, isNotEmpty);
+        expect(l10n.connectionsMinecraftRemoteIdRequired, isNotEmpty);
+        expect(l10n.connectionsMinecraftRank, isNotEmpty);
+        expect(l10n.connectionsMinecraftLevel, isNotEmpty);
+        expect(l10n.connectionsMinecraftKarma, isNotEmpty);
+        expect(l10n.connectionsMinecraftGameStats, isNotEmpty);
+        expect(l10n.connectionsMinecraftBedwars, isNotEmpty);
+        expect(l10n.connectionsMinecraftSkywars, isNotEmpty);
+        expect(l10n.connectionsMinecraftDuels, isNotEmpty);
+        expect(l10n.connectionsMinecraftWins, isNotEmpty);
+        expect(l10n.connectionsMinecraftKills, isNotEmpty);
+        expect(l10n.connectionsMinecraftFinalKills, isNotEmpty);
+        expect(l10n.connectionsMinecraftBedsBroken, isNotEmpty);
+        expect(l10n.connectionsMinecraftStar, isNotEmpty);
+        expect(l10n.connectionsStatTotalAchievementPoints, isNotEmpty);
+        expect(l10n.connectionsStatRetroRank, isNotEmpty);
+        expect(l10n.connectionsStatCompletionPct, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsRemoteIdLabel, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsRemoteIdHint, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsRemoteIdRequired, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsRank, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsTotalPoints, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsTruePoints, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsSoftcorePoints, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsMemberSince, isNotEmpty);
+        expect(l10n.connectionsRetroAchievementsRecentGames, isNotEmpty);
+        expect(l10n.errorUpstreamNotFound, isNotEmpty);
+        expect(l10n.errorUpstreamNotConnected, isNotEmpty);
+        expect(l10n.errorUpstreamReconnect, isNotEmpty);
+        // LoL form keys
+        expect(l10n.connectionsLolGameNameLabel, isNotEmpty);
+        expect(l10n.connectionsLolGameNameHint, isNotEmpty);
+        expect(l10n.connectionsLolGameNameRequired, isNotEmpty);
+        expect(l10n.connectionsLolTagLineLabel, isNotEmpty);
+        expect(l10n.connectionsLolTagLineHint, isNotEmpty);
+        expect(l10n.connectionsLolTagLineRequired, isNotEmpty);
+        expect(l10n.connectionsLolRegionLabel, isNotEmpty);
+        expect(l10n.connectionsLolRegionHint, isNotEmpty);
+        expect(l10n.connectionsLolRegionRequired, isNotEmpty);
+        // LoL card display keys
+        expect(l10n.connectionsLolRank, isNotEmpty);
+        expect(l10n.connectionsLolUnranked, isNotEmpty);
+        expect(l10n.connectionsLolLp, isNotEmpty);
+        expect(l10n.connectionsLolWins, isNotEmpty);
+        expect(l10n.connectionsLolLosses, isNotEmpty);
+        expect(l10n.connectionsLolSummonerLevel, isNotEmpty);
+        expect(l10n.connectionsLolChallenges, isNotEmpty);
+        expect(l10n.connectionsLolChallengeLevel, isNotEmpty);
+        expect(l10n.connectionsLolTopMastery, isNotEmpty);
+        expect(l10n.connectionsLolMasteryLevel, isNotEmpty);
+        expect(l10n.connectionsLolChampion, isNotEmpty);
+        // LoL stat row keys
+        expect(l10n.connectionsStatRankLp, isNotEmpty);
+        expect(l10n.connectionsStatWinrate, isNotEmpty);
+        expect(l10n.connectionsStatMasteryPoints, isNotEmpty);
+        expect(l10n.connectionsStatChallengePoints, isNotEmpty);
+        expect(l10n.connectionsStatSummonerLevel, isNotEmpty);
+        // Countdown keys: ICU plural — both singular and plural resolve non-empty.
+        expect(l10n.connectionsRefreshCooldownCountdown(1), isNotEmpty);
+        expect(l10n.connectionsRefreshCooldownCountdown(10), isNotEmpty);
+        expect(l10n.profileAvatarCooldownCountdown(1), isNotEmpty);
+        expect(l10n.profileAvatarCooldownCountdown(10), isNotEmpty);
+      }
+    });
+
     test(
-      'new connections keys exist and are non-empty in all locales',
+      'countdown ICU plural keys yield distinct =1 vs other forms in all locales',
       () async {
         final en = await AppLocalizations.delegate.load(const Locale('en'));
         final es = await AppLocalizations.delegate.load(const Locale('es'));
         final pt = await AppLocalizations.delegate.load(const Locale('pt'));
 
         for (final l10n in [en, es, pt]) {
-          expect(l10n.errorAlreadyLinked, isNotEmpty);
-          expect(l10n.errorSyncCooldown, isNotEmpty);
-          expect(l10n.errorUpstream, isNotEmpty);
-          expect(l10n.connectionsTitle, isNotEmpty);
-          expect(l10n.connectionsEntry, isNotEmpty);
-          expect(l10n.connectionsEmpty, isNotEmpty);
-          expect(l10n.connectionsConnectPlatform('Steam'), isNotEmpty);
-          expect(l10n.connectionsSteamRemoteIdLabel, isNotEmpty);
-          expect(l10n.connectionsSteamRemoteIdHint, isNotEmpty);
-          expect(l10n.connectionsRemoteIdRequired, isNotEmpty);
-          expect(l10n.connectionsLink, isNotEmpty);
-          expect(l10n.connectionsLinked, isNotEmpty);
-          expect(l10n.connectionsRefresh, isNotEmpty);
-          expect(l10n.connectionsRefreshSkipped, isNotEmpty);
-          expect(l10n.connectionsRefreshCooldown, isNotEmpty);
-          expect(l10n.connectionsUnlink, isNotEmpty);
-          expect(l10n.connectionsUnlinked, isNotEmpty);
-          expect(l10n.connectionsStatusActive, isNotEmpty);
-          expect(l10n.connectionsStatusError, isNotEmpty);
-          expect(l10n.connectionsLastSyncNever, isNotEmpty);
-          expect(l10n.connectionsCardProfileLink, isNotEmpty);
-          expect(l10n.connectionsStatHoursPlayed, isNotEmpty);
-          expect(l10n.connectionsStatGamesOwned, isNotEmpty);
-          expect(l10n.connectionsLastSync('2026-06-05'), isNotEmpty);
-          expect(l10n.connectionsLibraryShowcase, isNotEmpty);
-          expect(l10n.connectionsRecentGames, isNotEmpty);
-          expect(l10n.connectionsStatNetworkLevel, isNotEmpty);
-          expect(l10n.connectionsStatBedwarsWins, isNotEmpty);
-          expect(l10n.connectionsStatBedwarsKills, isNotEmpty);
-          expect(l10n.connectionsStatKarma, isNotEmpty);
-          expect(l10n.connectionsStatAchievementPoints, isNotEmpty);
-          expect(l10n.connectionsMinecraftRemoteIdLabel, isNotEmpty);
-          expect(l10n.connectionsMinecraftRemoteIdHint, isNotEmpty);
-          expect(l10n.connectionsMinecraftRemoteIdRequired, isNotEmpty);
-          expect(l10n.connectionsMinecraftRank, isNotEmpty);
-          expect(l10n.connectionsMinecraftLevel, isNotEmpty);
-          expect(l10n.connectionsMinecraftKarma, isNotEmpty);
-          expect(l10n.connectionsMinecraftGameStats, isNotEmpty);
-          expect(l10n.connectionsMinecraftBedwars, isNotEmpty);
-          expect(l10n.connectionsMinecraftSkywars, isNotEmpty);
-          expect(l10n.connectionsMinecraftDuels, isNotEmpty);
-          expect(l10n.connectionsMinecraftWins, isNotEmpty);
-          expect(l10n.connectionsMinecraftKills, isNotEmpty);
-          expect(l10n.connectionsMinecraftFinalKills, isNotEmpty);
-          expect(l10n.connectionsMinecraftBedsBroken, isNotEmpty);
-          expect(l10n.connectionsMinecraftStar, isNotEmpty);
-          expect(l10n.connectionsStatTotalAchievementPoints, isNotEmpty);
-          expect(l10n.connectionsStatRetroRank, isNotEmpty);
-          expect(l10n.connectionsStatCompletionPct, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsRemoteIdLabel, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsRemoteIdHint, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsRemoteIdRequired, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsRank, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsTotalPoints, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsTruePoints, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsSoftcorePoints, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsMemberSince, isNotEmpty);
-          expect(l10n.connectionsRetroAchievementsRecentGames, isNotEmpty);
-          expect(l10n.errorUpstreamNotFound, isNotEmpty);
-          expect(l10n.errorUpstreamNotConnected, isNotEmpty);
-          expect(l10n.errorUpstreamReconnect, isNotEmpty);
-          // LoL form keys
-          expect(l10n.connectionsLolGameNameLabel, isNotEmpty);
-          expect(l10n.connectionsLolGameNameHint, isNotEmpty);
-          expect(l10n.connectionsLolGameNameRequired, isNotEmpty);
-          expect(l10n.connectionsLolTagLineLabel, isNotEmpty);
-          expect(l10n.connectionsLolTagLineHint, isNotEmpty);
-          expect(l10n.connectionsLolTagLineRequired, isNotEmpty);
-          expect(l10n.connectionsLolRegionLabel, isNotEmpty);
-          expect(l10n.connectionsLolRegionHint, isNotEmpty);
-          expect(l10n.connectionsLolRegionRequired, isNotEmpty);
-          // LoL card display keys
-          expect(l10n.connectionsLolRank, isNotEmpty);
-          expect(l10n.connectionsLolUnranked, isNotEmpty);
-          expect(l10n.connectionsLolLp, isNotEmpty);
-          expect(l10n.connectionsLolWins, isNotEmpty);
-          expect(l10n.connectionsLolLosses, isNotEmpty);
-          expect(l10n.connectionsLolSummonerLevel, isNotEmpty);
-          expect(l10n.connectionsLolChallenges, isNotEmpty);
-          expect(l10n.connectionsLolChallengeLevel, isNotEmpty);
-          expect(l10n.connectionsLolTopMastery, isNotEmpty);
-          expect(l10n.connectionsLolMasteryLevel, isNotEmpty);
-          expect(l10n.connectionsLolChampion, isNotEmpty);
-          // LoL stat row keys
-          expect(l10n.connectionsStatRankLp, isNotEmpty);
-          expect(l10n.connectionsStatWinrate, isNotEmpty);
-          expect(l10n.connectionsStatMasteryPoints, isNotEmpty);
-          expect(l10n.connectionsStatChallengePoints, isNotEmpty);
-          expect(l10n.connectionsStatSummonerLevel, isNotEmpty);
+          // =1 and other must produce structurally distinct strings (the =1 form
+          // spells out "1 second" / "1 segundo" and the other form interpolates
+          // the count). Asserts structural difference, not literal text.
+          expect(
+            l10n.connectionsRefreshCooldownCountdown(1),
+            isNot(l10n.connectionsRefreshCooldownCountdown(10)),
+          );
+          expect(
+            l10n.profileAvatarCooldownCountdown(1),
+            isNot(l10n.profileAvatarCooldownCountdown(10)),
+          );
         }
       },
     );
