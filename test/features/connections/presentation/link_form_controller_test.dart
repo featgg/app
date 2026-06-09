@@ -2,6 +2,7 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
+import 'package:featgg/src/features/connections/presentation/connection_actions_controller.dart';
 import 'package:featgg/src/features/connections/presentation/connections_provider.dart';
 import 'package:featgg/src/features/connections/presentation/link_form_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
 
   final Either<Failure, Unit> Function() linkResult;
   int linkCalls = 0;
+  int refreshCalls = 0;
 
   @override
   Future<Either<Failure, Unit>> link({
@@ -31,8 +33,10 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
   Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
 
   @override
-  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
-      right(const SyncResult(skipped: false));
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async {
+    refreshCalls++;
+    return right(const SyncResult(skipped: false));
+  }
 
   @override
   Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
@@ -53,6 +57,12 @@ ProviderContainer _container(_FakeConnectionsRepository repo) {
   );
   addTearDown(container.dispose);
   container.listen(linkFormControllerProvider(Platform.steam), (_, _) {});
+  // Keep the actions controller alive so fire-and-forget refresh() calls
+  // reach the fake repository rather than being dropped on a dead notifier.
+  container.listen(
+    connectionActionsControllerProvider(Platform.steam),
+    (_, _) {},
+  );
   return container;
 }
 
@@ -459,6 +469,84 @@ void main() {
         expect(state.submitting, isFalse);
         // Backend failures do not set per-field errors — that is client-only.
         expect(state.fieldErrors, isEmpty);
+      },
+    );
+  });
+
+  group('LinkFormController — auto-populate sync after link', () {
+    test('submit success triggers per-platform refresh once', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = _container(repo);
+
+      await container
+          .read(linkFormControllerProvider(Platform.steam).notifier)
+          .submit(remoteId: '12345');
+
+      // Allow the fire-and-forget refresh() to complete.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.refreshCalls, 1);
+    });
+
+    test('submitFields success triggers per-platform refresh once', () async {
+      final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+      final container = ProviderContainer(
+        overrides: [connectionsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      container.listen(linkFormControllerProvider(Platform.gw2), (_, _) {});
+      container.listen(
+        connectionActionsControllerProvider(Platform.gw2),
+        (_, _) {},
+      );
+
+      await container
+          .read(linkFormControllerProvider(Platform.gw2).notifier)
+          .submitFields({
+            'api_key': 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXXXXXXXXX',
+          });
+
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.refreshCalls, 1);
+    });
+
+    test('link failure does not trigger refresh', () async {
+      final repo = _FakeConnectionsRepository(
+        linkResult: () => left(const NetworkFailure()),
+      );
+      final container = _container(repo);
+
+      await container
+          .read(linkFormControllerProvider(Platform.steam).notifier)
+          .submit(remoteId: '12345');
+
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.refreshCalls, 0);
+      expect(
+        container.read(linkFormControllerProvider(Platform.steam)).linked,
+        isFalse,
+      );
+    });
+
+    test(
+      'successful link still reports linked without awaiting sync',
+      () async {
+        final repo = _FakeConnectionsRepository(linkResult: () => right(unit));
+        final container = _container(repo);
+
+        await container
+            .read(linkFormControllerProvider(Platform.steam).notifier)
+            .submit(remoteId: '12345');
+
+        // Check state immediately after submit() returns — before the async
+        // refresh completes — to confirm the fire-and-forget contract.
+        final state = container.read(
+          linkFormControllerProvider(Platform.steam),
+        );
+        expect(state.linked, isTrue);
+        expect(state.submitting, isFalse);
       },
     );
   });

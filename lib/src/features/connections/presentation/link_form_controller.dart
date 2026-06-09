@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/error/failure.dart';
 import '../domain/connection.dart';
 import '../domain/connections_providers.dart';
+import 'connection_actions_controller.dart';
 import 'connections_provider.dart';
 
 part 'link_form_controller.g.dart';
@@ -76,8 +79,10 @@ class LinkFormController extends _$LinkFormController {
   /// added to [LinkFormState.fieldErrors] and the backend is not called.
   /// On success, links [platform] via the platform's wire body builder
   /// (passing the trimmed [fields] as formInput), invalidates
-  /// [myConnectionsProvider], and sets [LinkFormState.linked]. The widget
-  /// owns the TextEditingControllers and is never reset here.
+  /// [myConnectionsProvider], sets [LinkFormState.linked], and fires the
+  /// per-platform sync so the card populates automatically — reusing the
+  /// cooldown-aware [ConnectionActionsController.refresh] path.
+  /// The widget owns the TextEditingControllers and is never reset here.
   Future<void> submitFields(Map<String, String> fields) async {
     final blanks = fields.entries
         .where((e) => e.value.trim().isEmpty)
@@ -112,12 +117,23 @@ class LinkFormController extends _$LinkFormController {
           clearFailure: true,
           clearFieldErrors: true,
         );
+        // Auto-populate the card: reuse the per-platform refresh so its
+        // cooldown handling and card/connection invalidation are not bypassed.
+        // Fire-and-forget — the tile owns the refreshing spinner; the link
+        // form's submitting flag must not extend through the sync.
+        unawaited(
+          ref
+              .read(connectionActionsControllerProvider(platform).notifier)
+              .refresh(),
+        );
       },
     );
   }
 
   /// Validates [remoteId] and links [platform]. On success, invalidates
-  /// [myConnectionsProvider] and sets [LinkFormState.linked]. On
+  /// [myConnectionsProvider], sets [LinkFormState.linked], and fires the
+  /// per-platform sync so the card populates automatically — reusing the
+  /// cooldown-aware [ConnectionActionsController.refresh] path. On
   /// [InputFailure], preserves the typed input (the widget owns the
   /// TextEditingController and is never reset here). State is isolated per
   /// [platform] (this controller is a family), so forms rendered side by side
@@ -153,6 +169,15 @@ class LinkFormController extends _$LinkFormController {
           submitting: false,
           linked: true,
           clearFailure: true,
+        );
+        // Auto-populate the card: reuse the per-platform refresh so its
+        // cooldown handling and card/connection invalidation are not bypassed.
+        // Fire-and-forget — the tile owns the refreshing spinner; the link
+        // form's submitting flag must not extend through the sync.
+        unawaited(
+          ref
+              .read(connectionActionsControllerProvider(platform).notifier)
+              .refresh(),
         );
       },
     );
