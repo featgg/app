@@ -199,10 +199,10 @@ on every app start/resume is safe.
   `refreshed`, some `skipped_cooldown`) the client simply retries next open.
 - **Idempotency and retry semantics.** Naturally idempotent (replace-on-success;
   unchanged data → `skipped_unchanged`); safe to retry once `Retry-After`
-  elapses. Concurrent refreshes of the same platform are coalesced server-side
-  — a second in-flight refresh returns `skipped_cooldown` rather than
-  double-fetching — but the client should still keep at most one `refresh-all`
-  in flight and skip a repeat within a short resume window.
+  elapses. A second refresh of the same platform while one is still in flight
+  returns `skipped_cooldown` instead of double-fetching; the client should still
+  keep at most one `refresh-all` in flight and skip a repeat within a short
+  resume window.
 - **Latency / timeout expectation.** Platforms refresh in parallel, so total
   latency is roughly the slowest single platform, not the sum. Recommended
   client timeout ~60s (above the per-platform ~30s, to absorb one slow leg);

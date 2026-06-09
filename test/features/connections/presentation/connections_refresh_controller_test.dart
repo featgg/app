@@ -19,11 +19,17 @@ import 'package:fpdart/fpdart.dart';
 final class _CountingConnectionsRepository implements ConnectionsRepository {
   _CountingConnectionsRepository({
     Either<Failure, RefreshAllResult> Function()? refreshAllResult,
+    this.responseDelay,
   }) : _refreshAllResult =
            refreshAllResult ??
            (() => right(const RefreshAllResult(outcomes: [])));
 
   final Either<Failure, RefreshAllResult> Function() _refreshAllResult;
+
+  /// When set, [refreshAll] awaits this before returning — simulates a slow
+  /// server response so back-off anchoring (response time vs request start) is
+  /// testable under FakeAsync.
+  final Duration? responseDelay;
   int refreshAllCalls = 0;
 
   @override
@@ -46,6 +52,9 @@ final class _CountingConnectionsRepository implements ConnectionsRepository {
   @override
   Future<Either<Failure, RefreshAllResult>> refreshAll() async {
     refreshAllCalls++;
+    if (responseDelay != null) {
+      await Future<void>.delayed(responseDelay!);
+    }
     return _refreshAllResult();
   }
 }
@@ -321,5 +330,42 @@ void main() {
 
       expect(myConnectionsBuilds, 0);
     });
+
+    test(
+      '429 back-off is anchored to the response time, not the request start',
+      () {
+        FakeAsync().run((async) {
+          final repo = _CountingConnectionsRepository(
+            responseDelay: const Duration(seconds: 10),
+            refreshAllResult: () =>
+                left(const SyncCooldownFailure(retryAfterSeconds: 30)),
+          );
+          final container = _container(repo);
+          final notifier = container.read(
+            connectionsRefreshControllerProvider.notifier,
+          );
+
+          // Call starts at T0; the 429 arrives 10s later (slow response).
+          notifier.refreshAllOnOpen();
+          async.elapse(const Duration(seconds: 10));
+          async.flushMicrotasks();
+          expect(repo.refreshAllCalls, 1);
+
+          // Back-off must run to response (T0+10) + 30 = T0+40. At T0+35 it is
+          // still blocked; anchoring to the request start (T0+30) would wrongly
+          // allow this call.
+          async.elapse(const Duration(seconds: 25));
+          notifier.refreshAllOnOpen();
+          async.flushMicrotasks();
+          expect(repo.refreshAllCalls, 1);
+
+          // Past T0+40 the back-off has elapsed, so a new call fires.
+          async.elapse(const Duration(seconds: 10));
+          notifier.refreshAllOnOpen();
+          async.flushMicrotasks();
+          expect(repo.refreshAllCalls, 2);
+        });
+      },
+    );
   });
 }

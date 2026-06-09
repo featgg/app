@@ -55,11 +55,11 @@ class ConnectionsRefreshController extends _$ConnectionsRefreshController {
     }
 
     _lastAttemptAt = now;
-    _inFlight = _doRefresh(now);
+    _inFlight = _doRefresh();
     return _inFlight!;
   }
 
-  Future<void> _doRefresh(DateTime attemptTime) async {
+  Future<void> _doRefresh() async {
     try {
       final result = await ref.read(connectionsRepositoryProvider).refreshAll();
 
@@ -71,7 +71,10 @@ class ConnectionsRefreshController extends _$ConnectionsRefreshController {
             final backoff = failure.retryAfterSeconds != null
                 ? Duration(seconds: failure.retryAfterSeconds!)
                 : _refreshAllFallbackBackoff;
-            _backoffUntil = attemptTime.add(backoff);
+            // Anchor to the handling time (now), not the request start: the
+            // server's retry_after is the window remaining as of the response,
+            // so a slow call must not shorten the back-off.
+            _backoffUntil = clock.now().add(backoff);
           }
           // Other Left: repo already crash-reported unexpected ones; nothing
           // to surface here (background path is intentionally silent).
