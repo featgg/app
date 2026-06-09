@@ -818,5 +818,33 @@
         "type": "int"
       }
     }
+  },
+  "feedEntry": "Discovery feed",
+  "@feedEntry": {
+    "description": "Home AppBar action tooltip that routes to the discovery feed screen."
+  },
+  "feedTitle": "Discovery",
+  "@feedTitle": {
+    "description": "App bar title for the discovery feed screen."
+  },
+  "feedEmptyTitle": "Nothing here yet",
+  "@feedEmptyTitle": {
+    "description": "Heading shown on the feed screen when no public cards are available."
+  },
+  "feedEmptyBody": "Connect a gaming platform to appear in the discovery feed.",
+  "@feedEmptyBody": {
+    "description": "Body text for the feed empty state, encouraging the user to connect an account."
+  },
+  "feedEmptyCta": "Connect an account",
+  "@feedEmptyCta": {
+    "description": "Call-to-action button label on the feed empty state."
+  },
+  "feedEndReached": "You're all caught up",
+  "@feedEndReached": {
+    "description": "Footer indicator shown when the last page of the discovery feed has loaded."
+  },
+  "feedLoadMoreRetry": "Couldn't load more. Tap to retry",
+  "@feedLoadMoreRetry": {
+    "description": "Footer button shown when loading the next page of the discovery feed failed; tapping it retries."
   }
 }

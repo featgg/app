@@ -195,5 +195,12 @@
   "connectionsStatAccountAgeHours": "Idade da conta (horas)",
   "connectionsStatVeterancyYears": "Veterância (anos)",
   "connectionsRefreshCooldownCountdown": "Atualização disponível em {seconds, plural, =1{1 segundo} other{{seconds} segundos}}",
-  "profileAvatarCooldownCountdown": "Você pode alterar sua foto novamente em {seconds, plural, =1{1 segundo} other{{seconds} segundos}}"
+  "profileAvatarCooldownCountdown": "Você pode alterar sua foto novamente em {seconds, plural, =1{1 segundo} other{{seconds} segundos}}",
+  "feedEntry": "Feed de descoberta",
+  "feedTitle": "Descoberta",
+  "feedEmptyTitle": "Nada aqui ainda",
+  "feedEmptyBody": "Conecte uma plataforma de jogos para aparecer no feed de descoberta.",
+  "feedEmptyCta": "Conectar uma conta",
+  "feedEndReached": "Você está em dia",
+  "feedLoadMoreRetry": "Não foi possível carregar mais. Toque para tentar novamente"
 }
