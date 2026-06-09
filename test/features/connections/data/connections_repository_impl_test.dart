@@ -734,6 +734,52 @@ void main() {
       });
     });
 
+    test('drops an unknown platform, keeps known ones, and reports the '
+        'drop', () async {
+      final source = _FakeConnectionsDataSource(
+        onFetch: () async => [
+          ConnectionDto.fromJson({
+            'platform': 'steam',
+            'status': 'active',
+            'created_at': '2026-01-01T00:00:00Z',
+          }),
+          ConnectionDto.fromJson({
+            'platform': 'future_platform',
+            'status': 'active',
+            'created_at': '2026-01-01T00:00:00Z',
+          }),
+        ],
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).fetchMyConnections();
+
+      result.fold((f) => fail('want Right, got $f'), (list) {
+        expect(list, hasLength(1));
+        expect(list[0].platform, Platform.steam);
+      });
+      expect(reporter.reported, hasLength(1));
+    });
+
+    test('returns an empty list when all platforms are unknown and reports '
+        'each drop', () async {
+      final source = _FakeConnectionsDataSource(
+        onFetch: () async => [
+          ConnectionDto.fromJson({
+            'platform': 'future_platform',
+            'status': 'active',
+            'created_at': '2026-01-01T00:00:00Z',
+          }),
+        ],
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).fetchMyConnections();
+
+      result.fold((f) => fail('want Right, got $f'), (list) {
+        expect(list, isEmpty);
+      });
+      expect(reporter.reported, hasLength(1));
+    });
+
     test(
       'parse fault on unknown status → Left(UnexpectedFailure), reported',
       () async {
