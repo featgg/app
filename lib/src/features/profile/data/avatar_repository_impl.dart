@@ -83,6 +83,7 @@ final class AvatarRepositoryImpl implements AvatarRepository {
       return RateLimitFailure(
         code: code,
         message: details is Map ? details['message'] as String? : null,
+        retryAfterSeconds: _parseCooldownRetryAfter(details),
       );
     }
     if (code == 'MODERATION_UNAVAILABLE' || status >= 500) {
@@ -105,6 +106,23 @@ final class AvatarRepositoryImpl implements AvatarRepository {
       return dto.categories;
     } catch (_) {
       return const [];
+    }
+  }
+
+  /// Defensively reads `details['retry_after']` from an AVATAR_COOLDOWN (429)
+  /// response. Returns null when the field is absent, non-numeric, or <= 0 so
+  /// the caller falls back to the documented 60s refill interval.
+  int? _parseCooldownRetryAfter(Object? details) {
+    if (details is! Map) return null;
+    try {
+      final dto = AvatarCooldownDetailsDto.fromJson(
+        Map<String, dynamic>.from(details),
+      );
+      final v = dto.retryAfter;
+      if (v == null || v <= 0) return null;
+      return v;
+    } catch (_) {
+      return null;
     }
   }
 }
