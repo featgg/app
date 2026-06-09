@@ -52,6 +52,17 @@ final class ProfileRepositoryImpl implements ProfileRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async {
+    try {
+      final dto = await _dataSource.fetchProfileRow(userId);
+      if (dto == null) return right(null);
+      return right(profileFromDto(dto));
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
   Failure _handleError(Object error, StackTrace st) {
     final failure = _mapError(error);
     if (!failure.isExpected) _crashReporter.reportError(error, st);

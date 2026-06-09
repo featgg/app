@@ -846,5 +846,17 @@
   "feedLoadMoreRetry": "Couldn't load more. Tap to retry",
   "@feedLoadMoreRetry": {
     "description": "Footer button shown when loading the next page of the discovery feed failed; tapping it retries."
+  },
+  "publicProfileTitle": "Profile",
+  "@publicProfileTitle": {
+    "description": "App bar title for the public visitor profile screen."
+  },
+  "publicProfileUnavailable": "This profile is private or doesn't exist.",
+  "@publicProfileUnavailable": {
+    "description": "Neutral state shown on the public profile screen when the profile is private or the user id does not exist. The two cases are indistinguishable to the client."
+  },
+  "publicProfileNoCards": "No public cards yet.",
+  "@publicProfileNoCards": {
+    "description": "Shown on the public profile screen when the profile is public but the user has no visible game cards."
   }
 }

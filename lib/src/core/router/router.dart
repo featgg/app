@@ -52,6 +52,17 @@ GoRouter router(Ref ref) {
             ProfileEditScreen(profile: state.extra! as Profile),
       ),
       GoRoute(
+        path: '/profile/:id',
+        // The card renderer lives in the connections feature and the visitor
+        // screen in feed; the router is the composition root that may import
+        // both presentations, so it injects the builder to keep the features
+        // decoupled.
+        builder: (_, state) => PublicProfileScreen(
+          userId: state.pathParameters['id']!,
+          cardBuilder: (card) => GameCardView(card: card),
+        ),
+      ),
+      GoRoute(
         path: '/connections',
         builder: (_, _) => const ConnectionsScreen(),
       ),

@@ -212,6 +212,58 @@ void main() {
     );
   });
 
+  group('ProfileRepositoryImpl.fetchPublicProfile', () {
+    test('returns Right(Profile) on a valid row', () async {
+      final dataSource = _FakeDataSource(onFetch: (_) async => _validDto);
+      final result = await _repo(
+        dataSource,
+        _RecordingReporter(),
+      ).fetchPublicProfile('user-123');
+
+      expect(result.isRight(), isTrue);
+      result.fold((_) => fail('expected Right'), (profile) {
+        expect(profile, isNotNull);
+        expect(profile!.id, 'user-123');
+        expect(profile.username, 'testuser');
+      });
+    });
+
+    test('returns Right(null) on a null row (private/not-found)', () async {
+      final reporter = _RecordingReporter();
+      final dataSource = _FakeDataSource(onFetch: (_) async => null);
+      final result = await _repo(
+        dataSource,
+        reporter,
+      ).fetchPublicProfile('user-999');
+
+      result.fold(
+        (f) => fail('expected Right(null), got Left'),
+        (profile) => expect(profile, isNull),
+      );
+      expect(reporter.reported, isEmpty);
+    });
+
+    test(
+      'SocketException returns Left(NetworkFailure) and is not reported',
+      () async {
+        final reporter = _RecordingReporter();
+        final dataSource = _FakeDataSource(
+          onFetch: (_) async => throw const SocketException('no route to host'),
+        );
+        final result = await _repo(
+          dataSource,
+          reporter,
+        ).fetchPublicProfile('user-123');
+
+        result.fold(
+          (f) => expect(f, isA<NetworkFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(reporter.reported, isEmpty);
+      },
+    );
+  });
+
   group('ProfileRepositoryImpl.updateMyProfile', () {
     // avatar_url is server-managed; it must not appear in the writable-column
     // map emitted by profileEditToColumns.

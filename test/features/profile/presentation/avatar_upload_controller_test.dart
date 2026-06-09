@@ -82,6 +82,10 @@ final class _CountingProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
       right(_profile);
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 // ---------------------------------------------------------------------------

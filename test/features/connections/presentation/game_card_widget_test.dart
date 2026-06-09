@@ -24,6 +24,12 @@ final class _FakeCardsRepository implements CardsRepository {
   @override
   Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
       _result;
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
 }
 
 // ---------------------------------------------------------------------------

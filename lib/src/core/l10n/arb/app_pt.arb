@@ -202,5 +202,8 @@
   "feedEmptyBody": "Conecte uma plataforma de jogos para aparecer no feed de descoberta.",
   "feedEmptyCta": "Conectar uma conta",
   "feedEndReached": "Você está em dia",
-  "feedLoadMoreRetry": "Não foi possível carregar mais. Toque para tentar novamente"
+  "feedLoadMoreRetry": "Não foi possível carregar mais. Toque para tentar novamente",
+  "publicProfileTitle": "Perfil",
+  "publicProfileUnavailable": "Este perfil é privado ou não existe.",
+  "publicProfileNoCards": "Ainda não há cartões públicos."
 }

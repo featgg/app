@@ -25,6 +25,10 @@ final class _FakeRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
       right(_profile);
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 /// Holds the future open indefinitely so the loading state is observable.
@@ -37,6 +41,10 @@ final class _PendingRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
       _completer.future;
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 const _profile = Profile(
