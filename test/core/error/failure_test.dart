@@ -15,6 +15,31 @@ void main() {
       const b = ServerFailure(code: 'B');
       expect(a, isNot(equals(b)));
     });
+
+    test('SyncCooldownFailure with same retryAfterSeconds are equal', () {
+      const a = SyncCooldownFailure(retryAfterSeconds: 5);
+      const b = SyncCooldownFailure(retryAfterSeconds: 5);
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test(
+      'SyncCooldownFailure with differing retryAfterSeconds are unequal',
+      () {
+        const a = SyncCooldownFailure(retryAfterSeconds: 5);
+        const b = SyncCooldownFailure(retryAfterSeconds: 60);
+        expect(a, isNot(equals(b)));
+      },
+    );
+
+    test(
+      'SyncCooldownFailure with null vs non-null retryAfterSeconds are unequal',
+      () {
+        const a = SyncCooldownFailure();
+        const b = SyncCooldownFailure(retryAfterSeconds: 5);
+        expect(a, isNot(equals(b)));
+      },
+    );
   });
 
   group('Failure type identity', () {

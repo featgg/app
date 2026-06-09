@@ -1,5 +1,5 @@
-import 'link_account_dto.dart';
 import 'connection_dto.dart';
+import 'link_account_dto.dart';
 
 /// Thin seam over the Supabase SDK for Shape-1 edge-function calls and the
 /// Shape-2 `linked_accounts` read. Extracted so tests can fake the SDK without
@@ -21,4 +21,8 @@ abstract interface class ConnectionsDataSource {
   /// Reads all `linked_accounts` rows for the caller ordered by `created_at`.
   /// Results are scoped to the caller server-side; no client-side user filter.
   Future<List<ConnectionDto>> fetchConnections();
+
+  /// Calls `refresh-all` with `{'action':'refresh'}`. Returns the result
+  /// DTO on 200. Throws on any non-2xx or transport fault.
+  Future<RefreshAllResultDto> refreshAll();
 }

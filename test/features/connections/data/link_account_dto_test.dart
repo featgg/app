@@ -112,4 +112,33 @@ void main() {
       expect(body.containsKey('metadata'), isFalse);
     });
   });
+
+  group('RefreshAllResultDto.fromJson', () {
+    test('parses success and results into typed entries', () {
+      final dto = RefreshAllResultDto.fromJson({
+        'success': true,
+        'results': [
+          {'platform': 'steam', 'status': 'refreshed'},
+          {'platform': 'chess', 'status': 'skipped_cooldown'},
+        ],
+      });
+
+      expect(dto.success, isTrue);
+      expect(dto.results, hasLength(2));
+      expect(dto.results[0].platform, 'steam');
+      expect(dto.results[0].status, 'refreshed');
+      expect(dto.results[1].platform, 'chess');
+      expect(dto.results[1].status, 'skipped_cooldown');
+    });
+
+    test('empty results list yields empty list', () {
+      final dto = RefreshAllResultDto.fromJson({
+        'success': true,
+        'results': <dynamic>[],
+      });
+
+      expect(dto.success, isTrue);
+      expect(dto.results, isEmpty);
+    });
+  });
 }

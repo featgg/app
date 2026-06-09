@@ -28,6 +28,7 @@ typedef _LinkFn = Future<LinkSuccessDto> Function(Map<String, dynamic> body);
 typedef _UnlinkFn = Future<LinkSuccessDto> Function(String wireValue);
 typedef _SyncFn = Future<SyncResultDto> Function(String functionName);
 typedef _FetchFn = Future<List<ConnectionDto>> Function();
+typedef _RefreshAllFn = Future<RefreshAllResultDto> Function();
 
 final class _FakeConnectionsDataSource implements ConnectionsDataSource {
   _FakeConnectionsDataSource({
@@ -35,16 +36,21 @@ final class _FakeConnectionsDataSource implements ConnectionsDataSource {
     _UnlinkFn? onUnlink,
     _SyncFn? onSync,
     _FetchFn? onFetch,
+    _RefreshAllFn? onRefreshAll,
   }) : _onLink = onLink ?? ((_) async => const LinkSuccessDto(success: true)),
        _onUnlink =
            onUnlink ?? ((_) async => const LinkSuccessDto(success: true)),
        _onSync = onSync ?? ((_) async => const SyncResultDto(skipped: false)),
-       _onFetch = onFetch ?? (() async => []);
+       _onFetch = onFetch ?? (() async => []),
+       _onRefreshAll =
+           onRefreshAll ??
+           (() async => const RefreshAllResultDto(success: true, results: []));
 
   final _LinkFn _onLink;
   final _UnlinkFn _onUnlink;
   final _SyncFn _onSync;
   final _FetchFn _onFetch;
+  final _RefreshAllFn _onRefreshAll;
 
   @override
   Future<LinkSuccessDto> linkAccount(Map<String, dynamic> body) =>
@@ -60,6 +66,9 @@ final class _FakeConnectionsDataSource implements ConnectionsDataSource {
 
   @override
   Future<List<ConnectionDto>> fetchConnections() => _onFetch();
+
+  @override
+  Future<RefreshAllResultDto> refreshAll() => _onRefreshAll();
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +83,21 @@ FunctionException _fnEx(int status, {String? code, String? message}) {
     status: status,
     details: details.isEmpty ? null : details,
     reasonPhrase: message,
+  );
+}
+
+FunctionException _fnExWithRetryAfter(
+  int status, {
+  String? code,
+  int? retryAfter,
+}) {
+  final details = <String, dynamic>{};
+  if (code != null) details['code'] = code;
+  if (retryAfter != null) details['retry_after'] = retryAfter;
+  return FunctionException(
+    status: status,
+    details: details.isEmpty ? null : details,
+    reasonPhrase: null,
   );
 }
 
@@ -788,6 +812,201 @@ void main() {
         reporter,
       ).link(platform: Platform.steam, formInput: {'remote_id': '12345'});
       expect(reporter.reported, hasLength(1));
+    });
+  });
+
+  group('ConnectionsRepositoryImpl.refreshAll', () {
+    test('200 with mixed results maps to RefreshAllResult', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async => RefreshAllResultDto(
+          success: true,
+          results: [
+            const RefreshResultEntryDto(platform: 'steam', status: 'refreshed'),
+            const RefreshResultEntryDto(
+              platform: 'chess',
+              status: 'skipped_cooldown',
+            ),
+            const RefreshResultEntryDto(
+              platform: 'retroachievements',
+              status: 'failed',
+            ),
+          ],
+        ),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold((f) => fail('want Right, got $f'), (r) {
+        expect(r.outcomes, hasLength(3));
+        expect(
+          r.outcomes.map((o) => o.status),
+          containsAllInOrder([
+            RefreshStatus.refreshed,
+            RefreshStatus.skippedCooldown,
+            RefreshStatus.failed,
+          ]),
+        );
+        expect(r.refreshedPlatforms, [Platform.steam]);
+      });
+      expect(reporter.reported, isEmpty);
+    });
+
+    test('200 empty results → empty outcomes', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async =>
+            const RefreshAllResultDto(success: true, results: []),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold((f) => fail('want Right, got $f'), (r) {
+        expect(r.outcomes, isEmpty);
+        expect(r.refreshedPlatforms, isEmpty);
+      });
+    });
+
+    test(
+      'REFRESH_COOLDOWN 429 → Left(SyncCooldownFailure) with retryAfterSeconds',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onRefreshAll: () async => throw _fnExWithRetryAfter(
+            429,
+            code: 'REFRESH_COOLDOWN',
+            retryAfter: 120,
+          ),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).refreshAll();
+
+        result.fold((f) {
+          expect(f, isA<SyncCooldownFailure>());
+          expect((f as SyncCooldownFailure).retryAfterSeconds, 120);
+        }, (_) => fail('want Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'SYNC_COOLDOWN 429 (alias) → Left(SyncCooldownFailure) with retryAfterSeconds',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onRefreshAll: () async => throw _fnExWithRetryAfter(
+            429,
+            code: 'SYNC_COOLDOWN',
+            retryAfter: 60,
+          ),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).refreshAll();
+
+        result.fold((f) {
+          expect(f, isA<SyncCooldownFailure>());
+          expect((f as SyncCooldownFailure).retryAfterSeconds, 60);
+        }, (_) => fail('want Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      '429 without retry_after → SyncCooldownFailure with null retryAfterSeconds',
+      () async {
+        final source = _FakeConnectionsDataSource(
+          onRefreshAll: () async => throw _fnEx(429, code: 'REFRESH_COOLDOWN'),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).refreshAll();
+
+        result.fold((f) {
+          expect(f, isA<SyncCooldownFailure>());
+          expect((f as SyncCooldownFailure).retryAfterSeconds, isNull);
+        }, (_) => fail('want Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test('unknown status token maps to RefreshStatus.failed', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async => RefreshAllResultDto(
+          success: true,
+          results: [
+            const RefreshResultEntryDto(
+              platform: 'steam',
+              status: 'future_unknown_status',
+            ),
+          ],
+        ),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold((f) => fail('want Right, got $f'), (r) {
+        expect(r.outcomes, hasLength(1));
+        expect(r.outcomes.first.status, RefreshStatus.failed);
+      });
+    });
+
+    test('unknown platform token is dropped from outcomes', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async => RefreshAllResultDto(
+          success: true,
+          results: [
+            const RefreshResultEntryDto(
+              platform: 'unknown_platform_xyz',
+              status: 'refreshed',
+            ),
+            const RefreshResultEntryDto(platform: 'steam', status: 'refreshed'),
+          ],
+        ),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold((f) => fail('want Right, got $f'), (r) {
+        expect(r.outcomes, hasLength(1));
+        expect(r.outcomes.first.platform, Platform.steam);
+      });
+    });
+
+    test('INVALID_REQUEST 400 → Left(InputFailure), not reported', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async => throw _fnEx(400, code: 'INVALID_REQUEST'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold(
+        (f) => expect(f, isA<InputFailure>()),
+        (_) => fail('want Left'),
+      );
+      expect(reporter.reported, isEmpty);
+    });
+
+    test('500 → Left(ServerFailure), reported', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async => throw _fnEx(500, code: 'INTERNAL_ERROR'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold(
+        (f) => expect(f, isA<ServerFailure>()),
+        (_) => fail('want Left'),
+      );
+      expect(reporter.reported, hasLength(1));
+    });
+
+    test('SocketException → Left(NetworkFailure), not reported', () async {
+      final source = _FakeConnectionsDataSource(
+        onRefreshAll: () async => throw const SocketException('no route'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refreshAll();
+
+      result.fold(
+        (f) => expect(f, isA<NetworkFailure>()),
+        (_) => fail('want Left'),
+      );
+      expect(reporter.reported, isEmpty);
     });
   });
 }

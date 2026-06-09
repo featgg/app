@@ -5,6 +5,7 @@ export 'chess_card_data_view.dart';
 export 'chess_link_form.dart';
 export 'connection_actions_controller.dart';
 export 'connections_provider.dart';
+export 'connections_refresh_controller.dart';
 export 'connections_screen.dart';
 export 'game_card_widget.dart';
 export 'gw2_card_data_view.dart';

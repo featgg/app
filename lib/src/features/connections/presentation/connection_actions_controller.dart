@@ -10,11 +10,13 @@ import 'connections_provider.dart';
 
 part 'connection_actions_controller.g.dart';
 
-/// Fixed client-side proactive cooldown after a SYNC_COOLDOWN response. The
-/// server window is authoritative; this is a UX-only affordance that mirrors
-/// the avatar-cooldown precedent. Retry-After headers are unreachable via the
-/// SDK (FunctionsClient exposes only status + details on FunctionException).
-const Duration _syncCooldownDuration = Duration(seconds: 60);
+/// Fallback client-side cooldown used when a SYNC_COOLDOWN response carries
+/// no usable `retry_after` in the body. Response headers are discarded by the
+/// SDK (FunctionException exposes only status, details, and reasonPhrase), so
+/// the header-only `Retry-After` on `sync-<platform>` is unreachable. When the
+/// body carries `retry_after`, that value is used instead (via
+/// `SyncCooldownFailure.retryAfterSeconds`); this constant is the fallback.
+const Duration _syncCooldownFallback = Duration(seconds: 60);
 
 /// Immutable state for the connection-actions controller.
 final class ConnectionActionsState extends Equatable {
@@ -91,9 +93,9 @@ class ConnectionActionsController extends _$ConnectionActionsController {
     return ConnectionActionsState.initial();
   }
 
-  void _scheduleCooldownTimer() {
+  void _scheduleCooldownTimer(Duration duration) {
     _cooldownTimer?.cancel();
-    _cooldownTimer = Timer(_syncCooldownDuration, () {
+    _cooldownTimer = Timer(duration, () {
       if (ref.mounted) {
         state = state.copyWith(clearCooldown: true);
       }
@@ -121,12 +123,15 @@ class ConnectionActionsController extends _$ConnectionActionsController {
     result.fold(
       (failure) {
         if (failure is SyncCooldownFailure) {
+          final cooldown = failure.retryAfterSeconds != null
+              ? Duration(seconds: failure.retryAfterSeconds!)
+              : _syncCooldownFallback;
           state = state.copyWith(
             refreshing: false,
             failure: failure,
-            cooldownUntil: DateTime.now().add(_syncCooldownDuration),
+            cooldownUntil: DateTime.now().add(cooldown),
           );
-          _scheduleCooldownTimer();
+          _scheduleCooldownTimer(cooldown);
         } else {
           state = state.copyWith(refreshing: false, failure: failure);
         }

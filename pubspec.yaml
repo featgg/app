@@ -31,6 +31,7 @@ dependencies:
   fpdart: 1.2.0
   equatable: 2.0.8
   json_annotation: 4.9.0
+  clock: 1.1.2
 
   # Navigation
   go_router: 17.1.0

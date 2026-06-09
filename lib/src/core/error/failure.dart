@@ -147,15 +147,26 @@ final class AlreadyLinkedFailure extends Failure {
   bool get isExpected => true;
 }
 
-/// A refresh hit the per-connection cooldown (`SYNC_COOLDOWN` 429). Expected
-/// control flow — drives a disabled-refresh state in the UI. The server window
-/// is authoritative; the client applies a fixed proactive cooldown as a UX
-/// affordance only.
+/// A refresh hit the per-connection cooldown (`SYNC_COOLDOWN` / `REFRESH_COOLDOWN`
+/// 429). Expected control flow — drives a disabled-refresh state in the UI.
+/// The server window is authoritative; the client applies a fixed proactive
+/// cooldown as a UX affordance only.
 final class SyncCooldownFailure extends Failure {
-  const SyncCooldownFailure({super.message, super.code});
+  const SyncCooldownFailure({
+    super.message,
+    super.code,
+    this.retryAfterSeconds,
+  });
+
+  /// Server-provided remaining cooldown seconds, when the response body
+  /// carried `retry_after`; null when absent (caller applies its fallback).
+  final int? retryAfterSeconds;
 
   @override
   bool get isExpected => true;
+
+  @override
+  List<Object?> get props => [...super.props, retryAfterSeconds];
 }
 
 /// An upstream third-party platform is unavailable, not-found, or rate-limited,

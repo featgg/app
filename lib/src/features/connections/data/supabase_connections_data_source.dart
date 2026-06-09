@@ -61,4 +61,18 @@ final class SupabaseConnectionsDataSource implements ConnectionsDataSource {
         .map((r) => ConnectionDto.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
   }
+
+  @override
+  Future<RefreshAllResultDto> refreshAll() async {
+    final response = await _client.functions
+        .invoke(
+          'refresh-all',
+          method: HttpMethod.post,
+          body: {'action': 'refresh'},
+        )
+        .timeout(const Duration(seconds: 60));
+    return RefreshAllResultDto.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
 }

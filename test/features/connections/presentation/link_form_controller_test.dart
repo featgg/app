@@ -37,6 +37,10 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
   @override
   Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
       right([]);
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
 }
 
 // ---------------------------------------------------------------------------

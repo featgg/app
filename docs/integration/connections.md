@@ -151,6 +151,71 @@ user's existing connection. Each path is `/functions/v1/sync-<platform>`:
   platform; may be slow (several seconds). Recommended client timeout
   ~30s; do not retry before `Retry-After`.
 
+## Refresh all connections — Shape 1 (server operation)
+
+A bulk companion to the per-platform refresh: refreshes every platform the
+user has connected in one call. It self-throttles per platform, so calling it
+on every app start/resume is safe.
+
+- **Path.** `/functions/v1/refresh-all`
+- **HTTP method.** `POST`
+- **Request headers.** `Authorization: Bearer <token>`;
+  `Content-Type: application/json`
+- **Request body.** `action: string, optional` — `"refresh"` or `"open"`;
+  defaults to `"refresh"` when omitted or the body is `{}`.
+  - `"refresh"` — refresh every connected platform (replace-on-success).
+  - `"open"` — activity ping only; see *Activity ping* below.
+- **Success response.** `200` — `{ "success": true, "results": [ { "platform":
+  <platform value>, "status": <status> }, … ] }`, one entry per connected
+  platform. A user with no connections returns `200` with `"results": []`
+  (not an error). `status` is one of:
+
+  | Status              | Meaning                                                       |
+  | ------------------- | ------------------------------------------------------------- |
+  | `refreshed`         | New upstream data fetched and stored.                         |
+  | `skipped_unchanged` | Upstream data unchanged; nothing to update.                   |
+  | `skipped_cooldown`  | Within this platform's refresh window; not fetched this call. |
+  | `failed`            | This platform's refresh failed; its previous card is kept.    |
+
+  `failed` is opaque — the bulk response gives no per-platform reason. For an
+  actionable code (for example "needs reconnect"), call that platform's
+  per-platform refresh (`/functions/v1/sync-<platform>`), which returns the
+  granular error. Use `refresh-all` as the bulk happy path and per-platform
+  sync for diagnosis.
+- **Error responses.** These fail the whole call; a single platform's failure
+  does not (it appears as `failed` in `results`). Common errors apply and are
+  omitted here.
+
+  | Code               | Status | Client-UX consequence                                                   |
+  | ------------------ | -----: | ----------------------------------------------------------------------- |
+  | `INVALID_REQUEST`  |    400 | `action` not in `{ "refresh", "open" }`, or malformed body; client bug. |
+  | `REFRESH_COOLDOWN` |    429 | Every connected platform is on cooldown; back off, treat as no-op.      |
+  | `SYNC_COOLDOWN`    |    429 | Every connected platform is on cooldown; identical handling.            |
+
+  Both 429s are UX-identical: back off and retry on the next start/resume. The
+  remaining time is in both the `Retry-After` header and a `retry_after` field
+  in the body (`{ "success": false, "code", "message", "retry_after" }`). A
+  `200` carries no per-platform retry hint — in the mixed case (some
+  `refreshed`, some `skipped_cooldown`) the client simply retries next open.
+- **Idempotency and retry semantics.** Naturally idempotent (replace-on-success;
+  unchanged data → `skipped_unchanged`); safe to retry once `Retry-After`
+  elapses. A second refresh of the same platform while one is still in flight
+  returns `skipped_cooldown` instead of double-fetching; the client should still
+  keep at most one `refresh-all` in flight and skip a repeat within a short
+  resume window.
+- **Latency / timeout expectation.** Platforms refresh in parallel, so total
+  latency is roughly the slowest single platform, not the sum. Recommended
+  client timeout ~60s (above the per-platform ~30s, to absorb one slow leg);
+  call it non-blocking in the background.
+
+### Activity ping (`{ "action": "open" }`)
+
+Marks the account active; does not fetch and has no client-visible effect on
+the cards you read. Success is `200` — `{ "success": true, "opened": true }`;
+never rate-limited. Only the common errors apply. Sending it is optional and
+independent of data freshness — `{ "action": "refresh" }` alone keeps cards
+fresh.
+
 ## Read your connections — Shape 2 (direct data access)
 
 - **Table.** `linked_accounts`
@@ -171,6 +236,11 @@ Each connection enforces a refresh cooldown. While the cooldown is
 active, the refresh endpoint returns `SYNC_COOLDOWN` (429) with a
 `Retry-After` header carrying the remaining seconds. The client must not
 retry before that window elapses.
+
+`refresh-all` enforces its own, longer per-platform cooldown, separate from the
+per-platform refresh window; when every connected platform is still cooling
+down it returns `429` (`REFRESH_COOLDOWN`/`SYNC_COOLDOWN`) with `Retry-After`.
+The client must not retry before that window.
 
 ## Out-of-band side effects
 
