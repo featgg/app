@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../domain/connection.dart';
+import '../domain/platform_descriptor.dart';
 
 part 'connection_dto.g.dart';
 
@@ -30,14 +31,24 @@ final class ConnectionDto {
       _$ConnectionDtoFromJson(json);
 }
 
-Connection connectionFromDto(ConnectionDto dto) => Connection(
-  platform: _platformFromWire(dto.platform),
-  status: _statusFromWire(dto.status),
-  createdAt: DateTime.parse(dto.createdAt),
-  lastSyncAt: dto.lastSyncAt != null ? DateTime.parse(dto.lastSyncAt!) : null,
-  remoteId: dto.remoteId,
-  metadata: _coerceMetadata(dto.metadata),
-);
+/// Maps a DTO to a [Connection], or null when the wire `platform` token is
+/// not one this build registers — so the read path can drop the row instead of
+/// failing the whole list (one unrecognised row must not blank every card). The
+/// caller reports the drop, since an unknown token is undocumented backend drift
+/// rather than a normal condition. A known platform with a malformed field
+/// (e.g. unknown `status`) still throws, so a genuine parse fault is surfaced.
+Connection? connectionFromDtoOrNull(ConnectionDto dto) {
+  final platform = _platformFromWire(dto.platform);
+  if (platform == null) return null;
+  return Connection(
+    platform: platform,
+    status: _statusFromWire(dto.status),
+    createdAt: DateTime.parse(dto.createdAt),
+    lastSyncAt: dto.lastSyncAt != null ? DateTime.parse(dto.lastSyncAt!) : null,
+    remoteId: dto.remoteId,
+    metadata: _coerceMetadata(dto.metadata),
+  );
+}
 
 /// Coerces a raw JSON metadata map to `Map<String, String>?`. Non-string
 /// values are dropped defensively so a malformed stored value never throws
@@ -53,16 +64,12 @@ Map<String, String>? _coerceMetadata(Map<String, dynamic>? raw) {
   return result.isEmpty ? null : result;
 }
 
-Platform _platformFromWire(String value) => switch (value) {
-  'steam' => Platform.steam,
-  'league_of_legends' => Platform.leagueOfLegends,
-  'wow_retail' => Platform.wowRetail,
-  'minecraft_hypixel' => Platform.minecraftHypixel,
-  'chess' => Platform.chess,
-  'retroachievements' => Platform.retroachievements,
-  'gw2' => Platform.gw2,
-  _ => throw FormatException('unknown platform: $value'),
-};
+Platform? _platformFromWire(String value) {
+  for (final entry in platformDescriptors.entries) {
+    if (entry.value.wireValue == value) return entry.key;
+  }
+  return null;
+}
 
 ConnectionStatus _statusFromWire(String value) => switch (value) {
   'active' => ConnectionStatus.active,

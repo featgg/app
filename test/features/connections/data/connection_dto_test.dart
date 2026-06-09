@@ -3,7 +3,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('connectionFromDto', () {
+  group('connectionFromDtoOrNull', () {
     test('maps a full linked_accounts row to a Connection', () {
       final dto = ConnectionDto.fromJson({
         'platform': 'steam',
@@ -13,7 +13,7 @@ void main() {
         'remote_id': '76561198000000000',
       });
 
-      final conn = connectionFromDto(dto);
+      final conn = connectionFromDtoOrNull(dto)!;
 
       expect(conn.platform, Platform.steam);
       expect(conn.status, ConnectionStatus.active);
@@ -31,7 +31,7 @@ void main() {
         'remote_id': null,
       });
 
-      final conn = connectionFromDto(dto);
+      final conn = connectionFromDtoOrNull(dto)!;
 
       expect(conn.status, ConnectionStatus.error);
       expect(conn.lastSyncAt, isNull);
@@ -45,17 +45,17 @@ void main() {
         'created_at': '2026-01-01T00:00:00Z',
       });
 
-      expect(() => connectionFromDto(dto), throwsFormatException);
+      expect(() => connectionFromDtoOrNull(dto), throwsFormatException);
     });
 
-    test('unknown platform token throws FormatException', () {
+    test('unknown platform token yields null (dropped)', () {
       final dto = ConnectionDto.fromJson({
         'platform': 'unknown_platform',
         'status': 'active',
         'created_at': '2026-01-01T00:00:00Z',
       });
 
-      expect(() => connectionFromDto(dto), throwsFormatException);
+      expect(connectionFromDtoOrNull(dto), isNull);
     });
 
     test('maps a metadata row to Connection.metadata', () {
@@ -70,7 +70,7 @@ void main() {
         },
       });
 
-      final conn = connectionFromDto(dto);
+      final conn = connectionFromDtoOrNull(dto)!;
 
       expect(conn.platform, Platform.leagueOfLegends);
       expect(conn.metadata, {
@@ -98,7 +98,7 @@ void main() {
           'status': 'active',
           'created_at': '2026-01-01T00:00:00Z',
         });
-        expect(connectionFromDto(dto).platform, entry.value);
+        expect(connectionFromDtoOrNull(dto)!.platform, entry.value);
       }
     });
   });
