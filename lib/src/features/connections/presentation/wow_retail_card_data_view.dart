@@ -1,41 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/l10n/l10n.dart';
-import '../../../core/theme/tokens.dart';
+import '../../../core/core.dart';
+import '../domain/connection.dart';
 import '../domain/game_card.dart';
+import 'connection_actions_controller.dart';
 
-/// Renders the WoW (Retail) `data` block. Accepts [lastUpdated] to compute
-/// the freshness gate: when the data is more than 30 days old, the stale
-/// state is shown instead of the data block. Attribution is always shown.
-class WowRetailCardDataView extends StatelessWidget {
+/// Renders the WoW (Retail) `data` block.
+///
+/// Accepts [isOwner] and [isStale] (pre-computed by [_CardContent] using
+/// [GameCardFreshness.isStaleAt]) — the 30-day threshold is expressed once in
+/// the domain extension and never repeated here.
+///
+/// Three branches:
+/// - `isStale && isOwner` → owner refresh affordance (key `wowStaleState`),
+///   stat rows hidden, attribution shown.
+/// - `isStale && !isOwner` → defensive `SizedBox.shrink` (unreachable in
+///   normal flow because `_CardContent` already hides the whole card, but
+///   guarded here for safety).
+/// - `!isStale` → normal data rows, attribution shown.
+class WowRetailCardDataView extends ConsumerWidget {
   const WowRetailCardDataView({
     super.key,
     required this.data,
-    required this.lastUpdated,
+    required this.isOwner,
+    required this.isStale,
   });
 
   final WowRetailCardData data;
-  final DateTime lastUpdated;
+  final bool isOwner;
+  final bool isStale;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
 
-    final stale =
-        DateTime.now().difference(lastUpdated) > const Duration(days: 30);
+    if (isStale && !isOwner) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (stale)
-          Text(
-            key: const Key('wowStaleState'),
-            l10n.connectionsWowStale,
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+        if (isStale && isOwner)
+          _OwnerStaleAffordance(
+            textTheme: textTheme,
+            colorScheme: colorScheme,
+            l10n: l10n,
           )
         else ...[
           // Profile rows
@@ -151,7 +164,8 @@ class WowRetailCardDataView extends StatelessWidget {
             ),
           ],
         ],
-        // Attribution always shown
+        // Attribution shown in owner-stale and fresh branches; hidden for
+        // non-owner stale (which returns early above).
         const SizedBox(height: AppSpacing.sm),
         Text(
           key: const Key('wowAttribution'),
@@ -162,6 +176,69 @@ class WowRetailCardDataView extends StatelessWidget {
             color: colorScheme.onSurfaceVariant,
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Tappable affordance shown to the owner of a stale WoW card. Wired to the
+/// per-platform [ConnectionActionsController.refresh]; shows a live
+/// [CooldownCountdown] while a cooldown is active.
+class _OwnerStaleAffordance extends ConsumerWidget {
+  const _OwnerStaleAffordance({
+    required this.textTheme,
+    required this.colorScheme,
+    required this.l10n,
+  });
+
+  final TextTheme textTheme;
+  final ColorScheme colorScheme;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actionsState = ref.watch(
+      connectionActionsControllerProvider(Platform.wowRetail),
+    );
+    final onCooldown = actionsState.onCooldown;
+    final cooldownUntil = actionsState.cooldownUntil;
+    // Also disable the tap while a refresh is in flight, so repeated taps
+    // can't start a second sync.
+    final disabled = onCooldown || actionsState.refreshing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          key: const Key('wowStaleState'),
+          onTap: disabled
+              ? null
+              : () => ref
+                    .read(
+                      connectionActionsControllerProvider(
+                        Platform.wowRetail,
+                      ).notifier,
+                    )
+                    .refresh(),
+          child: Text(
+            l10n.connectionsWowStale,
+            style: textTheme.bodySmall?.copyWith(
+              color: disabled
+                  ? colorScheme.onSurfaceVariant
+                  : colorScheme.primary,
+            ),
+          ),
+        ),
+        if (onCooldown && cooldownUntil != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          CooldownCountdown(
+            until: cooldownUntil,
+            label: (s) => l10n.connectionsRefreshCooldownCountdown(s),
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ],
     );
   }

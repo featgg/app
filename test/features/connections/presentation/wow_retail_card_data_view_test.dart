@@ -1,20 +1,72 @@
+import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
+import 'package:featgg/src/core/widgets/cooldown_countdown.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/connections/presentation/connection_actions_controller.dart';
 import 'package:featgg/src/features/connections/presentation/wow_retail_card_data_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 
-Widget _wrap(Widget child) => MaterialApp(
-  localizationsDelegates: const [
-    AppLocalizations.delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-  ],
-  supportedLocales: const [Locale('en')],
-  home: Scaffold(body: SingleChildScrollView(child: child)),
-);
+// ---------------------------------------------------------------------------
+// Fake
+// ---------------------------------------------------------------------------
+
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([]);
+
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+Widget _wrap(Widget child) {
+  final container = ProviderContainer(
+    overrides: [
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(body: SingleChildScrollView(child: child)),
+    ),
+  );
+}
 
 const _profile = WowProfile(
   race: 'Orc',
@@ -44,36 +96,37 @@ final _achievement = WowRecentAchievement(
   completedAt: DateTime.utc(2026, 5, 1),
 );
 
-final _freshData = WowRetailCardData(
+const _freshData = WowRetailCardData(
   profile: _profile,
-  mythicPlus: const WowMythicPlus(rating: 2450.5, bestRuns: []),
-  recentAchievements: [_achievement],
+  mythicPlus: WowMythicPlus(rating: 2450.5, bestRuns: []),
+  recentAchievements: [],
   attribution: 'Data provided by Blizzard',
 );
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 void main() {
   group('WowRetailCardDataView', () {
-    testWidgets('renders profile, M+, and attribution for fresh data', (
+    // -------------------------------------------------------------------------
+    // Fresh cases (isStale: false)
+    // -------------------------------------------------------------------------
+
+    testWidgets('fresh + owner: renders profile rows and attribution', (
       tester,
     ) async {
-      final freshData = WowRetailCardData(
+      final data = WowRetailCardData(
         profile: _profile,
         mythicPlus: WowMythicPlus(rating: 2450.5, bestRuns: [_run]),
         recentAchievements: [_achievement],
         attribution: 'Data provided by Blizzard',
       );
-      final recentLastUpdated = DateTime.now().subtract(
-        const Duration(days: 1),
-      );
 
       await tester.pumpWidget(
-        _wrap(
-          WowRetailCardDataView(
-            data: freshData,
-            lastUpdated: recentLastUpdated,
-          ),
-        ),
+        _wrap(WowRetailCardDataView(data: data, isOwner: true, isStale: false)),
       );
+      await tester.pump();
 
       expect(find.byKey(const Key('wowItemLevelLabel')), findsOneWidget);
       expect(find.byKey(const Key('wowClassLabel')), findsOneWidget);
@@ -86,7 +139,25 @@ void main() {
         find.byKey(const Key('wowRecentAchievementsHeading')),
         findsOneWidget,
       );
-      // Stale state must not appear for fresh data.
+      expect(find.byKey(const Key('wowStaleState')), findsNothing);
+    });
+
+    testWidgets('fresh + non-owner: renders profile rows and attribution', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          WowRetailCardDataView(
+            data: _freshData,
+            isOwner: false,
+            isStale: false,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('wowItemLevelLabel')), findsOneWidget);
+      expect(find.byKey(const Key('wowAttribution')), findsOneWidget);
       expect(find.byKey(const Key('wowStaleState')), findsNothing);
     });
 
@@ -96,15 +167,13 @@ void main() {
         recentAchievements: [],
         attribution: 'Data provided by Blizzard',
       );
-      final recentLastUpdated = DateTime.now().subtract(
-        const Duration(days: 1),
-      );
 
       await tester.pumpWidget(
         _wrap(
-          WowRetailCardDataView(data: noMpData, lastUpdated: recentLastUpdated),
+          WowRetailCardDataView(data: noMpData, isOwner: true, isStale: false),
         ),
       );
+      await tester.pump();
 
       expect(find.byKey(const Key('wowItemLevelLabel')), findsOneWidget);
       expect(find.byKey(const Key('wowMythicRatingHeading')), findsNothing);
@@ -123,18 +192,17 @@ void main() {
           recentAchievements: [],
           attribution: 'Data provided by Blizzard',
         );
-        final recentLastUpdated = DateTime.now().subtract(
-          const Duration(days: 1),
-        );
 
         await tester.pumpWidget(
           _wrap(
             WowRetailCardDataView(
               data: emptyMpData,
-              lastUpdated: recentLastUpdated,
+              isOwner: true,
+              isStale: false,
             ),
           ),
         );
+        await tester.pump();
 
         expect(find.byKey(const Key('wowItemLevelLabel')), findsOneWidget);
         expect(find.byKey(const Key('wowMythicRatingHeading')), findsNothing);
@@ -143,46 +211,128 @@ void main() {
       },
     );
 
-    testWidgets('data older than 30 days shows the stale state', (
+    // -------------------------------------------------------------------------
+    // Stale cases
+    // -------------------------------------------------------------------------
+
+    testWidgets(
+      'owner + stale: shows wowStaleState, hides data rows, shows attribution',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            WowRetailCardDataView(
+              data: _freshData,
+              isOwner: true,
+              isStale: true,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byKey(const Key('wowStaleState')), findsOneWidget);
+        expect(find.byKey(const Key('wowItemLevelLabel')), findsNothing);
+        expect(find.byKey(const Key('wowClassLabel')), findsNothing);
+        // Attribution still shows for the owner in stale state.
+        expect(find.byKey(const Key('wowAttribution')), findsOneWidget);
+      },
+    );
+
+    testWidgets('non-owner + stale: renders nothing (SizedBox.shrink)', (
       tester,
     ) async {
-      final staleLastUpdated = DateTime.now().subtract(
-        const Duration(days: 40),
-      );
-
       await tester.pumpWidget(
         _wrap(
           WowRetailCardDataView(
             data: _freshData,
-            lastUpdated: staleLastUpdated,
+            isOwner: false,
+            isStale: true,
           ),
         ),
       );
-
-      expect(find.byKey(const Key('wowStaleState')), findsOneWidget);
-      // Data rows must not appear in the stale state.
-      expect(find.byKey(const Key('wowItemLevelLabel')), findsNothing);
-      expect(find.byKey(const Key('wowClassLabel')), findsNothing);
-      // Attribution still shows in the stale state.
-      expect(find.byKey(const Key('wowAttribution')), findsOneWidget);
-    });
-
-    testWidgets('recent data does not show the stale state', (tester) async {
-      final recentLastUpdated = DateTime.now().subtract(
-        const Duration(days: 1),
-      );
-
-      await tester.pumpWidget(
-        _wrap(
-          WowRetailCardDataView(
-            data: _freshData,
-            lastUpdated: recentLastUpdated,
-          ),
-        ),
-      );
+      await tester.pump();
 
       expect(find.byKey(const Key('wowStaleState')), findsNothing);
-      expect(find.byKey(const Key('wowItemLevelLabel')), findsOneWidget);
+      expect(find.byKey(const Key('wowItemLevelLabel')), findsNothing);
+      expect(find.byKey(const Key('wowAttribution')), findsNothing);
+    });
+
+    // -------------------------------------------------------------------------
+    // Controller interaction: owner stale affordance reads onCooldown
+    // -------------------------------------------------------------------------
+
+    testWidgets(
+      'owner + stale + not on cooldown: wowStaleState tap is not disabled',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            WowRetailCardDataView(
+              data: _freshData,
+              isOwner: true,
+              isStale: true,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // The stale affordance widget exists and is tappable (no crash on tap).
+        expect(find.byKey(const Key('wowStaleState')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('wowStaleState')));
+        await tester.pump();
+      },
+    );
+
+    testWidgets('owner + stale + on cooldown: CooldownCountdown is rendered', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          connectionsRepositoryProvider.overrideWithValue(
+            _FakeConnectionsRepository(),
+          ),
+          connectionActionsControllerProvider(
+            Platform.wowRetail,
+          ).overrideWith(() => _CooldownActionsController()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en')],
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: WowRetailCardDataView(
+                  data: _freshData,
+                  isOwner: true,
+                  isStale: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // CooldownCountdown should be present when on cooldown.
+      expect(find.byType(CooldownCountdown), findsOneWidget);
     });
   });
+}
+
+/// Stub controller that always reports an active cooldown.
+final class _CooldownActionsController extends ConnectionActionsController {
+  @override
+  ConnectionActionsState build(Platform platform) => ConnectionActionsState(
+    refreshing: false,
+    unlinking: false,
+    cooldownUntil: DateTime.now().add(const Duration(minutes: 1)),
+  );
 }

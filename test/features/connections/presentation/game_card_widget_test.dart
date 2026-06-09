@@ -2,6 +2,7 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/presentation/game_card_widget.dart';
 import 'package:flutter/material.dart';
@@ -105,6 +106,54 @@ GameCard _retroachievementsCard({RetroAchievementsCardData? data}) => GameCard(
   lastUpdated: DateTime(2026, 6, 3),
   data: data,
 );
+
+GameCard _wowCard({required DateTime lastUpdated}) => GameCard(
+  schemaVersion: 1,
+  platform: Platform.wowRetail,
+  title: 'Thrallson',
+  subtitle: 'stormrage-US',
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [CardStat(key: 'item_level', value: 492, unit: 'count')],
+  lastUpdated: lastUpdated,
+  data: const WowRetailCardData(
+    profile: WowProfile(
+      race: 'Orc',
+      faction: 'HORDE',
+      className: 'Shaman',
+      level: 70,
+      ilvlAvg: 492,
+      ilvlEquipped: 489,
+    ),
+    recentAchievements: [],
+    attribution: 'Data provided by Blizzard',
+  ),
+);
+
+/// Fake connections repository stub used by WoW widget tests (no real calls).
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([]);
+
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -302,6 +351,214 @@ void main() {
         find.byKey(const Key('retroachievementsRankLabel')),
         findsOneWidget,
       );
+    });
+
+    // -------------------------------------------------------------------------
+    // WoW viewer-aware freshness gate
+    // -------------------------------------------------------------------------
+
+    testWidgets(
+      'WoW + stale + isOwner:false → no gameCardContent (whole card hidden)',
+      (tester) async {
+        final staleCard = _wowCard(
+          lastUpdated: DateTime.now().subtract(const Duration(days: 40)),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            cardsRepositoryProvider.overrideWithValue(
+              _FakeCardsRepository(right(staleCard)),
+            ),
+            connectionsRepositoryProvider.overrideWithValue(
+              _FakeConnectionsRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [Locale('en')],
+              home: const Scaffold(
+                body: GameCardWidget(
+                  platform: Platform.wowRetail,
+                  isOwner: false,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byKey(const Key('gameCardContent')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'WoW + stale + isOwner:true → card present but gameCardStats absent',
+      (tester) async {
+        final staleCard = _wowCard(
+          lastUpdated: DateTime.now().subtract(const Duration(days: 40)),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            cardsRepositoryProvider.overrideWithValue(
+              _FakeCardsRepository(right(staleCard)),
+            ),
+            connectionsRepositoryProvider.overrideWithValue(
+              _FakeConnectionsRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [Locale('en')],
+              home: const Scaffold(
+                body: GameCardWidget(
+                  platform: Platform.wowRetail,
+                  isOwner: true,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byKey(const Key('gameCardContent')), findsOneWidget);
+        // Stat chips are hidden for stale cards.
+        expect(find.byKey(const Key('gameCardStats')), findsNothing);
+        // Owner stale affordance is present.
+        expect(find.byKey(const Key('wowStaleState')), findsOneWidget);
+      },
+    );
+
+    testWidgets('WoW + fresh → gameCardStats present for isOwner:true', (
+      tester,
+    ) async {
+      final freshCard = _wowCard(
+        lastUpdated: DateTime.now().subtract(const Duration(days: 1)),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          cardsRepositoryProvider.overrideWithValue(
+            _FakeCardsRepository(right(freshCard)),
+          ),
+          connectionsRepositoryProvider.overrideWithValue(
+            _FakeConnectionsRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en')],
+            home: const Scaffold(
+              body: GameCardWidget(platform: Platform.wowRetail, isOwner: true),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('gameCardContent')), findsOneWidget);
+      expect(find.byKey(const Key('gameCardStats')), findsOneWidget);
+      expect(find.byKey(const Key('wowStaleState')), findsNothing);
+    });
+
+    testWidgets('WoW + fresh → renders for isOwner:false too', (tester) async {
+      final freshCard = _wowCard(
+        lastUpdated: DateTime.now().subtract(const Duration(days: 1)),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          cardsRepositoryProvider.overrideWithValue(
+            _FakeCardsRepository(right(freshCard)),
+          ),
+          connectionsRepositoryProvider.overrideWithValue(
+            _FakeConnectionsRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en')],
+            home: const Scaffold(
+              body: GameCardWidget(
+                platform: Platform.wowRetail,
+                isOwner: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('gameCardContent')), findsOneWidget);
+      expect(find.byKey(const Key('wowStaleState')), findsNothing);
+    });
+
+    testWidgets('non-WoW card with old lastUpdated is never freshness-gated', (
+      tester,
+    ) async {
+      // Steam card with a very old lastUpdated — must still render normally.
+      final agedSteamCard = GameCard(
+        schemaVersion: 1,
+        platform: Platform.steam,
+        title: 'OldUser',
+        subtitle: null,
+        iconImage: null,
+        heroImage: null,
+        profileUrl: null,
+        stats: const [CardStat(key: 'hours_played', value: 100, unit: 'hours')],
+        lastUpdated: DateTime.now().subtract(const Duration(days: 365)),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const GameCardWidget(platform: Platform.steam),
+          _FakeCardsRepository(right(agedSteamCard)),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('gameCardContent')), findsOneWidget);
+      expect(find.byKey(const Key('gameCardStats')), findsOneWidget);
     });
   });
 }

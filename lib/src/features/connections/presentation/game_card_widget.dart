@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,39 +20,52 @@ import 'wow_retail_card_data_view.dart';
 /// descriptor split (domain holds wire logic, presentation holds widget
 /// builders).
 ///
-/// The second argument carries `lastUpdated` so views that require a freshness
-/// gate (e.g. WoW Retail) can act on it without a separate registry.
-/// Platforms that don't need it ignore the argument.
+/// The second and third arguments carry [isOwner] and [isStale] so
+/// views that require a freshness gate (e.g. WoW Retail) can act on them
+/// without a separate registry. Platforms that don't need them ignore
+/// the arguments.
 typedef CardDataViewBuilder =
-    Widget Function(CardData data, DateTime lastUpdated);
+    Widget Function(CardData data, bool isOwner, bool isStale);
 
 /// Presentation-side registry mapping a [Platform] to its data-block view
 /// builder. A missing entry falls back to rendering the envelope only (safe
 /// degradation asserted in tests).
 final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
-  Platform.steam: (data, _) => SteamCardDataView(data: data as SteamCardData),
-  Platform.minecraftHypixel: (data, _) =>
+  Platform.steam: (data, _, _) =>
+      SteamCardDataView(data: data as SteamCardData),
+  Platform.minecraftHypixel: (data, _, _) =>
       MinecraftCardDataView(data: data as MinecraftCardData),
-  Platform.retroachievements: (data, _) =>
+  Platform.retroachievements: (data, _, _) =>
       RetroAchievementsCardDataView(data: data as RetroAchievementsCardData),
-  Platform.leagueOfLegends: (data, _) =>
+  Platform.leagueOfLegends: (data, _, _) =>
       LeagueOfLegendsCardDataView(data: data as LeagueOfLegendsCardData),
-  Platform.wowRetail: (data, lastUpdated) => WowRetailCardDataView(
+  Platform.wowRetail: (data, isOwner, isStale) => WowRetailCardDataView(
     data: data as WowRetailCardData,
-    lastUpdated: lastUpdated,
+    isOwner: isOwner,
+    isStale: isStale,
   ),
-  Platform.chess: (data, _) => ChessCardDataView(data: data as ChessCardData),
-  Platform.gw2: (data, _) => Gw2CardDataView(data: data as Gw2CardData),
+  Platform.chess: (data, _, _) =>
+      ChessCardDataView(data: data as ChessCardData),
+  Platform.gw2: (data, _, _) => Gw2CardDataView(data: data as Gw2CardData),
 };
 
 /// Generic envelope-driven card widget. Renders loading / error / data states
 /// via [AsyncValueWidget] and delegates the per-platform `data` block to the
 /// widget registry. The [platform] field determines which provider is watched
 /// and which data-view builder is selected.
+///
+/// [isOwner] controls viewer-aware gating (e.g. the WoW freshness gate).
+/// Defaults to `false` — the safe default for a non-owner viewer. The owner's
+/// [ConnectionsScreen] passes `true`.
 class GameCardWidget extends ConsumerWidget {
-  const GameCardWidget({super.key, required this.platform});
+  const GameCardWidget({
+    super.key,
+    required this.platform,
+    this.isOwner = false,
+  });
 
   final Platform platform;
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,22 +79,34 @@ class GameCardWidget extends ConsumerWidget {
         if (card == null) {
           return const SizedBox.shrink();
         }
-        return _CardContent(card: card, l10n: l10n);
+        return _CardContent(card: card, l10n: l10n, isOwner: isOwner);
       },
     );
   }
 }
 
 class _CardContent extends StatelessWidget {
-  const _CardContent({required this.card, required this.l10n});
+  const _CardContent({
+    required this.card,
+    required this.l10n,
+    required this.isOwner,
+  });
 
   final GameCard card;
   final AppLocalizations l10n;
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+
+    final stale = card.isStaleAt(clock.now());
+
+    // Non-owner viewing a stale WoW card: hide the entire card.
+    if (card.platform == Platform.wowRetail && stale && !isOwner) {
+      return const SizedBox.shrink();
+    }
 
     return Card(
       key: const Key('gameCardContent'),
@@ -125,7 +151,9 @@ class _CardContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (card.stats.isNotEmpty) ...[
+                // Stat chips are hidden when the card is stale (fresh cards
+                // and non-WoW cards always show them).
+                if (card.stats.isNotEmpty && !stale) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     key: const Key('gameCardStats'),
@@ -156,7 +184,7 @@ class _CardContent extends StatelessWidget {
                 ],
                 if (card.data != null) ...[
                   const Divider(height: AppSpacing.lg),
-                  _buildDataView(card.data!),
+                  _buildDataView(card.data!, stale),
                 ],
               ],
             ),
@@ -166,10 +194,10 @@ class _CardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildDataView(CardData data) {
+  Widget _buildDataView(CardData data, bool stale) {
     final builder = _cardDataWidgetRegistry[card.platform];
     if (builder == null) return const SizedBox.shrink();
-    return builder(data, card.lastUpdated);
+    return builder(data, isOwner, stale);
   }
 }
 
