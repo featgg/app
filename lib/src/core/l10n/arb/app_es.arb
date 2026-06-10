@@ -196,7 +196,6 @@
   "connectionsStatVeterancyYears": "Veteranía (años)",
   "connectionsRefreshCooldownCountdown": "Actualización disponible en {seconds, plural, =1{1 segundo} other{{seconds} segundos}}",
   "profileAvatarCooldownCountdown": "Puedes cambiar tu foto de nuevo en {seconds, plural, =1{1 segundo} other{{seconds} segundos}}",
-  "feedEntry": "Feed de descubrimiento",
   "feedTitle": "Descubrimiento",
   "feedEmptyTitle": "Nada aquí todavía",
   "feedEmptyBody": "Conecta una plataforma de juegos para aparecer en el feed de descubrimiento.",

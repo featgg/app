@@ -6,6 +6,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_l10n.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/tokens.dart';
+import '../../auth/domain/auth_domain.dart';
 import 'feed_controller.dart';
 import 'feed_item_card.dart';
 import 'feed_list_state.dart';
@@ -59,7 +60,36 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     final feedState = ref.watch(feedControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.feedTitle)),
+      appBar: AppBar(
+        title: Text(l10n.feedTitle),
+        actions: [
+          IconButton(
+            key: const Key('connectionsEntryButton'),
+            icon: const Icon(Icons.link),
+            tooltip: l10n.connectionsEntry,
+            onPressed: () => context.push('/connections'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: l10n.profileTitle,
+            onPressed: () => context.push('/profile'),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final repo = ref.read(authRepositoryProvider);
+          final result = await repo.signOut();
+          result.fold((failure) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(failure.localizedMessage(l10n))),
+            );
+          }, (_) {});
+        },
+        label: Text(l10n.signOut),
+        icon: const Icon(Icons.logout),
+      ),
       body: feedState.when(
         skipLoadingOnReload: false,
         skipLoadingOnRefresh: false,

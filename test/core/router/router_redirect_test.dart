@@ -8,7 +8,10 @@ import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
-import 'package:featgg/src/features/home/presentation/home_presentation.dart';
+import 'package:featgg/src/features/feed/domain/feed_page.dart';
+import 'package:featgg/src/features/feed/domain/feed_providers.dart';
+import 'package:featgg/src/features/feed/domain/feed_repository.dart';
+import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +92,16 @@ final class _StubConnectionsRepository implements ConnectionsRepository {
       right(const RefreshAllResult(outcomes: []));
 }
 
+/// Feed repository stub that returns an empty first page so FeedScreen
+/// renders its empty state instead of throwing UnimplementedError.
+final class _StubFeedRepository implements FeedRepository {
+  @override
+  Future<Either<Failure, FeedPage>> fetchFeed({
+    required FeedCursor? cursor,
+  }) async =>
+      right(const FeedPage(items: [], nextCursor: null, hasMore: false));
+}
+
 Widget _app(AuthRepository repo) {
   final container = ProviderContainer(
     overrides: [
@@ -96,6 +109,7 @@ Widget _app(AuthRepository repo) {
       connectionsRepositoryProvider.overrideWithValue(
         _StubConnectionsRepository(),
       ),
+      feedRepositoryProvider.overrideWithValue(_StubFeedRepository()),
     ],
   );
   addTearDown(container.dispose);
@@ -112,6 +126,7 @@ Widget _signedInAppWithProfile() {
       connectionsRepositoryProvider.overrideWithValue(
         _StubConnectionsRepository(),
       ),
+      feedRepositoryProvider.overrideWithValue(_StubFeedRepository()),
     ],
   );
   addTearDown(container.dispose);
@@ -125,35 +140,36 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SignInScreen), findsOneWidget);
-      expect(find.byType(HomePage), findsNothing);
+      expect(find.byType(FeedScreen), findsNothing);
     });
 
-    testWidgets('signed-in lands on the home screen', (tester) async {
+    testWidgets('signed-in lands on the feed screen', (tester) async {
       await tester.pumpWidget(_app(_FakeAuthRepository(AuthStatus.signedIn)));
       await tester.pumpAndSettle();
 
-      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.byType(FeedScreen), findsOneWidget);
       expect(find.byType(SignInScreen), findsNothing);
     });
 
-    testWidgets('a sign-out emission redirects home to the sign-in screen', (
-      tester,
-    ) async {
-      final controller = StreamController<AuthStatus>();
-      addTearDown(controller.close);
+    testWidgets(
+      'a sign-out emission redirects the feed to the sign-in screen',
+      (tester) async {
+        final controller = StreamController<AuthStatus>();
+        addTearDown(controller.close);
 
-      await tester.pumpWidget(
-        _app(_FakeAuthRepository(AuthStatus.signedIn, controller.stream)),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(HomePage), findsOneWidget);
+        await tester.pumpWidget(
+          _app(_FakeAuthRepository(AuthStatus.signedIn, controller.stream)),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(FeedScreen), findsOneWidget);
 
-      controller.add(AuthStatus.signedOut);
-      await tester.pumpAndSettle();
+        controller.add(AuthStatus.signedOut);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(SignInScreen), findsOneWidget);
-      expect(find.byType(HomePage), findsNothing);
-    });
+        expect(find.byType(SignInScreen), findsOneWidget);
+        expect(find.byType(FeedScreen), findsNothing);
+      },
+    );
 
     testWidgets(
       'the router is built once — a same-state status change does not recreate it',
@@ -168,6 +184,7 @@ void main() {
             connectionsRepositoryProvider.overrideWithValue(
               _StubConnectionsRepository(),
             ),
+            feedRepositoryProvider.overrideWithValue(_StubFeedRepository()),
           ],
         );
         addTearDown(container.dispose);
@@ -185,7 +202,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(identical(container.read(routerProvider), firstRouter), isTrue);
-        expect(find.byType(HomePage), findsOneWidget);
+        expect(find.byType(FeedScreen), findsOneWidget);
       },
     );
 
@@ -197,7 +214,7 @@ void main() {
 
       // Navigate to /profile/edit with no extra — the route-level redirect
       // must send to /profile instead of crashing on the missing Profile.
-      final context = tester.element(find.byType(HomePage));
+      final context = tester.element(find.byType(FeedScreen));
       GoRouter.of(context).go('/profile/edit');
       // The redirect lands on /profile, which stays in a perpetual loading
       // state here (the pending repo never completes), so pump frames rather

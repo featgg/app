@@ -256,7 +256,7 @@
   },
   "connectionsEntry": "Connections",
   "@connectionsEntry": {
-    "description": "Home AppBar action label / tooltip that routes to the connections screen."
+    "description": "Feed AppBar action label / tooltip that routes to the connections screen."
   },
   "connectionsEmpty": "No platforms connected yet.",
   "@connectionsEmpty": {
@@ -818,10 +818,6 @@
         "type": "int"
       }
     }
-  },
-  "feedEntry": "Discovery feed",
-  "@feedEntry": {
-    "description": "Home AppBar action tooltip that routes to the discovery feed screen."
   },
   "feedTitle": "Discovery",
   "@feedTitle": {

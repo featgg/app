@@ -6,7 +6,6 @@ import 'package:featgg/src/features/auth/domain/auth_repository.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/connections/presentation/connections_presentation.dart';
 import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
-import 'package:featgg/src/features/home/presentation/home_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:go_router/go_router.dart';
@@ -41,7 +40,7 @@ GoRouter router(Ref ref) {
       return null;
     },
     routes: <RouteBase>[
-      GoRoute(path: '/', builder: (_, _) => const HomePage()),
+      GoRoute(path: '/', builder: (_, _) => const FeedScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(
@@ -66,7 +65,6 @@ GoRouter router(Ref ref) {
         path: '/connections',
         builder: (_, _) => const ConnectionsScreen(),
       ),
-      GoRoute(path: '/feed', builder: (_, _) => const FeedScreen()),
     ],
   );
 }
