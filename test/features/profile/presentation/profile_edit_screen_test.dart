@@ -4,6 +4,9 @@ import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +22,7 @@ const _profile = Profile(
   bio: 'My bio',
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
 );
 
 /// Fake profile repository; the update outcome is injected per test.
@@ -161,25 +165,69 @@ final class _SucceedThenCooldownAvatarRepository implements AvatarRepository {
   }
 }
 
+/// Fake connections repository whose `fetchMyConnections` outcome is injected.
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  _FakeConnectionsRepository({required this.connectionsResult});
+
+  final Either<Failure, List<Connection>> Function() connectionsResult;
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      connectionsResult();
+
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
+
+/// Connections repository that always returns an empty list (no platforms).
+final class _EmptyConnectionsRepository extends _FakeConnectionsRepository {
+  _EmptyConnectionsRepository() : super(connectionsResult: () => right([]));
+}
+
+/// Connections repository that always returns a network failure.
+final class _FailingConnectionsRepository extends _FakeConnectionsRepository {
+  _FailingConnectionsRepository()
+    : super(connectionsResult: () => left(const NetworkFailure()));
+}
+
 Widget _screen(
   ProfileRepository profileRepo, {
   AvatarPicker avatarPicker = const _CancelledPicker(),
   AvatarRepository avatarRepo = const _RejectingAvatarRepository(),
+  ConnectionsRepository? connectionsRepo,
+  Profile profile = _profile,
 }) {
   final container = ProviderContainer(
     overrides: [
       profileRepositoryProvider.overrideWithValue(profileRepo),
       avatarPickerProvider.overrideWithValue(avatarPicker),
       avatarRepositoryProvider.overrideWithValue(avatarRepo),
+      connectionsRepositoryProvider.overrideWithValue(
+        connectionsRepo ?? _EmptyConnectionsRepository(),
+      ),
     ],
   );
   addTearDown(container.dispose);
   return UncontrolledProviderScope(
     container: container,
-    child: const MaterialApp(
+    child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: ProfileEditScreen(profile: _profile),
+      home: ProfileEditScreen(profile: profile),
     ),
   );
 }
@@ -523,4 +571,136 @@ void main() {
     // Still dirty, nothing in flight → Save re-enables.
     expect(saveButton().onPressed, isNotNull);
   });
+
+  // ── Featured-card selector tests ──────────────────────────────────────────
+
+  testWidgets(
+    'featured-card selector shows connected platforms and the default option',
+    (tester) async {
+      final connectionsRepo = _FakeConnectionsRepository(
+        connectionsResult: () => right([
+          Connection(
+            platform: Platform.steam,
+            status: ConnectionStatus.active,
+            createdAt: DateTime.utc(2024),
+          ),
+        ]),
+      );
+      await tester.pumpWidget(
+        _screen(
+          _FakeRepository(updateResult: () => right(_profile)),
+          connectionsRepo: connectionsRepo,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The selector widget is present.
+      expect(find.byKey(const Key('featuredCardSelector')), findsOneWidget);
+
+      // Open the dropdown.
+      await tester.tap(find.byKey(const Key('featuredCardDropdown')));
+      await tester.pumpAndSettle();
+
+      // Both the default option and the Steam platform option are listed.
+      // Assertions key off widget keys / structural behavior, not literal copy.
+      expect(find.byType(DropdownMenuItem<Platform?>), findsWidgets);
+    },
+  );
+
+  testWidgets('a connections-read failure renders the retry affordance', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _screen(
+        _FakeRepository(updateResult: () => right(_profile)),
+        connectionsRepo: _FailingConnectionsRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // AsyncValueWidget error state shows the keyed retry button.
+    expect(find.byKey(const Key('asyncRetryButton')), findsOneWidget);
+  });
+
+  testWidgets(
+    'picking a platform makes the form dirty and submit carries that featuredPlatform',
+    (tester) async {
+      ProfileEdit? capturedEdit;
+
+      // Profile with a Steam connection available.
+      final connectionsRepo = _FakeConnectionsRepository(
+        connectionsResult: () => right([
+          Connection(
+            platform: Platform.steam,
+            status: ConnectionStatus.active,
+            createdAt: DateTime.utc(2024),
+          ),
+        ]),
+      );
+
+      // Use a recording repo to capture the submitted ProfileEdit.
+      final recordingRepo = _RecordingFeaturedRepo(
+        onUpdate: (edit) {
+          capturedEdit = edit;
+          return right(_profile);
+        },
+      );
+
+      await tester.pumpWidget(
+        _screen(recordingRepo, connectionsRepo: connectionsRepo),
+      );
+      await tester.pumpAndSettle();
+
+      // Scroll the dropdown into view before tapping — the form is taller than
+      // the 800×600 test viewport.
+      await tester.ensureVisible(find.byKey(const Key('featuredCardDropdown')));
+      await tester.pumpAndSettle();
+
+      // Open the featured-card dropdown and pick Steam.
+      await tester.tap(find.byKey(const Key('featuredCardDropdown')));
+      await tester.pumpAndSettle();
+
+      // After the dropdown opens, items appear in an overlay.  The Steam entry
+      // is the only DropdownMenuItem whose value equals Platform.steam.
+      final steamItems = find.byWidgetPredicate(
+        (w) => w is DropdownMenuItem<Platform?> && w.value == Platform.steam,
+      );
+      await tester.tap(steamItems.last);
+      await tester.pumpAndSettle();
+
+      // Form is now dirty — Save button is enabled.
+      final saveButton = tester.widget<TextButton>(
+        find.descendant(
+          of: find.byKey(const Key('profileSaveButton')),
+          matching: find.byType(TextButton),
+        ),
+      );
+      expect(saveButton.onPressed, isNotNull);
+
+      // Tap Save.
+      await tester.tap(find.byKey(const Key('profileSaveButton')));
+      await tester.pumpAndSettle();
+
+      expect(capturedEdit, isNotNull);
+      expect(capturedEdit!.featuredPlatform, Platform.steam);
+    },
+  );
+}
+
+/// Recording fake that captures the submitted [ProfileEdit].
+final class _RecordingFeaturedRepo implements ProfileRepository {
+  _RecordingFeaturedRepo({required this.onUpdate});
+
+  final Either<Failure, Profile> Function(ProfileEdit edit) onUpdate;
+
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() async => right(_profile);
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
+      onUpdate(edit);
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }

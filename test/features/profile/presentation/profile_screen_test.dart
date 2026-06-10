@@ -90,6 +90,7 @@ const _profile = Profile(
   bio: 'My bio',
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
 );
 
 const _privateProfile = Profile(
@@ -100,6 +101,7 @@ const _privateProfile = Profile(
   bio: null,
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.private,
+  featuredPlatform: null,
 );
 
 Widget _screen(ProfileRepository repo, {CardsRepository? cardsRepo}) {

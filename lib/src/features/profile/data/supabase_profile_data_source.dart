@@ -10,7 +10,7 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
 
   static const _table = 'profiles';
   static const _columns =
-      'id, username, display_name, avatar_url, bio, theme_id, privacy_level';
+      'id, username, display_name, avatar_url, bio, theme_id, privacy_level, featured_platform';
 
   @override
   Future<ProfileDto?> fetchProfileRow(String userId) async {

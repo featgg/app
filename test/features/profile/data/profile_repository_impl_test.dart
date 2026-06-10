@@ -54,6 +54,7 @@ final _validDto = ProfileDto.fromJson(const {
   'bio': 'Hello world',
   'theme_id': 'classic',
   'privacy_level': 'public',
+  'featured_platform': null,
 });
 
 ProfileRepositoryImpl _repo(
@@ -273,6 +274,7 @@ void main() {
         bio: 'New bio',
         theme: ProfileTheme.retro,
         privacy: ProfilePrivacy.private,
+        featuredPlatform: null,
       );
       final columns = profileEditToColumns(edit);
       expect(columns.containsKey('avatar_url'), isFalse);
@@ -283,6 +285,7 @@ void main() {
       bio: 'New bio',
       theme: ProfileTheme.retro,
       privacy: ProfilePrivacy.private,
+      featuredPlatform: null,
     );
 
     final updatedDto = ProfileDto.fromJson(const {
@@ -293,6 +296,7 @@ void main() {
       'bio': 'New bio',
       'theme_id': 'retro',
       'privacy_level': 'private',
+      'featured_platform': null,
     });
 
     test('returns Right(Profile) on a valid row', () async {

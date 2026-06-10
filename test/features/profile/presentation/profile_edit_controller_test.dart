@@ -13,6 +13,7 @@ const _profile = Profile(
   bio: 'My bio',
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
 );
 
 const _validEdit = ProfileEdit(
@@ -20,6 +21,7 @@ const _validEdit = ProfileEdit(
   bio: 'Updated bio',
   theme: ProfileTheme.retro,
   privacy: ProfilePrivacy.private,
+  featuredPlatform: null,
 );
 
 // Empty display name fails client validation before any backend call.
@@ -28,6 +30,7 @@ const _invalidEdit = ProfileEdit(
   bio: null,
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
 );
 
 /// Recording fake — counts reads and writes; the update outcome is injected.

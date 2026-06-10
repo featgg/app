@@ -1,5 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../connections/domain/connection.dart';
+import '../../connections/domain/platform_descriptor.dart';
 import '../domain/profile.dart';
 
 part 'profile_dto.g.dart';
@@ -14,6 +16,7 @@ final class ProfileDto {
     required this.bio,
     required this.themeId,
     required this.privacyLevel,
+    required this.featuredPlatform,
   });
 
   final String id;
@@ -27,6 +30,8 @@ final class ProfileDto {
   final String themeId;
   @JsonKey(name: 'privacy_level')
   final String privacyLevel;
+  @JsonKey(name: 'featured_platform')
+  final String? featuredPlatform;
 
   factory ProfileDto.fromJson(Map<String, dynamic> json) =>
       _$ProfileDtoFromJson(json);
@@ -40,7 +45,20 @@ Profile profileFromDto(ProfileDto dto) => Profile(
   bio: dto.bio,
   theme: _themeFromWire(dto.themeId),
   privacy: _privacyFromWire(dto.privacyLevel),
+  featuredPlatform: _platformFromWireOrNull(dto.featuredPlatform),
 );
+
+/// Maps a wire token to a [Platform], returning null for null or unknown tokens.
+/// Resolution is intentionally soft — the server resolves an unknown/stale
+/// token to the default card, so the client reads it back as "default" rather
+/// than throwing and never needs to clean the value up.
+Platform? _platformFromWireOrNull(String? wire) {
+  if (wire == null) return null;
+  for (final d in platformDescriptors.values) {
+    if (d.wireValue == wire) return d.platform;
+  }
+  return null;
+}
 
 ProfileTheme _themeFromWire(String value) => switch (value) {
   'classic' => ProfileTheme.classic,
@@ -71,4 +89,7 @@ Map<String, dynamic> profileEditToColumns(ProfileEdit e) => {
   'bio': e.bio,
   'theme_id': _themeToWire(e.theme),
   'privacy_level': _privacyToWire(e.privacy),
+  'featured_platform': e.featuredPlatform == null
+      ? null
+      : platformDescriptors[e.featuredPlatform!]!.wireValue,
 };

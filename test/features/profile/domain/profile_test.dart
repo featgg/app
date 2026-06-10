@@ -8,6 +8,7 @@ ProfileEdit _edit({String displayName = 'Valid Name', String? bio}) =>
       bio: bio,
       theme: ProfileTheme.classic,
       privacy: ProfilePrivacy.public,
+      featuredPlatform: null,
     );
 
 void main() {
