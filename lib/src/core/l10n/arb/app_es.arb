@@ -204,5 +204,7 @@
   "feedLoadMoreRetry": "No se pudo cargar más. Toca para reintentar",
   "publicProfileTitle": "Perfil",
   "publicProfileUnavailable": "Este perfil es privado o no existe.",
-  "publicProfileNoCards": "Aún no hay tarjetas públicas."
+  "publicProfileNoCards": "Aún no hay tarjetas públicas.",
+  "profileCardsSectionTitle": "Tus tarjetas",
+  "profileNoCardsYet": "Aún no tienes tarjetas. Conecta una plataforma para obtener tu primera tarjeta."
 }

@@ -9,7 +9,6 @@ import 'chess_link_form.dart';
 import 'connection_actions_controller.dart';
 import 'gw2_link_form.dart';
 import 'connections_provider.dart';
-import 'game_card_widget.dart';
 import 'league_of_legends_link_form.dart';
 import 'minecraft_link_form.dart';
 import 'retroachievements_link_form.dart';
@@ -103,19 +102,12 @@ class _ConnectionsBody extends ConsumerWidget {
                   ),
                 ),
               ),
-            for (final c in visible) ...[
+            for (final c in visible)
               Padding(
                 key: Key('connection_${c.platform.name}'),
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: _ConnectionTile(connection: c),
               ),
-              GameCardWidget(
-                key: Key('card_${c.platform.name}'),
-                platform: c.platform,
-                isOwner: true,
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
             for (final descriptor in platformDescriptors.values)
               if (!connectedPlatforms.contains(descriptor.platform)) ...[
                 const SizedBox(height: AppSpacing.md),

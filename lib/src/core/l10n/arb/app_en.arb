@@ -854,5 +854,13 @@
   "publicProfileNoCards": "No public cards yet.",
   "@publicProfileNoCards": {
     "description": "Shown on the public profile screen when the profile is public but the user has no visible game cards."
+  },
+  "profileCardsSectionTitle": "Your cards",
+  "@profileCardsSectionTitle": {
+    "description": "Section header above the owner's game cards on the profile screen."
+  },
+  "profileNoCardsYet": "No cards yet. Connect a platform to get your first card.",
+  "@profileNoCardsYet": {
+    "description": "Shown on the owner's profile screen when no platform has produced a card yet."
   }
 }
