@@ -48,7 +48,7 @@ void main() {
       'renders title with null iconImage and heroImage (no-image-first)',
       (tester) async {
         final item = _item(iconImage: null, heroImage: null);
-        await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+        await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
         await tester.pump();
 
         // Title is rendered.
@@ -67,7 +67,7 @@ void main() {
 
     testWidgets('renders subtitle when non-null', (tester) async {
       final item = _item(subtitle: 'na1');
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       expect(find.byKey(const Key('feedCardSubtitle')), findsOneWidget);
@@ -76,7 +76,7 @@ void main() {
 
     testWidgets('no subtitle widget when subtitle is null', (tester) async {
       final item = _item(subtitle: null);
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       expect(find.byKey(const Key('feedCardSubtitle')), findsNothing);
@@ -89,7 +89,7 @@ void main() {
           CardStat(key: 'games_owned', value: 312, unit: 'count'),
         ],
       );
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       expect(find.byKey(const Key('stat_hours_played')), findsOneWidget);
@@ -107,7 +107,7 @@ void main() {
           CardStat(key: 'rating', value: 1200),
         ],
       );
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       // Only the first two chips are rendered.
@@ -118,7 +118,7 @@ void main() {
 
     testWidgets('no stats section when stats list is empty', (tester) async {
       final item = _item(stats: const []);
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       expect(find.byKey(const Key('feedCardStats')), findsNothing);
@@ -126,7 +126,7 @@ void main() {
 
     testWidgets('per-platform accent chip is present', (tester) async {
       final item = _item(platform: Platform.chess);
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       expect(find.byKey(const Key('feedCardPlatform_chess')), findsOneWidget);
@@ -134,10 +134,24 @@ void main() {
 
     testWidgets('card key includes userId', (tester) async {
       final item = _item(userId: 'abc-123');
-      await tester.pumpWidget(_wrap(FeedItemCard(item: item)));
+      await tester.pumpWidget(_wrap(FeedItemCard(item: item, onTap: () {})));
       await tester.pump();
 
       expect(find.byKey(const Key('feedCard_abc-123')), findsOneWidget);
+    });
+
+    testWidgets('tapping the card invokes onTap', (tester) async {
+      var tapped = false;
+      final item = _item(userId: 'spy-id');
+      await tester.pumpWidget(
+        _wrap(FeedItemCard(item: item, onTap: () => tapped = true)),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('feedCard_spy-id')));
+      await tester.pump();
+
+      expect(tapped, isTrue);
     });
   });
 }

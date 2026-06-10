@@ -11,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:go_router/go_router.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
@@ -272,5 +273,116 @@ void main() {
         expect(find.byKey(const Key('feedEndReached')), findsOneWidget);
       },
     );
+  });
+
+  group('FeedScreen — tap-through navigation', () {
+    // Builds a MaterialApp.router with a minimal two-route GoRouter:
+    //   /      → FeedScreen (with the fake feed repository)
+    //   /profile/:id → a probe widget that records the id and renders a
+    //                  widget keyed with that id (no real profile data needed)
+    //
+    // This harness proves the navigation wiring without any profile provider
+    // overrides; the probe route asserts the path parameter, not copy.
+    Future<void> pumpRouterApp(
+      WidgetTester tester, {
+      required String userId,
+    }) async {
+      final container = ProviderContainer(
+        overrides: [
+          feedRepositoryProvider.overrideWithValue(
+            _FakeFeedRepository(
+              right(
+                FeedPage(
+                  items: [_item(userId)],
+                  nextCursor: null,
+                  hasMore: false,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const FeedScreen()),
+          GoRoute(
+            path: '/profile/:id',
+            builder: (_, state) => Scaffold(
+              appBar: AppBar(),
+              body: Center(
+                child: Text(
+                  key: Key('probeUserId_${state.pathParameters['id']}'),
+                  state.pathParameters['id']!,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en')],
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+      'tapping a feed card navigates to the public profile for that user id',
+      (tester) async {
+        const uid = 'nav-test-user';
+        await pumpRouterApp(tester, userId: uid);
+        // Resolve the initial feed data.
+        await tester.pump();
+        await tester.pump();
+
+        // Feed card for this user is visible.
+        expect(find.byKey(const Key('feedCard_$uid')), findsOneWidget);
+
+        // Tap the card.
+        await tester.tap(find.byKey(const Key('feedCard_$uid')));
+        await tester.pumpAndSettle();
+
+        // Probe route rendered with the correct user id.
+        expect(find.byKey(const Key('probeUserId_$uid')), findsOneWidget);
+        // Feed is no longer visible.
+        expect(find.byKey(const Key('feedCard_$uid')), findsNothing);
+      },
+    );
+
+    testWidgets('back navigation returns to the feed', (tester) async {
+      const uid = 'back-nav-user';
+      await pumpRouterApp(tester, userId: uid);
+      await tester.pump();
+      await tester.pump();
+
+      // Navigate to the profile probe.
+      await tester.tap(find.byKey(const Key('feedCard_$uid')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('probeUserId_$uid')), findsOneWidget);
+
+      // Tap the AppBar back button to pop the profile route.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      // Feed is visible again; profile probe is gone.
+      expect(find.byKey(const Key('feedCard_$uid')), findsOneWidget);
+      expect(find.byKey(const Key('probeUserId_$uid')), findsNothing);
+    });
   });
 }

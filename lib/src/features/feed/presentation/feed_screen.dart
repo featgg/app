@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_l10n.dart';
@@ -116,7 +117,11 @@ class _FeedList extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         if (index < state.items.length) {
-          return FeedItemCard(item: state.items[index]);
+          final item = state.items[index];
+          return FeedItemCard(
+            item: item,
+            onTap: () => context.push('/profile/${item.userId}'),
+          );
         }
         // Footer slot.
         if (state.isLoadingMore) {
