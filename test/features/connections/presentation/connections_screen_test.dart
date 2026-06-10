@@ -265,7 +265,8 @@ void main() {
         find.byKey(const Key('connection_minecraftHypixel')),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('card_minecraftHypixel')), findsOneWidget);
+      // Card rendering moved to the profile feature; connections shows no slot.
+      expect(find.byKey(const Key('card_minecraftHypixel')), findsNothing);
       // A connected platform is not offered its link form again.
       expect(find.byKey(const Key('linkForm_minecraftHypixel')), findsNothing);
     });
@@ -303,7 +304,8 @@ void main() {
         find.byKey(const Key('connection_retroachievements')),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('card_retroachievements')), findsOneWidget);
+      // Card rendering moved to the profile feature; connections shows no slot.
+      expect(find.byKey(const Key('card_retroachievements')), findsNothing);
       // A connected platform is not offered its link form again.
       expect(find.byKey(const Key('linkForm_retroachievements')), findsNothing);
     });

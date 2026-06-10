@@ -4,12 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/core.dart';
+import '../../connections/domain/connection.dart';
+import '../../connections/domain/game_card.dart';
 import '../domain/profile.dart';
+import 'profile_owner_cards_provider.dart';
 import 'profile_provider.dart';
+
+/// Builds the full card view for the signed-in owner's [GameCard]. Injected at
+/// the composition root (the router) so this feature's presentation stays
+/// decoupled from the card renderer's owning feature.
+typedef OwnerCardBuilder = Widget Function(GameCard card);
 
 /// Displays the signed-in user's own profile.
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, required this.cardBuilder});
+
+  final OwnerCardBuilder cardBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,22 +45,35 @@ class ProfileScreen extends ConsumerWidget {
       body: AsyncValueWidget<Profile>(
         value: state,
         onRetry: () => ref.invalidate(profileProvider),
-        data: (profile) => _ProfileContent(profile),
+        data: (profile) =>
+            _ProfileContent(profile: profile, cardBuilder: cardBuilder),
       ),
     );
   }
 }
 
-class _ProfileContent extends StatelessWidget {
-  const _ProfileContent(this.profile);
+class _ProfileContent extends ConsumerWidget {
+  const _ProfileContent({required this.profile, required this.cardBuilder});
 
   final Profile profile;
+  final OwnerCardBuilder cardBuilder;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+
+    // One watch per platform feeds both the per-card rendering and the
+    // all-null empty-state predicate.
+    final cardStates = {
+      for (final p in Platform.values) p: ref.watch(ownerCardProvider(p)),
+    };
+
+    final allResolved = cardStates.values.every((s) => s is AsyncData);
+    final allNull =
+        allResolved &&
+        cardStates.values.every((s) => (s as AsyncData).value == null);
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -87,6 +110,38 @@ class _ProfileContent extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _PrivacyIndicator(privacy: profile.privacy, l10n: l10n),
+                const SizedBox(height: AppSpacing.lg),
+                if (allNull)
+                  Text(
+                    l10n.profileNoCardsYet,
+                    key: const Key('profileNoCardsYet'),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  )
+                else ...[
+                  Text(
+                    l10n.profileCardsSectionTitle,
+                    key: const Key('profileCardsSectionTitle'),
+                    style: textTheme.titleSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  ...Platform.values.map(
+                    (p) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: AsyncValueWidget<GameCard?>(
+                        key: Key('ownerCard_${p.name}'),
+                        value: cardStates[p]!,
+                        onRetry: () => ref.invalidate(ownerCardProvider(p)),
+                        data: (card) => card == null
+                            ? const SizedBox.shrink()
+                            : cardBuilder(card),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

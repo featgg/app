@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/connections/domain/cards_repository.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +51,37 @@ final class _PendingRepository implements ProfileRepository {
       right(null);
 }
 
+/// Injects a fixed `fetchMyCard` outcome per test. `fetchPublicCard` is never
+/// called by the owner screen, but must satisfy the interface.
+final class _FakeCardsRepository implements CardsRepository {
+  _FakeCardsRepository({required this.myCardResult});
+
+  final Either<Failure, GameCard?> Function(Platform platform) myCardResult;
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
+      myCardResult(platform);
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
+}
+
+GameCard _minecraftCard() => GameCard(
+  schemaVersion: 1,
+  platform: Platform.minecraftHypixel,
+  title: 'Steve',
+  subtitle: 'Hypixel',
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [CardStat(key: 'level', value: 42, unit: 'count')],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+  data: const MinecraftCardData(rank: 'DEFAULT', level: 42, karma: 100),
+);
+
 const _profile = Profile(
   id: 'user-1',
   username: 'testuser',
@@ -67,20 +102,28 @@ const _privateProfile = Profile(
   privacy: ProfilePrivacy.private,
 );
 
-Widget _screen(ProfileRepository repo) {
+Widget _screen(ProfileRepository repo, {CardsRepository? cardsRepo}) {
   final container = ProviderContainer(
     // Disable Riverpod's automatic retry so error states are stable in tests
     // and pending timers do not leak past teardown.
     retry: (count, error) => null,
-    overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      profileRepositoryProvider.overrideWithValue(repo),
+      cardsRepositoryProvider.overrideWithValue(
+        cardsRepo ?? _FakeCardsRepository(myCardResult: (_) => right(null)),
+      ),
+    ],
   );
   addTearDown(container.dispose);
   return UncontrolledProviderScope(
     container: container,
-    child: const MaterialApp(
+    child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: ProfileScreen(),
+      home: ProfileScreen(
+        // Mirrors the router's composition-root wiring with a fake renderer.
+        cardBuilder: (card) => Text(card.title),
+      ),
     ),
   );
 }
@@ -158,6 +201,37 @@ void main() {
 
     // Tapping Retry re-invokes fetchMyProfile.
     expect(repo.calls, greaterThan(callsBefore));
+  });
+
+  testWidgets('renders an owner card slot for a non-null card', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final cardsRepo = _FakeCardsRepository(
+      myCardResult: (platform) => platform == Platform.minecraftHypixel
+          ? right(_minecraftCard())
+          : right(null),
+    );
+
+    await tester.pumpWidget(_screen(repo, cardsRepo: cardsRepo));
+    await tester.pumpAndSettle();
+
+    // The populated platform renders via the injected builder; the section
+    // header is present and the empty line is not.
+    expect(find.byKey(const Key('ownerCard_minecraftHypixel')), findsOneWidget);
+    expect(find.text(_minecraftCard().title), findsOneWidget);
+    expect(find.byKey(const Key('profileCardsSectionTitle')), findsOneWidget);
+    expect(find.byKey(const Key('profileNoCardsYet')), findsNothing);
+  });
+
+  testWidgets('shows the no-cards line when every platform is null', (
+    tester,
+  ) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(_screen(repo));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileNoCardsYet')), findsOneWidget);
+    expect(find.byKey(const Key('profileCardsSectionTitle')), findsNothing);
   });
 
   testWidgets('private profile shows the private indicator', (tester) async {

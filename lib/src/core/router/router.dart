@@ -42,7 +42,15 @@ GoRouter router(Ref ref) {
     routes: <RouteBase>[
       GoRoute(path: '/', builder: (_, _) => const FeedScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
-      GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: '/profile',
+        // The card renderer lives in the connections feature; the router is the
+        // composition root that may import both presentations, so it injects the
+        // builder to keep the features decoupled.
+        builder: (_, _) => ProfileScreen(
+          cardBuilder: (card) => GameCardView(card: card, isOwner: true),
+        ),
+      ),
       GoRoute(
         path: '/profile/edit',
         redirect: (context, state) =>
