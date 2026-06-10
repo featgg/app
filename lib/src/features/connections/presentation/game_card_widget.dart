@@ -49,6 +49,29 @@ final Map<Platform, CardDataViewBuilder> _cardDataWidgetRegistry = {
   Platform.gw2: (data, _, _) => Gw2CardDataView(data: data as Gw2CardData),
 };
 
+/// Renders a loaded [GameCard] with the full envelope (hero, icon, title,
+/// stats, per-platform data view) and all viewer-aware gates. Pure data-in:
+/// it watches no provider, so callers in other features can receive it via
+/// composition-root injection without importing this feature's providers.
+///
+/// [isOwner] controls viewer-aware gating (e.g. the WoW freshness gate).
+/// Defaults to `false` — the safe default for a non-owner viewer.
+class GameCardView extends StatelessWidget {
+  const GameCardView({super.key, required this.card, this.isOwner = false});
+
+  final GameCard card;
+  final bool isOwner;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CardContent(
+      card: card,
+      l10n: AppLocalizations.of(context),
+      isOwner: isOwner,
+    );
+  }
+}
+
 /// Generic envelope-driven card widget. Renders loading / error / data states
 /// via [AsyncValueWidget] and delegates the per-platform `data` block to the
 /// widget registry. The [platform] field determines which provider is watched
@@ -70,7 +93,6 @@ class GameCardWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(cardProvider(platform));
-    final l10n = AppLocalizations.of(context);
 
     return AsyncValueWidget<GameCard?>(
       value: state,
@@ -79,7 +101,7 @@ class GameCardWidget extends ConsumerWidget {
         if (card == null) {
           return const SizedBox.shrink();
         }
-        return _CardContent(card: card, l10n: l10n, isOwner: isOwner);
+        return GameCardView(card: card, isOwner: isOwner);
       },
     );
   }

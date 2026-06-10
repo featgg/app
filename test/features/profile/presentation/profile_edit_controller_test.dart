@@ -49,6 +49,10 @@ final class _RecordingRepository implements ProfileRepository {
     updateCalls++;
     return updateResult();
   }
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 ProviderContainer _container(ProfileRepository repo) {

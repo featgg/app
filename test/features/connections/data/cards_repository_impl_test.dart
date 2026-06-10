@@ -188,4 +188,42 @@ void main() {
       },
     );
   });
+
+  group('CardsRepositoryImpl.fetchPublicCard', () {
+    test('maps a public row to a GameCard', () async {
+      final source = _FakeCardsDataSource(
+        (_, _) async =>
+            GameCardDto.fromJson(Map<String, dynamic>.from(_steamWidgetData)),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(
+        source,
+        reporter,
+      ).fetchPublicCard('other-user', Platform.steam);
+
+      result.fold((f) => fail('want Right, got $f'), (card) {
+        expect(card, isNotNull);
+        expect(card!.platform, Platform.steam);
+        expect(card.title, 'TestUser');
+        expect(card.stats, hasLength(2));
+        expect(card.data, isA<SteamCardData>());
+      });
+      expect(reporter.reported, isEmpty);
+    });
+
+    test('returns Right(null) when no row', () async {
+      final source = _FakeCardsDataSource((_, _) async => null);
+      final reporter = _RecordingReporter();
+      final result = await _repo(
+        source,
+        reporter,
+      ).fetchPublicCard('other-user', Platform.steam);
+
+      result.fold(
+        (f) => fail('want Right(null), got $f'),
+        (card) => expect(card, isNull),
+      );
+      expect(reporter.reported, isEmpty);
+    });
+  });
 }

@@ -6,3 +6,5 @@ export 'feed_item_card.dart';
 export 'feed_list_state.dart';
 export 'feed_screen.dart';
 export 'feed_skeleton.dart';
+export 'public_profile_provider.dart';
+export 'public_profile_screen.dart';

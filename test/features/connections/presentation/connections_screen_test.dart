@@ -98,6 +98,12 @@ final class _FakeCardsRepository implements CardsRepository {
   @override
   Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
 }
 
 /// Controller stub whose state reports an active cooldown, so the refresh

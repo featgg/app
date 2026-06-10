@@ -33,6 +33,10 @@ final class _FakeRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
       updateResult();
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 /// Holds the update future open so the submitting state stays observable.
@@ -45,6 +49,10 @@ final class _PendingRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
       _completer.future;
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 /// Fake avatar picker that immediately returns null (cancelled).

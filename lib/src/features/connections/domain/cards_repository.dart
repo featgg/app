@@ -11,4 +11,13 @@ abstract interface class CardsRepository {
   /// Parses `widget_data` into a [GameCard] with its platform-specific [CardData]
   /// via the descriptor's mapper.
   Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform);
+
+  /// Reads any user's public card for [platform] by [userId] from `game_cards`.
+  /// Right(null) when no public card row is visible (none, or owner is private).
+  /// Parses `widget_data` into a [GameCard] exactly as fetchMyCard does.
+  /// Left(NetworkFailure) on transport; Left(UnexpectedFailure) on parse/unclassified.
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  );
 }

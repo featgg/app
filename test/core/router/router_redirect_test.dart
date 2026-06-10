@@ -58,6 +58,10 @@ final class _PendingProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
       _completer.future;
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
 }
 
 /// Connections repository stub that satisfies the cold-start refresh-all

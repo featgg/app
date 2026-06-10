@@ -35,6 +35,22 @@ final class CardsRepositoryImpl implements CardsRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async {
+    try {
+      final descriptor = platformDescriptors[platform];
+      final wireValue = descriptor?.wireValue ?? platform.name;
+      final dto = await _source.fetchCard(userId, wireValue);
+      if (dto == null) return right(null);
+      return right(gameCardFromDto(dto));
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
   Failure _handleError(Object error, StackTrace st) {
     final failure = _mapError(error);
     if (!failure.isExpected) _crashReporter.reportError(error, st);
