@@ -6,7 +6,11 @@ import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
-import 'package:featgg/src/features/home/presentation/home_presentation.dart';
+import 'package:featgg/src/features/connections/presentation/connections_presentation.dart';
+import 'package:featgg/src/features/feed/domain/feed_page.dart';
+import 'package:featgg/src/features/feed/domain/feed_providers.dart';
+import 'package:featgg/src/features/feed/domain/feed_repository.dart';
+import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
-/// Signed-in repository so the session-gated redirect resolves to the home
+/// Signed-in repository so the session-gated redirect resolves to the feed
 /// route; the redirect itself is exercised in router_redirect_test.dart.
 final class _SignedInAuthRepository implements AuthRepository {
   @override
@@ -83,6 +87,16 @@ final class _StubConnectionsRepository implements ConnectionsRepository {
       right(const RefreshAllResult(outcomes: []));
 }
 
+/// Feed repository stub that returns an empty first page so FeedScreen
+/// renders its empty state instead of throwing UnimplementedError.
+final class _StubFeedRepository implements FeedRepository {
+  @override
+  Future<Either<Failure, FeedPage>> fetchFeed({
+    required FeedCursor? cursor,
+  }) async =>
+      right(const FeedPage(items: [], nextCursor: null, hasMore: false));
+}
+
 Widget _signedInApp() {
   final container = ProviderContainer(
     overrides: [
@@ -90,6 +104,7 @@ Widget _signedInApp() {
       connectionsRepositoryProvider.overrideWithValue(
         _StubConnectionsRepository(),
       ),
+      feedRepositoryProvider.overrideWithValue(_StubFeedRepository()),
     ],
   );
   addTearDown(container.dispose);
@@ -104,6 +119,7 @@ Widget _signedInAppWithProfile() {
       connectionsRepositoryProvider.overrideWithValue(
         _StubConnectionsRepository(),
       ),
+      feedRepositoryProvider.overrideWithValue(_StubFeedRepository()),
     ],
   );
   addTearDown(container.dispose);
@@ -112,12 +128,12 @@ Widget _signedInAppWithProfile() {
 
 void main() {
   group('router', () {
-    testWidgets('resolves the root route to the home screen when signed in', (
+    testWidgets('resolves the root route to the feed screen when signed in', (
       tester,
     ) async {
       await tester.pumpWidget(_signedInApp());
       await tester.pumpAndSettle();
-      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.byType(FeedScreen), findsOneWidget);
     });
 
     testWidgets('App applies AppTheme via MaterialApp.router', (tester) async {
@@ -128,14 +144,14 @@ void main() {
     });
 
     testWidgets(
-      'profile icon push navigates to ProfileScreen and back returns to HomePage',
+      'profile icon push navigates to ProfileScreen and back returns to the feed',
       (tester) async {
         await tester.pumpWidget(_signedInAppWithProfile());
         await tester.pumpAndSettle();
 
-        expect(find.byType(HomePage), findsOneWidget);
+        expect(find.byType(FeedScreen), findsOneWidget);
 
-        // Tap the profile icon button to push /profile.
+        // Tap the profile icon button in the feed app bar to push /profile.
         await tester.tap(find.byIcon(Icons.account_circle_outlined));
         await tester.pump(); // one frame — routing + ProfileScreen loading
         await tester.pump(); // settle the push animation
@@ -148,8 +164,34 @@ void main() {
         await tester.tap(backButton);
         await tester.pumpAndSettle();
 
-        expect(find.byType(HomePage), findsOneWidget);
+        expect(find.byType(FeedScreen), findsOneWidget);
         expect(find.byType(ProfileScreen), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'connections icon push navigates to ConnectionsScreen and back returns to the feed',
+      (tester) async {
+        await tester.pumpWidget(_signedInApp());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FeedScreen), findsOneWidget);
+
+        // Tap the connections icon button in the feed app bar to push /connections.
+        await tester.tap(find.byKey(const Key('connectionsEntryButton')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ConnectionsScreen), findsOneWidget);
+
+        // Pop back to the feed.
+        final backButton = find.byType(BackButton);
+        expect(backButton, findsOneWidget);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FeedScreen), findsOneWidget);
+        expect(find.byType(ConnectionsScreen), findsNothing);
       },
     );
   });
