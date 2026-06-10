@@ -222,7 +222,7 @@ No secret is committed to this repository (`AGENTS.md` § Core principles: "No c
 
 ### Public-vs-owner data exposure
 
-Some data surfaces are publicly readable — public profiles, public game cards, and widgets of public profiles (tables `profiles`, `game_cards`, `profile_widgets`) — via the SDK's public key without a session token, as documented in the relevant briefs. Private and owner-only data requires a valid session token and is enforced server-side by row-level authorization; `privacy_level` on a profile propagates server-side to the visibility of that user's cards. The client renders only what the backend returns and degrades gracefully on a denial rather than assuming access or attempting to unlock data locally.
+Some data surfaces are publicly readable — public profiles, public game cards, widgets of public profiles, and the discovery feed (tables `profiles`, `game_cards`, `profile_widgets`, and the read-only `discovery_feed` surface) — via the SDK's public key without a session token, as documented in the relevant briefs. Private and owner-only data requires a valid session token and is enforced server-side by row-level authorization; `privacy_level` on a profile propagates server-side to the visibility of that user's cards. The client renders only what the backend returns and degrades gracefully on a denial rather than assuming access or attempting to unlock data locally.
 
 ### Authorization failures and re-auth
 
