@@ -13,9 +13,10 @@ import '../domain/feed_page.dart';
 /// non-null. Does NOT watch a provider — items are pre-fetched by the feed
 /// controller.
 class FeedItemCard extends StatelessWidget {
-  const FeedItemCard({super.key, required this.item});
+  const FeedItemCard({super.key, required this.item, required this.onTap});
 
   final FeedItem item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -29,72 +30,79 @@ class FeedItemCard extends StatelessWidget {
     return Card(
       key: Key('feedCard_${item.userId}'),
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _IconImage(iconImage: card.iconImage, colorScheme: colorScheme),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        key: const Key('feedCardTitle'),
-                        card.title,
-                        style: textTheme.titleSmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (card.subtitle != null)
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _IconImage(
+                    iconImage: card.iconImage,
+                    colorScheme: colorScheme,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          key: const Key('feedCardSubtitle'),
-                          card.subtitle!,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                          key: const Key('feedCardTitle'),
+                          card.title,
+                          style: textTheme.titleSmall,
                           overflow: TextOverflow.ellipsis,
                         ),
-                    ],
+                        if (card.subtitle != null)
+                          Text(
+                            key: const Key('feedCardSubtitle'),
+                            card.subtitle!,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                // Per-platform accent chip.
-                Chip(
-                  key: Key('feedCardPlatform_${card.platform.name}'),
-                  label: Text(platformName, style: textTheme.labelSmall),
-                  backgroundColor: colorScheme.secondaryContainer,
-                  labelStyle: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSecondaryContainer,
+                  const SizedBox(width: AppSpacing.sm),
+                  // Per-platform accent chip.
+                  Chip(
+                    key: Key('feedCardPlatform_${card.platform.name}'),
+                    label: Text(platformName, style: textTheme.labelSmall),
+                    backgroundColor: colorScheme.secondaryContainer,
+                    labelStyle: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
+                    ),
+                    padding: EdgeInsets.zero,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ],
+              ),
+              if (card.stats.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  key: const Key('feedCardStats'),
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  children: card.stats
+                      .take(2)
+                      .map(
+                        (s) => Chip(
+                          key: Key('stat_${s.key}'),
+                          label: Text(
+                            '${s.value} ${_statLabel(s.key, l10n)}',
+                            style: textTheme.labelSmall,
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
-            ),
-            if (card.stats.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                key: const Key('feedCardStats'),
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xs,
-                children: card.stats
-                    .take(2)
-                    .map(
-                      (s) => Chip(
-                        key: Key('stat_${s.key}'),
-                        label: Text(
-                          '${s.value} ${_statLabel(s.key, l10n)}',
-                          style: textTheme.labelSmall,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );
