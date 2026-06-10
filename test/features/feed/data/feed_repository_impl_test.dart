@@ -349,6 +349,37 @@ void main() {
       });
     });
 
+    test(
+      'N distinct-user surface rows → N FeedItems, one per user (no fan-out or collapse)',
+      () async {
+        const n = 4;
+        final inputRows = [
+          for (var i = 0; i < n; i++)
+            _row('distinct-user-$i', '2026-06-0${9 - i}T12:00:00Z'),
+        ];
+        final source = _FakeFeedDataSource(
+          ({
+            required viewerId,
+            required cursor,
+            required staleCutoffUtc,
+            required limit,
+          }) async => inputRows,
+        );
+        final reporter = _RecordingReporter();
+        final result = await _makeRepo(
+          source,
+          reporter,
+        ).fetchFeed(cursor: null);
+
+        result.fold((f) => fail('want Right, got $f'), (page) {
+          expect(page.items, hasLength(n));
+          final outputIds = page.items.map((item) => item.userId).toSet();
+          final inputIds = inputRows.map((row) => row.userId).toSet();
+          expect(outputIds, equals(inputIds));
+        });
+      },
+    );
+
     test('staleCutoff is 30 days before clock.now()', () async {
       final fixedNow = DateTime.utc(2026, 6, 9, 12);
       DateTime? capturedCutoff;

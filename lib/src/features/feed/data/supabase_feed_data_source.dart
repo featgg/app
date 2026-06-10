@@ -45,9 +45,8 @@ final class SupabaseFeedDataSource implements FeedDataSource {
     required int limit,
   }) async {
     var query = _client
-        .from('game_cards')
+        .from('discovery_feed')
         .select('user_id, platform, feed_preview, last_updated_at')
-        .eq('is_public', true)
         .neq('user_id', viewerId)
         .or(buildStaleWowOrFilter(staleCutoffUtc));
 
