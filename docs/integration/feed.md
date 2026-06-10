@@ -3,9 +3,10 @@
 ## Surface summary
 
 Read the public, UI-ready game cards the backend publishes per connected
-platform — both for rendering a specific profile and for discovery surfaces
-that list recently-updated public cards. Cards are produced and refreshed by
-the backend (see `connections.md` → refresh); the client only reads them.
+platform — both for rendering a specific profile and for the discovery feed.
+Cards are produced and refreshed by the backend (see `connections.md` →
+refresh); the client only reads them. Discovery reads a dedicated
+one-card-per-profile surface (see § Discovery surface), not raw cards.
 
 ## Authentication
 
@@ -28,25 +29,41 @@ profile is private — with their session token (see `auth.md`).
   `privacy_level` — it is never client-controlled.
 - **Constraints.** One card per user per platform.
 - **Ordering / pagination.** For a single profile, read that user's cards (at
-  most one per platform). For a discovery feed, read public cards ordered by
-  `last_updated_at` (most recent first) and page with a limit; the data API
-  caps result-set size, so always paginate discovery reads.
+  most one per platform). Discovery does NOT read this table directly — it
+  reads the one-card-per-profile surface below.
 
-  **Discovery feed — client query contract (first consumer):**
+## Discovery surface (one card per profile)
+
+- **Relation.** `discovery_feed` — a read-only surface over the public game
+  cards. Same access model as `game_cards` public reads: readable by any
+  client, including signed-out, via the SDK's public key. No writes, ever.
+- **Columns.** `user_id`, `platform`, `feed_preview`, `last_updated_at` —
+  same types and payload shape as the `game_cards` columns of the same name.
+- **Contract.** At most **one row per public profile**: the profile's
+  *featured* card when the owner has picked one and that platform has a
+  public card, else the profile's most-recently-updated public card. The
+  featured pick is the `featured_platform` profile preference (see
+  `profile.md`); resolution is soft — a featured platform that is missing or
+  no longer linked silently falls back to the freshest card. This contract is
+  stable: the surface always yields one `feed_preview` per profile,
+  regardless of how the backend resolves it.
+
+  **Discovery feed — client query contract:**
 
   - **Keyset pagination** over `last_updated_at` descending with `user_id` as
     the stable tiebreaker (not offset paging, which drifts under concurrent
-    updates). The cursor predicate for page 2+ is:
+    updates). Always specify the ordering explicitly in the query. The cursor
+    predicate for page 2+ is:
     `last_updated_at < curISO OR (last_updated_at = curISO AND user_id < curUserId)`.
     In PostgREST `or()` notation:
     `last_updated_at.lt.<curISO>,and(last_updated_at.eq.<curISO>,user_id.lt.<curUserId>)`.
-  - **Own-card exclusion is client-side:** the access rule permits reading the
-    viewer's own cards, but discovery hides them via
+  - **Own-card exclusion is client-side:** the surface includes the viewer's
+    own row when their profile is public; discovery hides it via
     `user_id != <viewerId>` (`.neq('user_id', viewerId)`). If the server later
     excludes the viewer too, the client predicate is a harmless no-op.
-  - **Stale WoW (Retail) exclusion:** feed queries filter out cards where
-    `platform = 'wow_retail'` AND `last_updated_at < now-minus-30-days-UTC-ISO`.
-    PostgREST predicate:
+  - **Stale WoW (Retail) exclusion is client-side:** feed queries filter out
+    rows where `platform = 'wow_retail'` AND
+    `last_updated_at < now-minus-30-days-UTC-ISO`. PostgREST predicate:
     `or=(platform.neq.wow_retail,last_updated_at.gte.<cutoff_30d_iso>)`.
     `cutoff_30d_iso` is `clock.now().toUtc().subtract(Duration(days: 30)).toIso8601String()`.
   - **Page size** is a client choice under the data API's result-set cap; no

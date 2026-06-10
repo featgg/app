@@ -20,10 +20,11 @@ it — a user can update only their own profile.
 
 - **Table.** `profiles`
 - **Readable columns.** `id`, `username`, `display_name`, `avatar_url`,
-  `bio`, `theme_id`, `privacy_level`, `created_at`. A public profile exposes
-  these to anyone; a private profile is readable only by its owner.
+  `bio`, `theme_id`, `privacy_level`, `featured_platform`, `created_at`. A
+  public profile exposes these to anyone; a private profile is readable only
+  by its owner.
 - **Writable columns (owner only).** `display_name`, `bio`, `theme_id`,
-  `privacy_level`.
+  `privacy_level`, `featured_platform`.
 - **Server-managed (read-only to the client).** `id`, `created_at`,
   `last_updated_at`, `deletion_requested_at`, and `avatar_url`. Never
   client-writable directly; `avatar_url` is updated by the upload endpoint
@@ -37,6 +38,12 @@ it — a user can update only their own profile.
   - `theme_id` — one of `classic`, `immersive`, `retro`, `analyst`.
   - `privacy_level` — one of `public`, `private`. Setting it to `private`
     hides the profile and the user's game cards from everyone but the owner.
+  - `featured_platform` — one of the platform values (see `connections.md`),
+    or `null`. A display preference: which of the user's cards represents
+    them in the discovery feed (see `feed.md` § Discovery surface). `null`
+    means the most-recently-updated card. Resolution is soft — pointing at a
+    platform the user no longer has falls back to the freshest card; the
+    client never needs to clean it up.
 - **Ordering / pagination.** Reads are single-row: the signed-in user's own
   profile, or one public profile looked up by `username`. No pagination.
 
