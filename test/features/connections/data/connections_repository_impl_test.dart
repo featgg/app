@@ -346,7 +346,9 @@ void main() {
       expect(reporter.reported, isEmpty);
     });
 
-    test('UPSTREAM_RATE_LIMIT → Left(UpstreamFailure), not reported', () async {
+    test('UPSTREAM_RATE_LIMIT → Left(UpstreamFailure), reported', () async {
+      // Service breakage (e.g. the platform throttling the service) must be
+      // visible in the crash reporter, unlike user-state upstream codes.
       final source = _FakeConnectionsDataSource(
         onLink: (_) async => throw _fnEx(429, code: 'UPSTREAM_RATE_LIMIT'),
       );
@@ -360,10 +362,12 @@ void main() {
         (f) => expect(f, isA<UpstreamFailure>()),
         (_) => fail('want Left'),
       );
-      expect(reporter.reported, isEmpty);
+      expect(reporter.reported, hasLength(1));
     });
 
-    test('UPSTREAM_FAILURE → Left(UpstreamFailure), not reported', () async {
+    test('UPSTREAM_FAILURE → Left(UpstreamFailure), reported', () async {
+      // Platform-unavailable is service breakage; it must reach the crash
+      // reporter so outages are visible in aggregate.
       final source = _FakeConnectionsDataSource(
         onLink: (_) async => throw _fnEx(502, code: 'UPSTREAM_FAILURE'),
       );
@@ -377,7 +381,7 @@ void main() {
         (f) => expect(f, isA<UpstreamFailure>()),
         (_) => fail('want Left'),
       );
-      expect(reporter.reported, isEmpty);
+      expect(reporter.reported, hasLength(1));
     });
 
     test('LINK_WRITE_FAILED / 500 → Left(ServerFailure), reported', () async {
@@ -627,22 +631,21 @@ void main() {
       },
     );
 
-    test(
-      'INVALID_STORED_ROUTING → Left(UpstreamFailure), not reported',
-      () async {
-        final source = _FakeConnectionsDataSource(
-          onSync: (_) async => throw _fnEx(500, code: 'INVALID_STORED_ROUTING'),
-        );
-        final reporter = _RecordingReporter();
-        final result = await _repo(source, reporter).refresh(Platform.steam);
+    test('INVALID_STORED_ROUTING → Left(UpstreamFailure), reported', () async {
+      // Broken stored routing is service-side data breakage; it must reach
+      // the crash reporter so it is visible in aggregate.
+      final source = _FakeConnectionsDataSource(
+        onSync: (_) async => throw _fnEx(500, code: 'INVALID_STORED_ROUTING'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).refresh(Platform.steam);
 
-        result.fold(
-          (f) => expect(f, isA<UpstreamFailure>()),
-          (_) => fail('want Left'),
-        );
-        expect(reporter.reported, isEmpty);
-      },
-    );
+      result.fold(
+        (f) => expect(f, isA<UpstreamFailure>()),
+        (_) => fail('want Left'),
+      );
+      expect(reporter.reported, hasLength(1));
+    });
 
     test('SYNC_COMMIT_FAILED → Left(ServerFailure), reported', () async {
       final source = _FakeConnectionsDataSource(

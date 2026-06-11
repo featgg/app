@@ -179,11 +179,20 @@ final class SyncCooldownFailure extends Failure {
 /// An upstream third-party platform is unavailable, not-found, or rate-limited,
 /// or the stored connection routing is broken (`UPSTREAM_*`,
 /// `LINKED_ACCOUNT_NOT_FOUND`, `MISSING_STORED_CREDENTIAL`,
-/// `INVALID_STORED_ROUTING`). Expected control flow — the user retries or
-/// reconnects; not an app fault. Not crash-reported.
+/// `INVALID_STORED_ROUTING`).
+///
+/// User-state codes (identity gone, needs reconnect) are expected control
+/// flow. Service-breakage codes — the platform unavailable or throttling, or
+/// broken stored routing — are faults: invisible in aggregate unless
+/// crash-reported, so they are.
 final class UpstreamFailure extends Failure {
   const UpstreamFailure({super.message, super.code});
 
   @override
-  bool get isExpected => true;
+  bool get isExpected => switch (code) {
+    'UPSTREAM_FAILURE' ||
+    'UPSTREAM_RATE_LIMIT' ||
+    'INVALID_STORED_ROUTING' => false,
+    _ => true,
+  };
 }
