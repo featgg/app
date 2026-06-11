@@ -31,6 +31,20 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Restore build_runner's incremental state so the build is incremental
+      # instead of cold. build_runner re-hashes every input on restore and
+      # regenerates only what changed, so a restored cache + new source stays
+      # correct. The run_id suffix makes each run save a fresh baseline; the
+      # restore-keys prefix matches the most recent cache for the same deps,
+      # SDK, and generator config (busts when any of those hashes change).
+      - name: Cache build_runner output
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .dart_tool/build
+          key: build-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'build.yaml') }}-${{ github.run_id }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'build.yaml') }}-
+
       - name: dart run build_runner build
         run: dart run build_runner build --delete-conflicting-outputs
 

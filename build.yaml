@@ -1,0 +1,11 @@
+# Scope code generators to lib/ only. test/ and tool/ carry no codegen
+# annotations, so analyzing them is wasted work. Correctness-neutral.
+targets:
+  $default:
+    builders:
+      riverpod_generator:riverpod_generator:
+        generate_for:
+          - lib/**
+      json_serializable:json_serializable:
+        generate_for:
+          - lib/**
