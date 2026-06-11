@@ -16,6 +16,10 @@ import 'feed_skeleton.dart';
 /// pixels of the list bottom.
 const double _kScrollLoadThreshold = 200;
 
+/// Standard Material extended-FAB height; reserved as bottom list padding so the
+/// last card and the "all caught up" indicator clear the floating sign-out FAB.
+const double _kExtendedFabHeight = 56;
+
 /// Discovery feed screen: a scrollable keyset-paginated list of other users'
 /// game cards rendered from `feed_preview`, with skeleton loading, empty/error
 /// states, pull-to-refresh, and an "all caught up" end indicator.
@@ -90,26 +94,29 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         label: Text(l10n.signOut),
         icon: const Icon(Icons.logout),
       ),
-      body: feedState.when(
-        skipLoadingOnReload: false,
-        skipLoadingOnRefresh: false,
-        loading: () => const Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: FeedSkeleton(),
-        ),
-        error: (error, _) => _ErrorBody(
-          error: error,
-          onRetry: () => ref.read(feedControllerProvider.notifier).refresh(),
-        ),
-        data: (state) => RefreshIndicator(
-          key: const Key('feedRefreshIndicator'),
-          onRefresh: () => ref.read(feedControllerProvider.notifier).refresh(),
-          child: _FeedList(
-            state: state,
-            scrollController: _scrollController,
-            l10n: l10n,
-            onLoadMoreRetry: () =>
-                ref.read(feedControllerProvider.notifier).loadMore(),
+      body: SafeArea(
+        child: feedState.when(
+          skipLoadingOnReload: false,
+          skipLoadingOnRefresh: false,
+          loading: () => const Padding(
+            padding: EdgeInsets.all(AppSpacing.md),
+            child: FeedSkeleton(),
+          ),
+          error: (error, _) => _ErrorBody(
+            error: error,
+            onRetry: () => ref.read(feedControllerProvider.notifier).refresh(),
+          ),
+          data: (state) => RefreshIndicator(
+            key: const Key('feedRefreshIndicator'),
+            onRefresh: () =>
+                ref.read(feedControllerProvider.notifier).refresh(),
+            child: _FeedList(
+              state: state,
+              scrollController: _scrollController,
+              l10n: l10n,
+              onLoadMoreRetry: () =>
+                  ref.read(feedControllerProvider.notifier).loadMore(),
+            ),
           ),
         ),
       ),
@@ -139,10 +146,18 @@ class _FeedList extends StatelessWidget {
     // +1 for the footer slot (loader / end indicator / retry).
     final itemCount = state.items.length + 1;
 
+    // The SafeArea above owns the system nav-bar inset; this padding only
+    // reserves clearance so the last card and the "all caught up" indicator
+    // are not covered by the extended sign-out FAB.
     return ListView.separated(
       key: const Key('feedList'),
       controller: scrollController,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md + kFloatingActionButtonMargin + _kExtendedFabHeight,
+      ),
       itemCount: itemCount,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {

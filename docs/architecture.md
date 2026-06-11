@@ -155,6 +155,10 @@ A screen or widget renders state and dispatches user intent; it holds no busines
 
 Colors, spacing, typography, and border radii are consumed as named design tokens; a widget never hard-codes a color or a magic number. User-facing text is consumed from localization; a widget never hard-codes a string. Both are enforced rules, not conventions.
 
+### Safe areas
+
+Every screen's `Scaffold` body is wrapped in `SafeArea` so content clears the device's system intrusions (status bar, notches, the Android navigation bar). This is the standard, reviewer-enforceable default for all screens. A screen may opt out only when being full-bleed is the point (e.g. an edge-to-edge media or cropping surface), and the opt-out must be deliberate and visible in review — not an omission. Ad-hoc inset math (`MediaQuery.viewPadding` arithmetic) is not a substitute for `SafeArea`.
+
 ### Responsive layout
 
 The app is mobile-first and also targets desktop and web. Mobile-first means the base layout is the mobile layout, and constraints for larger surfaces (a maximum content width, multi-column arrangements) are added on top — not a desktop layout shrunk down. Breakpoints are defined once, centrally, in `core` (as named values, like tokens). A widget branches on layout via `LayoutBuilder` and the central breakpoint helper. Scattered `MediaQuery.of(context).size.width > N` checks are forbidden — every screen reads the same breakpoint definitions so layout behavior is consistent across the app. The specific breakpoint pixel values are a design-system concern.

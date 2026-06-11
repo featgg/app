@@ -149,6 +149,15 @@ void main() {
       // A ListView (lazy builder) is used, not a Column of all items.
       expect(find.byKey(const Key('feedList')), findsOneWidget);
       expect(find.byType(ListView), findsOneWidget);
+
+      // The screen body is wrapped in SafeArea (architecture convention).
+      expect(
+        find.ancestor(
+          of: find.byKey(const Key('feedList')),
+          matching: find.byType(SafeArea),
+        ),
+        findsWidgets,
+      );
     });
 
     testWidgets('end indicator shown when hasMore is false', (tester) async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
@@ -52,6 +54,22 @@ final class _FakeCardsRepository implements CardsRepository {
     String userId,
     Platform platform,
   ) async => publicCardResult(userId, platform);
+}
+
+/// Holds all public card futures open indefinitely so the loading state is
+/// observable. `fetchMyCard` is never called by the visitor screen.
+final class _PendingCardsRepository implements CardsRepository {
+  final _completer = Completer<Either<Failure, GameCard?>>();
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
+      right(null);
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) => _completer.future;
 }
 
 // ---------------------------------------------------------------------------
@@ -147,6 +165,15 @@ void main() {
     expect(find.textContaining(_publicProfile.username), findsOneWidget);
     expect(find.text(_publicProfile.bio!), findsOneWidget);
     expect(find.byIcon(Icons.person), findsOneWidget);
+
+    // The screen body is wrapped in SafeArea (architecture convention).
+    expect(
+      find.ancestor(
+        of: find.text(_publicProfile.displayName),
+        matching: find.byType(SafeArea),
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('visitor mode hides owner actions', (tester) async {
@@ -202,6 +229,63 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('publicProfileNoCards')), findsOneWidget);
+  });
+
+  testWidgets('shows a single section loader while card reads are in flight', (
+    tester,
+  ) async {
+    // Public profile resolves immediately; cards are held pending so only the
+    // card section is loading — isolates the single-spinner requirement.
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(_publicProfile),
+    );
+    final cardsRepo = _PendingCardsRepository();
+
+    await tester.pumpWidget(_screen(profileRepo, cardsRepo));
+    // Pump enough frames for the profile future to resolve while card futures
+    // remain pending. pumpAndSettle cannot be used here because the pending
+    // card futures never quiesce.
+    await tester.pump();
+    await tester.pump();
+
+    // Exactly one spinner in the cards area — no N-spinner reflow.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Per-platform card keys are absent until settle.
+    expect(find.byKey(const Key('publicCard_minecraftHypixel')), findsNothing);
+  });
+
+  testWidgets('renders only one card padding per real card', (tester) async {
+    // Two non-adjacent platforms have cards; all others are null.
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(_publicProfile),
+    );
+    final populated = {Platform.minecraftHypixel, Platform.steam};
+    final cardsRepo = _FakeCardsRepository(
+      publicCardResult: (_, p) =>
+          populated.contains(p) ? right(_staleWowCard()) : right(null),
+    );
+
+    await tester.pumpWidget(_screen(profileRepo, cardsRepo));
+    await tester.pumpAndSettle();
+
+    // Both real cards are present.
+    expect(
+      find.byKey(const Key('publicCard_minecraftHypixel')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('publicCard_steam')), findsOneWidget);
+
+    // Only 2 Padding(bottom: AppSpacing.md) wrappers around card slots —
+    // not Platform.values.length (phantom gaps from card-less platforms).
+    final paddingFinder = find.ancestor(
+      of: find.byWidgetPredicate((w) => w is AsyncValueWidget),
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Padding &&
+            w.padding == const EdgeInsets.only(bottom: AppSpacing.md),
+      ),
+    );
+    expect(paddingFinder, findsNWidgets(populated.length));
   });
 
   testWidgets('loading then error with retry', (tester) async {

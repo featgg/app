@@ -218,6 +218,10 @@
   "@profileBioTooLong": {
     "description": "Shown on the bio field when the value exceeds the 150-character limit."
   },
+  "profileBioTooManyLines": "Bio can have at most 8 line breaks.",
+  "@profileBioTooManyLines": {
+    "description": "Shown on the bio field when the value contains more than 8 line breaks."
+  },
   "asyncErrorTitle": "Couldn't load this",
   "@asyncErrorTitle": {
     "description": "Heading shown in the AsyncValueWidget error state."
@@ -819,7 +823,7 @@
       }
     }
   },
-  "feedTitle": "Discovery",
+  "feedTitle": "Feat.gg",
   "@feedTitle": {
     "description": "App bar title for the discovery feed screen."
   },

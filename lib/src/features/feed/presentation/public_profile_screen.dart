@@ -33,16 +33,18 @@ class PublicProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.publicProfileTitle)),
-      body: AsyncValueWidget<Profile?>(
-        value: state,
-        onRetry: () => ref.invalidate(publicProfileProvider(userId)),
-        data: (profile) => profile == null
-            ? const _UnavailableState()
-            : _PublicProfileContent(
-                userId: userId,
-                profile: profile,
-                cardBuilder: cardBuilder,
-              ),
+      body: SafeArea(
+        child: AsyncValueWidget<Profile?>(
+          value: state,
+          onRetry: () => ref.invalidate(publicProfileProvider(userId)),
+          data: (profile) => profile == null
+              ? const _UnavailableState()
+              : _PublicProfileContent(
+                  userId: userId,
+                  profile: profile,
+                  cardBuilder: cardBuilder,
+                ),
+        ),
       ),
     );
   }
@@ -72,10 +74,26 @@ class _PublicProfileContent extends ConsumerWidget {
         p: ref.watch(publicCardProvider(userId, p)),
     };
 
+    // Section is ready once every read has settled (data or error — not loading).
+    // This prevents N independent spinners from appearing while reads are in
+    // flight and ensures the cards render together.
+    final allSettled = cardStates.values.every((s) => s is! AsyncLoading);
+
     final allResolved = cardStates.values.every((s) => s is AsyncData);
     final allNull =
         allResolved &&
         cardStates.values.every((s) => (s as AsyncData).value == null);
+
+    // Platforms that will render visible content (non-null data or an error
+    // tile). Card-less platforms (AsyncData(null)) contribute no padding.
+    final renderablePlatforms = Platform.values
+        .where(
+          (p) =>
+              cardStates[p] is AsyncError ||
+              (cardStates[p] is AsyncData &&
+                  (cardStates[p] as AsyncData).value != null),
+        )
+        .toList();
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -84,7 +102,10 @@ class _PublicProfileContent extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              // Top-anchored so the avatar/identity block stays put while the
+              // cards section settles — vertical centering made the whole page
+              // jump as the cards loaded in.
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _Avatar(avatarUrl: profile.avatarUrl, l10n: l10n),
@@ -111,7 +132,10 @@ class _PublicProfileContent extends ConsumerWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                if (allNull)
+                if (!allSettled)
+                  // Single affordance while any platform read is still loading.
+                  const CircularProgressIndicator.adaptive()
+                else if (allNull)
                   Text(
                     l10n.publicProfileNoCards,
                     key: const Key('publicProfileNoCards'),
@@ -121,20 +145,28 @@ class _PublicProfileContent extends ConsumerWidget {
                     textAlign: TextAlign.center,
                   )
                 else
-                  ...Platform.values.map(
-                    (p) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: AsyncValueWidget<GameCard?>(
-                        key: Key('publicCard_${p.name}'),
-                        value: cardStates[p]!,
-                        onRetry: () =>
-                            ref.invalidate(publicCardProvider(userId, p)),
-                        data: (card) => card == null
-                            ? const SizedBox.shrink()
-                            : cardBuilder(card),
-                      ),
-                    ),
-                  ),
+                  // Renderable platforms carry bottom padding; card-less
+                  // platforms (null data) get none so there are no phantom gaps.
+                  ...Platform.values.map((p) {
+                    final isRenderable = renderablePlatforms.contains(p);
+                    final widget = AsyncValueWidget<GameCard?>(
+                      key: Key('publicCard_${p.name}'),
+                      value: cardStates[p]!,
+                      onRetry: () =>
+                          ref.invalidate(publicCardProvider(userId, p)),
+                      data: (card) => card == null
+                          ? const SizedBox.shrink()
+                          : cardBuilder(card),
+                    );
+                    return isRenderable
+                        ? Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.md,
+                            ),
+                            child: widget,
+                          )
+                        : widget;
+                  }),
               ],
             ),
           ),
