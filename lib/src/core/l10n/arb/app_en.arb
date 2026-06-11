@@ -862,5 +862,13 @@
   "profileNoCardsYet": "No cards yet. Connect a platform to get your first card.",
   "@profileNoCardsYet": {
     "description": "Shown on the owner's profile screen when no platform has produced a card yet."
+  },
+  "profileFeaturedCardLabel": "Featured card",
+  "@profileFeaturedCardLabel": {
+    "description": "Section label above the featured-card selector on the profile-edit screen."
+  },
+  "profileFeaturedCardDefault": "Default — most recent card",
+  "@profileFeaturedCardDefault": {
+    "description": "Option in the featured-card dropdown that clears the preference, letting the backend fall back to the most-recently-updated card."
   }
 }

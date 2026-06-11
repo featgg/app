@@ -68,6 +68,7 @@ const _publicProfile = Profile(
   bio: 'I play games.',
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
 );
 
 GameCard _staleWowCard() => GameCard(

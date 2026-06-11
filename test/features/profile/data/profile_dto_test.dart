@@ -1,3 +1,4 @@
+import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_dto.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 Map<String, dynamic> _fullRow({
   String privacyLevel = 'public',
   String themeId = 'classic',
+  Object? featuredPlatform,
 }) => {
   'id': 'user-123',
   'username': 'testuser',
@@ -13,6 +15,7 @@ Map<String, dynamic> _fullRow({
   'bio': 'Hello world',
   'theme_id': themeId,
   'privacy_level': privacyLevel,
+  'featured_platform': featuredPlatform,
 };
 
 void main() {
@@ -46,6 +49,7 @@ void main() {
         'bio': null,
         'theme_id': 'classic',
         'privacy_level': 'public',
+        'featured_platform': null,
       };
       final profile = profileFromDto(ProfileDto.fromJson(row));
 
@@ -90,12 +94,19 @@ void main() {
         bio: 'Hello',
         theme: ProfileTheme.retro,
         privacy: ProfilePrivacy.private,
+        featuredPlatform: null,
       );
       final columns = profileEditToColumns(edit);
 
       expect(
         columns.keys,
-        containsAll(['display_name', 'bio', 'theme_id', 'privacy_level']),
+        containsAll([
+          'display_name',
+          'bio',
+          'theme_id',
+          'privacy_level',
+          'featured_platform',
+        ]),
       );
       expect(columns['display_name'], 'Alice');
       expect(columns['bio'], 'Hello');
@@ -108,6 +119,55 @@ void main() {
       expect(columns.containsKey('avatar_url'), isFalse);
       expect(columns.containsKey('username'), isFalse);
       expect(columns.containsKey('id'), isFalse);
+    });
+
+    group('featured_platform wire mapping', () {
+      test('a known wire token maps to the matching Platform', () {
+        final dto = ProfileDto.fromJson(_fullRow(featuredPlatform: 'steam'));
+        final profile = profileFromDto(dto);
+        expect(profile.featuredPlatform, Platform.steam);
+      });
+
+      test('null wire token maps to null', () {
+        final dto = ProfileDto.fromJson(_fullRow());
+        final profile = profileFromDto(dto);
+        expect(profile.featuredPlatform, isNull);
+      });
+
+      test('an unknown wire token maps to null (soft resolution)', () {
+        final dto = ProfileDto.fromJson(
+          _fullRow(featuredPlatform: 'unknown_platform_xyz'),
+        );
+        final profile = profileFromDto(dto);
+        expect(profile.featuredPlatform, isNull);
+      });
+
+      test(
+        'profileEditToColumns emits the wire token for a selected platform',
+        () {
+          const edit = ProfileEdit(
+            displayName: 'Bob',
+            bio: null,
+            theme: ProfileTheme.classic,
+            privacy: ProfilePrivacy.public,
+            featuredPlatform: Platform.steam,
+          );
+          final columns = profileEditToColumns(edit);
+          expect(columns['featured_platform'], 'steam');
+        },
+      );
+
+      test('profileEditToColumns emits null when platform is cleared', () {
+        const edit = ProfileEdit(
+          displayName: 'Bob',
+          bio: null,
+          theme: ProfileTheme.classic,
+          privacy: ProfilePrivacy.public,
+          featuredPlatform: null,
+        );
+        final columns = profileEditToColumns(edit);
+        expect(columns['featured_platform'], isNull);
+      });
     });
   });
 }

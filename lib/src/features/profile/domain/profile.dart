@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../connections/domain/connection.dart';
+
 /// Whether the signed-in user's profile is publicly discoverable.
 enum ProfilePrivacy { public, private }
 
@@ -16,6 +18,7 @@ final class Profile extends Equatable {
     required this.bio,
     required this.theme,
     required this.privacy,
+    required this.featuredPlatform,
   });
 
   final String id;
@@ -31,6 +34,10 @@ final class Profile extends Equatable {
   final ProfileTheme theme;
   final ProfilePrivacy privacy;
 
+  /// The platform card the user has pinned as their discovery-feed preview,
+  /// or null to use the default (most-recently-updated card).
+  final Platform? featuredPlatform;
+
   Profile copyWith({
     String? displayName,
     // Wrapped in a nullary function so callers can explicitly set null.
@@ -38,6 +45,7 @@ final class Profile extends Equatable {
     String? Function()? bio,
     ProfileTheme? theme,
     ProfilePrivacy? privacy,
+    Platform? Function()? featuredPlatform,
   }) => Profile(
     id: id,
     username: username,
@@ -46,6 +54,9 @@ final class Profile extends Equatable {
     bio: bio != null ? bio() : this.bio,
     theme: theme ?? this.theme,
     privacy: privacy ?? this.privacy,
+    featuredPlatform: featuredPlatform != null
+        ? featuredPlatform()
+        : this.featuredPlatform,
   );
 
   @override
@@ -57,6 +68,7 @@ final class Profile extends Equatable {
     bio,
     theme,
     privacy,
+    featuredPlatform,
   ];
 }
 
@@ -68,12 +80,17 @@ final class ProfileEdit extends Equatable {
     required this.bio,
     required this.theme,
     required this.privacy,
+    required this.featuredPlatform,
   });
 
   final String displayName;
   final String? bio;
   final ProfileTheme theme;
   final ProfilePrivacy privacy;
+
+  /// The platform card to pin as the discovery-feed preview, or null to use
+  /// the default (most-recently-updated card).
+  final Platform? featuredPlatform;
 
   /// Pure client-side validation mirroring the documented constraints.
   /// Returns the per-field errors found, empty when the edit is valid.
@@ -94,7 +111,13 @@ final class ProfileEdit extends Equatable {
   }
 
   @override
-  List<Object?> get props => [displayName, bio, theme, privacy];
+  List<Object?> get props => [
+    displayName,
+    bio,
+    theme,
+    privacy,
+    featuredPlatform,
+  ];
 }
 
 /// Which field failed client validation; the screen maps each to localized copy.

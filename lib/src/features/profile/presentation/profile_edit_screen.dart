@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
 import '../../../core/error/failure.dart';
+import '../../connections/domain/connection.dart';
+import '../../connections/domain/platform_descriptor.dart';
 import '../domain/profile.dart';
 import 'avatar_picker.dart';
 import 'avatar_upload_controller.dart';
+import 'featured_platform_provider.dart';
 import 'profile_edit_controller.dart';
 
 /// Edit form for the signed-in user's own profile.
@@ -29,6 +32,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late final TextEditingController _bioController;
   late ProfileTheme _selectedTheme;
   late ProfilePrivacy _selectedPrivacy;
+  late Platform? _selectedFeaturedPlatform;
 
   late final ProfileEdit _seed;
 
@@ -43,6 +47,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _bioController = TextEditingController(text: widget.profile.bio ?? '');
     _selectedTheme = widget.profile.theme;
     _selectedPrivacy = widget.profile.privacy;
+    _selectedFeaturedPlatform = widget.profile.featuredPlatform;
     _seed = _editFrom(widget.profile);
 
     _displayNameController.addListener(_onFieldChanged);
@@ -66,6 +71,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: p.theme,
       privacy: p.privacy,
+      featuredPlatform: p.featuredPlatform,
     );
   }
 
@@ -76,6 +82,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: _selectedTheme,
       privacy: _selectedPrivacy,
+      featuredPlatform: _selectedFeaturedPlatform,
     );
   }
 
@@ -251,6 +258,39 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         onChanged: (p) => setState(() => _selectedPrivacy = p),
                         l10n: l10n,
                       ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        l10n.profileFeaturedCardLabel,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      AsyncValueWidget<List<Platform>>(
+                        key: const Key('featuredCardAsyncSection'),
+                        value: ref.watch(connectedPlatformsProvider),
+                        onRetry: () =>
+                            ref.invalidate(connectedPlatformsProvider),
+                        data: (platforms) {
+                          // Union of connected platforms and the seeded
+                          // featured platform (if any) avoids a Material
+                          // dropdown assertion when the stored value is no
+                          // longer in the connected list.
+                          final items = {
+                            ...platforms,
+                            ...?(_selectedFeaturedPlatform != null
+                                ? [_selectedFeaturedPlatform!]
+                                : null),
+                          }.toList();
+                          return _FeaturedCardSelector(
+                            key: const Key('featuredCardSelector'),
+                            selected: _selectedFeaturedPlatform,
+                            platforms: items,
+                            enabled: !editState.submitting,
+                            onChanged: (p) =>
+                                setState(() => _selectedFeaturedPlatform = p),
+                            l10n: l10n,
+                          );
+                        },
+                      ),
                       if (editState.failure != null) ...[
                         const SizedBox(height: AppSpacing.md),
                         Text(
@@ -406,6 +446,42 @@ class _SaveButton extends StatelessWidget {
             child: CircularProgressIndicator.adaptive(strokeWidth: 2),
           )
         : Text(l10n.profileSave),
+  );
+}
+
+class _FeaturedCardSelector extends StatelessWidget {
+  const _FeaturedCardSelector({
+    super.key,
+    required this.selected,
+    required this.platforms,
+    required this.enabled,
+    required this.onChanged,
+    required this.l10n,
+  });
+
+  final Platform? selected;
+  final List<Platform> platforms;
+  final bool enabled;
+  final ValueChanged<Platform?> onChanged;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) => DropdownButtonFormField<Platform?>(
+    key: const Key('featuredCardDropdown'),
+    initialValue: selected,
+    onChanged: enabled ? onChanged : null,
+    items: [
+      DropdownMenuItem<Platform?>(
+        value: null,
+        child: Text(l10n.profileFeaturedCardDefault),
+      ),
+      ...platforms.map(
+        (p) => DropdownMenuItem<Platform?>(
+          value: p,
+          child: Text(platformDescriptors[p]!.displayName),
+        ),
+      ),
+    ],
   );
 }
 

@@ -66,6 +66,7 @@ const _profile = Profile(
   bio: null,
   theme: ProfileTheme.classic,
   privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
 );
 
 /// Counts reads so the success test can observe `profileProvider` invalidation
