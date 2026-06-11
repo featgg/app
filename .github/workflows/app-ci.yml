@@ -31,6 +31,24 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Restore build_runner's incremental state AND the generated *.g.dart
+      # outputs. The generated parts live under lib/ and are gitignored, so a
+      # clean CI checkout lacks them; caching only .dart_tool/build would force
+      # a full re-analysis to re-materialize them (no speedup). Caching both
+      # lets build_runner re-hash inputs and regenerate only what changed, so a
+      # restored cache + new source stays correct. The run_id suffix saves a
+      # fresh baseline each run; the restore-keys prefix matches the most recent
+      # cache for the same deps, SDK, and generator config.
+      - name: Cache build_runner output
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .dart_tool/build
+            lib/**/*.g.dart
+          key: build-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'build.yaml') }}-${{ github.run_id }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'build.yaml') }}-
+
       - name: dart run build_runner build
         run: dart run build_runner build --delete-conflicting-outputs
 
