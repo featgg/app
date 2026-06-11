@@ -37,6 +37,7 @@ class PublicProfileScreen extends ConsumerWidget {
         child: AsyncValueWidget<Profile?>(
           value: state,
           onRetry: () => ref.invalidate(publicProfileProvider(userId)),
+          loading: const ProfileSkeleton(),
           data: (profile) => profile == null
               ? const _UnavailableState()
               : _PublicProfileContent(
@@ -133,8 +134,10 @@ class _PublicProfileContent extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (!allSettled)
-                  // Single affordance while any platform read is still loading.
-                  const CircularProgressIndicator.adaptive()
+                  // Card-shaped placeholders while any platform read is still
+                  // loading: they occupy realistic space, so the page does not
+                  // reflow when the real cards resolve.
+                  const ProfileCardsSkeleton()
                 else if (allNull)
                   Text(
                     l10n.publicProfileNoCards,

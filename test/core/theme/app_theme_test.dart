@@ -8,6 +8,15 @@ void main() {
       expect(AppTheme.light().useMaterial3, isTrue);
     });
 
+    test('keeps the app bar color constant under scroll', () {
+      final theme = AppTheme.light();
+      // The M3 scrolled-under state falls back to the pinned backgroundColor,
+      // so the bar cannot recolor when content scrolls beneath it.
+      expect(theme.appBarTheme.backgroundColor, theme.colorScheme.surface);
+      expect(theme.appBarTheme.scrolledUnderElevation, 0);
+      expect(theme.appBarTheme.surfaceTintColor, Colors.transparent);
+    });
+
     test('derives colorScheme from the seed token', () {
       final expected = ColorScheme.fromSeed(
         seedColor: AppColorTokens.seed,

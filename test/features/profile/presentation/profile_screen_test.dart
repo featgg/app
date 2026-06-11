@@ -171,7 +171,7 @@ void main() {
     expect(container.read(profileProvider), isA<AsyncError<Profile>>());
   });
 
-  testWidgets('shows a loading indicator while the read is in flight', (
+  testWidgets('shows the profile skeleton while the read is in flight', (
     tester,
   ) async {
     // Hold the future open so the loading state is observable without a timer.
@@ -180,7 +180,8 @@ void main() {
     await tester.pumpWidget(_screen(repo));
     await tester.pump(); // one frame — loading state
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('profileSkeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('renders identity fields on data', (tester) async {
@@ -275,8 +276,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    // Exactly one spinner in the cards area — no N-spinner reflow.
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Card-shaped skeleton in the cards area — no N-spinner reflow.
+    expect(find.byKey(const Key('profileCardsSkeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     // Section header and per-platform keys are absent until settle.
     expect(find.byKey(const Key('profileCardsSectionTitle')), findsNothing);
     expect(find.byKey(const Key('ownerCard_minecraftHypixel')), findsNothing);

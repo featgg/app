@@ -13,9 +13,21 @@ abstract final class AppTheme {
   /// No [fontFamily] is set — the platform default font is used until a brand
   /// font is chosen, avoiding a runtime network dependency.
   static ThemeData light() {
+    final colorScheme = ColorScheme.fromSeed(seedColor: AppColorTokens.seed);
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: AppColorTokens.seed),
+      colorScheme: colorScheme,
+      // The M3 app bar swaps its background to colorScheme.surfaceContainer
+      // when content scrolls under it — elevation and surfaceTint no longer
+      // drive that change. Pinning backgroundColor resolves the rest and
+      // scrolled-under states to the same color, so the bar never shifts hue
+      // on scroll; the zeroed elevation and transparent tint cover the legacy
+      // overlay path as well.
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
       textTheme: const TextTheme(
         displayLarge: TextStyle(
           fontSize: AppTypography.displaySize,

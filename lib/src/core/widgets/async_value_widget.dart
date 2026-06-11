@@ -20,6 +20,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
     required this.value,
     required this.data,
     this.onRetry,
+    this.loading,
   });
 
   final AsyncValue<T> value;
@@ -28,12 +29,17 @@ class AsyncValueWidget<T> extends StatelessWidget {
   /// Invoked by the error state's Retry action. Null hides the action.
   final VoidCallback? onRetry;
 
+  /// Replaces the default centered spinner — e.g. a skeleton mirroring the
+  /// data layout so content swaps in without reflow. Null keeps the spinner.
+  final Widget? loading;
+
   @override
   Widget build(BuildContext context) => value.when(
     skipLoadingOnReload: true,
     skipLoadingOnRefresh: true,
     data: data,
-    loading: () => const Center(child: CircularProgressIndicator.adaptive()),
+    loading: () =>
+        loading ?? const Center(child: CircularProgressIndicator.adaptive()),
     error: (error, _) => _ErrorView(error: error, onRetry: onRetry),
   );
 }

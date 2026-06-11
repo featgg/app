@@ -248,8 +248,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    // Exactly one spinner in the cards area — no N-spinner reflow.
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Card-shaped skeleton in the cards area — no N-spinner reflow.
+    expect(find.byKey(const Key('profileCardsSkeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     // Per-platform card keys are absent until settle.
     expect(find.byKey(const Key('publicCard_minecraftHypixel')), findsNothing);
   });
