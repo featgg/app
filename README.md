@@ -108,6 +108,20 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+### Refreshing generated code
+
+After switching branches or editing a provider/DTO, regenerate the `*.g.dart`
+without a full clean rebuild:
+
+```sh
+dart run tool/gen.dart
+```
+
+It runs `dart run build_runner build --delete-conflicting-outputs` only —
+build_runner is incremental, so it regenerates just what changed (seconds). It
+skips `flutter pub get`; if dependencies changed, run that (or `setup.dart`)
+first. Reach for `setup.dart` when you need a clean rebuild from scratch.
+
 ## License
 
 This project is source-available under the [Functional Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2)](https://fsl.software). Each version automatically converts to the Apache License, Version 2.0 two years after its publication. See [LICENSE](LICENSE.md) for the full text.
