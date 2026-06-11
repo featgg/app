@@ -74,6 +74,37 @@ void main() {
     test('UnexpectedFailure is not expected', () {
       expect(const UnexpectedFailure().isExpected, isFalse);
     });
+
+    test('UpstreamFailure user-state codes are expected', () {
+      expect(
+        const UpstreamFailure(code: 'UPSTREAM_NOT_FOUND').isExpected,
+        isTrue,
+      );
+      expect(
+        const UpstreamFailure(code: 'LINKED_ACCOUNT_NOT_FOUND').isExpected,
+        isTrue,
+      );
+      expect(
+        const UpstreamFailure(code: 'MISSING_STORED_CREDENTIAL').isExpected,
+        isTrue,
+      );
+      expect(const UpstreamFailure().isExpected, isTrue);
+    });
+
+    test('UpstreamFailure service-breakage codes are not expected', () {
+      expect(
+        const UpstreamFailure(code: 'UPSTREAM_FAILURE').isExpected,
+        isFalse,
+      );
+      expect(
+        const UpstreamFailure(code: 'UPSTREAM_RATE_LIMIT').isExpected,
+        isFalse,
+      );
+      expect(
+        const UpstreamFailure(code: 'INVALID_STORED_ROUTING').isExpected,
+        isFalse,
+      );
+    });
   });
 
   group('Failure carries no user-facing field', () {
