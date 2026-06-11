@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
@@ -226,10 +227,17 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         maxLength: 150,
                         minLines: 4,
                         maxLines: 4,
+                        inputFormatters: const [
+                          _MaxLineBreaksFormatter(kMaxBioLineBreaks),
+                        ],
                         decoration: InputDecoration(
                           labelText: l10n.profileBioLabel,
                           errorText: fieldErrors.contains(ProfileEditField.bio)
                               ? l10n.profileBioTooLong
+                              : fieldErrors.contains(
+                                  ProfileEditField.bioLineBreaks,
+                                )
+                              ? l10n.profileBioTooManyLines
                               : null,
                         ),
                         textInputAction: TextInputAction.newline,
@@ -541,4 +549,18 @@ class _PrivacySelector extends StatelessWidget {
         .map((p) => DropdownMenuItem(value: p, child: Text(_label(p))))
         .toList(),
   );
+}
+
+/// Rejects edits that would push the bio past [max] line breaks, so the user
+/// cannot enter a bio that drives their profile cards far down the screen.
+class _MaxLineBreaksFormatter extends TextInputFormatter {
+  const _MaxLineBreaksFormatter(this.max);
+
+  final int max;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) => '\n'.allMatches(newValue.text).length > max ? oldValue : newValue;
 }
