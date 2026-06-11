@@ -2,6 +2,11 @@ import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
 
+/// Maximum line breaks allowed in a bio. Keeps a creative bio from pushing the
+/// profile's cards far down the screen. Enforced both as input prevention on the
+/// edit field and as a validation backstop here.
+const int kMaxBioLineBreaks = 8;
+
 /// Whether the signed-in user's profile is publicly discoverable.
 enum ProfilePrivacy { public, private }
 
@@ -107,6 +112,10 @@ final class ProfileEdit extends Equatable {
       errors.add(ProfileEditField.bio);
     }
 
+    if (bio != null && '\n'.allMatches(bio!).length > kMaxBioLineBreaks) {
+      errors.add(ProfileEditField.bioLineBreaks);
+    }
+
     return errors;
   }
 
@@ -121,4 +130,4 @@ final class ProfileEdit extends Equatable {
 }
 
 /// Which field failed client validation; the screen maps each to localized copy.
-enum ProfileEditField { displayName, bio }
+enum ProfileEditField { displayName, bio, bioLineBreaks }

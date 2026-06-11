@@ -8,7 +8,10 @@ import '../../../core/theme/tokens.dart';
 class FeedSkeleton extends StatelessWidget {
   const FeedSkeleton({super.key});
 
-  static const int _count = 4;
+  /// Enough rows to fill any reasonable viewport; the lazy builder only
+  /// materializes the visible ones, and overflow clips at the screen edge —
+  /// the loading state must not look like a half-empty page.
+  static const int _count = 12;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +19,6 @@ class FeedSkeleton extends StatelessWidget {
     return ListView.separated(
       key: const Key('feedSkeleton'),
       physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
       itemCount: _count,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (_, _) => _SkeletonCard(colorScheme: colorScheme),

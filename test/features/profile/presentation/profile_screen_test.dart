@@ -69,6 +69,21 @@ final class _FakeCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
+/// Holds all card futures open indefinitely so the loading state is observable.
+final class _PendingCardsRepository implements CardsRepository {
+  final _completer = Completer<Either<Failure, GameCard?>>();
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) =>
+      _completer.future;
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
+}
+
 GameCard _minecraftCard() => GameCard(
   schemaVersion: 1,
   platform: Platform.minecraftHypixel,
@@ -156,7 +171,7 @@ void main() {
     expect(container.read(profileProvider), isA<AsyncError<Profile>>());
   });
 
-  testWidgets('shows a loading indicator while the read is in flight', (
+  testWidgets('shows the profile skeleton while the read is in flight', (
     tester,
   ) async {
     // Hold the future open so the loading state is observable without a timer.
@@ -165,7 +180,8 @@ void main() {
     await tester.pumpWidget(_screen(repo));
     await tester.pump(); // one frame — loading state
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('profileSkeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('renders identity fields on data', (tester) async {
@@ -184,6 +200,15 @@ void main() {
 
     // Avatar widget is present (icon placeholder when avatarUrl is null).
     expect(find.byIcon(Icons.person), findsOneWidget);
+
+    // The screen body is wrapped in SafeArea (architecture convention).
+    expect(
+      find.ancestor(
+        of: find.text(_profile.displayName),
+        matching: find.byType(SafeArea),
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('renders the error view with Retry on Left', (tester) async {
@@ -234,6 +259,58 @@ void main() {
 
     expect(find.byKey(const Key('profileNoCardsYet')), findsOneWidget);
     expect(find.byKey(const Key('profileCardsSectionTitle')), findsNothing);
+  });
+
+  testWidgets('shows a single section loader while card reads are in flight', (
+    tester,
+  ) async {
+    // Profile resolves immediately; cards are held pending so only the card
+    // section is loading — this isolates the single-spinner requirement.
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final cardsRepo = _PendingCardsRepository();
+
+    await tester.pumpWidget(_screen(repo, cardsRepo: cardsRepo));
+    // Pump enough frames for the profile future to resolve while card futures
+    // remain pending. pumpAndSettle cannot be used here because the pending
+    // card futures never quiesce.
+    await tester.pump();
+    await tester.pump();
+
+    // Card-shaped skeleton in the cards area — no N-spinner reflow.
+    expect(find.byKey(const Key('profileCardsSkeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    // Section header and per-platform keys are absent until settle.
+    expect(find.byKey(const Key('profileCardsSectionTitle')), findsNothing);
+    expect(find.byKey(const Key('ownerCard_minecraftHypixel')), findsNothing);
+  });
+
+  testWidgets('renders only one card padding per real card', (tester) async {
+    // Two non-adjacent platforms have cards; all others are null.
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final populated = {Platform.minecraftHypixel, Platform.steam};
+    final cardsRepo = _FakeCardsRepository(
+      myCardResult: (p) =>
+          populated.contains(p) ? right(_minecraftCard()) : right(null),
+    );
+
+    await tester.pumpWidget(_screen(repo, cardsRepo: cardsRepo));
+    await tester.pumpAndSettle();
+
+    // Both real cards are present.
+    expect(find.byKey(const Key('ownerCard_minecraftHypixel')), findsOneWidget);
+    expect(find.byKey(const Key('ownerCard_steam')), findsOneWidget);
+
+    // Only 2 Padding(bottom: AppSpacing.md) wrappers around card slots —
+    // not Platform.values.length (phantom gaps from card-less platforms).
+    final paddingFinder = find.ancestor(
+      of: find.byWidgetPredicate((w) => w is AsyncValueWidget),
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Padding &&
+            w.padding == const EdgeInsets.only(bottom: AppSpacing.md),
+      ),
+    );
+    expect(paddingFinder, findsNWidgets(populated.length));
   });
 
   testWidgets('private profile shows the private indicator', (tester) async {

@@ -42,11 +42,14 @@ class ProfileScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: AsyncValueWidget<Profile>(
-        value: state,
-        onRetry: () => ref.invalidate(profileProvider),
-        data: (profile) =>
-            _ProfileContent(profile: profile, cardBuilder: cardBuilder),
+      body: SafeArea(
+        child: AsyncValueWidget<Profile>(
+          value: state,
+          onRetry: () => ref.invalidate(profileProvider),
+          loading: const ProfileSkeleton(),
+          data: (profile) =>
+              _ProfileContent(profile: profile, cardBuilder: cardBuilder),
+        ),
       ),
     );
   }
@@ -70,10 +73,26 @@ class _ProfileContent extends ConsumerWidget {
       for (final p in Platform.values) p: ref.watch(ownerCardProvider(p)),
     };
 
+    // Section is ready once every read has settled (data or error — not loading).
+    // This prevents N independent spinners from appearing while reads are in
+    // flight and ensures the header + cards render together.
+    final allSettled = cardStates.values.every((s) => s is! AsyncLoading);
+
     final allResolved = cardStates.values.every((s) => s is AsyncData);
     final allNull =
         allResolved &&
         cardStates.values.every((s) => (s as AsyncData).value == null);
+
+    // Platforms that will render visible content (non-null data or an error
+    // tile). Card-less platforms (AsyncData(null)) contribute no padding.
+    final renderablePlatforms = Platform.values
+        .where(
+          (p) =>
+              cardStates[p] is AsyncError ||
+              (cardStates[p] is AsyncData &&
+                  (cardStates[p] as AsyncData).value != null),
+        )
+        .toList();
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -82,7 +101,10 @@ class _ProfileContent extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              // Top-anchored so the avatar/identity block stays put while the
+              // cards section settles — vertical centering made the whole page
+              // jump as the cards loaded in.
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _Avatar(avatarUrl: profile.avatarUrl, l10n: l10n),
@@ -111,7 +133,12 @@ class _ProfileContent extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 _PrivacyIndicator(privacy: profile.privacy, l10n: l10n),
                 const SizedBox(height: AppSpacing.lg),
-                if (allNull)
+                if (!allSettled)
+                  // Card-shaped placeholders while any platform read is still
+                  // loading: they occupy realistic space, so the page does not
+                  // reflow when the real cards resolve.
+                  const ProfileCardsSkeleton()
+                else if (allNull)
                   Text(
                     l10n.profileNoCardsYet,
                     key: const Key('profileNoCardsYet'),
@@ -128,19 +155,28 @@ class _ProfileContent extends ConsumerWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  ...Platform.values.map(
-                    (p) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: AsyncValueWidget<GameCard?>(
-                        key: Key('ownerCard_${p.name}'),
-                        value: cardStates[p]!,
-                        onRetry: () => ref.invalidate(ownerCardProvider(p)),
-                        data: (card) => card == null
-                            ? const SizedBox.shrink()
-                            : cardBuilder(card),
-                      ),
-                    ),
-                  ),
+                  // Renderable platforms (non-null data or error) carry bottom
+                  // padding; card-less platforms (null data) get none so there
+                  // are no phantom gaps between real cards.
+                  ...Platform.values.map((p) {
+                    final isRenderable = renderablePlatforms.contains(p);
+                    final widget = AsyncValueWidget<GameCard?>(
+                      key: Key('ownerCard_${p.name}'),
+                      value: cardStates[p]!,
+                      onRetry: () => ref.invalidate(ownerCardProvider(p)),
+                      data: (card) => card == null
+                          ? const SizedBox.shrink()
+                          : cardBuilder(card),
+                    );
+                    return isRenderable
+                        ? Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.md,
+                            ),
+                            child: widget,
+                          )
+                        : widget;
+                  }),
                 ],
               ],
             ),
