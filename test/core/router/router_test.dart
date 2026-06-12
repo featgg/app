@@ -13,6 +13,7 @@ import 'package:featgg/src/features/feed/domain/feed_repository.dart';
 import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
+import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -166,6 +167,36 @@ void main() {
 
         expect(find.byType(FeedScreen), findsOneWidget);
         expect(find.byType(ProfileScreen), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'settings gear push navigates from the profile to the SettingsScreen',
+      (tester) async {
+        await tester.pumpWidget(_signedInAppWithProfile());
+        await tester.pumpAndSettle();
+
+        // Feed → profile. Pump a fixed duration (not pumpAndSettle: the pending
+        // profile read animates the skeleton, so the tree never quiesces) long
+        // enough to COMPLETE the push transition — otherwise the profile AppBar
+        // is still sliding in from the right and its gear sits off-screen.
+        await tester.tap(find.byIcon(Icons.account_circle_outlined));
+        await tester.pump(); // start the push
+        await tester.pump(
+          const Duration(milliseconds: 400),
+        ); // settle transition
+        expect(find.byType(ProfileScreen), findsOneWidget);
+
+        // The settings gear is always present in the profile AppBar; now that
+        // the profile is settled the gear is on-screen and hittable. Tapping it
+        // pushes /settings (it resolves under the signed-in redirect).
+        await tester.tap(find.byKey(const Key('settingsEntryButton')));
+        await tester.pump(); // start the push
+        await tester.pump(
+          const Duration(milliseconds: 400),
+        ); // settle transition
+
+        expect(find.byType(SettingsScreen), findsOneWidget);
       },
     );
 

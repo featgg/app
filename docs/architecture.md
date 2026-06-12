@@ -72,7 +72,7 @@ Riverpod with code generation is the only state-management and dependency-inject
 
 **Use cases are providers/controllers.** The use case is the controller itself, not a separate class: a read is a derived provider, a mutation is an `AsyncNotifier`, both living in `presentation`. A widget never calls a repository or a data source — it watches a provider or calls a controller method; the controller, in turn, calls a single repository interface directly (or an application service when one exists). A standalone service is introduced only for real orchestration: more than one repository combined into a single operation, or a rule reused by more than one controller. A service that only forwards a single repository call is not written; it is friction without benefit.
 
-**Ephemeral visual state uses `setState`.** State that is purely visual, does not outlive the widget, and carries no domain meaning stays in the widget via `setState`. Riverpod is used when state has domain meaning, is shared between widgets, or must outlive the widget. This is detailed at the screen level below.
+**`setState` is the exception, not a default.** Riverpod holds state with domain meaning, state shared between widgets, and state that outlives the widget; `setState` is reserved for genuinely ephemeral, widget-internal visual state with no consequence beyond the widget itself. This is detailed at the screen level below (§ Ephemeral state).
 
 ### Dependency injection
 
@@ -174,7 +174,7 @@ Both the read providers and the mutation controllers live in the `presentation` 
 
 ### Ephemeral state
 
-State that is purely visual, does not outlive the widget, and has no domain meaning — a dropdown's open/closed flag, a text field's contents before submit, an `AnimationController`, `obscureText` — uses `setState`. Riverpod is used when state has domain meaning, is shared between widgets, or must outlive the widget. This does not weaken the dummy-widget rule: business state stays in providers.
+`setState` is avoided by default. Riverpod is this codebase's state mechanism, and using `setState` for anything with a consequence beyond a widget's own rendering creates state that lives outside the provider graph — unobservable and untestable through `ProviderContainer`, and a recurring source of drift bugs (two views of the same fact falling out of sync). The **only** sanctioned use of `setState` is genuinely ephemeral, widget-internal visual state: it does not outlive the widget, is not shared, has no domain meaning, and has no consequence beyond that widget's own layout — a dropdown's open/closed flag, a text field's contents before submit, an `AnimationController`, `obscureText`. The moment a piece of state influences anything outside the widget — another screen, a navigation or refresh decision, a sibling's rendering — it is no longer ephemeral and moves into a provider/`AsyncNotifier`. This does not weaken the dummy-widget rule: business state stays in providers.
 
 ### Centralized loading and error rendering
 

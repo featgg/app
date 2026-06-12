@@ -158,7 +158,11 @@ and P1 to Major in the Stage-3 reviewer's severity buckets.
   committed `env.*.json` values.
 - P1: backend calls not returning `Either<Failure, T>`; swallowed
   errors on network or auth paths; legacy `StateNotifier` instead
-  of Riverpod codegen; raw `Color(...)` / `Colors.*` literals,
+  of Riverpod codegen; `setState` holding non-ephemeral state —
+  state that is shared, outlives the widget, or has any consequence
+  beyond the widget's own rendering (navigation, a refresh, another
+  screen. Use it as less as possible. Only as an exception if really needed) — instead of a Riverpod provider/`AsyncNotifier`; raw
+  `Color(...)` / `Colors.*` literals,
   magic spacing, or ad-hoc `TextStyle` outside
   `lib/src/core/theme/`; imports violating the inward-only layer
   rule or cross-feature isolation (only `domain` crosses feature

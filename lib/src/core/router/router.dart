@@ -8,6 +8,7 @@ import 'package:featgg/src/features/connections/presentation/connections_present
 import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
+import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -73,6 +74,7 @@ GoRouter router(Ref ref) {
         path: '/connections',
         builder: (_, _) => const ConnectionsScreen(),
       ),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     ],
   );
 }

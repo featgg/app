@@ -874,5 +874,13 @@
   "profileFeaturedCardDefault": "Default — most recent card",
   "@profileFeaturedCardDefault": {
     "description": "Option in the featured-card dropdown that clears the preference, letting the backend fall back to the most-recently-updated card."
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "App bar title for the settings screen."
+  },
+  "settingsPrivacyUpdated": "Privacy updated.",
+  "@settingsPrivacyUpdated": {
+    "description": "Transient snackbar confirmation shown after a privacy change persists successfully."
   }
 }

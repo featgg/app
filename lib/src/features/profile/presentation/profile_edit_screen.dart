@@ -32,7 +32,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late final TextEditingController _displayNameController;
   late final TextEditingController _bioController;
   late ProfileTheme _selectedTheme;
-  late ProfilePrivacy _selectedPrivacy;
   late Platform? _selectedFeaturedPlatform;
 
   late final ProfileEdit _seed;
@@ -47,7 +46,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     );
     _bioController = TextEditingController(text: widget.profile.bio ?? '');
     _selectedTheme = widget.profile.theme;
-    _selectedPrivacy = widget.profile.privacy;
     _selectedFeaturedPlatform = widget.profile.featuredPlatform;
     _seed = _editFrom(widget.profile);
 
@@ -82,7 +80,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       displayName: _displayNameController.text.trim(),
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: _selectedTheme,
-      privacy: _selectedPrivacy,
+      // Privacy is no longer edited here; the seed value is passed through so
+      // an edit-save does not overwrite a privacy change made in Settings.
+      privacy: widget.profile.privacy,
       featuredPlatform: _selectedFeaturedPlatform,
     );
   }
@@ -252,18 +252,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         selected: _selectedTheme,
                         enabled: !editState.submitting,
                         onChanged: (t) => setState(() => _selectedTheme = t),
-                        l10n: l10n,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        l10n.profilePrivacyLabel,
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _PrivacySelector(
-                        selected: _selectedPrivacy,
-                        enabled: !editState.submitting,
-                        onChanged: (p) => setState(() => _selectedPrivacy = p),
                         l10n: l10n,
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -519,34 +507,6 @@ class _ThemeSelector extends StatelessWidget {
     onChanged: enabled ? (v) => onChanged(v!) : null,
     items: ProfileTheme.values
         .map((t) => DropdownMenuItem(value: t, child: Text(_label(t))))
-        .toList(),
-  );
-}
-
-class _PrivacySelector extends StatelessWidget {
-  const _PrivacySelector({
-    required this.selected,
-    required this.enabled,
-    required this.onChanged,
-    required this.l10n,
-  });
-
-  final ProfilePrivacy selected;
-  final bool enabled;
-  final ValueChanged<ProfilePrivacy> onChanged;
-  final AppLocalizations l10n;
-
-  String _label(ProfilePrivacy p) => switch (p) {
-    ProfilePrivacy.public => l10n.profilePrivacyPublic,
-    ProfilePrivacy.private => l10n.profilePrivacyPrivate,
-  };
-
-  @override
-  Widget build(BuildContext context) => DropdownButtonFormField<ProfilePrivacy>(
-    initialValue: selected,
-    onChanged: enabled ? (v) => onChanged(v!) : null,
-    items: ProfilePrivacy.values
-        .map((p) => DropdownMenuItem(value: p, child: Text(_label(p))))
         .toList(),
   );
 }

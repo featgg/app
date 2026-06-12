@@ -209,5 +209,7 @@
   "profileCardsSectionTitle": "Tus tarjetas",
   "profileNoCardsYet": "Aún no tienes tarjetas. Conecta una plataforma para obtener tu primera tarjeta.",
   "profileFeaturedCardLabel": "Tarjeta destacada",
-  "profileFeaturedCardDefault": "Predeterminada — tarjeta más reciente"
+  "profileFeaturedCardDefault": "Predeterminada — tarjeta más reciente",
+  "settingsTitle": "Ajustes",
+  "settingsPrivacyUpdated": "Privacidad actualizada."
 }
