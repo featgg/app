@@ -26,6 +26,9 @@ enum DeletionStep {
 
   /// The code was accepted; deletion is scheduled. Shows the target date.
   scheduled,
+
+  /// A scheduled deletion was cancelled during the grace period.
+  cancelled,
 }
 
 /// Immutable controller state for the account-deletion flow.
@@ -133,6 +136,23 @@ class AccountDeletionController extends _$AccountDeletionController {
         step: DeletionStep.scheduled,
         submitting: false,
         scheduledAt: schedule.scheduledAt,
+        clearFailure: true,
+      ),
+    );
+  }
+
+  /// Cancels a scheduled deletion during the grace period. On success advances
+  /// to [DeletionStep.cancelled]; on failure stays on [DeletionStep.scheduled]
+  /// and surfaces the [Failure] so the user can retry.
+  Future<void> cancelDeletion() async {
+    state = state.copyWith(submitting: true, clearFailure: true);
+    final repo = ref.read(accountDeletionRepositoryProvider);
+    final result = await repo.cancelDeletion();
+    result.fold(
+      (failure) => state = state.copyWith(submitting: false, failure: failure),
+      (_) => state = state.copyWith(
+        step: DeletionStep.cancelled,
+        submitting: false,
         clearFailure: true,
       ),
     );

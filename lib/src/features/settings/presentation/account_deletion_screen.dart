@@ -51,7 +51,11 @@ class AccountDeletionScreen extends ConsumerWidget {
           DeletionStep.scheduled => _ScheduledStep(
             l10n: l10n,
             scheduledAt: s.scheduledAt!,
+            submitting: s.submitting,
+            failure: s.failure,
+            onCancel: controller.cancelDeletion,
           ),
+          DeletionStep.cancelled => _CancelledStep(l10n: l10n),
         },
       ),
     );
@@ -326,10 +330,19 @@ class _AwaitingCodeStepState extends State<_AwaitingCodeStep> {
 }
 
 class _ScheduledStep extends StatelessWidget {
-  const _ScheduledStep({required this.l10n, required this.scheduledAt});
+  const _ScheduledStep({
+    required this.l10n,
+    required this.scheduledAt,
+    required this.submitting,
+    required this.failure,
+    required this.onCancel,
+  });
 
   final AppLocalizations l10n;
   final DateTime scheduledAt;
+  final bool submitting;
+  final Failure? failure;
+  final Future<void> Function() onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -350,6 +363,54 @@ class _ScheduledStep extends StatelessWidget {
           Text(
             l10n.deleteAccountScheduledBody(formattedDate),
             key: const Key('deleteAccountScheduledBody'),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (failure != null) ...[
+            const SizedBox(height: AppSpacing.smMd),
+            Text(
+              failure!.localizedMessage(l10n),
+              key: const Key('deleteAccountCancelError'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(
+            key: const Key('deleteAccountCancelButton'),
+            onPressed: submitting ? null : onCancel,
+            child: submitting
+                ? const _SubmitSpinner()
+                : Text(l10n.deleteAccountCancelButton),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CancelledStep extends StatelessWidget {
+  const _CancelledStep({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            l10n.deleteAccountCancelledTitle,
+            key: const Key('deleteAccountCancelledTitle'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.smMd),
+          Text(
+            l10n.deleteAccountCancelledBody,
+            key: const Key('deleteAccountCancelledBody'),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],

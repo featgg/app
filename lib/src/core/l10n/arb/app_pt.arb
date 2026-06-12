@@ -227,5 +227,8 @@
   "deleteAccountResendCountdown": "Reenviar código em {time}",
   "deleteAccountInvalidCode": "O código está incorreto ou expirou. Tente novamente.",
   "deleteAccountScheduledTitle": "Exclusão agendada",
-  "deleteAccountScheduledBody": "Sua conta está agendada para exclusão em {date}. Você pode cancelar antes dessa data."
+  "deleteAccountScheduledBody": "Sua conta está agendada para exclusão em {date}. Você pode cancelar antes dessa data.",
+  "deleteAccountCancelButton": "Cancelar exclusão",
+  "deleteAccountCancelledTitle": "Exclusão cancelada",
+  "deleteAccountCancelledBody": "A exclusão da sua conta foi cancelada. Sua conta está segura."
 }

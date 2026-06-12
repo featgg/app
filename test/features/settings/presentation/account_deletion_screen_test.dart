@@ -173,4 +173,32 @@ void main() {
     await tester.pump(const Duration(seconds: 31));
     expect(tester.widget<TextButton>(resend).onPressed, isNotNull);
   });
+
+  testWidgets('the scheduled state offers cancel, and cancelling shows the '
+      'cancelled state', (tester) async {
+    final repo = _FakeRepo();
+    final container = await _pump(tester, repo);
+    await tester.pumpAndSettle();
+
+    final notifier = container.read(accountDeletionControllerProvider.notifier);
+    await notifier.requestCode();
+    await tester.pump();
+    await notifier.confirmCode('123456');
+    await tester.pump();
+
+    // The scheduled step provides the cancel affordance the copy promises.
+    final cancel = find.byKey(const Key('deleteAccountCancelButton'));
+    expect(cancel, findsOneWidget);
+
+    await tester.tap(cancel);
+    await tester.pump(); // cancelDeletion runs
+    await tester.pump(); // → cancelled step
+
+    expect(
+      find.byKey(const Key('deleteAccountCancelledTitle')),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(seconds: 31)); // drain the cooldown timer
+  });
 }

@@ -9,14 +9,17 @@ final class _FakeRepo implements AccountDeletionRepository {
   _FakeRepo({
     Either<Failure, Unit> Function()? request,
     Either<Failure, DeletionSchedule> Function()? confirm,
+    Either<Failure, Unit> Function()? cancel,
   }) : _request = request ?? (() => right(unit)),
        _confirm =
            confirm ??
            (() =>
-               right(DeletionSchedule(scheduledAt: DateTime.utc(2026, 6, 18))));
+               right(DeletionSchedule(scheduledAt: DateTime.utc(2026, 6, 18)))),
+       _cancel = cancel ?? (() => right(unit));
 
   final Either<Failure, Unit> Function() _request;
   final Either<Failure, DeletionSchedule> Function() _confirm;
+  final Either<Failure, Unit> Function() _cancel;
   int requestCalls = 0;
 
   @override
@@ -31,7 +34,7 @@ final class _FakeRepo implements AccountDeletionRepository {
   ) async => _confirm();
 
   @override
-  Future<Either<Failure, Unit>> cancelDeletion() async => right(unit);
+  Future<Either<Failure, Unit>> cancelDeletion() async => _cancel();
 }
 
 ProviderContainer _container(AccountDeletionRepository repo) {
@@ -88,6 +91,49 @@ void main() {
         final state = container.read(accountDeletionControllerProvider);
         expect(state.step, DeletionStep.awaitingCode);
         expect(state.failure, isA<InputFailure>());
+
+        notifier.reset();
+      },
+    );
+
+    test('cancelDeletion from scheduled advances to cancelled', () async {
+      final repo = _FakeRepo();
+      final container = _container(repo);
+      final notifier = container.read(
+        accountDeletionControllerProvider.notifier,
+      );
+
+      await notifier.requestCode();
+      await notifier.confirmCode('123456');
+      expect(
+        container.read(accountDeletionControllerProvider).step,
+        DeletionStep.scheduled,
+      );
+
+      await notifier.cancelDeletion();
+      final state = container.read(accountDeletionControllerProvider);
+      expect(state.step, DeletionStep.cancelled);
+      expect(state.failure, isNull);
+
+      notifier.reset();
+    });
+
+    test(
+      'a failed cancel stays on scheduled and surfaces the Failure',
+      () async {
+        final repo = _FakeRepo(cancel: () => left(const NetworkFailure()));
+        final container = _container(repo);
+        final notifier = container.read(
+          accountDeletionControllerProvider.notifier,
+        );
+
+        await notifier.requestCode();
+        await notifier.confirmCode('123456');
+        await notifier.cancelDeletion();
+
+        final state = container.read(accountDeletionControllerProvider);
+        expect(state.step, DeletionStep.scheduled);
+        expect(state.failure, isA<NetworkFailure>());
 
         notifier.reset();
       },

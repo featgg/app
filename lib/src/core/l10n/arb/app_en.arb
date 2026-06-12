@@ -956,5 +956,17 @@
         "type": "String"
       }
     }
+  },
+  "deleteAccountCancelButton": "Cancel deletion",
+  "@deleteAccountCancelButton": {
+    "description": "Button on the scheduled step that cancels the pending deletion during the grace period."
+  },
+  "deleteAccountCancelledTitle": "Deletion cancelled",
+  "@deleteAccountCancelledTitle": {
+    "description": "Heading shown after a scheduled deletion is successfully cancelled."
+  },
+  "deleteAccountCancelledBody": "Your account deletion has been cancelled. Your account is safe.",
+  "@deleteAccountCancelledBody": {
+    "description": "Body text confirming the scheduled deletion was cancelled."
   }
 }

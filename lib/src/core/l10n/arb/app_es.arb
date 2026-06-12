@@ -227,5 +227,8 @@
   "deleteAccountResendCountdown": "Reenviar código en {time}",
   "deleteAccountInvalidCode": "El código es incorrecto o ha expirado. Inténtalo de nuevo.",
   "deleteAccountScheduledTitle": "Eliminación programada",
-  "deleteAccountScheduledBody": "Tu cuenta está programada para eliminarse el {date}. Puedes cancelar antes de esa fecha."
+  "deleteAccountScheduledBody": "Tu cuenta está programada para eliminarse el {date}. Puedes cancelar antes de esa fecha.",
+  "deleteAccountCancelButton": "Cancelar eliminación",
+  "deleteAccountCancelledTitle": "Eliminación cancelada",
+  "deleteAccountCancelledBody": "Se canceló la eliminación de tu cuenta. Tu cuenta está a salvo."
 }
