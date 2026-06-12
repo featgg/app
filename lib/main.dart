@@ -13,6 +13,8 @@ import 'src/features/feed/domain/feed_providers.dart';
 import 'src/features/profile/data/profile_data.dart';
 import 'src/features/profile/domain/profile_domain.dart';
 import 'src/features/profile/presentation/avatar_picker.dart';
+import 'src/features/settings/data/settings_data.dart';
+import 'src/features/settings/domain/settings_domain.dart';
 
 Future<void> main() async {
   await bootstrap(
@@ -31,6 +33,9 @@ Future<void> main() async {
           ),
           cardsRepositoryProvider.overrideWith(buildCardsRepository),
           feedRepositoryProvider.overrideWith(buildFeedRepository),
+          accountDeletionRepositoryProvider.overrideWith(
+            buildAccountDeletionRepository,
+          ),
         ],
         child: const App(),
       ),
