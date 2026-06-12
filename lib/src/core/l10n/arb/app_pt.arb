@@ -211,5 +211,21 @@
   "profileFeaturedCardLabel": "Cartão em destaque",
   "profileFeaturedCardDefault": "Padrão — cartão mais recente",
   "settingsTitle": "Configurações",
-  "settingsPrivacyUpdated": "Privacidade atualizada."
+  "settingsPrivacyUpdated": "Privacidade atualizada.",
+  "settingsDeleteAccount": "Excluir conta",
+  "deleteAccountTitle": "Excluir conta",
+  "deleteAccountIntroBody": "Para excluir sua conta, enviaremos um código de uso único para seu e-mail. Digite o código para confirmar. Sua conta será programada para exclusão em 7 dias — você pode cancelar a qualquer momento durante esse período.",
+  "deleteAccountRequestButton": "Enviar código",
+  "deleteAccountConfirmDialogTitle": "Excluir sua conta?",
+  "deleteAccountConfirmDialogBody": "Enviaremos um código por e-mail. Digite-o para agendar a exclusão da sua conta.",
+  "deleteAccountConfirmDialogConfirm": "Enviar código",
+  "deleteAccountConfirmDialogCancel": "Cancelar",
+  "deleteAccountCodeLabel": "Código de exclusão",
+  "deleteAccountCodeHint": "Digite o código de 6 dígitos",
+  "deleteAccountConfirmButton": "Confirmar exclusão",
+  "deleteAccountResend": "Reenviar código",
+  "deleteAccountResendCountdown": "Reenviar código em {time}",
+  "deleteAccountInvalidCode": "O código está incorreto ou expirou. Tente novamente.",
+  "deleteAccountScheduledTitle": "Exclusão agendada",
+  "deleteAccountScheduledBody": "Sua conta está agendada para exclusão em {date}. Você pode cancelar antes dessa data."
 }

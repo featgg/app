@@ -75,6 +75,10 @@ GoRouter router(Ref ref) {
         builder: (_, _) => const ConnectionsScreen(),
       ),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(
+        path: '/settings/delete-account',
+        builder: (_, _) => const AccountDeletionScreen(),
+      ),
     ],
   );
 }

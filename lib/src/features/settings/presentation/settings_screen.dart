@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_l10n.dart';
@@ -96,6 +97,15 @@ class SettingsScreen extends ConsumerWidget {
               title: Text(l10n.signOut),
               onTap: () =>
                   ref.read(signOutControllerProvider.notifier).signOut(),
+            ),
+            const Divider(height: AppSpacing.xs),
+            ListTile(
+              key: const Key('settingsDeleteAccountTile'),
+              iconColor: Theme.of(context).colorScheme.error,
+              textColor: Theme.of(context).colorScheme.error,
+              leading: const Icon(Icons.delete_forever),
+              title: Text(l10n.settingsDeleteAccount),
+              onTap: () => context.push('/settings/delete-account'),
             ),
           ],
         ),

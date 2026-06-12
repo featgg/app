@@ -211,5 +211,21 @@
   "profileFeaturedCardLabel": "Tarjeta destacada",
   "profileFeaturedCardDefault": "Predeterminada — tarjeta más reciente",
   "settingsTitle": "Ajustes",
-  "settingsPrivacyUpdated": "Privacidad actualizada."
+  "settingsPrivacyUpdated": "Privacidad actualizada.",
+  "settingsDeleteAccount": "Eliminar cuenta",
+  "deleteAccountTitle": "Eliminar cuenta",
+  "deleteAccountIntroBody": "Para eliminar tu cuenta, te enviaremos un código de un solo uso a tu correo. Ingrésalo para confirmar. Tu cuenta quedará programada para eliminarse en 7 días — puedes cancelar en cualquier momento durante ese período.",
+  "deleteAccountRequestButton": "Enviar código",
+  "deleteAccountConfirmDialogTitle": "¿Eliminar tu cuenta?",
+  "deleteAccountConfirmDialogBody": "Te enviaremos un código por correo. Ingrésalo para programar la eliminación de tu cuenta.",
+  "deleteAccountConfirmDialogConfirm": "Enviar código",
+  "deleteAccountConfirmDialogCancel": "Cancelar",
+  "deleteAccountCodeLabel": "Código de eliminación",
+  "deleteAccountCodeHint": "Ingresa el código de 6 dígitos",
+  "deleteAccountConfirmButton": "Confirmar eliminación",
+  "deleteAccountResend": "Reenviar código",
+  "deleteAccountResendCountdown": "Reenviar código en {time}",
+  "deleteAccountInvalidCode": "El código es incorrecto o ha expirado. Inténtalo de nuevo.",
+  "deleteAccountScheduledTitle": "Eliminación programada",
+  "deleteAccountScheduledBody": "Tu cuenta está programada para eliminarse el {date}. Puedes cancelar antes de esa fecha."
 }

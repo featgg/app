@@ -882,5 +882,79 @@
   "settingsPrivacyUpdated": "Privacy updated.",
   "@settingsPrivacyUpdated": {
     "description": "Transient snackbar confirmation shown after a privacy change persists successfully."
+  },
+  "settingsDeleteAccount": "Delete account",
+  "@settingsDeleteAccount": {
+    "description": "Settings list tile label for the account-deletion flow entry point."
+  },
+  "deleteAccountTitle": "Delete account",
+  "@deleteAccountTitle": {
+    "description": "App bar title for the account-deletion flow screen."
+  },
+  "deleteAccountIntroBody": "To delete your account, we'll send a one-time code to your email. Enter the code to confirm. Your account will be scheduled for deletion in 7 days — you can cancel any time during that period.",
+  "@deleteAccountIntroBody": {
+    "description": "Body text on the idle step explaining the email-code gate and the 7-day grace period."
+  },
+  "deleteAccountRequestButton": "Send code",
+  "@deleteAccountRequestButton": {
+    "description": "Primary action button on the idle step that requests the deletion code email."
+  },
+  "deleteAccountConfirmDialogTitle": "Delete your account?",
+  "@deleteAccountConfirmDialogTitle": {
+    "description": "Title of the intent-confirm dialog shown before requesting the deletion code."
+  },
+  "deleteAccountConfirmDialogBody": "We'll email you a one-time code. Enter it to schedule your account for deletion.",
+  "@deleteAccountConfirmDialogBody": {
+    "description": "Body text of the intent-confirm dialog explaining what happens when the user proceeds."
+  },
+  "deleteAccountConfirmDialogConfirm": "Send code",
+  "@deleteAccountConfirmDialogConfirm": {
+    "description": "Destructive confirm button in the intent dialog — proceeds to request the code."
+  },
+  "deleteAccountConfirmDialogCancel": "Cancel",
+  "@deleteAccountConfirmDialogCancel": {
+    "description": "Cancel button in the intent dialog — dismisses without action."
+  },
+  "deleteAccountCodeLabel": "Deletion code",
+  "@deleteAccountCodeLabel": {
+    "description": "Label for the 6-digit deletion-code input field."
+  },
+  "deleteAccountCodeHint": "Enter the 6-digit code",
+  "@deleteAccountCodeHint": {
+    "description": "Placeholder hint for the 6-digit deletion-code input field."
+  },
+  "deleteAccountConfirmButton": "Confirm deletion",
+  "@deleteAccountConfirmButton": {
+    "description": "Primary action button on the code-entry step that submits the code to schedule deletion."
+  },
+  "deleteAccountResend": "Resend code",
+  "@deleteAccountResend": {
+    "description": "Button label to resend the deletion code email."
+  },
+  "deleteAccountResendCountdown": "Resend code in {time}",
+  "@deleteAccountResendCountdown": {
+    "description": "Resend button label while the client debounce is active; {time} is formatted as m:ss.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountInvalidCode": "The code is incorrect or has expired. Please try again.",
+  "@deleteAccountInvalidCode": {
+    "description": "Field-level error shown on the code-entry step when the server returns INVALID_OTP."
+  },
+  "deleteAccountScheduledTitle": "Deletion scheduled",
+  "@deleteAccountScheduledTitle": {
+    "description": "Heading shown on the scheduled step after a successful deletion confirmation."
+  },
+  "deleteAccountScheduledBody": "Your account is scheduled for deletion on {date}. You can cancel before that date.",
+  "@deleteAccountScheduledBody": {
+    "description": "Body text on the scheduled step showing the target deletion date. {date} is locale-formatted by the caller.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   }
 }
