@@ -6,7 +6,6 @@ import '../../../core/error/failure.dart';
 import '../../../core/l10n/failure_l10n.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/tokens.dart';
-import '../../auth/domain/auth_domain.dart';
 import 'feed_controller.dart';
 import 'feed_item_card.dart';
 import 'feed_list_state.dart';
@@ -15,10 +14,6 @@ import 'feed_skeleton.dart';
 /// Trigger the next page when the scroll position is within this many logical
 /// pixels of the list bottom.
 const double _kScrollLoadThreshold = 200;
-
-/// Standard Material extended-FAB height; reserved as bottom list padding so the
-/// last card and the "all caught up" indicator clear the floating sign-out FAB.
-const double _kExtendedFabHeight = 56;
 
 /// Discovery feed screen: a scrollable keyset-paginated list of other users'
 /// game cards rendered from `feed_preview`, with skeleton loading, empty/error
@@ -80,20 +75,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final repo = ref.read(authRepositoryProvider);
-          final result = await repo.signOut();
-          result.fold((failure) {
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(failure.localizedMessage(l10n))),
-            );
-          }, (_) {});
-        },
-        label: Text(l10n.signOut),
-        icon: const Icon(Icons.logout),
-      ),
       body: SafeArea(
         child: feedState.when(
           skipLoadingOnReload: false,
@@ -146,18 +127,10 @@ class _FeedList extends StatelessWidget {
     // +1 for the footer slot (loader / end indicator / retry).
     final itemCount = state.items.length + 1;
 
-    // The SafeArea above owns the system nav-bar inset; this padding only
-    // reserves clearance so the last card and the "all caught up" indicator
-    // are not covered by the extended sign-out FAB.
     return ListView.separated(
       key: const Key('feedList'),
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md + kFloatingActionButtonMargin + _kExtendedFabHeight,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: itemCount,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {

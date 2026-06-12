@@ -2,16 +2,19 @@ import 'dart:async';
 
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
+import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:go_router/go_router.dart';
 
 /// Fake repository whose outcome is injected per test.
 final class _FakeRepository implements ProfileRepository {
@@ -141,6 +144,70 @@ Widget _screen(ProfileRepository repo, {CardsRepository? cardsRepo}) {
         // Mirrors the router's composition-root wiring with a fake renderer.
         cardBuilder: (card) => Text(card.title),
       ),
+    ),
+  );
+}
+
+/// Minimal auth stub so the settings screen's sign-out tile has a repository.
+final class _StubAuthRepository implements AuthRepository {
+  @override
+  AuthStatus currentStatus() => AuthStatus.signedIn;
+
+  @override
+  Stream<AuthStatus> statusChanges() => const Stream.empty();
+
+  @override
+  Future<Either<Failure, Unit>> requestEmailCode(String email) async =>
+      right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> verifyEmailCode({
+    required String email,
+    required String code,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> signOut() async => right(unit);
+}
+
+/// Router harness with the real profile and settings screens so the gear's
+/// `context.push<bool>('/settings')` round-trip is exercised end to end.
+Widget _profileToSettingsRouter(ProfileRepository repo) {
+  final router = GoRouter(
+    initialLocation: '/profile',
+    routes: [
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) =>
+            ProfileScreen(cardBuilder: (card) => Text(card.title)),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+    ],
+  );
+  final container = ProviderContainer(
+    retry: (count, error) => null,
+    overrides: [
+      profileRepositoryProvider.overrideWithValue(repo),
+      cardsRepositoryProvider.overrideWithValue(
+        _FakeCardsRepository(myCardResult: (_) => right(null)),
+      ),
+      authRepositoryProvider.overrideWithValue(_StubAuthRepository()),
+    ],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     ),
   );
 }
@@ -322,5 +389,39 @@ void main() {
     // The private icon is keyed; the public icon must not be present.
     expect(find.byKey(const Key('privacyPrivateIcon')), findsOneWidget);
     expect(find.byKey(const Key('privacyPublicIcon')), findsNothing);
+  });
+
+  testWidgets('shows the settings gear in the app bar', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(_screen(repo));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settingsEntryButton')), findsOneWidget);
+  });
+
+  testWidgets('returning from settings invalidates the profile read', (
+    tester,
+  ) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(_profileToSettingsRouter(repo));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+
+    // Open settings via the gear.
+    await tester.tap(find.byKey(const Key('settingsEntryButton')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+
+    // Return via the default back button — a plain pop with no result, as a
+    // system/gesture back also produces. The gear handler must invalidate the
+    // profile read on any return, observable as a re-fetch.
+    final fetchesBeforeReturn = repo.calls;
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(repo.calls, greaterThan(fetchesBeforeReturn));
   });
 }

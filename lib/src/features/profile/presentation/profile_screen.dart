@@ -29,7 +29,22 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.profileTitle),
         actions: [
-          // Only show Edit when the profile has loaded; the action is defined
+          IconButton(
+            key: const Key('settingsEntryButton'),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.settingsTitle,
+            onPressed: () async {
+              // Refresh on return regardless of how settings was dismissed
+              // (app-bar back, system back, or swipe). A typed pop result is
+              // only delivered by the app-bar button, so relying on it left the
+              // privacy indicator stale after a system/gesture back. The
+              // refresh is cheap and shows no loading flash (the profile read
+              // keeps its previous value on reload).
+              await context.push('/settings');
+              if (!context.mounted) return;
+              ref.invalidate(profileProvider);
+            },
+          ), // Only show Edit when the profile has loaded; the action is defined
           // here so the AppBar is always present, but it is conditionally
           // populated from the data state below.
           if (state.hasValue)
