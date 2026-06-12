@@ -6,10 +6,10 @@ import '../../../core/l10n/failure_l10n.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/async_value_widget.dart';
-import '../../auth/domain/auth_providers.dart';
 import '../../profile/domain/profile.dart';
 import 'privacy_controller.dart';
 import 'settings_current_privacy_provider.dart';
+import 'sign_out_controller.dart';
 
 /// Settings screen: privacy toggle and sign-out, reached from the profile
 /// gear action. The profile refreshes its own read whenever this screen is
@@ -43,8 +43,20 @@ class SettingsScreen extends ConsumerWidget {
       }
     });
 
+    ref.listen<AsyncValue<void>>(signOutControllerProvider, (previous, next) {
+      if (!context.mounted || !next.hasError) return;
+      final error = next.error!;
+      final msg = error is Failure
+          ? error.localizedMessage(l10n)
+          : l10n.errorUnexpected;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
+    });
+
     final privacyAsync = ref.watch(settingsCurrentPrivacyProvider);
     final isWriting = ref.watch(privacyControllerProvider).isLoading;
+    final isSigningOut = ref.watch(signOutControllerProvider).isLoading;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
@@ -79,20 +91,11 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(height: AppSpacing.xs),
             ListTile(
               key: const Key('settingsSignOutTile'),
+              enabled: !isSigningOut,
               leading: const Icon(Icons.logout),
               title: Text(l10n.signOut),
-              onTap: () async {
-                final repo = ref.read(authRepositoryProvider);
-                final result = await repo.signOut();
-                if (!context.mounted) return;
-                result.fold((failure) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      SnackBar(content: Text(failure.localizedMessage(l10n))),
-                    );
-                }, (_) {});
-              },
+              onTap: () =>
+                  ref.read(signOutControllerProvider.notifier).signOut(),
             ),
           ],
         ),

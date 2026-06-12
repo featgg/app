@@ -32,9 +32,13 @@ final class _FakeProfileRepository implements ProfileRepository {
   _FakeProfileRepository(this._fetchResult);
 
   final Either<Failure, Profile> Function() _fetchResult;
+  int fetchCalls = 0;
 
   @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async => _fetchResult();
+  Future<Either<Failure, Profile>> fetchMyProfile() async {
+    fetchCalls++;
+    return _fetchResult();
+  }
 
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
@@ -84,6 +88,26 @@ void main() {
       await expectLater(
         container.read(settingsCurrentPrivacyProvider.future),
         throwsA(isA<NetworkFailure>()),
+      );
+    });
+
+    test('does not auto-retry on Left (its own _noRetry policy)', () async {
+      final repo = _FakeProfileRepository(() => left(const NetworkFailure()));
+      // No container-level retry override, so only the provider's own
+      // `_noRetry` can suppress Riverpod's default retry.
+      final container = ProviderContainer(
+        overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+
+      container.read(settingsCurrentPrivacyProvider);
+      await Future<void>.microtask(() {});
+      await Future<void>.microtask(() {});
+
+      expect(repo.fetchCalls, 1);
+      expect(
+        container.read(settingsCurrentPrivacyProvider),
+        isA<AsyncError<ProfilePrivacy>>(),
       );
     });
   });

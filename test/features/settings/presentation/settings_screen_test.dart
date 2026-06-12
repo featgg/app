@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
@@ -58,6 +60,39 @@ final class _RecordingAuthRepository implements AuthRepository {
   Future<Either<Failure, Unit>> signOut() async {
     signOutCalls++;
     return _signOutResult();
+  }
+
+  @override
+  AuthStatus currentStatus() => AuthStatus.signedIn;
+
+  @override
+  Stream<AuthStatus> statusChanges() => const Stream.empty();
+
+  @override
+  Future<Either<Failure, Unit>> requestEmailCode(String email) async =>
+      right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> verifyEmailCode({
+    required String email,
+    required String code,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> signInWithOAuth(AuthProvider provider) async =>
+      right(unit);
+}
+
+/// Auth fake whose sign-out never completes, so the in-flight (disabled) tile
+/// state is observable; counts how many times sign-out was started.
+final class _PendingSignOutAuthRepository implements AuthRepository {
+  final _completer = Completer<Either<Failure, Unit>>();
+  int signOutCalls = 0;
+
+  @override
+  Future<Either<Failure, Unit>> signOut() {
+    signOutCalls++;
+    return _completer.future;
   }
 
   @override
@@ -157,6 +192,24 @@ void main() {
 
     await tester.tap(find.byKey(const Key('settingsSignOutTile')));
     await tester.pumpAndSettle();
+
+    expect(auth.signOutCalls, 1);
+  });
+
+  testWidgets('a second sign-out tap while one is in flight does not start a '
+      'duplicate', (tester) async {
+    final auth = _PendingSignOutAuthRepository();
+    await tester.pumpWidget(_screen(_RecordingProfileRepository(), auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settingsSignOutTile')));
+    await tester.pump(); // controller → AsyncLoading → tile disabled
+    // The second tap lands on the now-disabled tile and must be a no-op.
+    await tester.tap(
+      find.byKey(const Key('settingsSignOutTile')),
+      warnIfMissed: false,
+    );
+    await tester.pump();
 
     expect(auth.signOutCalls, 1);
   });
