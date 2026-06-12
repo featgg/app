@@ -16,9 +16,9 @@ testing_policy: <none | existing | required>
 
 ## Verification
 
-<echo each command from the plan's "Verification commands" section, one bullet per command, paste the relevant outcome. Missing or red is a hard stop.>
+<one bullet per Stage-2 command from the plan's "Verification commands": exit status plus the relevant counts (tests passed/failed, analyze issues). Paste an output excerpt only for a red command. Missing or red is a hard stop.>
 
-- `<command>`: <green | red, with relevant excerpt>
+- `<command>`: <green (counts) | red, with failing excerpt>
 
 ## Doc updates applied
 

@@ -112,9 +112,11 @@ the request being correct.
   reviewer will run to prove acceptance. Standard Flutter sequence:
   `flutter pub get`, `dart run build_runner build
 --delete-conflicting-outputs`, `dart format --output=none
---set-exit-if-changed .`, `flutter analyze`, `flutter test`. Include
-  only what applies to this change; `flutter analyze` is the minimum
-  sanity check on every PR.
+--set-exit-if-changed .`, `flutter analyze`, `flutter test`. Scope the
+  Stage-2 `flutter test` to the test paths this change touches; the
+  full suite runs once, at Stage 3 (reviewer) — mark the two rows
+  accordingly. Include only what applies to this change;
+  `flutter analyze` is the minimum sanity check on every PR.
 - **Acceptance criteria** — bound to verification commands and tests,
   not vague outcomes.
 - **`testing_policy`** — one of `none`, `existing`, `required`.

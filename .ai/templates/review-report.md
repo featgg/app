@@ -4,9 +4,9 @@
 
 ## Verification
 
-<echo each command from the plan's "Verification commands" section, one bullet per command, paste your own re-run outputs. If any command is red, recommendation is `changes-required`.>
+<one bullet per command you re-ran (the plan's shared commands plus the Stage-3 full `flutter test`): exit status plus the relevant counts (tests passed/failed, analyze issues). Paste an output excerpt only for a red command. If any command is red, recommendation is `changes-required`.>
 
-- `<command>`: <green | red, with relevant excerpt>
+- `<command>`: <green (counts) | red, with failing excerpt>
 
 ## Deviations re-verified
 
