@@ -13,13 +13,14 @@ with `git diff main...HEAD`.
 
 ## First action — re-run verification
 
-Run every command in the plan's "Verification commands" section yourself,
-including the Stage-3 full `flutter test` suite (Stage 2 runs only a
-scoped subset; the full suite runs here). Do not trust the implementer's
-recorded outcomes blindly. Record your own results in the review report
-under `## Verification` — exit status and counts per command, output
-excerpts only for failures. If any command fails, the recommendation is
-`changes-required` and the rest of the review is informational.
+Run the plan's "Verification commands" yourself — the shared commands plus
+the Stage-3 full `flutter test` suite. Do not re-run the Stage-2-only
+scoped `flutter test <paths>` row; the full suite supersedes it. Do not
+trust the implementer's recorded outcomes blindly. Record your own results
+in the review report under `## Verification` — exit status and counts per
+command, output excerpts only for failures. If any command fails, the
+recommendation is `changes-required` and the rest of the review is
+informational.
 
 ## Regression guard — trace changed behavior end to end
 
@@ -70,10 +71,10 @@ For every behavior the diff changes or adds:
 
 Apply each item that is relevant. Cite a file:line for every finding.
 
-- [ ] **Verification re-run**: every command in the plan's "Verification
-      commands" section runs green from your shell, including the
-      Stage-3 full `flutter test`. Per-command results are recorded in
-      the report.
+- [ ] **Verification re-run**: the plan's shared verification commands plus
+      the Stage-3 full `flutter test` run green from your shell; the
+      Stage-2-only scoped test row is not re-run. Per-command results are
+      recorded in the report.
 - [ ] **Drift from plan**: diff matches `plan.md`'s "Files to touch";
       anything new, missing, or different is flagged in "Deviations from
       plan".
