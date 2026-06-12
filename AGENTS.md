@@ -32,6 +32,8 @@ Each agent file owns its own contract — tools, prompt, output.
 
 Stage artifacts live in `.ai/runs/<YYYY-MM-DD>-<slug>/`. They are local working notes: gitignored, never committed. The pipeline reads them across stages within one task; once the PR merges they have no canonical value.
 
+A stage is complete only when its run-dir artifact exists with the handoff footer — never on the strength of the subagent's final chat message; a subagent can be cut off mid-task and still be reported as completed. Pipeline subagents run in the foreground. If a stage returns without its artifact, the stage is not done: when the harness exposes a resume capability, continue that same agent from where it stopped (cheapest — its context is intact); otherwise re-spawn it fresh against the existing working tree and partial artifact, or finish the stage inline.
+
 Codex (or any other AI tool) auto-reviews every PR on GitHub
 outside the repo. Its findings arrive as PR comments after Stage 4.
 The human triages them — which apply, which do not — and either
@@ -68,7 +70,7 @@ flutter analyze
 flutter test
 ```
 
-Run exactly what the plan's "Verification commands" section lists — no more, no less.
+Run exactly what the plan's "Verification commands" section lists for your stage — no more, no less. Plans scope the Stage-2 `flutter test` to the suites the change touches; the full suite runs once, at Stage 3.
 
 Run the sequence in the foreground in one shell, each command to its real exit code before the next — it is a dependency chain, not parallel work; do not background-and-poll. A genuinely long-lived process (a dev server) is the exception and may background. Stay in that shell: switch only if the shell itself cannot run the command (unrecognized syntax, shell unavailable), never because a command failed on its own merits — a failing test or `analyze` error is a real result, not a shell fault. After switching, stay in the new shell until it also fails.
 

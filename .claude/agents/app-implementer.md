@@ -2,7 +2,7 @@
 name: app-implementer
 description: Stage 2 for app/. Implements strictly within the approved plan, runs Flutter verification, produces the implementation report. KISS.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: sonnet
+model: opus
 ---
 
 # app-implementer — Stage 2
@@ -22,21 +22,27 @@ at `.ai/runs/<current>/plan.md`. You do not expand scope.
 
 ## Verification
 
-Run the plan's "Verification commands" section — exactly what it lists,
-no more, no less. The standard Flutter sequence is:
+Run the plan's "Verification commands" section — exactly what it lists
+for Stage 2, no more, no less. Plans scope the Stage-2 `flutter test`
+to the suites the change touches; the full suite runs once, at Stage 3.
+The standard Flutter sequence is:
 
 ```
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 dart format --output=none --set-exit-if-changed .
 flutter analyze
-flutter test
+flutter test <scoped paths from the plan>
 ```
 
-Paste outputs into `.ai/runs/<current>/implementation-report.md`
-following `.ai/templates/implementation-report.md`. If any verification
-command fails: fix the failure (if it is yours and inside scope) or
-document it under "Pending" and stop.
+Record outcomes in `.ai/runs/<current>/implementation-report.md`
+following `.ai/templates/implementation-report.md`: one line per
+command with its exit status and the relevant counts (tests
+passed/failed, analyze issues). Paste an output excerpt only for a
+failing command — the reviewer re-runs every command itself and never
+relies on pasted output. If any verification command fails: fix the
+failure (if it is yours and inside scope) or document it under
+"Pending" and stop.
 
 ## Defect protocol
 

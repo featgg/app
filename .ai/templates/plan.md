@@ -50,13 +50,14 @@ testing_policy: <none | existing | required>
 
 ## Verification commands
 
-<exact commands the implementer and reviewer run to prove acceptance. The standard Flutter sequence:>
+<exact commands the implementer and reviewer run to prove acceptance. Scope the Stage-2 `flutter test` to the test paths this change touches; the full suite runs once, at Stage 3. The standard Flutter sequence:>
 
 - `flutter pub get`
 - `dart run build_runner build --delete-conflicting-outputs`
 - `dart format --output=none --set-exit-if-changed .`
 - `flutter analyze`
-- `flutter test`
+- `flutter test <test paths this change touches>` — Stage 2 (implementer)
+- `flutter test` — Stage 3 only (reviewer, full suite)
 
 ## Doc updates
 
