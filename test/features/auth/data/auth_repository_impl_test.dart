@@ -82,6 +82,9 @@ final class _FakeGoTrueClient extends GoTrueClient {
   Session? get currentSession => _session;
 
   @override
+  User? get currentUser => _session?.user;
+
+  @override
   Stream<AuthState> get onAuthStateChange => _authStateStream;
 
   @override
@@ -403,6 +406,58 @@ void main() {
         _RecordingReporter(),
       );
       expect(repo.currentStatus(), AuthStatus.signedIn);
+    });
+  });
+
+  group('AuthRepositoryImpl.currentIdentity', () {
+    test('returns null when there is no session', () {
+      final repo = _repo(_FakeGoTrueClient(), _RecordingReporter());
+      expect(repo.currentIdentity(), isNull);
+    });
+
+    test('maps the session email and provider token', () {
+      final session = Session(
+        accessToken: 'token',
+        tokenType: 'bearer',
+        user: const User(
+          id: 'uid',
+          email: 'user@example.com',
+          appMetadata: {'provider': 'google'},
+          userMetadata: {},
+          aud: 'authenticated',
+          createdAt: '2024-01-01T00:00:00Z',
+        ),
+      );
+      final repo = _repo(
+        _FakeGoTrueClient(session: session),
+        _RecordingReporter(),
+      );
+      final identity = repo.currentIdentity();
+      expect(identity, isNotNull);
+      expect(identity!.email, 'user@example.com');
+      expect(identity.providerToken, 'google');
+    });
+
+    test('providerToken is null when the metadata value is absent', () {
+      final session = Session(
+        accessToken: 'token',
+        tokenType: 'bearer',
+        user: const User(
+          id: 'uid',
+          email: 'user@example.com',
+          appMetadata: {},
+          userMetadata: {},
+          aud: 'authenticated',
+          createdAt: '2024-01-01T00:00:00Z',
+        ),
+      );
+      final repo = _repo(
+        _FakeGoTrueClient(session: session),
+        _RecordingReporter(),
+      );
+      final identity = repo.currentIdentity();
+      expect(identity!.email, 'user@example.com');
+      expect(identity.providerToken, isNull);
     });
   });
 

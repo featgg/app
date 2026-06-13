@@ -110,6 +110,17 @@ final class AuthRepositoryImpl implements AuthRepository {
       _auth.currentSession == null ? AuthStatus.signedOut : AuthStatus.signedIn;
 
   @override
+  AccountIdentity? currentIdentity() {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final provider = user.appMetadata['provider'];
+    return AccountIdentity(
+      email: user.email,
+      providerToken: provider is String ? provider : null,
+    );
+  }
+
+  @override
   Stream<AuthStatus> statusChanges() => _auth.onAuthStateChange.map(
     (event) =>
         event.session == null ? AuthStatus.signedOut : AuthStatus.signedIn,

@@ -17,6 +17,7 @@ final class ProfileDto {
     required this.themeId,
     required this.privacyLevel,
     required this.featuredPlatform,
+    this.deletionRequestedAt,
   });
 
   final String id;
@@ -32,6 +33,8 @@ final class ProfileDto {
   final String privacyLevel;
   @JsonKey(name: 'featured_platform')
   final String? featuredPlatform;
+  @JsonKey(name: 'deletion_requested_at')
+  final DateTime? deletionRequestedAt;
 
   factory ProfileDto.fromJson(Map<String, dynamic> json) =>
       _$ProfileDtoFromJson(json);
@@ -46,6 +49,7 @@ Profile profileFromDto(ProfileDto dto) => Profile(
   theme: _themeFromWire(dto.themeId),
   privacy: _privacyFromWire(dto.privacyLevel),
   featuredPlatform: _platformFromWireOrNull(dto.featuredPlatform),
+  deletionRequestedAt: dto.deletionRequestedAt,
 );
 
 /// Maps a wire token to a [Platform], returning null for null or unknown tokens.

@@ -11,7 +11,37 @@ ProfileEdit _edit({String displayName = 'Valid Name', String? bio}) =>
       featuredPlatform: null,
     );
 
+Profile _profile({DateTime? deletionRequestedAt}) => Profile(
+  id: 'user-1',
+  username: 'user',
+  displayName: 'User',
+  avatarUrl: null,
+  bio: null,
+  theme: ProfileTheme.classic,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  deletionRequestedAt: deletionRequestedAt,
+);
+
 void main() {
+  group('Profile deletion markers', () {
+    test('a null marker is not pending and has no scheduled target', () {
+      final profile = _profile();
+      expect(profile.isDeletionPending, isFalse);
+      expect(profile.deletionScheduledAt, isNull);
+    });
+
+    test('a marker is pending and schedules 7 days out', () {
+      final requestedAt = DateTime.utc(2026, 6, 12, 10);
+      final profile = _profile(deletionRequestedAt: requestedAt);
+      expect(profile.isDeletionPending, isTrue);
+      expect(
+        profile.deletionScheduledAt,
+        requestedAt.add(const Duration(days: 7)),
+      );
+    });
+  });
+
   group('ProfileEdit.validate — bio line breaks', () {
     test('flags a bio with more than 8 line breaks', () {
       // 9 breaks → flagged.

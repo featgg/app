@@ -154,6 +154,10 @@ final class _StubAuthRepository implements AuthRepository {
   AuthStatus currentStatus() => AuthStatus.signedIn;
 
   @override
+  AccountIdentity? currentIdentity() =>
+      const AccountIdentity(email: 'user@example.com', providerToken: 'email');
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 
   @override

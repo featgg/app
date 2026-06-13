@@ -42,6 +42,9 @@ final class _FakeAuthRepository implements AuthRepository {
   AuthStatus currentStatus() => AuthStatus.signedOut;
 
   @override
+  AccountIdentity? currentIdentity() => null;
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 }
 

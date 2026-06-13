@@ -230,5 +230,16 @@
   "deleteAccountScheduledBody": "Sua conta está agendada para exclusão em {date}. Você pode cancelar antes dessa data.",
   "deleteAccountCancelButton": "Cancelar exclusão",
   "deleteAccountCancelledTitle": "Exclusão cancelada",
-  "deleteAccountCancelledBody": "A exclusão da sua conta foi cancelada. Sua conta está segura."
+  "deleteAccountCancelledBody": "A exclusão da sua conta foi cancelada. Sua conta está segura.",
+  "settingsAccountSection": "Conta",
+  "accountEmailLabel": "E-mail",
+  "accountProviderLabel": "Método de login",
+  "accountProviderEmail": "E-mail",
+  "accountProviderGoogle": "Google",
+  "accountProviderDiscord": "Discord",
+  "accountDeletionPendingTitle": "Exclusão de conta pendente",
+  "accountDeletionPendingBody": "Sua conta está agendada para exclusão. Cancele antes do fim do período de carência para mantê-la.",
+  "accountDeletionCountdown": "{days, plural, =1{resta 1 dia} other{restam {days} dias}}",
+  "accountCancelDeletionButton": "Cancelar exclusão",
+  "accountDeletionCancelled": "Exclusão de conta cancelada."
 }

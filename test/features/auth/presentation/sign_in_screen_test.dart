@@ -42,6 +42,9 @@ final class _FakeRepository implements AuthRepository {
   AuthStatus currentStatus() => AuthStatus.signedOut;
 
   @override
+  AccountIdentity? currentIdentity() => null;
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 }
 
@@ -80,6 +83,9 @@ final class _CountingRepository implements AuthRepository {
   AuthStatus currentStatus() => AuthStatus.signedOut;
 
   @override
+  AccountIdentity? currentIdentity() => null;
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 }
 
@@ -112,6 +118,9 @@ final class _FirstSuccessThenRateLimitRepository implements AuthRepository {
   AuthStatus currentStatus() => AuthStatus.signedOut;
 
   @override
+  AccountIdentity? currentIdentity() => null;
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 }
 
@@ -139,6 +148,9 @@ final class _PendingRepository implements AuthRepository {
 
   @override
   AuthStatus currentStatus() => AuthStatus.signedOut;
+
+  @override
+  AccountIdentity? currentIdentity() => null;
 
   @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
@@ -174,6 +186,9 @@ final class _OAuthRepository implements AuthRepository {
 
   @override
   AuthStatus currentStatus() => AuthStatus.signedOut;
+
+  @override
+  AccountIdentity? currentIdentity() => null;
 
   @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();

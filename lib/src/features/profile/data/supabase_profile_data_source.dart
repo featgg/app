@@ -12,11 +12,27 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
   static const _columns =
       'id, username, display_name, avatar_url, bio, theme_id, privacy_level, featured_platform';
 
+  // deletion_requested_at is an owner-only, server-managed column. It must never
+  // be requested on a public read of another user's row, so it is appended only
+  // for the owner's own read.
+  static const _ownerColumns = '$_columns, deletion_requested_at';
+
   @override
   Future<ProfileDto?> fetchProfileRow(String userId) async {
     final row = await _client
         .from(_table)
         .select(_columns)
+        .eq('id', userId)
+        .maybeSingle();
+    if (row == null) return null;
+    return ProfileDto.fromJson(row);
+  }
+
+  @override
+  Future<ProfileDto?> fetchMyProfileRow(String userId) async {
+    final row = await _client
+        .from(_table)
+        .select(_ownerColumns)
         .eq('id', userId)
         .maybeSingle();
     if (row == null) return null;

@@ -21,6 +21,11 @@ final class _FakeAuthRepository implements AuthRepository {
   AuthStatus currentStatus() => _status;
 
   @override
+  AccountIdentity? currentIdentity() => _status == AuthStatus.signedIn
+      ? const AccountIdentity(email: 'user@example.com', providerToken: 'email')
+      : null;
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 
   @override

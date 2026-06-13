@@ -159,6 +159,36 @@ void main() {
       },
     );
 
+    test(
+      'new account-section keys exist and are non-empty in all locales',
+      () async {
+        final en = await AppLocalizations.delegate.load(const Locale('en'));
+        final es = await AppLocalizations.delegate.load(const Locale('es'));
+        final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+
+        for (final l10n in [en, es, pt]) {
+          expect(l10n.settingsAccountSection, isNotEmpty);
+          expect(l10n.accountEmailLabel, isNotEmpty);
+          expect(l10n.accountProviderLabel, isNotEmpty);
+          expect(l10n.accountProviderEmail, isNotEmpty);
+          expect(l10n.accountProviderGoogle, isNotEmpty);
+          expect(l10n.accountProviderDiscord, isNotEmpty);
+          expect(l10n.accountDeletionPendingTitle, isNotEmpty);
+          expect(l10n.accountDeletionPendingBody, isNotEmpty);
+          expect(l10n.accountCancelDeletionButton, isNotEmpty);
+          expect(l10n.accountDeletionCancelled, isNotEmpty);
+          // Countdown is an ICU plural — both =1 and other forms resolve, and
+          // are structurally distinct (=1 spells out one day, other interpolates).
+          expect(l10n.accountDeletionCountdown(1), isNotEmpty);
+          expect(l10n.accountDeletionCountdown(10), isNotEmpty);
+          expect(
+            l10n.accountDeletionCountdown(1),
+            isNot(l10n.accountDeletionCountdown(10)),
+          );
+        }
+      },
+    );
+
     test('new connections keys differ across locales', () async {
       final en = await AppLocalizations.delegate.load(const Locale('en'));
       final es = await AppLocalizations.delegate.load(const Locale('es'));
