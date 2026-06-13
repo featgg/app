@@ -50,7 +50,7 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
         .from(_table)
         .update(values)
         .eq('id', userId)
-        .select(_columns)
+        .select(_ownerColumns)
         .single();
     return ProfileDto.fromJson(row);
   }
