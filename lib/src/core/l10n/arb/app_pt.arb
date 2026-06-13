@@ -241,5 +241,19 @@
   "accountDeletionPendingBody": "Sua conta está agendada para exclusão. Cancele antes do fim do período de carência para mantê-la.",
   "accountDeletionCountdown": "{days, plural, =1{resta 1 dia} other{restam {days} dias}}",
   "accountCancelDeletionButton": "Cancelar exclusão",
-  "accountDeletionCancelled": "Exclusão de conta cancelada."
+  "accountDeletionCancelled": "Exclusão de conta cancelada.",
+  "profileWidgetsEmpty": "Ainda não há widgets. Adicione um para organizar seu perfil.",
+  "profileWidgetAdd": "Adicionar widget",
+  "profileWidgetAddPlatform": "Adicionar widget de {platform}",
+  "profileWidgetOptions": "Opções do widget",
+  "profileWidgetRemove": "Remover widget",
+  "profileWidgetHide": "Ocultar widget",
+  "profileWidgetShow": "Mostrar widget",
+  "profileWidgetMoveUp": "Mover para cima",
+  "profileWidgetMoveDown": "Mover para baixo",
+  "profileWidgetResize": "Redimensionar",
+  "profileWidgetSizeSmall": "Pequeno",
+  "profileWidgetSizeWide": "Largo",
+  "profileWidgetSizeLarge": "Grande",
+  "profileWidgetCardUnavailable": "Cartão indisponível"
 }
