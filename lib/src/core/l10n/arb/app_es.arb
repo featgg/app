@@ -230,5 +230,16 @@
   "deleteAccountScheduledBody": "Tu cuenta está programada para eliminarse el {date}. Puedes cancelar antes de esa fecha.",
   "deleteAccountCancelButton": "Cancelar eliminación",
   "deleteAccountCancelledTitle": "Eliminación cancelada",
-  "deleteAccountCancelledBody": "Se canceló la eliminación de tu cuenta. Tu cuenta está a salvo."
+  "deleteAccountCancelledBody": "Se canceló la eliminación de tu cuenta. Tu cuenta está a salvo.",
+  "settingsAccountSection": "Cuenta",
+  "accountEmailLabel": "Correo electrónico",
+  "accountProviderLabel": "Método de inicio de sesión",
+  "accountProviderEmail": "Correo electrónico",
+  "accountProviderGoogle": "Google",
+  "accountProviderDiscord": "Discord",
+  "accountDeletionPendingTitle": "Eliminación de cuenta pendiente",
+  "accountDeletionPendingBody": "Tu cuenta está programada para eliminarse. Cancela antes de que termine el período de gracia para conservarla.",
+  "accountDeletionCountdown": "{days, plural, =1{queda 1 día} other{quedan {days} días}}",
+  "accountCancelDeletionButton": "Cancelar eliminación",
+  "accountDeletionCancelled": "Eliminación de cuenta cancelada."
 }

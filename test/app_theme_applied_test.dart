@@ -14,6 +14,9 @@ final class _SignedOutAuthRepository implements AuthRepository {
   AuthStatus currentStatus() => AuthStatus.signedOut;
 
   @override
+  AccountIdentity? currentIdentity() => null;
+
+  @override
   Stream<AuthStatus> statusChanges() => const Stream.empty();
 
   @override

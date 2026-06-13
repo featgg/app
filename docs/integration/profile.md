@@ -21,8 +21,11 @@ it — a user can update only their own profile.
 - **Table.** `profiles`
 - **Readable columns.** `id`, `username`, `display_name`, `avatar_url`,
   `bio`, `theme_id`, `privacy_level`, `featured_platform`, `created_at`. A
-  public profile exposes these to anyone; a private profile is readable only
-  by its owner.
+  public profile exposes these to anyone; a private profile is readable only by
+  its owner.
+- **Owner-only readable column.** `deletion_requested_at` — readable only by the
+  owner, server-managed, and never client-writable (see below). It is not part
+  of the public readable set above, even on a public profile.
 - **Writable columns (owner only).** `display_name`, `bio`, `theme_id`,
   `privacy_level`, `featured_platform`.
 - **Server-managed (read-only to the client).** `id`, `created_at`,

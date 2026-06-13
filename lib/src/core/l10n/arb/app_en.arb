@@ -968,5 +968,54 @@
   "deleteAccountCancelledBody": "Your account deletion has been cancelled. Your account is safe.",
   "@deleteAccountCancelledBody": {
     "description": "Body text confirming the scheduled deletion was cancelled."
+  },
+  "settingsAccountSection": "Account",
+  "@settingsAccountSection": {
+    "description": "Section header for the account block on the settings screen."
+  },
+  "accountEmailLabel": "Email",
+  "@accountEmailLabel": {
+    "description": "Label for the signed-in user's email row in the account section."
+  },
+  "accountProviderLabel": "Sign-in method",
+  "@accountProviderLabel": {
+    "description": "Label for the sign-in provider row in the account section."
+  },
+  "accountProviderEmail": "Email",
+  "@accountProviderEmail": {
+    "description": "Display name for the email sign-in provider in the account section."
+  },
+  "accountProviderGoogle": "Google",
+  "@accountProviderGoogle": {
+    "description": "Display name for the Google sign-in provider in the account section. Brand proper noun."
+  },
+  "accountProviderDiscord": "Discord",
+  "@accountProviderDiscord": {
+    "description": "Display name for the Discord sign-in provider in the account section. Brand proper noun."
+  },
+  "accountDeletionPendingTitle": "Account deletion pending",
+  "@accountDeletionPendingTitle": {
+    "description": "Heading of the pending-deletion banner in the account section."
+  },
+  "accountDeletionPendingBody": "Your account is scheduled for deletion. Cancel before the grace period ends to keep it.",
+  "@accountDeletionPendingBody": {
+    "description": "Body of the pending-deletion banner explaining the grace period and the cancel affordance."
+  },
+  "accountDeletionCountdown": "{days, plural, =1{1 day left} other{{days} days left}}",
+  "@accountDeletionCountdown": {
+    "description": "Live countdown shown in the pending-deletion banner. {days} is the whole days remaining until the deletion target; uses ICU plural for 1 vs many.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "accountCancelDeletionButton": "Cancel deletion",
+  "@accountCancelDeletionButton": {
+    "description": "Button label in the pending-deletion banner that cancels the pending deletion."
+  },
+  "accountDeletionCancelled": "Account deletion cancelled.",
+  "@accountDeletionCancelled": {
+    "description": "Transient snackbar confirmation shown after the banner's cancel succeeds."
   }
 }

@@ -24,6 +24,7 @@ final class Profile extends Equatable {
     required this.theme,
     required this.privacy,
     required this.featuredPlatform,
+    this.deletionRequestedAt,
   });
 
   final String id;
@@ -43,6 +44,20 @@ final class Profile extends Equatable {
   /// or null to use the default (most-recently-updated card).
   final Platform? featuredPlatform;
 
+  /// Server-managed read-only marker set when a deletion is pending, or null
+  /// when none is. The client reads but never writes it.
+  final DateTime? deletionRequestedAt;
+
+  /// Grace window the backend applies after a confirmed deletion request.
+  static const Duration deletionGracePeriod = Duration(days: 7);
+
+  /// Whether a deletion is pending for this account.
+  bool get isDeletionPending => deletionRequestedAt != null;
+
+  /// The 7-day deletion target, or null when no deletion is pending.
+  DateTime? get deletionScheduledAt =>
+      deletionRequestedAt?.add(deletionGracePeriod);
+
   Profile copyWith({
     String? displayName,
     // Wrapped in a nullary function so callers can explicitly set null.
@@ -51,6 +66,7 @@ final class Profile extends Equatable {
     ProfileTheme? theme,
     ProfilePrivacy? privacy,
     Platform? Function()? featuredPlatform,
+    DateTime? Function()? deletionRequestedAt,
   }) => Profile(
     id: id,
     username: username,
@@ -62,6 +78,9 @@ final class Profile extends Equatable {
     featuredPlatform: featuredPlatform != null
         ? featuredPlatform()
         : this.featuredPlatform,
+    deletionRequestedAt: deletionRequestedAt != null
+        ? deletionRequestedAt()
+        : this.deletionRequestedAt,
   );
 
   @override
@@ -74,6 +93,7 @@ final class Profile extends Equatable {
     theme,
     privacy,
     featuredPlatform,
+    deletionRequestedAt,
   ];
 }
 

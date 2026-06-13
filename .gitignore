@@ -87,3 +87,6 @@ env.*.json
 
 # AI agent pipeline run artifacts (local notes, never committed)
 .ai/runs/**
+
+# AI agent isolated worktrees (ephemeral repo copies, never committed)
+.claude/worktrees/
