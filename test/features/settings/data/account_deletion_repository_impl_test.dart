@@ -170,6 +170,21 @@ void main() {
       expect(failure, isA<ServerFailure>());
     });
 
+    test('OTP_RATE_LIMIT (429) → AuthRateLimitFailure, not '
+        'crash-reported', () async {
+      final s = _subject(
+        _FakeDataSource(
+          onRequest: () async => throw _fnEx(429, code: 'OTP_RATE_LIMIT'),
+        ),
+      );
+      final failure = (await s.repo.requestDeletion()).fold(
+        (f) => f,
+        (_) => null,
+      );
+      expect(failure, isA<AuthRateLimitFailure>());
+      expect(s.reporter.reported, isEmpty);
+    });
+
     test('malformed deletion_scheduled_at → UnexpectedFailure and '
         'crash-reported', () async {
       final s = _subject(

@@ -96,6 +96,78 @@ void main() {
       },
     );
 
+    test(
+      'a rate-limited request engages the cooldown and stays on idle',
+      () async {
+        final repo = _FakeRepo(
+          request: () => left(const AuthRateLimitFailure()),
+        );
+        final container = _container(repo);
+        final notifier = container.read(
+          accountDeletionControllerProvider.notifier,
+        );
+
+        await notifier.requestCode();
+
+        final state = container.read(accountDeletionControllerProvider);
+        expect(
+          state.step,
+          DeletionStep.idle,
+        ); // a throttled send does not advance
+        expect(state.failure, isA<AuthRateLimitFailure>());
+        expect(state.requestCooldownActive, isTrue); // the debounce engaged
+        expect(state.requestCooldownTick, 1);
+
+        notifier.reset();
+      },
+    );
+
+    test(
+      'a rate-limited confirm engages the cooldown and stays on awaitingCode',
+      () async {
+        final repo = _FakeRepo(
+          confirm: () => left(const AuthRateLimitFailure()),
+        );
+        final container = _container(repo);
+        final notifier = container.read(
+          accountDeletionControllerProvider.notifier,
+        );
+
+        await notifier.requestCode(); // success → awaitingCode, tick 1
+        await notifier.confirmCode(
+          '000000',
+        ); // 429 → re-engage cooldown, tick 2
+
+        final state = container.read(accountDeletionControllerProvider);
+        expect(state.step, DeletionStep.awaitingCode);
+        expect(state.failure, isA<AuthRateLimitFailure>());
+        expect(state.requestCooldownActive, isTrue);
+        expect(state.requestCooldownTick, 2);
+
+        notifier.reset();
+      },
+    );
+
+    test(
+      'a non-rate-limit request failure does not engage the cooldown',
+      () async {
+        final repo = _FakeRepo(request: () => left(const ServerFailure()));
+        final container = _container(repo);
+        final notifier = container.read(
+          accountDeletionControllerProvider.notifier,
+        );
+
+        await notifier.requestCode();
+
+        final state = container.read(accountDeletionControllerProvider);
+        expect(state.step, DeletionStep.idle);
+        expect(state.failure, isA<ServerFailure>());
+        expect(state.requestCooldownActive, isFalse); // only a 429 throttles
+
+        notifier.reset();
+      },
+    );
+
     test('cancelDeletion from scheduled advances to cancelled', () async {
       final repo = _FakeRepo();
       final container = _container(repo);

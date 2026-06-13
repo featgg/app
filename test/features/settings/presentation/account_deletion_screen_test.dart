@@ -174,6 +174,32 @@ void main() {
     expect(tester.widget<TextButton>(resend).onPressed, isNotNull);
   });
 
+  testWidgets('a rate-limited initial request disables the request button '
+      'during the cooldown', (tester) async {
+    final repo = _FakeRepo(
+      request: () async => left(const AuthRateLimitFailure()),
+    );
+    await _pump(tester, repo);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('deleteAccountRequestButton')));
+    await tester.pumpAndSettle(); // dialog
+    await tester.tap(
+      find.byKey(const Key('deleteAccountConfirmDialogConfirm')),
+    );
+    await tester.pump(); // dialog pops, requestCode runs → 429
+    await tester.pump(); // state settles: idle + cooldown active
+
+    // The throttled send stays on idle with the request button debounced.
+    final button = find.byKey(const Key('deleteAccountRequestButton'));
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+    expect(repo.requestCalls, 1);
+
+    // Re-enables once the cooldown window elapses.
+    await tester.pump(const Duration(seconds: 61));
+    expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+  });
+
   testWidgets('the scheduled state offers cancel, and cancelling shows the '
       'cancelled state', (tester) async {
     final repo = _FakeRepo();

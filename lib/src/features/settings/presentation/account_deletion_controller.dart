@@ -9,11 +9,13 @@ import '../domain/settings_providers.dart';
 
 part 'account_deletion_controller.g.dart';
 
-/// Short client-side debounce after a successful request/resend send. This is
-/// an anti-spam UX gate only — the server's own limit is authoritative. Kept
-/// short because the backend surfaces its email-send limit as
-/// ACCOUNT_DELETE_FAILED (500) rather than a 429 with a fixed window the
-/// client could mirror.
+/// Short client-side debounce on the OTP actions. Engaged after a successful
+/// request/resend send and after a `429 OTP_RATE_LIMIT` on any deletion action,
+/// so the request/resend and confirm buttons back off for the window instead of
+/// re-enabling immediately and letting the user hammer the throttled endpoint.
+/// Anti-spam UX only — the server's limit is authoritative; the window is fixed
+/// and short rather than mirrored from the server because the backend documents
+/// no fixed retry interval the client could reproduce.
 const _requestCooldown = Duration(seconds: 60);
 
 /// Step of the account-deletion flow the screen is currently rendering.
@@ -131,7 +133,7 @@ class AccountDeletionController extends _$AccountDeletionController {
     final repo = ref.read(accountDeletionRepositoryProvider);
     final result = await repo.confirmDeletion(code);
     result.fold(
-      (failure) => state = state.copyWith(submitting: false, failure: failure),
+      _applyFailure,
       (schedule) => state = state.copyWith(
         step: DeletionStep.scheduled,
         submitting: false,
@@ -169,20 +171,37 @@ class AccountDeletionController extends _$AccountDeletionController {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(accountDeletionRepositoryProvider);
     final result = await repo.requestDeletion();
-    result.fold(
-      (failure) => state = state.copyWith(submitting: false, failure: failure),
-      (_) {
-        state = state.copyWith(
-          step: DeletionStep.awaitingCode,
-          submitting: false,
-          requestCooldownActive: true,
-          requestCooldownSeconds: _requestCooldown.inSeconds,
-          requestCooldownTick: state.requestCooldownTick + 1,
-          clearFailure: true,
-        );
-        _startRequestCooldown();
-      },
-    );
+    result.fold(_applyFailure, (_) {
+      state = state.copyWith(
+        step: DeletionStep.awaitingCode,
+        submitting: false,
+        requestCooldownActive: true,
+        requestCooldownSeconds: _requestCooldown.inSeconds,
+        requestCooldownTick: state.requestCooldownTick + 1,
+        clearFailure: true,
+      );
+      _startRequestCooldown();
+    });
+  }
+
+  /// Applies a [failure] to the state. A `429 OTP_RATE_LIMIT`
+  /// ([AuthRateLimitFailure]) is the auth platform throttling the OTP channel,
+  /// so it engages the same [_requestCooldown] debounce a successful send does;
+  /// otherwise the throttled buttons would re-enable instantly and let the user
+  /// keep hitting the rate-limited endpoint. Any other failure just surfaces.
+  void _applyFailure(Failure failure) {
+    if (failure is AuthRateLimitFailure) {
+      state = state.copyWith(
+        submitting: false,
+        failure: failure,
+        requestCooldownActive: true,
+        requestCooldownSeconds: _requestCooldown.inSeconds,
+        requestCooldownTick: state.requestCooldownTick + 1,
+      );
+      _startRequestCooldown();
+      return;
+    }
+    state = state.copyWith(submitting: false, failure: failure);
   }
 
   void _startRequestCooldown() {

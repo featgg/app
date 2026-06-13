@@ -35,6 +35,7 @@ class AccountDeletionScreen extends ConsumerWidget {
           DeletionStep.idle => _IdleStep(
             l10n: l10n,
             submitting: s.submitting,
+            requestCooldownActive: s.requestCooldownActive,
             failure: s.failure,
             onRequest: () => _showConfirmDialog(context, l10n, controller),
           ),
@@ -98,12 +99,14 @@ class _IdleStep extends StatelessWidget {
   const _IdleStep({
     required this.l10n,
     required this.submitting,
+    required this.requestCooldownActive,
     required this.failure,
     required this.onRequest,
   });
 
   final AppLocalizations l10n;
   final bool submitting;
+  final bool requestCooldownActive;
   final Failure? failure;
   final VoidCallback onRequest;
 
@@ -132,7 +135,7 @@ class _IdleStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           FilledButton(
             key: const Key('deleteAccountRequestButton'),
-            onPressed: submitting ? null : onRequest,
+            onPressed: (submitting || requestCooldownActive) ? null : onRequest,
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
@@ -242,9 +245,9 @@ class _AwaitingCodeStepState extends State<_AwaitingCodeStep> {
     final l10n = widget.l10n;
     final code = _codeController.text;
     final codeReady = code.length == 6;
-    final confirmBlocked = widget.submitting || !codeReady;
-    final resendBlocked =
-        widget.submitting || widget.requestCooldownActive || _remaining > 0;
+    final cooldownActive = widget.requestCooldownActive || _remaining > 0;
+    final confirmBlocked = widget.submitting || !codeReady || cooldownActive;
+    final resendBlocked = widget.submitting || cooldownActive;
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
