@@ -91,6 +91,11 @@ class SettingsScreen extends ConsumerWidget {
     final privacyAsync = ref.watch(settingsCurrentPrivacyProvider);
     final isWriting = ref.watch(privacyControllerProvider).isLoading;
     final isSigningOut = ref.watch(signOutControllerProvider).isLoading;
+    // Fail-open: a loading or errored status read leaves the tile enabled, so a
+    // transient read never locks the user out of the delete flow.
+    final deletionPending = ref
+        .watch(settingsDeletionStatusProvider)
+        .maybeWhen(data: (s) => s.isPending, orElse: () => false);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
@@ -136,6 +141,7 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(height: AppSpacing.xs),
             ListTile(
               key: const Key('settingsDeleteAccountTile'),
+              enabled: !deletionPending,
               iconColor: Theme.of(context).colorScheme.error,
               textColor: Theme.of(context).colorScheme.error,
               leading: const Icon(Icons.delete_forever),

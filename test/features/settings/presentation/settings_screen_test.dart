@@ -371,7 +371,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('accountDeletionBanner')), findsNothing);
+    // No pending deletion: the delete-account tile stays enabled.
+    expect(
+      tester
+          .widget<ListTile>(find.byKey(const Key('settingsDeleteAccountTile')))
+          .enabled,
+      isTrue,
+    );
   });
+
+  testWidgets(
+    'the delete-account tile is disabled when a deletion is pending',
+    (tester) async {
+      await tester.pumpWidget(
+        _screen(_ClearableProfileRepository(), _RecordingAuthRepository()),
+      );
+      // The pending banner's CooldownCountdown periodic timer keeps the tree
+      // busy; pump fixed frames instead of pumpAndSettle.
+      await tester.pump(); // resolve the deletion-status future
+      await tester.pump(); // render with the pending state applied
+
+      expect(
+        tester
+            .widget<ListTile>(
+              find.byKey(const Key('settingsDeleteAccountTile')),
+            )
+            .enabled,
+        isFalse,
+      );
+    },
+  );
 
   testWidgets(
     'tapping Cancel invokes cancelDeletion and the refreshed read clears the '

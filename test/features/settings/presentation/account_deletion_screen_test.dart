@@ -86,7 +86,7 @@ void main() {
       expect(repo.requestCalls, 1);
       expect(find.byKey(const Key('deleteAccountCodeField')), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 31)); // drain cooldown + ticker
+      await tester.pump(const Duration(seconds: 61)); // drain cooldown + ticker
     },
   );
 
@@ -108,7 +108,7 @@ void main() {
 
     completer.complete(right(unit)); // finish so no future leaks
     await tester.pump();
-    await tester.pump(const Duration(seconds: 31)); // drain
+    await tester.pump(const Duration(seconds: 61)); // drain
   });
 
   testWidgets('a wrong code shows the error affordance', (tester) async {
@@ -124,7 +124,7 @@ void main() {
 
     expect(find.byKey(const Key('deleteAccountCodeError')), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 31)); // drain
+    await tester.pump(const Duration(seconds: 61)); // drain
   });
 
   testWidgets('the scheduled state shows the scheduled-date surface', (
@@ -146,7 +146,7 @@ void main() {
     );
     expect(find.byKey(const Key('deleteAccountScheduledBody')), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 31)); // drain the cooldown timer
+    await tester.pump(const Duration(seconds: 61)); // drain the cooldown timer
   });
 
   testWidgets('resend is gated during the cooldown — a tap starts no second '
@@ -170,7 +170,7 @@ void main() {
     expect(repo.requestCalls, 1);
 
     // Re-enables once the cooldown window elapses.
-    await tester.pump(const Duration(seconds: 31));
+    await tester.pump(const Duration(seconds: 61));
     expect(tester.widget<TextButton>(resend).onPressed, isNotNull);
   });
 
@@ -199,6 +199,6 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.pump(const Duration(seconds: 31)); // drain the cooldown timer
+    await tester.pump(const Duration(seconds: 61)); // drain the cooldown timer
   });
 }

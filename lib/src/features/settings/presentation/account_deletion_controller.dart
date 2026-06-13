@@ -14,7 +14,7 @@ part 'account_deletion_controller.g.dart';
 /// short because the backend surfaces its email-send limit as
 /// ACCOUNT_DELETE_FAILED (500) rather than a 429 with a fixed window the
 /// client could mirror.
-const _requestCooldown = Duration(seconds: 30);
+const _requestCooldown = Duration(seconds: 60);
 
 /// Step of the account-deletion flow the screen is currently rendering.
 enum DeletionStep {
@@ -66,7 +66,7 @@ final class AccountDeletionState extends Equatable {
   final int requestCooldownSeconds;
 
   /// Monotonic counter bumped on each successful (re)send so the widget's
-  /// countdown can restart even when the seeded seconds repeat (30 → 30).
+  /// countdown can restart even when the seeded seconds repeat (60 → 60).
   final int requestCooldownTick;
 
   /// Set on a successful confirm; the scheduled deletion UTC timestamp.

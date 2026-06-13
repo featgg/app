@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
-import '../../auth/domain/auth_domain.dart';
+import 'account_identity_provider.dart';
 import 'account_section_cancel_controller.dart';
 import 'settings_deletion_status_provider.dart';
 
@@ -16,9 +16,7 @@ class AccountSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    // Synchronous in-memory read of the restored session, mirroring the
-    // main.dart precedent of reading currentStatus() off the repository.
-    final identity = ref.read(authRepositoryProvider).currentIdentity();
+    final identity = ref.watch(accountIdentityProvider);
     final deletionAsync = ref.watch(settingsDeletionStatusProvider);
 
     return Padding(
