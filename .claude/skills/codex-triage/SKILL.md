@@ -1,15 +1,19 @@
 ---
 name: codex-triage
-description: Triage Codex (chatgpt-codex-connector) review findings — a GitHub PR review or a local pass — per AGENTS.md § AI review triage. Use when the user asks to review/triage Codex comments and decide which apply.
+description: Gather the evidence for triaging Codex (chatgpt-codex-connector) review findings — a GitHub PR review or a local pass — into a digest for the main agent to judge per AGENTS.md § AI review triage. Use when the user asks to review/triage Codex comments.
+model: sonnet
+allowed-tools: Read, Grep, Bash(gh:*)
 ---
 
-# Codex Review Triage
+# Codex Review Triage — gather the evidence
 
-Triage Codex findings per `AGENTS.md` § AI review triage. The flow is identical
-for a GitHub PR review and a local pass (the `code-review` skill / codex-companion);
-only how the findings are gathered differs.
+This skill **brings the data on a platter; it does not judge.** It fetches the
+findings and quotes the exact code they point at, then hands a digest back to
+the main agent, which makes the applies / severity / decision call per
+`AGENTS.md` § AI review triage. Do **not** decide whether a finding applies, its
+severity, or what to do about it, and never edit code — this is gather-only.
 
-## Gather the findings
+## 1. Gather the findings
 
 - **PR review** — fetch ALL Codex feedback (bot user `chatgpt-codex-connector[bot]`)
   from all three surfaces. Do NOT rely on `gh pr view --comments` — it can miss
@@ -18,22 +22,24 @@ only how the findings are gathered differs.
   - Inline comments: `gh api repos/{owner}/{repo}/pulls/{N}/comments --paginate --jq '.[] | select(.user.login == "chatgpt-codex-connector[bot]")'`
   - Top-level PR comments: `gh api repos/{owner}/{repo}/issues/{N}/comments --paginate --jq '.[] | select(.user.login == "chatgpt-codex-connector[bot]")'`
 - **Local review** — use the findings the local pass printed (the `code-review`
-  skill output, or the codex-companion review file). There is nothing to fetch.
+  skill output / codex-companion review file). Nothing to fetch.
 
-## Triage each finding (AGENTS.md § AI review triage)
+## 2. Bring the evidence for each finding
 
-1. **Applies?** Read the referenced file/lines on the current branch and check
-   the finding against the actual code, the `docs/integration/` brief, and canon
-   — not against the comment's wording. It may already be fixed, be a false
-   positive, rest on a misread, or contradict a deliberate scope split the
-   reviewer cannot see. KISS: reject suggestions that add complexity without
-   clear value. A finding that does not apply is dismissed here and never
-   reaches step 2.
-2. **Severity.** P0/P1/P2 per `AGENTS.md` § Review guidelines (P0 = Blocker,
-   P1 = Major, P2 = Minor/Nit).
-3. **Decision.** Exactly one: **fix now** (valid, in scope) · **dismiss**
-   (doesn't apply) · **file an issue + re-scope** (valid but off-scope — see
-   § Defect protocol) · **defer** (valid but owned by a planned later sub-issue).
+For every finding, read the referenced file/lines **on the current branch** and
+quote the actual code (plus the relevant `docs/integration/` brief lines if the
+finding cites the contract). Add one mechanical, non-judgmental observation: does
+the cited line still match the comment's claim, or does the code look
+already-changed / the symbol no longer present? (This surfaces stale findings —
+it is an observation, not a verdict.)
 
-Output a table: finding (file:line) | applies? | severity | decision | reason.
-Do not implement fixes unless explicitly asked.
+## Output — a digest, not a verdict
+
+One block per finding:
+
+- **Finding** — `file:line`, the severity Codex stated, and the claim.
+- **Actual code** — the quoted lines on the current branch (+ brief excerpt if cited).
+- **Mechanical note** — "line matches claim" / "looks already-changed" / "not found".
+
+Do **not** add an applies / severity / decision column — the main agent fills
+that in per `AGENTS.md` § AI review triage. Do not implement fixes.

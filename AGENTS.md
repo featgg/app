@@ -183,9 +183,13 @@ buckets.
 
 When an AI review of a change comes back — a local pass (the `code-review`
 skill / codex), the GitHub PR auto-review (Codex, arriving as comments after
-Stage 4), or the Stage-3 `app-reviewer`'s own findings — the human triages
-every finding in this fixed order. Agents never act on an AI review finding
-without this triage.
+Stage 4), or the Stage-3 `app-reviewer`'s own findings — the **main agent**
+triages every finding in this fixed order, automatically, without being
+re-prompted on the logic. Gathering the raw findings (fetching the comments,
+quoting the referenced code) is mechanical and is delegated to the
+`codex-triage` skill on a cheaper model; the judgment below is the agent's, on
+that gathered evidence. The agent produces the verdict; the **human owns the
+final action** — agents never fix, dismiss, file, or defer without that sign-off.
 
 1. **Does it apply?** First and decisive — and the step most often skipped.
    Verify the finding against the actual code, the `docs/integration/` brief,
@@ -210,7 +214,7 @@ without this triage.
 
 Record the triage as a short table — finding (file:line) | applies? | severity
 | decision — so the rotation is auditable. The flow is identical for a local
-review and a PR review; only how findings are gathered differs (the
-`codex-triage` skill covers the PR-comment fetch). The Stage-3 reviewer is the
-authoritative gate and already buckets its findings by severity; its
-`changes-required` items are resolved with the same step-3 decision set.
+review and a PR review; only the gather differs (the `codex-triage` skill brings
+the evidence). The Stage-3 reviewer is the authoritative gate and already
+buckets its findings by severity; its `changes-required` items are resolved with
+the same step-3 decision set.
