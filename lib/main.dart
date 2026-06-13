@@ -24,6 +24,9 @@ Future<void> main() async {
         overrides: [
           authRepositoryProvider.overrideWith(buildAuthRepository),
           profileRepositoryProvider.overrideWith(buildProfileRepository),
+          profileWidgetsRepositoryProvider.overrideWith(
+            buildProfileWidgetsRepository,
+          ),
           avatarRepositoryProvider.overrideWith(buildAvatarRepository),
           avatarPickerProvider.overrideWithValue(
             const CropYourImageAvatarPicker(),
