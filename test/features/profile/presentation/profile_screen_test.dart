@@ -505,7 +505,7 @@ void main() {
   ) async {
     // The screen listens to the mutation controller; a failing mutation must
     // show the keyed error SnackBar — without the listener the failure is
-    // swallowed (F2(b)).
+    // swallowed when the screen does not observe the mutation controller.
     final repo = _FakeRepository(result: () async => right(_profile));
     final widgetsRepo = _FakeWidgetsRepository(
       fetchResult: right(const []),
@@ -530,7 +530,8 @@ void main() {
 
   testWidgets('after a successful mutation the grid refreshes', (tester) async {
     // With the screen mounted (the production listener present), a successful
-    // mutation must invalidate the read, observable as a re-fetch (F2(a)).
+    // mutation must invalidate the read, observable as a re-fetch (the
+    // screen-level observer keeps the controller alive).
     final repo = _FakeRepository(result: () async => right(_profile));
     final widgetsRepo = _FakeWidgetsRepository(fetchResult: right(const []));
 

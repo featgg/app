@@ -138,7 +138,8 @@ void main() {
       final source = _FakeDataSource(onFetch: () async => <ProfileWidgetDto>[]);
       await _repo(source, _RecordingReporter()).fetchMyWidgets();
 
-      // Without the filter the id is never threaded — this pins F1.
+      // Without the filter the id is never threaded — this pins the
+      // owner-scoped read.
       expect(source.lastFetchUserId, 'user-1');
     });
 
@@ -304,24 +305,72 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
     });
 
-    test('unique-constraint fault → Left(UnexpectedFailure)', () async {
-      final source = _FakeDataSource(
-        onInsert: (_) async =>
-            throw PostgrestException(message: 'duplicate', code: '23505'),
-      );
-      final reporter = _RecordingReporter();
-      final result = await _repo(source, reporter).addPlatformWidget(
-        platform: Platform.steam,
-        position: 0,
-        size: ProfileWidgetSize.small,
-      );
+    test(
+      'constraint violation (23505) → Left(InputFailure), not reported',
+      () async {
+        final source = _FakeDataSource(
+          onInsert: (_) async =>
+              throw PostgrestException(message: 'duplicate', code: '23505'),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).addPlatformWidget(
+          platform: Platform.steam,
+          position: 0,
+          size: ProfileWidgetSize.small,
+        );
 
-      result.fold(
-        (f) => expect(f, isA<UnexpectedFailure>()),
-        (_) => fail('want Left'),
-      );
-      expect(reporter.reported, hasLength(1));
-    });
+        result.fold((f) {
+          expect(f, isA<InputFailure>());
+          expect(f.isExpected, isTrue);
+          expect((f as InputFailure).code, '23505');
+        }, (_) => fail('want Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'a check_violation (23514) → Left(InputFailure), not reported',
+      () async {
+        final source = _FakeDataSource(
+          onInsert: (_) async =>
+              throw PostgrestException(message: 'cap exceeded', code: '23514'),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).addPlatformWidget(
+          platform: Platform.steam,
+          position: 0,
+          size: ProfileWidgetSize.small,
+        );
+
+        result.fold((f) {
+          expect(f, isA<InputFailure>());
+          expect(f.isExpected, isTrue);
+        }, (_) => fail('want Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test(
+      'a non-integrity PostgrestException (PGRST116) → Left(UnexpectedFailure), reported',
+      () async {
+        final source = _FakeDataSource(
+          onInsert: (_) async =>
+              throw PostgrestException(message: 'no rows', code: 'PGRST116'),
+        );
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).addPlatformWidget(
+          platform: Platform.steam,
+          position: 0,
+          size: ProfileWidgetSize.small,
+        );
+
+        result.fold(
+          (f) => expect(f, isA<UnexpectedFailure>()),
+          (_) => fail('want Left'),
+        );
+        expect(reporter.reported, hasLength(1));
+      },
+    );
   });
 
   group('mutations write the expected values', () {

@@ -250,7 +250,8 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
     // The options menu is reachable for a null-card widget, so Remove (the only
-    // manage affordance) stays usable — this is what F4 restores.
+    // manage affordance) stays usable — a null-card widget must remain
+    // removable.
     await tester.tap(find.byKey(const Key('profileWidgetMenu_missing')));
     await tester.pumpAndSettle();
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);

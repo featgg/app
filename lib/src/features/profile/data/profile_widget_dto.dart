@@ -86,7 +86,7 @@ String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {
 };
 
 /// Serializes [kind] to its stable wire token. Only [ProfileWidgetKind.platform]
-/// is written in slice 1.
+/// is written today; the other kinds are reserved for later phases.
 String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.platform => 'platform',
   ProfileWidgetKind.dataMenu => 'data_menu',

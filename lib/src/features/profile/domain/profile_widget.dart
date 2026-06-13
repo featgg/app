@@ -2,9 +2,9 @@ import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
 
-/// Forward-compatible widget kinds. Only [platform] is wired in slice 1; the
-/// others are reserved for later personalization slices and degrade to
-/// "unknown → omit" on read. The full set is listed up front so later slices
+/// Forward-compatible widget kinds. Only [platform] is implemented today; the
+/// others are reserved for later personalization phases and degrade to
+/// "unknown → omit" on read. The full set is listed up front so later phases
 /// add no enum churn.
 enum ProfileWidgetKind { platform, dataMenu, template, composed }
 

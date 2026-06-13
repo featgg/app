@@ -148,8 +148,16 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
     }
     if (error is PostgrestException) {
       final code = error.code;
+      // PostgREST surfaces access denials / auth-token problems as 401/403.
       if (code == '401' || code == '403' || code == 'PGRST301') {
         return const AuthFailure();
+      }
+      // Postgres integrity-violation class (23xxx): unique (position), check (the
+      // per-user cap), and size/not-null violations are expected, user-driven
+      // rejections — the backend constraint is authoritative and the client
+      // surfaces the rejection as an InputFailure (not a crash-reported fault).
+      if (code != null && code.startsWith('23')) {
+        return InputFailure(message: error.message, code: code);
       }
       return UnexpectedFailure(message: error.message);
     }
