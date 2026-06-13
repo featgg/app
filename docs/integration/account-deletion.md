@@ -32,7 +32,7 @@ tables below.
 
   | Code                    | Status | Client-UX consequence                          |
   | ----------------------- | -----: | ---------------------------------------------- |
-  | `OTP_RATE_LIMIT`        |    429 | Codes requested too fast; debounce and retry.  |
+  | `OTP_RATE_LIMIT`        |    429 | Too many code requests in a short window; back off and retry after `retry_after` seconds when present. |
   | `ACCOUNT_DELETE_FAILED` |    500 | Could not send the code; allow retry.          |
 
 - **Idempotency and retry semantics.** Safe to retry; each call sends a
@@ -59,7 +59,7 @@ tables below.
   | ----------------------- | -----: | -------------------------------------------------- |
   | `INVALID_REQUEST`       |    400 | The code field was missing; prompt to enter it.    |
   | `INVALID_OTP`           |    401 | The code is wrong or expired; let the user retry.  |
-  | `OTP_RATE_LIMIT`        |    429 | Codes tried too fast; debounce and retry.          |
+  | `OTP_RATE_LIMIT`        |    429 | Too many verification attempts; back off and retry after `retry_after` seconds when present. |
   | `ACCOUNT_DELETE_FAILED` |    500 | Could not schedule deletion; allow retry.          |
 
 - **Idempotency and retry semantics.** Re-confirming restarts the 7-day
@@ -93,13 +93,13 @@ This surface enforces no application-level rate limit of its own. The
 one-time code is issued through the auth platform, which applies its own
 built-in limits on how often a verification email may be sent and how
 many times a code may be tried before it expires. When either limit is
-reached, the operation fails as `OTP_RATE_LIMIT` (429). The response may
-carry an integer `retry_after` (seconds) in the body and a matching
-`Retry-After` header when a window is exposed; both are optional and
-omitted when no window is surfaced. This is a transient, user-retryable
-throttle, not an error: the client should debounce the "request code" /
-"resend" and "confirm" actions, show a brief "try again shortly" message,
-and not report it to crash reporting.
+hit, the request returns `429 OTP_RATE_LIMIT` — distinct from any 500.
+When the platform reports a retry window, the response body includes an
+integer `retry_after` (seconds) and a matching `Retry-After` header;
+both are omitted when no window is exposed. Treat `OTP_RATE_LIMIT` as a
+transient, user-retryable throttle: debounce the "request code" /
+"resend" / "confirm" actions, show a brief "try again in a moment"
+message, and do not report it to crash reporting.
 
 ## Out-of-band side effects
 
