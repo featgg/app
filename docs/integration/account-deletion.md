@@ -32,6 +32,7 @@ tables below.
 
   | Code                    | Status | Client-UX consequence                          |
   | ----------------------- | -----: | ---------------------------------------------- |
+  | `OTP_RATE_LIMIT`        |    429 | Codes requested too fast; debounce and retry.  |
   | `ACCOUNT_DELETE_FAILED` |    500 | Could not send the code; allow retry.          |
 
 - **Idempotency and retry semantics.** Safe to retry; each call sends a
@@ -58,6 +59,7 @@ tables below.
   | ----------------------- | -----: | -------------------------------------------------- |
   | `INVALID_REQUEST`       |    400 | The code field was missing; prompt to enter it.    |
   | `INVALID_OTP`           |    401 | The code is wrong or expired; let the user retry.  |
+  | `OTP_RATE_LIMIT`        |    429 | Codes tried too fast; debounce and retry.          |
   | `ACCOUNT_DELETE_FAILED` |    500 | Could not schedule deletion; allow retry.          |
 
 - **Idempotency and retry semantics.** Re-confirming restarts the 7-day
@@ -90,11 +92,14 @@ tables below.
 This surface enforces no application-level rate limit of its own. The
 one-time code is issued through the auth platform, which applies its own
 built-in limits on how often a verification email may be sent and how
-many times a code may be tried before it expires. When the email-sending
-limit is reached, requesting a code fails as `ACCOUNT_DELETE_FAILED`
-(500) rather than a dedicated rate-limit status — the client should
-debounce the "request code" / "resend" action and avoid requesting codes
-in rapid succession.
+many times a code may be tried before it expires. When either limit is
+reached, the operation fails as `OTP_RATE_LIMIT` (429). The response may
+carry an integer `retry_after` (seconds) in the body and a matching
+`Retry-After` header when a window is exposed; both are optional and
+omitted when no window is surfaced. This is a transient, user-retryable
+throttle, not an error: the client should debounce the "request code" /
+"resend" and "confirm" actions, show a brief "try again shortly" message,
+and not report it to crash reporting.
 
 ## Out-of-band side effects
 

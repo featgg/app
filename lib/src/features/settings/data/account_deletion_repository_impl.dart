@@ -96,6 +96,9 @@ final class AccountDeletionRepositoryImpl implements AccountDeletionRepository {
     if (code == 'UNAUTHORIZED' || status == 401) {
       return AuthFailure(code: code, message: message);
     }
+    if (code == 'OTP_RATE_LIMIT' || status == 429) {
+      return AuthRateLimitFailure(code: code, message: message);
+    }
     if (code == 'ACCOUNT_DELETE_FAILED') {
       return ServerFailure(code: code, message: message);
     }

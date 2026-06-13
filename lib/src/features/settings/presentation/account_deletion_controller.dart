@@ -10,10 +10,11 @@ import '../domain/settings_providers.dart';
 part 'account_deletion_controller.g.dart';
 
 /// Short client-side debounce after a successful request/resend send. This is
-/// an anti-spam UX gate only — the server's own limit is authoritative. Kept
-/// short because the backend surfaces its email-send limit as
-/// ACCOUNT_DELETE_FAILED (500) rather than a 429 with a fixed window the
-/// client could mirror.
+/// an anti-spam UX gate only — the server's own limit is authoritative and
+/// surfaces as a 429 rate-limit failure. The window is kept fixed and short
+/// rather than mirrored from the server because the backend does not document
+/// a fixed retry interval the client could reproduce; the reactive 429 path
+/// owns the real "try again shortly" back-off.
 const _requestCooldown = Duration(seconds: 60);
 
 /// Step of the account-deletion flow the screen is currently rendering.
