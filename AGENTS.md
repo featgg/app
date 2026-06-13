@@ -35,11 +35,10 @@ Stage artifacts live in `.ai/runs/<YYYY-MM-DD>-<slug>/`. They are local working 
 A stage is complete only when its run-dir artifact exists with the handoff footer — never on the strength of the subagent's final chat message; a subagent can be cut off mid-task and still be reported as completed. Pipeline subagents run in the foreground. If a stage returns without its artifact, the stage is not done: when the harness exposes a resume capability, continue that same agent from where it stopped (cheapest — its context is intact); otherwise re-spawn it fresh against the existing working tree and partial artifact, or finish the stage inline.
 
 Codex (or any other AI tool) auto-reviews every PR on GitHub
-outside the repo. Its findings arrive as PR comments after Stage 4.
-The human triages them — which apply, which do not — and either
-dismisses them or returns the run to Stage 1 or 2 (depending on the
-nature of the findings) with the accepted findings as scope. Agents
-never act on AI PR review comments without that triage.
+outside the repo; its findings arrive as PR comments after Stage 4.
+The human triages them per § AI review triage — applies? → severity →
+decision (fix / dismiss / file an issue / defer). Agents never act on
+an AI review comment without that triage.
 
 ## Handoff convention
 
@@ -148,8 +147,9 @@ reviewer that reads this file). The Stage-3 reviewer subagent
 remains the authoritative gate; this section tunes diff-level
 review passes only. The P0/P1 lists below are repo-specific
 additions, not a whitelist: genuine correctness or logic defects
-remain reportable at the severity they merit. P0 maps to Blocker
-and P1 to Major in the Stage-3 reviewer's severity buckets.
+remain reportable at the severity they merit. P0 maps to Blocker,
+P1 to Major, and P2 to Minor/Nit in the Stage-3 reviewer's severity
+buckets.
 
 - P0: backend internals anywhere in the diff — internal function
   names, schema namespaces, migration filenames, cron job names,
@@ -178,3 +178,39 @@ and P1 to Major in the Stage-3 reviewer's severity buckets.
 - Plan and run artifacts live outside the repo; do not flag their
   absence. Any file under `.ai/runs/` appearing in the diff is P0 —
   run artifacts must never be committed.
+
+## AI review triage
+
+When an AI review of a change comes back — a local pass (the `code-review`
+skill / codex), the GitHub PR auto-review (Codex, arriving as comments after
+Stage 4), or the Stage-3 `app-reviewer`'s own findings — the human triages
+every finding in this fixed order. Agents never act on an AI review finding
+without this triage.
+
+1. **Does it apply?** First and decisive — and the step most often skipped.
+   Verify the finding against the actual code, the `docs/integration/` brief,
+   and canon, not against the comment's wording. It may already be fixed, be a
+   false positive, rest on a misread, or contradict a deliberate decision the
+   reviewer cannot see (a scope split across sub-issues, a documented
+   exception). A finding that does not apply is dismissed with a one-line
+   reason and never reaches step 2.
+2. **Severity.** For findings that apply, rate by the § Review guidelines
+   buckets (P0 = Blocker, P1 = Major, P2 = Minor/Nit). A genuine correctness or
+   logic defect keeps the severity it merits regardless of the P0/P1 lists.
+3. **Decision.** Exactly one per finding:
+   - **Fix now** — valid and inside the change's scope: fix it in this same
+     branch/PR and re-verify.
+   - **Dismiss** — did not apply (step 1): the one-line reason is the
+     dismissal (and the reply, on a PR comment).
+   - **File an issue + re-scope** — valid but off the change's scope: per
+     § Defect protocol, open a `Sub-issue` linking the source PR; never patch
+     off-scope work ad-hoc.
+   - **Defer** — valid but already owned by a planned later sub-issue (the AI
+     reviewer did not know the roadmap): note where it lands; no new issue.
+
+Record the triage as a short table — finding (file:line) | applies? | severity
+| decision — so the rotation is auditable. The flow is identical for a local
+review and a PR review; only how findings are gathered differs (the
+`codex-triage` skill covers the PR-comment fetch). The Stage-3 reviewer is the
+authoritative gate and already buckets its findings by severity; its
+`changes-required` items are resolved with the same step-3 decision set.
