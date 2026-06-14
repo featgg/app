@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
+import 'data_menu_screen.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
@@ -166,7 +167,7 @@ class _PlaceholderTile extends StatelessWidget {
   }
 }
 
-enum _WidgetMenuAction { remove, moveUp, moveDown }
+enum _WidgetMenuAction { customizeData, remove, moveUp, moveDown }
 
 class _WidgetOptionsMenu extends ConsumerWidget {
   const _WidgetOptionsMenu({
@@ -194,6 +195,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
       tooltip: l10n.profileWidgetOptions,
       onSelected: (value) {
         switch (value) {
+          case _WidgetMenuAction.customizeData:
+            showDataMenu(context, widget);
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
           case _WidgetMenuAction.moveUp:
@@ -203,6 +206,10 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
+        PopupMenuItem(
+          value: _WidgetMenuAction.customizeData,
+          child: Text(l10n.profileWidgetCustomizeData),
+        ),
         if (canMoveUp)
           PopupMenuItem(
             value: _WidgetMenuAction.moveUp,
