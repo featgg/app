@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'data_menu_selection.dart';
 
 /// Forward-compatible widget kinds. Only [platform] is implemented today; the
 /// others are reserved for later personalization phases and degrade to
@@ -30,6 +31,7 @@ final class ProfileWidget extends Equatable {
     required this.position,
     required this.isEnabled,
     required this.size,
+    this.selection = DataMenuSelection.empty,
   });
 
   final String id;
@@ -41,10 +43,15 @@ final class ProfileWidget extends Equatable {
   final bool isEnabled;
   final ProfileWidgetSize size;
 
+  /// The owner's data-menu curation for this widget. Empty (default) for a
+  /// widget that has not been customized.
+  final DataMenuSelection selection;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
     ProfileWidgetSize? size,
+    DataMenuSelection? selection,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -52,8 +59,17 @@ final class ProfileWidget extends Equatable {
     position: position ?? this.position,
     isEnabled: isEnabled ?? this.isEnabled,
     size: size ?? this.size,
+    selection: selection ?? this.selection,
   );
 
   @override
-  List<Object?> get props => [id, kind, platform, position, isEnabled, size];
+  List<Object?> get props => [
+    id,
+    kind,
+    platform,
+    position,
+    isEnabled,
+    size,
+    selection,
+  ];
 }

@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import 'data_menu_selection.dart';
 import 'profile_widget.dart';
 
 /// Reads and mutates the signed-in owner's `profile_widgets` arrangement.
@@ -23,6 +24,15 @@ abstract interface class ProfileWidgetsRepository {
 
   /// Sets the size (`settings.size`) for [id].
   Future<Either<Failure, Unit>> setSize(String id, ProfileWidgetSize size);
+
+  /// Persists the data-menu [selection] for [id], merged into the existing
+  /// `settings` envelope alongside [size] (preserved verbatim). Additive: it
+  /// keeps `schema_version` and `size` and never changes the grid behavior.
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
+  );
 
   /// Persists a new ordering: [orderedIds] in target position order.
   Future<Either<Failure, Unit>> reorder(List<String> orderedIds);
