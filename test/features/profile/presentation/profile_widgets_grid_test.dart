@@ -11,7 +11,6 @@ import 'package:featgg/src/features/profile/presentation/profile_widgets_grid.da
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
@@ -135,8 +134,11 @@ Widget _harness({
         body: SingleChildScrollView(
           child: ProfileWidgetsGrid(
             widgets: widgets,
-            // Identifiable renderer so card presence is assertable.
-            cardBuilder: (card) => Text(card.title),
+            // A full-height card stand-in (the real connections card is tall):
+            // gives the tile enough content height for the options-menu overlay
+            // to sit within its bounds, and keeps the title assertable.
+            cardBuilder: (card) =>
+                SizedBox(height: 200, child: Text(card.title)),
           ),
         ),
       ),
@@ -144,14 +146,100 @@ Widget _harness({
   );
 }
 
-StaggeredGridTile _tileFor(WidgetTester tester, String id) =>
-    tester.widget<StaggeredGridTile>(find.byKey(Key('profileWidgetTile_$id')));
+/// A deliberately tall, wide-content stand-in for the real connections
+/// `GameCardView` (which must not be imported here): a column of tall boxes plus
+/// a wide row of fixed-width boxes — the shape that overflowed inside the old
+/// fixed-aspect staggered cells.
+class _TallWideCard extends StatelessWidget {
+  const _TallWideCard({required this.cardKey});
+
+  final Key cardKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: cardKey,
+      children: [
+        for (var i = 0; i < 4; i++) const SizedBox(height: 200, width: 320),
+        Row(children: [for (var i = 0; i < 6; i++) const SizedBox(width: 120)]),
+      ],
+    );
+  }
+}
 
 void main() {
-  testWidgets('maps each size token to the expected tile spans', (
+  testWidgets('renders a tall, rich card at phone width with no overflow', (
     tester,
   ) async {
+    // Constrain to a phone width so the layout resolves at the size the old
+    // staggered grid overflowed at; a RenderFlex overflow surfaces as a thrown
+    // FlutterError in a test, so a null takeException proves none fired.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        cardsRepositoryProvider.overrideWithValue(
+          _FakeCardsRepository({Platform.steam: _card(Platform.steam)}),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(
+          _StubWidgetsRepository(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('en')],
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProfileWidgetsGrid(
+                widgets: [
+                  _widget(
+                    id: 'tall',
+                    platform: Platform.steam,
+                    position: 0,
+                    size: ProfileWidgetSize.small,
+                  ),
+                ],
+                cardBuilder: (card) =>
+                    const _TallWideCard(cardKey: Key('tallWideCard')),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // No RenderFlex overflow / FlutterError was thrown during layout — the
+    // guard the old fixed-aspect StaggeredGridTile.count layout failed.
+    expect(tester.takeException(), isNull);
+    // The tall card actually rendered (not hidden / collapsed).
+    expect(find.byKey(const Key('tallWideCard')), findsOneWidget);
+  });
+
+  testWidgets('renders one full-width tile per visible widget in position '
+      'order', (tester) async {
     final widgets = [
+      _widget(
+        id: 'l',
+        platform: Platform.gw2,
+        position: 2,
+        size: ProfileWidgetSize.large,
+      ),
       _widget(
         id: 's',
         platform: Platform.steam,
@@ -163,12 +251,6 @@ void main() {
         platform: Platform.chess,
         position: 1,
         size: ProfileWidgetSize.wide,
-      ),
-      _widget(
-        id: 'l',
-        platform: Platform.gw2,
-        position: 2,
-        size: ProfileWidgetSize.large,
       ),
     ];
     await tester.pumpWidget(
@@ -183,17 +265,55 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final small = _tileFor(tester, 's');
-    expect(small.crossAxisCellCount, 1);
-    expect(small.mainAxisCellCount, 1);
+    // Every widget renders regardless of its (now visually inert) size token,
+    // laid out as a plain column — the staggered grid is gone.
+    expect(find.byKey(const Key('profileWidgetTile_s')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetTile_w')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetTile_l')), findsOneWidget);
 
-    final wide = _tileFor(tester, 'w');
-    expect(wide.crossAxisCellCount, 2);
-    expect(wide.mainAxisCellCount, 1);
+    // Tiles render in ascending position order, top to bottom.
+    final yS = tester
+        .getTopLeft(find.byKey(const Key('profileWidgetTile_s')))
+        .dy;
+    final yW = tester
+        .getTopLeft(find.byKey(const Key('profileWidgetTile_w')))
+        .dy;
+    final yL = tester
+        .getTopLeft(find.byKey(const Key('profileWidgetTile_l')))
+        .dy;
+    expect(yS, lessThan(yW));
+    expect(yW, lessThan(yL));
+  });
 
-    final large = _tileFor(tester, 'l');
-    expect(large.crossAxisCellCount, 2);
-    expect(large.mainAxisCellCount, 2);
+  testWidgets('no resize option in the tile menu', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _widget(
+            id: 'on',
+            platform: Platform.steam,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+        ],
+        cards: {Platform.steam: _card(Platform.steam)},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_on')));
+    await tester.pumpAndSettle();
+
+    // The resize header and the three size items are no longer surfaced; the
+    // size tokens stay in the data model for the responsive follow-up.
+    expect(find.text(l10n.profileWidgetResize), findsNothing);
+    expect(find.text(l10n.profileWidgetSizeSmall), findsNothing);
+    expect(find.text(l10n.profileWidgetSizeWide), findsNothing);
+    expect(find.text(l10n.profileWidgetSizeLarge), findsNothing);
+    // The retained affordances are still present.
+    expect(find.text(l10n.profileWidgetHide), findsOneWidget);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
   });
 
   testWidgets('a widget whose card is null renders a placeholder, not a blank '

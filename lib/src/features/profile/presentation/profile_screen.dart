@@ -210,7 +210,7 @@ class _AddWidgetButton extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     // A platform is addable when it is connected AND not already placed as a
-    // widget (at most one widget per platform in this slice, so a platform that
+    // widget (at most one widget per platform is supported, so a platform that
     // already has a widget is excluded to avoid adding it twice).
     final alreadyAdded = {
       for (final w in existing)

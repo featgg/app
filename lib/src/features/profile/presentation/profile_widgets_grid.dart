@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../../../core/core.dart';
 import '../../connections/domain/game_card.dart';
@@ -9,33 +8,20 @@ import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
 
-/// Maps a [ProfileWidgetSize] to its staggered-grid cross-axis span on the
-/// fixed 2-column base grid.
-int crossAxisCellsFor(ProfileWidgetSize size) => switch (size) {
-  ProfileWidgetSize.small => 1,
-  ProfileWidgetSize.wide => 2,
-  ProfileWidgetSize.large => 2,
-};
-
-/// Maps a [ProfileWidgetSize] to its staggered-grid main-axis span.
-int mainAxisCellsFor(ProfileWidgetSize size) => switch (size) {
-  ProfileWidgetSize.small => 1,
-  ProfileWidgetSize.wide => 1,
-  ProfileWidgetSize.large => 2,
-};
-
-/// Renders the owner's profile widgets in an auto-packing staggered grid. Each
+/// Renders the owner's profile widgets as a single full-width column, each tile
+/// at its natural content height (the connections card is designed to render
+/// full width with content-driven height). Each
 /// [ProfileWidgetKind.platform] widget renders its card via the
 /// composition-root-injected [cardBuilder]; a widget whose card is not
 /// available renders a placeholder that keeps its options menu reachable, so
 /// the widget stays manageable (it is never shown as an error tile).
 ///
-/// Hidden (disabled) widgets stay in the grid rendered in a dimmed state with a
-/// "Show" action so hiding is reversible; enabled widgets expose "Hide".
+/// Hidden (disabled) widgets stay in the column rendered in a dimmed state with
+/// a "Show" action so hiding is reversible; enabled widgets expose "Hide".
 ///
-/// The grid is non-scrolling and is composed inside the profile screen's own
+/// The column is non-scrolling and is composed inside the profile screen's own
 /// scroll view. The per-tile options menu drives the
-/// [ProfileWidgetsController] (resize / hide / show / remove / reorder).
+/// [ProfileWidgetsController] (hide / show / remove / reorder).
 class ProfileWidgetsGrid extends ConsumerWidget {
   const ProfileWidgetsGrid({
     super.key,
@@ -63,25 +49,21 @@ class ProfileWidgetsGrid extends ConsumerWidget {
       ref.read(profileWidgetsControllerProvider.notifier).reorder(next);
     }
 
-    return StaggeredGrid.count(
-      crossAxisCount: 2,
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < ordered.length; i++)
-          StaggeredGridTile.count(
+        for (var i = 0; i < ordered.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.sm),
+          _WidgetTile(
             key: Key('profileWidgetTile_${ordered[i].id}'),
-            crossAxisCellCount: crossAxisCellsFor(ordered[i].size),
-            mainAxisCellCount: mainAxisCellsFor(ordered[i].size),
-            child: _WidgetTile(
-              widget: ordered[i],
-              cardBuilder: cardBuilder,
-              canMoveUp: i > 0,
-              canMoveDown: i < ordered.length - 1,
-              onMoveUp: () => reorderMoving(ordered[i].id, -1),
-              onMoveDown: () => reorderMoving(ordered[i].id, 1),
-            ),
+            widget: ordered[i],
+            cardBuilder: cardBuilder,
+            canMoveUp: i > 0,
+            canMoveDown: i < ordered.length - 1,
+            onMoveUp: () => reorderMoving(ordered[i].id, -1),
+            onMoveDown: () => reorderMoving(ordered[i].id, 1),
           ),
+        ],
       ],
     );
   }
@@ -92,6 +74,7 @@ class ProfileWidgetsGrid extends ConsumerWidget {
 /// keeps the options menu reachable, so the widget stays manageable.
 class _WidgetTile extends ConsumerWidget {
   const _WidgetTile({
+    super.key,
     required this.widget,
     required this.cardBuilder,
     required this.canMoveUp,
@@ -125,15 +108,22 @@ class _WidgetTile extends ConsumerWidget {
       // manageable.
       data: (card) => Stack(
         children: [
-          // A hidden widget stays in the grid dimmed so its "Show" action
-          // remains reachable; the menu itself stays at full opacity.
-          Opacity(
-            opacity: widget.isEnabled ? 1.0 : 0.5,
-            child: card == null
-                ? _PlaceholderTile(
-                    key: Key('profileWidgetPlaceholder_${widget.id}'),
-                  )
-                : cardBuilder(card),
+          // ClipRect bounds the child's paint to the tile box so an
+          // unexpectedly-oversized card degrades by clipping rather than
+          // throwing a fatal RenderFlex overflow; under the full-width
+          // content-height layout the card fits, so it is a no-op in the
+          // happy path.
+          ClipRect(
+            // A hidden widget stays in the column dimmed so its "Show" action
+            // remains reachable; the menu itself stays at full opacity.
+            child: Opacity(
+              opacity: widget.isEnabled ? 1.0 : 0.5,
+              child: card == null
+                  ? _PlaceholderTile(
+                      key: Key('profileWidgetPlaceholder_${widget.id}'),
+                    )
+                  : cardBuilder(card),
+            ),
           ),
           Positioned(
             top: AppSpacing.xs,
@@ -152,9 +142,9 @@ class _WidgetTile extends ConsumerWidget {
   }
 }
 
-/// Fills a tile's allotted span when a platform widget's card is not available,
-/// so the cell is intentional (not a blank reserved hole) and the widget's
-/// options menu stays reachable for removal.
+/// Renders in place of a platform widget's card when it is not available, so
+/// the tile is intentional (not a blank hole) and the widget's options menu
+/// stays reachable for removal.
 class _PlaceholderTile extends StatelessWidget {
   const _PlaceholderTile({super.key});
 
@@ -204,14 +194,12 @@ class _WidgetOptionsMenu extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final controller = ref.read(profileWidgetsControllerProvider.notifier);
 
-    return PopupMenuButton<Object>(
+    return PopupMenuButton<_WidgetMenuAction>(
       key: Key('profileWidgetMenu_${widget.id}'),
       icon: const Icon(Icons.more_vert),
       tooltip: l10n.profileWidgetOptions,
       onSelected: (value) {
         switch (value) {
-          case ProfileWidgetSize size:
-            controller.resize(widget.id, size);
           case _WidgetMenuAction.hide:
             controller.toggle(widget.id, false);
           case _WidgetMenuAction.show:
@@ -225,20 +213,6 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        PopupMenuItem(enabled: false, child: Text(l10n.profileWidgetResize)),
-        PopupMenuItem(
-          value: ProfileWidgetSize.small,
-          child: Text(l10n.profileWidgetSizeSmall),
-        ),
-        PopupMenuItem(
-          value: ProfileWidgetSize.wide,
-          child: Text(l10n.profileWidgetSizeWide),
-        ),
-        PopupMenuItem(
-          value: ProfileWidgetSize.large,
-          child: Text(l10n.profileWidgetSizeLarge),
-        ),
-        const PopupMenuDivider(),
         if (canMoveUp)
           PopupMenuItem(
             value: _WidgetMenuAction.moveUp,
