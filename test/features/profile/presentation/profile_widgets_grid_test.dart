@@ -4,6 +4,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
@@ -67,6 +68,13 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
   ) async => throw UnimplementedError();
 
   @override
@@ -509,14 +517,16 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    // The middle tile can move both ways and be removed; no hide/show item is
-    // surfaced (their l10n keys are gone — assert by the kept items only).
+    // The middle tile can move both ways, be removed, and customize its data;
+    // no hide/show item is surfaced (their l10n keys are gone — assert by the
+    // kept items only).
     await tester.tap(find.byKey(const Key('profileWidgetMenu_mid')));
     await tester.pumpAndSettle();
+    expect(find.text(l10n.profileWidgetCustomizeData), findsOneWidget);
     expect(find.text(l10n.profileWidgetMoveUp), findsOneWidget);
     expect(find.text(l10n.profileWidgetMoveDown), findsOneWidget);
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
-    // The menu surfaces exactly the three kept actions — no hide/show item.
-    expect(find.bySubtype<PopupMenuItem>(), findsNWidgets(3));
+    // The menu surfaces exactly the four kept actions — no hide/show item.
+    expect(find.bySubtype<PopupMenuItem>(), findsNWidgets(4));
   });
 }

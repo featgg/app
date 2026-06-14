@@ -104,6 +104,13 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
       throw UnimplementedError();
 }
@@ -132,6 +139,13 @@ final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
   ) async => throw UnimplementedError();
 
   @override
