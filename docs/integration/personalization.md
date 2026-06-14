@@ -40,9 +40,6 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `template` — a pre-designed, slot-filled card. *(upcoming)*
 - `composed_card` — a user-assembled, cross-platform composed card.
   *(upcoming)*
-- `card_classic`, `showcase_grid`, `stats_row` — legacy single-platform
-  values. Still accepted for existing rows, but **do not use them for new
-  widgets**; use `platform`.
 
 ### `platform` — valid values and binding rule
 
@@ -52,7 +49,7 @@ snake_case). Any other value is rejected as an invalid value for the field.
 
 Whether `platform` is required or must be null depends on `type`:
 
-- `type = platform` (and the legacy single-platform values) → `platform`
+- `type = platform` → `platform`
   **must be a non-null** value from the list above.
 - `type` in {`composed_card`, `data_menu`, `template`} → `platform`
   **must be null**.
@@ -63,7 +60,7 @@ from the invalid-`type` rejection above.
 - **Constraints (surface as the SDK error on violation).**
   - At most 50 widgets per user — an insert that would exceed the cap is
     rejected.
-  - `position` is unique per user.
+  - `position` is a non-negative integer (`>= 0`), unique per user.
   - `settings` is a JSON object up to ~50 KB. Versioned envelope:
     `{ "schema_version": 1, "size": "small" | "wide" | "large" }`.
   - `type` must be a valid value, and `platform` must satisfy the
