@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
+import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
 import '../domain/data_menu_catalog.dart';
@@ -56,6 +57,25 @@ class _DataMenuSheetState extends ConsumerState<DataMenuSheet> {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final connectedState = ref.watch(connectedPlatformsProvider);
+    // Observe the autoDispose controller from the sheet, which outlives every
+    // toggle: this keeps it alive across an in-flight save so its post-await
+    // invalidate fires (the read provider refreshes), and surfaces a failure as
+    // a SnackBar instead of swallowing it.
+    ref.listen<AsyncValue<void>>(dataMenuControllerProvider, (previous, next) {
+      if (!context.mounted || !next.hasError) return;
+      final error = next.error!;
+      final msg = error is Failure
+          ? error.localizedMessage(l10n)
+          : l10n.errorUnexpected;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(key: const Key('dataMenuErrorSnackBar'), content: Text(msg)),
+        );
+    });
+    // While a save is in flight, disable the toggles so a second write cannot be
+    // issued — serializing the writes by construction (at most one in flight).
+    final saving = ref.watch(dataMenuControllerProvider).isLoading;
 
     return SafeArea(
       child: Padding(
@@ -63,7 +83,8 @@ class _DataMenuSheetState extends ConsumerState<DataMenuSheet> {
         child: AsyncValueWidget<List<Platform>>(
           value: connectedState,
           onRetry: () => ref.invalidate(connectedPlatformsProvider),
-          data: (connected) => _content(context, l10n, textTheme, connected),
+          data: (connected) =>
+              _content(context, l10n, textTheme, connected, saving),
         ),
       ),
     );
@@ -74,6 +95,7 @@ class _DataMenuSheetState extends ConsumerState<DataMenuSheet> {
     AppLocalizations l10n,
     TextTheme textTheme,
     List<Platform> connected,
+    bool saving,
   ) {
     // Only catalog platforms the owner has actually connected are offered.
     final connectedSet = connected.toSet();
@@ -119,7 +141,13 @@ class _DataMenuSheetState extends ConsumerState<DataMenuSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final category in DataMenuCategory.values)
-                  ..._categorySection(l10n, textTheme, category, connectedSet),
+                  ..._categorySection(
+                    l10n,
+                    textTheme,
+                    category,
+                    connectedSet,
+                    saving,
+                  ),
               ],
             ),
           ),
@@ -139,6 +167,7 @@ class _DataMenuSheetState extends ConsumerState<DataMenuSheet> {
     TextTheme textTheme,
     DataMenuCategory category,
     Set<Platform> connectedSet,
+    bool saving,
   ) {
     final items = [
       for (final item in dataMenuCatalog)
@@ -161,7 +190,7 @@ class _DataMenuSheetState extends ConsumerState<DataMenuSheet> {
         SwitchListTile(
           key: Key('dataMenuItem_${item.id}'),
           value: _selection.contains(item.id),
-          onChanged: (_) => _toggle(item.id),
+          onChanged: saving ? null : (_) => _toggle(item.id),
           title: Text(dataMenuItemLabel(l10n, item.labelKey) ?? item.id),
         ),
     ];

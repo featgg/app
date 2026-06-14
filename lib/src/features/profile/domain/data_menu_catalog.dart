@@ -19,7 +19,7 @@ enum DataMenuCategory {
 /// so these only tag the value's shape today.
 enum DataMenuValueType { integer, percent, hours, rank, showcaseList, identity }
 
-/// A stable pointer into the frozen `feed.md` card contract. Sealed so a
+/// A stable pointer into the frozen game-card contract. Sealed so a
 /// pointer is either a scalar stat (a `stats[].key` or a scalar field in
 /// `widget_data.data`) or a showcase list (a `widget_data.data` list field),
 /// both keyed by [Platform].
@@ -35,7 +35,7 @@ sealed class DataMenuPointer extends Equatable {
 final class StatPointer extends DataMenuPointer {
   const StatPointer(super.platform, {required this.statKey, this.dataPath});
 
-  /// Stable `feed.md` token. Names the `stats[].key` when [dataPath] is null,
+  /// Stable contract token. Names the `stats[].key` when [dataPath] is null,
   /// otherwise the leaf of the `data` path (kept for a stable, readable id).
   final String statKey;
 
@@ -91,10 +91,10 @@ final class DataMenuItem extends Equatable {
   List<Object?> get props => [id, category, pointer, labelKey, valueType];
 }
 
-/// The v1 data menu catalog. Every pointer maps to a key/field already frozen
-/// in `feed.md` § Per-platform data and stats; nothing here invents a contract.
-/// Adding an item = appending ONE const entry; the iterating tests need no new
-/// case for a conformant addition.
+/// The v1 data menu catalog. Every pointer maps to a stat key or showcase
+/// field already in the frozen game-card data contract; nothing here invents a
+/// contract. Adding an item = appending ONE const entry; the iterating tests
+/// need no new case for a conformant addition.
 const List<DataMenuItem> dataMenuCatalog = [
   // ── Ranks & competitive ──────────────────────────────────────────────────
   DataMenuItem(
