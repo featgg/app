@@ -90,7 +90,7 @@ void main() {
       // The reserved kinds are named in the wire taxonomy but not yet wired on
       // read; an older client must omit a row a newer client writes, never
       // crash. Mirrors profileWidgetKindToWire's reserved branches.
-      for (final token in const ['data_menu', 'template', 'composed']) {
+      for (final token in const ['data_menu', 'template', 'composed_card']) {
         final widget = profileWidgetFromDto(
           ProfileWidgetDto.fromJson(_row(type: token)),
         );
@@ -131,7 +131,10 @@ void main() {
       expect(profileWidgetKindToWire(ProfileWidgetKind.platform), 'platform');
       expect(profileWidgetKindToWire(ProfileWidgetKind.dataMenu), 'data_menu');
       expect(profileWidgetKindToWire(ProfileWidgetKind.template), 'template');
-      expect(profileWidgetKindToWire(ProfileWidgetKind.composed), 'composed');
+      expect(
+        profileWidgetKindToWire(ProfileWidgetKind.composed),
+        'composed_card',
+      );
     });
   });
 }

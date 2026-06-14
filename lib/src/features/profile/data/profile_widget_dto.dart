@@ -91,7 +91,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.platform => 'platform',
   ProfileWidgetKind.dataMenu => 'data_menu',
   ProfileWidgetKind.template => 'template',
-  ProfileWidgetKind.composed => 'composed',
+  ProfileWidgetKind.composed => 'composed_card',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
