@@ -87,18 +87,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      await _source.updateWidget(id, {'is_enabled': isEnabled});
-      return right(unit);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,

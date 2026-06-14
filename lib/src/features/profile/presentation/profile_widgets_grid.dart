@@ -16,12 +16,11 @@ import 'profile_widgets_controller.dart';
 /// available renders a placeholder that keeps its options menu reachable, so
 /// the widget stays manageable (it is never shown as an error tile).
 ///
-/// Hidden (disabled) widgets stay in the column rendered in a dimmed state with
-/// a "Show" action so hiding is reversible; enabled widgets expose "Hide".
+/// Every widget renders regardless of `is_enabled`, so no row is stuck.
 ///
 /// The column is non-scrolling and is composed inside the profile screen's own
 /// scroll view. The per-tile options menu drives the
-/// [ProfileWidgetsController] (hide / show / remove / reorder).
+/// [ProfileWidgetsController] (remove / reorder).
 class ProfileWidgetsGrid extends ConsumerWidget {
   const ProfileWidgetsGrid({
     super.key,
@@ -114,16 +113,11 @@ class _WidgetTile extends ConsumerWidget {
           // content-height layout the card fits, so it is a no-op in the
           // happy path.
           ClipRect(
-            // A hidden widget stays in the column dimmed so its "Show" action
-            // remains reachable; the menu itself stays at full opacity.
-            child: Opacity(
-              opacity: widget.isEnabled ? 1.0 : 0.5,
-              child: card == null
-                  ? _PlaceholderTile(
-                      key: Key('profileWidgetPlaceholder_${widget.id}'),
-                    )
-                  : cardBuilder(card),
-            ),
+            child: card == null
+                ? _PlaceholderTile(
+                    key: Key('profileWidgetPlaceholder_${widget.id}'),
+                  )
+                : cardBuilder(card),
           ),
           Positioned(
             top: AppSpacing.xs,
@@ -172,7 +166,7 @@ class _PlaceholderTile extends StatelessWidget {
   }
 }
 
-enum _WidgetMenuAction { hide, show, remove, moveUp, moveDown }
+enum _WidgetMenuAction { remove, moveUp, moveDown }
 
 class _WidgetOptionsMenu extends ConsumerWidget {
   const _WidgetOptionsMenu({
@@ -200,10 +194,6 @@ class _WidgetOptionsMenu extends ConsumerWidget {
       tooltip: l10n.profileWidgetOptions,
       onSelected: (value) {
         switch (value) {
-          case _WidgetMenuAction.hide:
-            controller.toggle(widget.id, false);
-          case _WidgetMenuAction.show:
-            controller.toggle(widget.id, true);
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
           case _WidgetMenuAction.moveUp:
@@ -222,16 +212,6 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           PopupMenuItem(
             value: _WidgetMenuAction.moveDown,
             child: Text(l10n.profileWidgetMoveDown),
-          ),
-        if (widget.isEnabled)
-          PopupMenuItem(
-            value: _WidgetMenuAction.hide,
-            child: Text(l10n.profileWidgetHide),
-          )
-        else
-          PopupMenuItem(
-            value: _WidgetMenuAction.show,
-            child: Text(l10n.profileWidgetShow),
           ),
         PopupMenuItem(
           value: _WidgetMenuAction.remove,

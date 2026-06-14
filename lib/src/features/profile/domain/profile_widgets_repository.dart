@@ -21,9 +21,6 @@ abstract interface class ProfileWidgetsRepository {
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
-  /// Sets `is_enabled` for [id].
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled);
-
   /// Sets the size (`settings.size`) for [id].
   Future<Either<Failure, Unit>> setSize(String id, ProfileWidgetSize size);
 

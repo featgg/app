@@ -1043,14 +1043,6 @@
   "@profileWidgetRemove": {
     "description": "Per-widget menu option that removes the widget from the arrangement."
   },
-  "profileWidgetHide": "Hide widget",
-  "@profileWidgetHide": {
-    "description": "Per-widget menu option that disables (hides) the widget without removing it."
-  },
-  "profileWidgetShow": "Show widget",
-  "@profileWidgetShow": {
-    "description": "Per-widget menu option that re-enables (shows) a hidden widget."
-  },
   "profileWidgetMoveUp": "Move up",
   "@profileWidgetMoveUp": {
     "description": "Per-widget menu option that moves the widget earlier in the arrangement order."

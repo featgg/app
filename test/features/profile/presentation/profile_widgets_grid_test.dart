@@ -64,10 +64,6 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled) async =>
-      throw UnimplementedError();
-
-  @override
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
@@ -311,8 +307,7 @@ void main() {
     expect(find.text(l10n.profileWidgetSizeSmall), findsNothing);
     expect(find.text(l10n.profileWidgetSizeWide), findsNothing);
     expect(find.text(l10n.profileWidgetSizeLarge), findsNothing);
-    // The retained affordances are still present.
-    expect(find.text(l10n.profileWidgetHide), findsOneWidget);
+    // The retained manage affordance is still present.
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
   });
 
@@ -425,102 +420,103 @@ void main() {
     expect(find.byKey(const Key('asyncRetryButton')), findsOneWidget);
   });
 
-  testWidgets(
-    'a hidden widget stays in the grid, dimmed, so it is reversible',
-    (tester) async {
-      final widgets = [
-        _widget(
-          id: 'on',
-          platform: Platform.steam,
-          position: 0,
-          size: ProfileWidgetSize.small,
-        ),
-        _widget(
-          id: 'off',
-          platform: Platform.chess,
-          position: 1,
-          size: ProfileWidgetSize.small,
-          isEnabled: false,
-        ),
-      ];
-      await tester.pumpWidget(
-        _harness(
-          widgets: widgets,
-          cards: {
-            Platform.steam: _card(Platform.steam),
-            Platform.chess: _card(Platform.chess),
-          },
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Both tiles render — hiding does not remove the widget from the grid.
-      expect(find.byKey(const Key('profileWidgetTile_on')), findsOneWidget);
-      expect(find.byKey(const Key('profileWidgetTile_off')), findsOneWidget);
-
-      // The hidden tile's card is dimmed; the enabled one is at full opacity.
-      final hiddenOpacity = tester.widget<Opacity>(
-        find.descendant(
-          of: find.byKey(const Key('profileWidgetTile_off')),
-          matching: find.byType(Opacity),
-        ),
-      );
-      final shownOpacity = tester.widget<Opacity>(
-        find.descendant(
-          of: find.byKey(const Key('profileWidgetTile_on')),
-          matching: find.byType(Opacity),
-        ),
-      );
-      expect(hiddenOpacity.opacity, lessThan(shownOpacity.opacity));
-    },
-  );
-
-  testWidgets('an enabled tile offers Hide, not Show', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        widgets: [
-          _widget(
-            id: 'on',
-            platform: Platform.steam,
-            position: 0,
-            size: ProfileWidgetSize.small,
-          ),
-        ],
-        cards: {Platform.steam: _card(Platform.steam)},
-      ),
-    );
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    await tester.tap(find.byKey(const Key('profileWidgetMenu_on')));
-    await tester.pumpAndSettle();
-    expect(find.text(l10n.profileWidgetHide), findsOneWidget);
-    expect(find.text(l10n.profileWidgetShow), findsNothing);
-  });
-
-  testWidgets('a hidden tile offers a reachable Show (re-enable) path', (
+  testWidgets('a disabled widget renders normally and stays manageable', (
     tester,
   ) async {
+    final widgets = [
+      _widget(
+        id: 'on',
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      ),
+      _widget(
+        id: 'off',
+        platform: Platform.chess,
+        position: 1,
+        size: ProfileWidgetSize.small,
+        isEnabled: false,
+      ),
+    ];
     await tester.pumpWidget(
       _harness(
-        widgets: [
-          _widget(
-            id: 'off',
-            platform: Platform.steam,
-            position: 0,
-            size: ProfileWidgetSize.small,
-            isEnabled: false,
-          ),
-        ],
-        cards: {Platform.steam: _card(Platform.steam)},
+        widgets: widgets,
+        cards: {
+          Platform.steam: _card(Platform.steam),
+          Platform.chess: _card(Platform.chess),
+        },
       ),
     );
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
+    // An is_enabled=false widget renders like any other — tile and card both
+    // present, so a previously-hidden row is not stuck.
+    expect(find.byKey(const Key('profileWidgetTile_off')), findsOneWidget);
+    expect(find.text('${Platform.chess.name}-card'), findsOneWidget);
+
+    // No reduced-opacity dim is applied to the disabled tile: the only
+    // Opacity in its subtree (if any) renders at full opacity.
+    final opacities = tester
+        .widgetList<Opacity>(
+          find.descendant(
+            of: find.byKey(const Key('profileWidgetTile_off')),
+            matching: find.byType(Opacity),
+          ),
+        )
+        .toList();
+    expect(opacities.every((o) => o.opacity == 1.0), isTrue);
+
+    // Its options menu is reachable and Remove stays usable.
     await tester.tap(find.byKey(const Key('profileWidgetMenu_off')));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.profileWidgetShow), findsOneWidget);
-    expect(find.text(l10n.profileWidgetHide), findsNothing);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+  });
+
+  testWidgets('the tile menu offers move/remove only (no hide/show)', (
+    tester,
+  ) async {
+    final widgets = [
+      _widget(
+        id: 'top',
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      ),
+      _widget(
+        id: 'mid',
+        platform: Platform.chess,
+        position: 1,
+        size: ProfileWidgetSize.small,
+      ),
+      _widget(
+        id: 'bottom',
+        platform: Platform.gw2,
+        position: 2,
+        size: ProfileWidgetSize.small,
+      ),
+    ];
+    await tester.pumpWidget(
+      _harness(
+        widgets: widgets,
+        cards: {
+          Platform.steam: _card(Platform.steam),
+          Platform.chess: _card(Platform.chess),
+          Platform.gw2: _card(Platform.gw2),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // The middle tile can move both ways and be removed; no hide/show item is
+    // surfaced (their l10n keys are gone — assert by the kept items only).
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_mid')));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.profileWidgetMoveUp), findsOneWidget);
+    expect(find.text(l10n.profileWidgetMoveDown), findsOneWidget);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+    // The menu surfaces exactly the three kept actions — no hide/show item.
+    expect(find.bySubtype<PopupMenuItem>(), findsNWidgets(3));
   });
 }

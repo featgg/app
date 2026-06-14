@@ -41,10 +41,6 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 
-  /// Sets `is_enabled` on the widget [id].
-  Future<void> toggle(String id, bool isEnabled) =>
-      _run((repo) => repo.setEnabled(id, isEnabled));
-
   /// Sets the size on the widget [id].
   Future<void> resize(String id, ProfileWidgetSize size) =>
       _run((repo) => repo.setSize(id, size));

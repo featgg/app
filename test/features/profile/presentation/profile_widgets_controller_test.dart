@@ -19,7 +19,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   int fetchCalls = 0;
   final List<String> mutations = [];
   List<String>? lastReorder;
-  bool? lastEnabled;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -52,13 +51,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     mutations.add('remove');
-    return _result(unit);
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled) async {
-    mutations.add('toggle');
-    lastEnabled = isEnabled;
     return _result(unit);
   }
 
@@ -120,52 +112,22 @@ void main() {
       );
     });
 
-    test(
-      'remove / toggle / resize / reorder each invoke their repo method',
-      () async {
-        final repo = _RecordingRepository();
-        final container = _container(repo);
-        container.listen(ownerProfileWidgetsProvider, (_, _) {});
-        await _primeRead(container);
-        final notifier = container.read(
-          profileWidgetsControllerProvider.notifier,
-        );
+    test('remove / resize / reorder each invoke their repo method', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final notifier = container.read(
+        profileWidgetsControllerProvider.notifier,
+      );
 
-        await notifier.remove('a');
-        await notifier.toggle('a', false);
-        await notifier.resize('a', ProfileWidgetSize.large);
-        await notifier.reorder(['b', 'a']);
+      await notifier.remove('a');
+      await notifier.resize('a', ProfileWidgetSize.large);
+      await notifier.reorder(['b', 'a']);
 
-        expect(repo.mutations, ['remove', 'toggle', 'resize', 'reorder']);
-        expect(repo.lastReorder, ['b', 'a']);
-      },
-    );
-
-    test(
-      'toggle(id, true) re-enables a hidden widget via setEnabled',
-      () async {
-        final repo = _RecordingRepository();
-        final container = _container(repo);
-        container.listen(ownerProfileWidgetsProvider, (_, _) {});
-        await _primeRead(container);
-        final fetchesBefore = repo.fetchCalls;
-        final notifier = container.read(
-          profileWidgetsControllerProvider.notifier,
-        );
-
-        await notifier.toggle('a', true);
-        // Re-materialize so the invalidate-driven re-fetch is observable.
-        await container.read(ownerProfileWidgetsProvider.future);
-
-        expect(repo.mutations, ['toggle']);
-        expect(repo.lastEnabled, isTrue);
-        expect(repo.fetchCalls, greaterThan(fetchesBefore));
-        expect(
-          container.read(profileWidgetsControllerProvider).hasError,
-          isFalse,
-        );
-      },
-    );
+      expect(repo.mutations, ['remove', 'resize', 'reorder']);
+      expect(repo.lastReorder, ['b', 'a']);
+    });
   });
 
   test(

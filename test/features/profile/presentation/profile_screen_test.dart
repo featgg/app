@@ -98,10 +98,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled) async =>
-      throw UnimplementedError();
-
-  @override
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
@@ -130,10 +126,6 @@ final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
 
   @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled) async =>
       throw UnimplementedError();
 
   @override
@@ -521,8 +513,8 @@ void main() {
   testWidgets('all-hidden widgets show the grid, not the empty-add hint', (
     tester,
   ) async {
-    // A widget that exists but is hidden must not be reported as "no widgets
-    // yet" — the grid renders it (dimmed, with a Show action) instead.
+    // A widget that exists with is_enabled=false must not be reported as "no
+    // widgets yet" — the grid renders it normally instead.
     final repo = _FakeRepository(result: () async => right(_profile));
     final widgetsRepo = _FakeWidgetsRepository(
       fetchResult: right([_hiddenSteamWidget()]),

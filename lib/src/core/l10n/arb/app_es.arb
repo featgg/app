@@ -247,8 +247,6 @@
   "profileWidgetAddPlatform": "Añadir widget de {platform}",
   "profileWidgetOptions": "Opciones del widget",
   "profileWidgetRemove": "Eliminar widget",
-  "profileWidgetHide": "Ocultar widget",
-  "profileWidgetShow": "Mostrar widget",
   "profileWidgetMoveUp": "Subir",
   "profileWidgetMoveDown": "Bajar",
   "profileWidgetResize": "Redimensionar",

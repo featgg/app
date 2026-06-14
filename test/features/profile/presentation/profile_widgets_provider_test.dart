@@ -28,10 +28,6 @@ final class _FakeRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setEnabled(String id, bool isEnabled) async =>
-      throw UnimplementedError();
-
-  @override
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
