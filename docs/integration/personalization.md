@@ -29,11 +29,45 @@ SDK's public key.
 - **Access rule.** Insert / update / delete: owner only, restricted to the
   writable columns. Read: owner always, or anyone when the parent profile is
   public.
+
+### `type` — valid values
+
+`type` is required and must be one of the following tokens (lowercase,
+snake_case). Any other value is rejected as an invalid value for the field.
+
+- `platform` — a single-platform card. **The only kind wired today.**
+- `data_menu` — a curated stat/showcase widget. *(upcoming)*
+- `template` — a pre-designed, slot-filled card. *(upcoming)*
+- `composed_card` — a user-assembled, cross-platform composed card.
+  *(upcoming)*
+- `card_classic`, `showcase_grid`, `stats_row` — legacy single-platform
+  values. Still accepted for existing rows, but **do not use them for new
+  widgets**; use `platform`.
+
+### `platform` — valid values and binding rule
+
+`platform`, when set, must be one of:
+`steam`, `league_of_legends`, `wow_retail`, `minecraft_hypixel`, `chess`,
+`retroachievements`, `gw2`.
+
+Whether `platform` is required or must be null depends on `type`:
+
+- `type = platform` (and the legacy single-platform values) → `platform`
+  **must be a non-null** value from the list above.
+- `type` in {`composed_card`, `data_menu`, `template`} → `platform`
+  **must be null**.
+
+A write that breaks this rule is rejected (the row is not created), distinct
+from the invalid-`type` rejection above.
+
 - **Constraints (surface as the SDK error on violation).**
   - At most 50 widgets per user — an insert that would exceed the cap is
     rejected.
   - `position` is unique per user.
-  - `settings` is a JSON object up to ~50 KB.
+  - `settings` is a JSON object up to ~50 KB. Versioned envelope:
+    `{ "schema_version": 1, "size": "small" | "wide" | "large" }`.
+  - `type` must be a valid value, and `platform` must satisfy the
+    binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.
   The set is small (≤ 50); no pagination required.
 
@@ -41,4 +75,4 @@ SDK's public key.
 
 - `profile.md` — widgets are readable when the parent profile is public.
 - `connections.md` — a `platform` widget surfaces data from a connected
-  platform.
+  platform; the platform tokens above match the connections surface.
