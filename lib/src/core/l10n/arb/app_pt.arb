@@ -255,5 +255,7 @@
   "profileWidgetSizeSmall": "Pequeno",
   "profileWidgetSizeWide": "Largo",
   "profileWidgetSizeLarge": "Grande",
-  "profileWidgetCardUnavailable": "Cartão indisponível"
+  "profileWidgetCardUnavailable": "Cartão indisponível",
+  "profileWidgetAddConnectFirst": "Conecte uma conta primeiro para adicionar um widget.",
+  "profileWidgetAddAllAdded": "Todas as suas plataformas conectadas já estão no seu perfil."
 }

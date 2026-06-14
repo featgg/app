@@ -10,6 +10,7 @@ import '../../connections/domain/game_card.dart';
 import '../../connections/domain/platform_descriptor.dart';
 import '../domain/profile.dart';
 import '../domain/profile_widget.dart';
+import 'featured_platform_provider.dart';
 import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
 import 'profile_widgets_grid.dart';
@@ -110,6 +111,7 @@ class _ProfileContent extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     final widgetsState = ref.watch(ownerProfileWidgetsProvider);
+    final connectedState = ref.watch(connectedPlatformsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -150,11 +152,16 @@ class _ProfileContent extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 _PrivacyIndicator(privacy: profile.privacy, l10n: l10n),
                 const SizedBox(height: AppSpacing.lg),
-                // Only offer Add once the widgets read has a value, so a tap
-                // cannot assign a position against stale/empty data while the
-                // read is loading or errored and collide on the unique column.
-                if (widgetsState.hasValue)
-                  _AddWidgetButton(existing: widgetsState.value!),
+                // Offer Add only once BOTH the widgets read and the connected-
+                // platforms read have a value: the widgets read supplies the
+                // position math (no collision on the unique column) and the
+                // addable set is connected − already-added. While either read is
+                // loading or errored, Add is absent.
+                if (widgetsState.hasValue && connectedState.hasValue)
+                  _AddWidgetButton(
+                    existing: widgetsState.value!,
+                    connected: connectedState.value!,
+                  ),
                 const SizedBox(height: AppSpacing.md),
                 AsyncValueWidget<List<ProfileWidget>>(
                   value: widgetsState,
@@ -187,18 +194,51 @@ class _ProfileContent extends ConsumerWidget {
   }
 }
 
-/// Adds a platform widget to the owner's arrangement. Lists every platform; the
-/// backend remains authoritative on the ≤50-widget cap and `position`
-/// uniqueness — a rejected insert surfaces through the controller's error
-/// channel and the read reconciles on invalidate.
+/// Adds a platform widget to the owner's arrangement. Lists only the platforms
+/// the user has connected and has not already added; shows a hint when there is
+/// nothing to add. The backend remains authoritative on the ≤50-widget cap and
+/// `position` uniqueness — a rejected insert surfaces through the controller's
+/// error channel and the read reconciles on invalidate.
 class _AddWidgetButton extends ConsumerWidget {
-  const _AddWidgetButton({required this.existing});
+  const _AddWidgetButton({required this.existing, required this.connected});
 
   final List<ProfileWidget> existing;
+  final List<Platform> connected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+
+    // A platform is addable when it is connected AND not already placed as a
+    // widget (at most one widget per platform in this slice, so a platform that
+    // already has a widget is excluded to avoid adding it twice).
+    final alreadyAdded = {
+      for (final w in existing)
+        if (w.platform != null) w.platform!,
+    };
+    final addable = [
+      for (final p in connected)
+        if (!alreadyAdded.contains(p)) p,
+    ];
+
+    if (addable.isEmpty) {
+      // Nothing connectable to add: surface a clear, non-actionable hint rather
+      // than an enabled menu that opens empty. Distinguish "no connections at
+      // all" (connect first) from "every connected platform already added".
+      final noConnections = connected.isEmpty;
+      return Text(
+        noConnections
+            ? l10n.profileWidgetAddConnectFirst
+            : l10n.profileWidgetAddAllAdded,
+        key: noConnections
+            ? const Key('profileWidgetAddNoConnections')
+            : const Key('profileWidgetAddAllAdded'),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        textAlign: TextAlign.center,
+      );
+    }
 
     return PopupMenuButton<Platform>(
       key: const Key('profileWidgetAddButton'),
@@ -219,7 +259,7 @@ class _AddWidgetButton extends ConsumerWidget {
             );
       },
       itemBuilder: (context) => [
-        for (final platform in Platform.values)
+        for (final platform in addable)
           PopupMenuItem(
             value: platform,
             child: Text(

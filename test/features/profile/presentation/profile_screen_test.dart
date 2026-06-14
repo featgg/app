@@ -6,6 +6,7 @@ import 'package:featgg/src/features/auth/domain/auth_domain.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
@@ -163,6 +164,77 @@ final class _FakeCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
+/// Fake connections repository whose `fetchMyConnections` outcome is injected
+/// (mirrors the shape used by the featured-platform provider test). The Add
+/// menu reads connected platforms through `connectedPlatformsProvider`, which
+/// folds this repo.
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  _FakeConnectionsRepository(this.connectionsResult);
+
+  final Either<Failure, List<Connection>> connectionsResult;
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      connectionsResult;
+
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
+
+/// Holds the connections future open so the connected-platforms loading state
+/// is observable (Add must be hidden while it is in flight).
+final class _PendingConnectionsRepository implements ConnectionsRepository {
+  final _completer = Completer<Either<Failure, List<Connection>>>();
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() =>
+      _completer.future;
+
+  @override
+  Future<Either<Failure, Unit>> link({
+    required Platform platform,
+    required Map<String, String> formInput,
+  }) async => right(unit);
+
+  @override
+  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+
+  @override
+  Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
+      right(const SyncResult(skipped: false));
+
+  @override
+  Future<Either<Failure, RefreshAllResult>> refreshAll() async =>
+      right(const RefreshAllResult(outcomes: []));
+}
+
+/// Builds a connected-list outcome from a set of [platforms], with a fixed
+/// `createdAt` and `active` status (the Add menu offers every linked platform
+/// regardless of status).
+Either<Failure, List<Connection>> _connected(List<Platform> platforms) =>
+    right([
+      for (final platform in platforms)
+        Connection(
+          platform: platform,
+          status: ConnectionStatus.active,
+          createdAt: DateTime.utc(2024),
+        ),
+    ]);
+
 GameCard _steamCard() => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
@@ -220,6 +292,7 @@ Widget _screen(
   ProfileRepository repo, {
   ProfileWidgetsRepository? widgetsRepo,
   CardsRepository? cardsRepo,
+  ConnectionsRepository? connectionsRepo,
 }) {
   final container = ProviderContainer(
     // Disable Riverpod's automatic retry so error states are stable in tests
@@ -232,6 +305,13 @@ Widget _screen(
       ),
       cardsRepositoryProvider.overrideWithValue(
         cardsRepo ?? _FakeCardsRepository(null),
+      ),
+      // Default to one connected platform so a test that does not care about the
+      // Add-menu source still finds the Add button (connected − already-added is
+      // non-empty by default).
+      connectionsRepositoryProvider.overrideWithValue(
+        connectionsRepo ??
+            _FakeConnectionsRepository(_connected([Platform.steam])),
       ),
     ],
   );
@@ -304,6 +384,9 @@ Widget _profileToSettingsRouter(ProfileRepository repo) {
         _FakeWidgetsRepository(fetchResult: right(const [])),
       ),
       cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository(null)),
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(_connected([Platform.steam])),
+      ),
       authRepositoryProvider.overrideWithValue(_StubAuthRepository()),
     ],
   );
@@ -478,8 +561,10 @@ void main() {
   testWidgets('hides the add affordance while the widgets read is in flight', (
     tester,
   ) async {
-    // While the read has no value, Add must be absent so a tap cannot assign a
-    // position against stale/empty data and collide on the unique column.
+    // While the widgets read has no value, Add must be absent so a tap cannot
+    // assign a position against stale/empty data and collide on the unique
+    // column. The connections read resolves (the default) so this test isolates
+    // the widgets-read dependency of the gate.
     final repo = _FakeRepository(result: () async => right(_profile));
 
     await tester.pumpWidget(
@@ -491,13 +576,155 @@ void main() {
     expect(find.byKey(const Key('profileWidgetAddButton')), findsNothing);
   });
 
-  testWidgets('exposes the add-widget affordance', (tester) async {
+  testWidgets('hides the add affordance while the connections read is in '
+      'flight', (tester) async {
+    // The Add gate also depends on the connected-platforms read; while it is
+    // pending Add must be absent (no menu, no hint) even though the widgets read
+    // has resolved.
     final repo = _FakeRepository(result: () async => right(_profile));
 
-    await tester.pumpWidget(_screen(repo));
+    await tester.pumpWidget(
+      _screen(
+        repo,
+        widgetsRepo: _FakeWidgetsRepository(fetchResult: right(const [])),
+        connectionsRepo: _PendingConnectionsRepository(),
+      ),
+    );
+    // pumpAndSettle cannot be used — the pending connections future never
+    // quiesces.
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('profileWidgetAddButton')), findsNothing);
+    expect(
+      find.byKey(const Key('profileWidgetAddNoConnections')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('profileWidgetAddAllAdded')), findsNothing);
+  });
+
+  testWidgets('exposes the add-widget affordance', (tester) async {
+    // A connected platform that is not yet a widget makes the addable set
+    // non-empty, so the Add button (not a hint) renders.
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(
+      _screen(
+        repo,
+        connectionsRepo: _FakeConnectionsRepository(
+          _connected([Platform.steam]),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('profileWidgetAddButton')), findsOneWidget);
+  });
+
+  testWidgets('add menu offers only connected, not-already-added platforms', (
+    tester,
+  ) async {
+    // Connected [Steam], no widgets → the menu offers exactly Steam.
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(
+      _screen(
+        repo,
+        widgetsRepo: _FakeWidgetsRepository(fetchResult: right(const [])),
+        connectionsRepo: _FakeConnectionsRepository(
+          _connected([Platform.steam]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profileWidgetAddButton')));
+    await tester.pumpAndSettle();
+
+    final items = tester
+        .widgetList<PopupMenuItem<Platform>>(
+          find.byType(PopupMenuItem<Platform>),
+        )
+        .toList();
+    expect(items, hasLength(1));
+    expect(items.single.value, Platform.steam);
+  });
+
+  testWidgets('add menu excludes a platform already placed as a widget', (
+    tester,
+  ) async {
+    // Connected [Steam, Chess] with a Steam widget present → only Chess offered.
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(
+      _screen(
+        repo,
+        widgetsRepo: _FakeWidgetsRepository(
+          fetchResult: right([_steamWidget()]),
+        ),
+        cardsRepo: _FakeCardsRepository(_steamCard()),
+        connectionsRepo: _FakeConnectionsRepository(
+          _connected([Platform.steam, Platform.chess]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profileWidgetAddButton')));
+    await tester.pumpAndSettle();
+
+    final items = tester
+        .widgetList<PopupMenuItem<Platform>>(
+          find.byType(PopupMenuItem<Platform>),
+        )
+        .toList();
+    expect(items, hasLength(1));
+    expect(items.single.value, Platform.chess);
+  });
+
+  testWidgets(
+    'shows the connect-first hint when the owner has no connections',
+    (tester) async {
+      // No connections → the Add button is replaced by the connect-first hint.
+      final repo = _FakeRepository(result: () async => right(_profile));
+
+      await tester.pumpWidget(
+        _screen(
+          repo,
+          connectionsRepo: _FakeConnectionsRepository(_connected(const [])),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('profileWidgetAddNoConnections')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('profileWidgetAddButton')), findsNothing);
+    },
+  );
+
+  testWidgets('shows the all-added hint when every connected platform is '
+      'already a widget', (tester) async {
+    // Connected [Steam] with a Steam widget already present → all-added hint.
+    final repo = _FakeRepository(result: () async => right(_profile));
+
+    await tester.pumpWidget(
+      _screen(
+        repo,
+        widgetsRepo: _FakeWidgetsRepository(
+          fetchResult: right([_steamWidget()]),
+        ),
+        cardsRepo: _FakeCardsRepository(_steamCard()),
+        connectionsRepo: _FakeConnectionsRepository(
+          _connected([Platform.steam]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileWidgetAddAllAdded')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetAddButton')), findsNothing);
   });
 
   testWidgets('a mutation failure surfaces an error to the user', (
@@ -505,7 +732,9 @@ void main() {
   ) async {
     // The screen listens to the mutation controller; a failing mutation must
     // show the keyed error SnackBar — without the listener the failure is
-    // swallowed when the screen does not observe the mutation controller.
+    // swallowed when the screen does not observe the mutation controller. The
+    // default connections fixture ([Steam]) with no widgets keeps a tappable
+    // Add menu item.
     final repo = _FakeRepository(result: () async => right(_profile));
     final widgetsRepo = _FakeWidgetsRepository(
       fetchResult: right(const []),
@@ -531,7 +760,8 @@ void main() {
   testWidgets('after a successful mutation the grid refreshes', (tester) async {
     // With the screen mounted (the production listener present), a successful
     // mutation must invalidate the read, observable as a re-fetch (the
-    // screen-level observer keeps the controller alive).
+    // screen-level observer keeps the controller alive). The default connections
+    // fixture ([Steam]) with no widgets keeps a tappable Add menu item.
     final repo = _FakeRepository(result: () async => right(_profile));
     final widgetsRepo = _FakeWidgetsRepository(fetchResult: right(const []));
 

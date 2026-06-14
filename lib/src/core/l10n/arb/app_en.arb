@@ -1078,5 +1078,13 @@
   "profileWidgetCardUnavailable": "Card unavailable",
   "@profileWidgetCardUnavailable": {
     "description": "Placeholder label shown in a profile widget tile when its card data is not available; the widget stays manageable via its options menu."
+  },
+  "profileWidgetAddConnectFirst": "Connect an account first to add a widget.",
+  "@profileWidgetAddConnectFirst": {
+    "description": "Hint shown in place of the Add-widget action when the owner has no connected platforms to add."
+  },
+  "profileWidgetAddAllAdded": "All your connected platforms are already on your profile.",
+  "@profileWidgetAddAllAdded": {
+    "description": "Hint shown in place of the Add-widget action when every connected platform is already placed as a widget."
   }
 }
