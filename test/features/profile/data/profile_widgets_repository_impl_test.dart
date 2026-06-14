@@ -5,6 +5,7 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/observability/observability.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_data_source.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_repository_impl.dart';
 import 'package:featgg/src/features/profile/data/supabase_profile_widgets_data_source.dart';
@@ -41,6 +42,9 @@ final class _FakeDataSource implements ProfileWidgetsDataSource {
   Future<ProfileWidgetDto> Function(Map<String, dynamic> row)? onInsert;
   Future<void> Function(String id)? onDelete;
 
+  /// When set, `updateWidget` delegates here so a test can inject a failure.
+  Future<void> Function(String id, Map<String, dynamic> values)? onUpdate;
+
   Map<String, dynamic>? lastInsert;
   ({String id, Map<String, dynamic> values})? lastUpdate;
   List<({String id, int position})>? lastPositions;
@@ -74,6 +78,7 @@ final class _FakeDataSource implements ProfileWidgetsDataSource {
   @override
   Future<void> updateWidget(String id, Map<String, dynamic> values) async {
     lastUpdate = (id: id, values: values);
+    if (onUpdate != null) await onUpdate!(id, values);
   }
 
   @override
@@ -444,6 +449,63 @@ void main() {
         }
       },
     );
+
+    test('setDataMenuSelection writes a merged v1 envelope', () async {
+      final source = _FakeDataSource();
+      final result = await _repo(source, _RecordingReporter())
+          .setDataMenuSelection(
+            'w-1',
+            ProfileWidgetSize.wide,
+            const DataMenuSelection({'steam.hours_played'}),
+          );
+
+      expect(result.isRight(), isTrue);
+      final settings =
+          source.lastUpdate!.values['settings'] as Map<String, dynamic>;
+      // Preserves the version + size, sets the selection — never bumps version.
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'wide');
+      expect(settings['data_menu_items'], ['steam.hours_played']);
+    });
+
+    test(
+      'setDataMenuSelection maps a 23xxx violation to InputFailure',
+      () async {
+        final source = _FakeDataSource()
+          ..onUpdate = (_, _) async =>
+              throw PostgrestException(message: 'too big', code: '23514');
+        final reporter = _RecordingReporter();
+        final result = await _repo(source, reporter).setDataMenuSelection(
+          'w-1',
+          ProfileWidgetSize.small,
+          DataMenuSelection.empty,
+        );
+
+        result.fold((f) {
+          expect(f, isA<InputFailure>());
+          expect(f.isExpected, isTrue);
+        }, (_) => fail('want Left'));
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test('setDataMenuSelection with no user session → AuthFailure', () async {
+      final result =
+          await _repo(
+            _FakeDataSource(),
+            _RecordingReporter(),
+            userId: null,
+          ).setDataMenuSelection(
+            'w-1',
+            ProfileWidgetSize.small,
+            DataMenuSelection.empty,
+          );
+
+      result.fold(
+        (f) => expect(f, isA<AuthFailure>()),
+        (_) => fail('want Left'),
+      );
+    });
 
     test('removeWidget deletes by id', () async {
       String? deleted;

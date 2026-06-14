@@ -8,6 +8,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/observability/observability.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_repository.dart';
 import 'profile_widget_dto.dart';
@@ -99,6 +100,24 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
           'schema_version': kProfileWidgetSettingsVersion,
           'size': profileWidgetSizeToWire(size),
         },
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(id, {
+        'settings': mergeDataMenuSelectionIntoSettings(size, selection),
       });
       return right(unit);
     } catch (e, st) {
