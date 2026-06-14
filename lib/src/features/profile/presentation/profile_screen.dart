@@ -4,11 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/core.dart';
+import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
+import '../../connections/domain/platform_descriptor.dart';
 import '../domain/profile.dart';
-import 'profile_owner_cards_provider.dart';
+import '../domain/profile_widget.dart';
+import 'featured_platform_provider.dart';
 import 'profile_provider.dart';
+import 'profile_widgets_controller.dart';
+import 'profile_widgets_grid.dart';
+import 'profile_widgets_provider.dart';
 
 /// Builds the full card view for the signed-in owner's [GameCard]. Injected at
 /// the composition root (the router) so this feature's presentation stays
@@ -25,6 +31,28 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(profileProvider);
+    // Observe the widget-mutation controller here: the screen outlives every
+    // grid tile and the add button, so this listener keeps the autoDispose
+    // controller alive across an in-flight mutation (its post-await invalidate
+    // fires and the grid refreshes) and surfaces a failure as a SnackBar.
+    ref.listen<AsyncValue<void>>(profileWidgetsControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (!context.mounted || !next.hasError) return;
+      final error = next.error!;
+      final msg = error is Failure
+          ? error.localizedMessage(l10n)
+          : l10n.errorUnexpected;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const Key('profileWidgetsErrorSnackBar'),
+            content: Text(msg),
+          ),
+        );
+    });
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.profileTitle),
@@ -82,32 +110,8 @@ class _ProfileContent extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    // One watch per platform feeds both the per-card rendering and the
-    // all-null empty-state predicate.
-    final cardStates = {
-      for (final p in Platform.values) p: ref.watch(ownerCardProvider(p)),
-    };
-
-    // Section is ready once every read has settled (data or error — not loading).
-    // This prevents N independent spinners from appearing while reads are in
-    // flight and ensures the header + cards render together.
-    final allSettled = cardStates.values.every((s) => s is! AsyncLoading);
-
-    final allResolved = cardStates.values.every((s) => s is AsyncData);
-    final allNull =
-        allResolved &&
-        cardStates.values.every((s) => (s as AsyncData).value == null);
-
-    // Platforms that will render visible content (non-null data or an error
-    // tile). Card-less platforms (AsyncData(null)) contribute no padding.
-    final renderablePlatforms = Platform.values
-        .where(
-          (p) =>
-              cardStates[p] is AsyncError ||
-              (cardStates[p] is AsyncData &&
-                  (cardStates[p] as AsyncData).value != null),
-        )
-        .toList();
+    final widgetsState = ref.watch(ownerProfileWidgetsProvider);
+    final connectedState = ref.watch(connectedPlatformsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -148,55 +152,130 @@ class _ProfileContent extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 _PrivacyIndicator(privacy: profile.privacy, l10n: l10n),
                 const SizedBox(height: AppSpacing.lg),
-                if (!allSettled)
-                  // Card-shaped placeholders while any platform read is still
-                  // loading: they occupy realistic space, so the page does not
-                  // reflow when the real cards resolve.
-                  const ProfileCardsSkeleton()
-                else if (allNull)
-                  Text(
-                    l10n.profileNoCardsYet,
-                    key: const Key('profileNoCardsYet'),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  )
-                else ...[
-                  Text(
-                    l10n.profileCardsSectionTitle,
-                    key: const Key('profileCardsSectionTitle'),
-                    style: textTheme.titleSmall,
-                    textAlign: TextAlign.center,
+                // Offer Add only once BOTH the widgets read and the connected-
+                // platforms read have a value: the widgets read supplies the
+                // position math (no collision on the unique column) and the
+                // addable set is connected − already-added. While either read is
+                // loading or errored, Add is absent.
+                if (widgetsState.hasValue && connectedState.hasValue)
+                  _AddWidgetButton(
+                    existing: widgetsState.value!,
+                    connected: connectedState.value!,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  // Renderable platforms (non-null data or error) carry bottom
-                  // padding; card-less platforms (null data) get none so there
-                  // are no phantom gaps between real cards.
-                  ...Platform.values.map((p) {
-                    final isRenderable = renderablePlatforms.contains(p);
-                    final widget = AsyncValueWidget<GameCard?>(
-                      key: Key('ownerCard_${p.name}'),
-                      value: cardStates[p]!,
-                      onRetry: () => ref.invalidate(ownerCardProvider(p)),
-                      data: (card) => card == null
-                          ? const SizedBox.shrink()
-                          : cardBuilder(card),
-                    );
-                    return isRenderable
-                        ? Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppSpacing.md,
-                            ),
-                            child: widget,
-                          )
-                        : widget;
-                  }),
-                ],
+                const SizedBox(height: AppSpacing.md),
+                AsyncValueWidget<List<ProfileWidget>>(
+                  value: widgetsState,
+                  onRetry: () => ref.invalidate(ownerProfileWidgetsProvider),
+                  loading: const ProfileCardsSkeleton(),
+                  // Distinguish "no widgets at all" (the add-one hint) from
+                  // "all widgets hidden" (the grid still renders them dimmed
+                  // with a Show action), so the hint is never misleading.
+                  data: (widgets) => widgets.isEmpty
+                      ? Text(
+                          l10n.profileWidgetsEmpty,
+                          key: const Key('profileWidgetsEmpty'),
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                      : ProfileWidgetsGrid(
+                          key: const Key('profileWidgetsGrid'),
+                          widgets: widgets,
+                          cardBuilder: cardBuilder,
+                        ),
+                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Adds a platform widget to the owner's arrangement. Lists only the platforms
+/// the user has connected and has not already added; shows a hint when there is
+/// nothing to add. The backend remains authoritative on the ≤50-widget cap and
+/// `position` uniqueness — a rejected insert surfaces through the controller's
+/// error channel and the read reconciles on invalidate.
+class _AddWidgetButton extends ConsumerWidget {
+  const _AddWidgetButton({required this.existing, required this.connected});
+
+  final List<ProfileWidget> existing;
+  final List<Platform> connected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
+    // A platform is addable when it is connected AND not already placed as a
+    // widget (at most one widget per platform is supported, so a platform that
+    // already has a widget is excluded to avoid adding it twice).
+    final alreadyAdded = {
+      for (final w in existing)
+        if (w.platform != null) w.platform!,
+    };
+    final addable = [
+      for (final p in connected)
+        if (!alreadyAdded.contains(p)) p,
+    ];
+
+    if (addable.isEmpty) {
+      // Nothing connectable to add: surface a clear, non-actionable hint rather
+      // than an enabled menu that opens empty. Distinguish "no connections at
+      // all" (connect first) from "every connected platform already added".
+      final noConnections = connected.isEmpty;
+      return Text(
+        noConnections
+            ? l10n.profileWidgetAddConnectFirst
+            : l10n.profileWidgetAddAllAdded,
+        key: noConnections
+            ? const Key('profileWidgetAddNoConnections')
+            : const Key('profileWidgetAddAllAdded'),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        textAlign: TextAlign.center,
+      );
+    }
+
+    return PopupMenuButton<Platform>(
+      key: const Key('profileWidgetAddButton'),
+      tooltip: l10n.profileWidgetAdd,
+      onSelected: (platform) {
+        // Append after the current max position to avoid a foreseeable unique
+        // collision; the backend constraint stays authoritative.
+        final nextPosition = existing.isEmpty
+            ? 0
+            : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) +
+                  1;
+        ref
+            .read(profileWidgetsControllerProvider.notifier)
+            .addPlatform(
+              platform: platform,
+              position: nextPosition,
+              size: ProfileWidgetSize.small,
+            );
+      },
+      itemBuilder: (context) => [
+        for (final platform in addable)
+          PopupMenuItem(
+            value: platform,
+            child: Text(
+              l10n.profileWidgetAddPlatform(
+                platformDescriptors[platform]?.displayName ?? platform.name,
+              ),
+            ),
+          ),
+      ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.add),
+          const SizedBox(width: AppSpacing.xs),
+          Text(l10n.profileWidgetAdd),
+        ],
       ),
     );
   }

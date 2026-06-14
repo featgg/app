@@ -6,3 +6,6 @@ export 'avatar_repository.dart';
 export 'profile.dart';
 export 'profile_providers.dart';
 export 'profile_repository.dart';
+export 'profile_widget.dart';
+export 'profile_widgets_providers.dart';
+export 'profile_widgets_repository.dart';
