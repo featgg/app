@@ -7,8 +7,10 @@ import '../../connections/domain/platform_descriptor.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/profile_widget.dart';
 import '../domain/template_catalog.dart';
+import '../domain/template_value_resolver.dart';
 import 'data_menu_labels.dart';
 import 'featured_platform_provider.dart';
+import 'profile_owner_cards_provider.dart';
 import 'profile_widgets_controller.dart';
 import 'template_labels.dart';
 
@@ -176,22 +178,14 @@ class _SlotFillSheet extends ConsumerWidget {
         child: AsyncValueWidget<List<Platform>>(
           value: connectedState,
           onRetry: () => ref.invalidate(connectedPlatformsProvider),
-          data: (connected) => _content(
-            context,
-            ref,
-            l10n,
-            textTheme,
-            connected.toSet(),
-            saving,
-          ),
+          data: (connected) =>
+              _content(l10n, textTheme, connected.toSet(), saving),
         ),
       ),
     );
   }
 
   Widget _content(
-    BuildContext context,
-    WidgetRef ref,
     AppLocalizations l10n,
     TextTheme textTheme,
     Set<Platform> connectedSet,
@@ -230,35 +224,82 @@ class _SlotFillSheet extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final item in items)
-                    ListTile(
-                      key: Key('slotFillItem_${item.id}'),
-                      title: Text(
-                        dataMenuItemLabel(l10n, item.labelKey) ?? item.id,
-                      ),
-                      subtitle: Text(
-                        platformDescriptors[item.platform]?.displayName ??
-                            item.platform.name,
-                      ),
-                      onTap: saving
-                          ? null
-                          : () {
-                              ref
-                                  .read(
-                                    profileWidgetsControllerProvider.notifier,
-                                  )
-                                  .setTemplateSlot(
-                                    widgetId: widget.id,
-                                    slotId: slot.id,
-                                    itemId: item.id,
-                                  );
-                              Navigator.of(context).pop();
-                            },
+                    _SlotFillItem(
+                      widget: widget,
+                      slot: slot,
+                      item: item,
+                      saving: saving,
                     ),
                 ],
               ),
             ),
           ),
       ],
+    );
+  }
+}
+
+/// One pickable item in the slot-fill sheet, annotated with a muted "no data
+/// yet" trailing label when the item's platform card currently yields no value
+/// for this slot. It watches `ownerCardProvider(item.platform)` itself, so the
+/// annotation is derived (never stored) and scoped to the item whose card
+/// changed. The annotation never disables the item (a platform may sync later —
+/// only the in-flight-save gate disables). While the card is still loading and
+/// has no value the item is left unannotated, so the sheet never asserts "no
+/// data" mid-load.
+class _SlotFillItem extends ConsumerWidget {
+  const _SlotFillItem({
+    required this.widget,
+    required this.slot,
+    required this.item,
+    required this.saving,
+  });
+
+  final ProfileWidget widget;
+  final TemplateSlot slot;
+  final DataMenuItem item;
+  final bool saving;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final cardState = ref.watch(ownerCardProvider(item.platform));
+    final loadingUnknown = cardState.isLoading && !cardState.hasValue;
+    final resolved = cardState.hasError
+        ? null
+        : resolveSlot(item.id, cardState.value);
+    final showNoData = !loadingUnknown && resolved == null;
+
+    return ListTile(
+      key: Key('slotFillItem_${item.id}'),
+      title: Text(dataMenuItemLabel(l10n, item.labelKey) ?? item.id),
+      subtitle: Text(
+        platformDescriptors[item.platform]?.displayName ?? item.platform.name,
+      ),
+      trailing: showNoData
+          ? Text(
+              l10n.templateSlotNoData,
+              key: Key('slotFillNoData_${item.id}'),
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
+      onTap: saving
+          ? null
+          : () {
+              ref
+                  .read(profileWidgetsControllerProvider.notifier)
+                  .setTemplateSlot(
+                    widgetId: widget.id,
+                    slotId: slot.id,
+                    itemId: item.id,
+                  );
+              Navigator.of(context).pop();
+            },
     );
   }
 }

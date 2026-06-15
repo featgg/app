@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
+import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
+import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
@@ -124,6 +126,43 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
       right(const RefreshAllResult(outcomes: []));
 }
 
+/// Returns a fixed card per platform from the injected map; null for the rest.
+/// A platform mapped to a never-completing future keeps its owner card loading.
+final class _FakeCardsRepository implements CardsRepository {
+  _FakeCardsRepository({this.cards = const {}, this.pending = const {}});
+
+  final Map<Platform, GameCard?> cards;
+  final Set<Platform> pending;
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) {
+    if (pending.contains(platform)) {
+      return Completer<Either<Failure, GameCard?>>().future;
+    }
+    return Future.value(right(cards[platform]));
+  }
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
+}
+
+GameCard _card({required Platform platform, List<CardStat> stats = const []}) =>
+    GameCard(
+      schemaVersion: 1,
+      platform: platform,
+      title: '${platform.name}-card',
+      subtitle: null,
+      iconImage: null,
+      heroImage: null,
+      profileUrl: null,
+      stats: stats,
+      lastUpdated: DateTime.utc(2026, 6, 1),
+      data: null,
+    );
+
 /// Opens the slot-fill sheet for [_templateWidget]'s first rank slot and
 /// observes the controller so it stays alive across the sheet's pop — mirroring
 /// the profile screen host that keeps an in-flight save observable.
@@ -160,7 +199,10 @@ Widget _app(ProviderContainer container) => UncontrolledProviderScope(
   ),
 );
 
-ProviderContainer _container(ProfileWidgetsRepository repo) {
+ProviderContainer _container(
+  ProfileWidgetsRepository repo, {
+  CardsRepository? cardsRepository,
+}) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
@@ -168,6 +210,11 @@ ProviderContainer _container(ProfileWidgetsRepository repo) {
         _FakeConnectionsRepository(const [Platform.chess, Platform.gw2]),
       ),
       profileWidgetsRepositoryProvider.overrideWithValue(repo),
+      // The fill sheet watches ownerCardProvider per item; default to a
+      // repository with no cards so every watch resolves to null.
+      cardsRepositoryProvider.overrideWithValue(
+        cardsRepository ?? _FakeCardsRepository(),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -208,5 +255,67 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.fills, hasLength(1));
     expect(repo.fills.single.itemIdFor('slot_1'), 'chess.rating');
+  });
+
+  testWidgets(
+    "marks a pickable item with no current value as 'no data yet' and keeps it tappable",
+    (tester) async {
+      final repo = _GatedWidgetsRepository(widgets: const [_templateWidget]);
+      final cards = _FakeCardsRepository(
+        cards: {
+          // chess resolves (has the rating stat); gw2 does not (no wvw_rank).
+          Platform.chess: _card(
+            platform: Platform.chess,
+            stats: const [CardStat(key: 'rating', value: 1500)],
+          ),
+          Platform.gw2: _card(platform: Platform.gw2, stats: const []),
+        },
+      );
+      await tester.pumpWidget(_app(_container(repo, cardsRepository: cards)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('open')));
+      await tester.pumpAndSettle();
+
+      // The unresolved item carries the annotation; the resolved one does not.
+      expect(
+        find.byKey(const Key('slotFillNoData_gw2.wvw_rank')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('slotFillNoData_chess.rating')),
+        findsNothing,
+      );
+      // The annotated item stays pickable — no current value never disables it.
+      final tile = tester.widget<ListTile>(
+        find.byKey(const Key('slotFillItem_gw2.wvw_rank')),
+      );
+      expect(tile.onTap, isNotNull);
+    },
+  );
+
+  testWidgets('does not mark an item whose card is still loading', (
+    tester,
+  ) async {
+    final repo = _GatedWidgetsRepository(widgets: const [_templateWidget]);
+    final cards = _FakeCardsRepository(
+      // gw2's card never completes, so its owner card stays loading.
+      cards: {
+        Platform.chess: _card(
+          platform: Platform.chess,
+          stats: const [CardStat(key: 'rating', value: 1500)],
+        ),
+      },
+      pending: const {Platform.gw2},
+    );
+    await tester.pumpWidget(_app(_container(repo, cardsRepository: cards)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open')));
+    // Pump without settling so gw2's card stays in its loading state.
+    await tester.pump();
+
+    // No "no data yet" annotation while the card is still loading.
+    expect(find.byKey(const Key('slotFillNoData_gw2.wvw_rank')), findsNothing);
   });
 }

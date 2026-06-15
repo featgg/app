@@ -1195,6 +1195,10 @@
   "@templateEmpty": {
     "description": "Placeholder shown inside a template card when none of its slots resolve to a value yet."
   },
+  "templateSlotNoData": "No data yet",
+  "@templateSlotNoData": {
+    "description": "Muted annotation on a pickable slot-fill item whose platform card currently yields no value for that slot; the item stays selectable because the platform may sync later."
+  },
   "templateSlotEmpty": "Not set",
   "@templateSlotEmpty": {
     "description": "Shown in the slot-fill flow for a slot that has not been filled with a value."

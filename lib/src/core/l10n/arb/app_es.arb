@@ -285,5 +285,6 @@
   "templateSlotLevel3": "Nivel 3",
   "templateFillSlots": "Rellenar espacios",
   "templateEmpty": "Aún no hay datos. Rellena un espacio para mostrar un valor.",
+  "templateSlotNoData": "Sin datos todavía",
   "templateSlotEmpty": "Sin definir"
 }

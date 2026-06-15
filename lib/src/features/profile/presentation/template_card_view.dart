@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
+import '../../connections/domain/platform_descriptor.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/profile_widget.dart';
 import '../domain/template_catalog.dart';
@@ -10,14 +11,23 @@ import 'profile_owner_cards_provider.dart';
 import 'template_labels.dart';
 
 /// Profile-owned renderer for a [ProfileWidgetKind.template] widget. Renders the
-/// template title and one value row per filled slot that resolves to a value;
-/// empty or unresolvable slots are soft-omitted. When the template id is unknown
-/// or every slot is empty/unresolvable, it renders the all-empty placeholder so
-/// the tile stays intentional (the grid keeps the options menu reachable).
+/// template title and one row per RESOLVED slot: the bound platform on the left
+/// and its resolved value on the right. A filled slot soft-omits (contributes no
+/// row) whenever it does not currently resolve to a value — card null, still
+/// loading, errored, the stat absent, or a non-scalar pointer — so the card
+/// never asserts "no data" while a slot is loading and never shows an empty row.
+/// When the template id is unknown or no slot resolves, it renders the all-empty
+/// placeholder so the tile stays intentional (the grid keeps the options menu
+/// reachable).
+///
+/// The card carries no owner-only affordance: it renders identically for the
+/// owner and a future visitor render path, so it has no placeholder/"—" row.
+/// Owner feedback that a filled slot has no value yet lives in the (owner-only)
+/// slot-fill sheet, not here.
 ///
 /// Each filled slot watches `ownerCardProvider(item.platform)` itself, so the
-/// renderer needs no injected card builder. A single slot whose card is loading
-/// or errored simply does not contribute a row — it never errors the whole card.
+/// renderer needs no injected card builder. A slot whose card is loading or
+/// errored simply omits its row — it never errors the whole card.
 class TemplateCardView extends ConsumerWidget {
   const TemplateCardView({super.key, required this.widget});
 
@@ -36,14 +46,19 @@ class TemplateCardView extends ConsumerWidget {
     if (definition != null) {
       for (final slot in definition.slots) {
         final itemId = fill.itemIdFor(slot.id);
-        if (itemId == null) continue;
+        if (itemId == null) continue; // an unfilled slot contributes no row
         final item = _dataMenuItemById(itemId);
-        if (item == null) continue;
-        // value is the loaded card, or null while loading / on error — both fold
-        // to a soft-omit so one slot's load or failure never errors the card.
+        if (item == null) continue; // a stale/unknown token soft-resolves away
+        // Soft-omit: the value is null while the card loads, on error, or when
+        // the card lacks the stat — the row only appears once a value resolves,
+        // so the card never shows an empty/loading row. One slot's miss never
+        // errors the card.
         final cardState = ref.watch(ownerCardProvider(item.platform));
         final resolved = resolveSlot(itemId, cardState.value);
         if (resolved == null) continue;
+        final platformName =
+            platformDescriptors[item.platform]?.displayName ??
+            item.platform.name;
         rows.add(
           Padding(
             key: Key('templateSlotRow_${widget.id}_${slot.id}'),
@@ -53,7 +68,7 @@ class TemplateCardView extends ConsumerWidget {
               children: [
                 Flexible(
                   child: Text(
-                    templateSlotLabel(l10n, slot.labelKey) ?? slot.labelKey,
+                    platformName,
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
