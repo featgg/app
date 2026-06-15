@@ -136,6 +136,8 @@ The git stage cannot be fully tool-restricted (Bash is needed for git itself), s
 
 Denied, do not retry: file deletion (`rm`, `del`, `rmdir`, …), destructive git (`push --force`, `reset --hard`, `clean`, `checkout --`, `restore`), `gh pr merge`, reading or writing `env.*.json` and `.env*`, and editing `.claude/settings.json`. Git writes (`push`, `reset`, `merge`, `rebase`) and `gh issue close` prompt the human before running.
 
+Skipping a git hook — `git commit --no-verify`, `git push --no-verify`, or `LEFTHOOK=0` — requires explicit human approval. An agent must ask before bypassing the hooks (formatter, secret scan, analyzer, tests) and never skip them unprompted; the escape hatch exists for the human, not for the pipeline. Skipping is discouraged: only ask if absolutely necessary, like a bug in the hook itself that blocks all commits or pushes, etc.
+
 ## Defect protocol
 
 Off-scope defects don't get patched ad-hoc. File a new issue (`Sub-issue` template) linking the source PR; re-scope deliberately.
