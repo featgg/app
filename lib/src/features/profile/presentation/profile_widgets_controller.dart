@@ -8,6 +8,7 @@ import '../../connections/domain/connection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
+import '../domain/template_catalog.dart';
 import 'profile_widgets_provider.dart';
 
 part 'profile_widgets_controller.g.dart';
@@ -37,6 +38,23 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
       size: size,
     ),
   );
+
+  /// Adds a template widget for [templateId] at [position] with [size].
+  Future<void> addTemplate({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addTemplateWidget(
+      templateId: templateId,
+      position: position,
+      size: size,
+    ),
+  );
+
+  /// Persists the template [fill] for [widget], preserving its current size.
+  Future<void> setTemplateFill(ProfileWidget widget, TemplateFill fill) =>
+      _run((repo) => repo.setTemplateFill(widget.id, widget.size, fill));
 
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));

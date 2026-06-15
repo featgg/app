@@ -4,6 +4,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   int fetchCalls = 0;
   final List<String> mutations = [];
   List<String>? lastReorder;
+  TemplateFill? lastTemplateFill;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -47,6 +49,37 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         size: size,
       ),
     );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addTemplate');
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.template,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+        templateFill: TemplateFill(templateId, const {}),
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async {
+    mutations.add('setTemplateFill');
+    lastTemplateFill = fill;
+    return _result(unit);
   }
 
   @override
@@ -122,6 +155,90 @@ void main() {
         isFalse,
       );
     });
+
+    test('addTemplate', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addTemplate(
+            templateId: 'my_ranks',
+            position: 0,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addTemplate']);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('setTemplateFill writes the fill and invalidates the read', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      const widget = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.template,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        size: ProfileWidgetSize.wide,
+        templateFill: TemplateFill('my_ranks', {}),
+      );
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .setTemplateFill(
+            widget,
+            widget.templateFill.withSlot('slot_1', 'chess.rating'),
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['setTemplateFill']);
+      expect(repo.lastTemplateFill!.itemIdFor('slot_1'), 'chess.rating');
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test(
+      'a Left on setTemplateFill lands in the error state, no invalidate',
+      () async {
+        final repo = _RecordingRepository(failure: const NetworkFailure());
+        final container = _container(repo);
+        final fetchesBefore = repo.fetchCalls;
+
+        const widget = ProfileWidget(
+          id: 'w-1',
+          kind: ProfileWidgetKind.template,
+          platform: null,
+          position: 0,
+          isEnabled: true,
+          size: ProfileWidgetSize.small,
+          templateFill: TemplateFill('my_ranks', {}),
+        );
+        await container
+            .read(profileWidgetsControllerProvider.notifier)
+            .setTemplateFill(widget, widget.templateFill);
+
+        final state = container.read(profileWidgetsControllerProvider);
+        expect(state.hasError, isTrue);
+        expect(state.error, isA<NetworkFailure>());
+        expect(repo.fetchCalls, fetchesBefore);
+      },
+    );
 
     test('remove / resize / reorder each invoke their repo method', () async {
       final repo = _RecordingRepository();
