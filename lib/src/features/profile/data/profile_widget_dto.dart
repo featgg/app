@@ -5,6 +5,7 @@ import '../../connections/domain/platform_descriptor.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
+import '../domain/template_catalog.dart';
 
 part 'profile_widget_dto.g.dart';
 
@@ -78,6 +79,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     isEnabled: dto.isEnabled,
     size: size,
     selection: dataMenuSelectionFromSettings(settings),
+    templateFill: templateFillFromSettings(settings),
   );
 }
 
@@ -119,6 +121,50 @@ Map<String, dynamic> mergeDataMenuSelectionIntoSettings(
   if (!selection.isDefault) _dataMenuItemsKey: selection.selectedIds.toList(),
 };
 
+/// Stable `settings` key the template fill is stored under. Additive beside
+/// `size` and `data_menu_items` in the same `schema_version: 1` envelope. Shape:
+/// `{ "id": "<templateId>", "slots": { "<slotId>": "<dataMenuItemId>" } }`.
+const String _templateKey = 'template';
+
+/// Reads the template fill leniently from a `settings` envelope. A non-object
+/// value, a non-string `id`, or a non-map `slots` all yield [TemplateFill.empty].
+/// Slot entries whose value is not a known catalog item id are dropped on read
+/// (mirrors [dataMenuSelectionFromSettings]); an `id` not in the current catalog
+/// is kept raw so a stale token soft-resolves at render.
+TemplateFill templateFillFromSettings(Map<String, dynamic>? settings) {
+  final raw = settings?[_templateKey];
+  if (raw is! Map) return TemplateFill.empty;
+  final id = raw['id'];
+  if (id is! String) return TemplateFill.empty;
+  final rawSlots = raw['slots'];
+  final slots = <String, String>{
+    if (rawSlots is Map)
+      for (final entry in rawSlots.entries)
+        if (entry.key is String &&
+            entry.value is String &&
+            _knownCatalogIds.contains(entry.value))
+          entry.key as String: entry.value as String,
+  };
+  return TemplateFill(id, slots);
+}
+
+/// Builds the full `settings` envelope to write for a template change: preserves
+/// `schema_version` and `size` and sets the `template` sub-object from [fill].
+/// Additive — never bumps the version. A fill with a null `templateId` omits the
+/// key (an un-chosen template carries nothing).
+Map<String, dynamic> mergeTemplateFillIntoSettings(
+  ProfileWidgetSize size,
+  TemplateFill fill,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (fill.templateId != null)
+    _templateKey: {
+      'id': fill.templateId,
+      if (fill.slotItemIds.isNotEmpty) 'slots': fill.slotItemIds,
+    },
+};
+
 /// Serializes [size] to its stable wire token.
 String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.small => 'small',
@@ -137,6 +183,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'platform' => ProfileWidgetKind.platform,
+  'template' => ProfileWidgetKind.template,
   _ => null,
 };
 
