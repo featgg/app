@@ -33,19 +33,26 @@ pipeline (Plan, Implement, Review, Git). See
 [OPERATING.md](OPERATING.md) for the operator
 guide.
 
-## Pre-commit hooks
+## Git hooks
 
 This repo uses [lefthook](https://github.com/evilmartians/lefthook)
-to run local pre-commit checks. On every commit the hook runs:
+to run local git hooks. On every commit (`pre-commit`):
 
 - `dart format --output=none --set-exit-if-changed .` on the working tree
-- `flutter analyze` on the working tree
-- `flutter test` on the working tree
 - `gitleaks protect --staged` to scan staged content for secrets
 
-The same format / analyze / test checks also run in CI; the local
-hook catches them earlier. Secret scanning runs locally
-(staged diff) and in CI (full history) as defense in depth.
+On every push (`pre-push`):
+
+- `gitleaks detect` to scan the full commit history for secrets
+- `flutter analyze` on the working tree
+- `flutter test` on the working tree
+
+The analyzer and test suite run on push rather than on every commit so
+individual commits stay fast while each push is still gated. The same
+format / analyze / test checks also run in CI; the local hooks catch
+them earlier. Secret scanning runs locally on commit (staged diff) and
+on push (full history) — the last gate before anything leaves the
+machine — and again in CI (full history) as defense in depth.
 
 ### Install
 
@@ -77,12 +84,15 @@ lefthook install
 ```
 
 Other install methods (npm, scoop, chocolatey, `go install`) are
-listed in each tool's upstream docs.
+listed in each tool's upstream docs. If you installed the hooks
+before the `pre-push` hook existed, re-run `lefthook install` to wire
+it into `.git/hooks/`.
 
-### Skipping the hook
+### Skipping a hook
 
-If you absolutely must commit without running the hook, use
-`git commit --no-verify`. Skipping is discouraged: the same
+If you absolutely must bypass a hook, use `git commit --no-verify`
+(skips the commit-time checks) or `git push --no-verify` (skips the
+push-time checks). Skipping is discouraged: the same
 format / analyze / test checks run in CI and will block the PR, and
 the CI secret scan runs against full history.
 

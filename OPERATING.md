@@ -120,15 +120,16 @@ titles, squash-merge only, signed, linear history; bodies use
 `.github/PULL_REQUEST_TEMPLATE.md`. Canonical rules at `AGENTS.md`
 § Workflow.
 
-## Local pre-commit hooks
+## Local git hooks
 
-A local pre-commit hook runs the formatter, the analyzer, the test
-suite, and a secret scan against staged content — the same checks
-CI enforces, just earlier. The escape hatch `git commit --no-verify`
-skips it; CI re-runs the checks against full history. Per-OS
-install steps live in the
-[Pre-commit hooks](README.md#pre-commit-hooks) section of
-`README.md`.
+Local git hooks run on commit and on push: the `pre-commit` hook runs
+the formatter and a secret scan against staged content, and the
+`pre-push` hook runs a full-history secret scan, the analyzer, and the
+test suite — the same checks CI enforces, just earlier. Running the analyzer and tests on push
+keeps individual commits fast. The escape hatches
+`git commit --no-verify` and `git push --no-verify` skip them; CI
+re-runs the checks against full history. Per-OS install steps live in
+the [Git hooks](README.md#git-hooks) section of `README.md`.
 
 ## Continuous integration
 
@@ -148,8 +149,8 @@ require interactive GitHub settings or per-machine installation:
   branch auto-delete.
 - **Private vulnerability reporting** — enable the form so the
   channel `SECURITY.md` advertises is live.
-- **Pre-commit hook installation** — per-machine; commands in the
-  [Pre-commit hooks](README.md#pre-commit-hooks) section of
+- **Git hook installation** — per-machine; commands in the
+  [Git hooks](README.md#git-hooks) section of
   `README.md`.
 - **GitHub Project board automation** — the `issue closed → Done`
   rule moves cards on merge auto-close.
