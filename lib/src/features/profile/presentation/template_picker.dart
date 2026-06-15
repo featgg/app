@@ -164,6 +164,11 @@ class _SlotFillSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final connectedState = ref.watch(connectedPlatformsProvider);
+    // While a save is in flight, disable the slot choices so a second fill
+    // cannot be issued — serializing the writes (at most one in flight) so a
+    // rapid second pick, taken before the read provider refreshes, cannot
+    // overwrite the slot just saved. Mirrors the data menu sheet's gating.
+    final saving = ref.watch(profileWidgetsControllerProvider).isLoading;
 
     return SafeArea(
       child: Padding(
@@ -171,8 +176,14 @@ class _SlotFillSheet extends ConsumerWidget {
         child: AsyncValueWidget<List<Platform>>(
           value: connectedState,
           onRetry: () => ref.invalidate(connectedPlatformsProvider),
-          data: (connected) =>
-              _content(context, ref, l10n, textTheme, connected.toSet()),
+          data: (connected) => _content(
+            context,
+            ref,
+            l10n,
+            textTheme,
+            connected.toSet(),
+            saving,
+          ),
         ),
       ),
     );
@@ -184,6 +195,7 @@ class _SlotFillSheet extends ConsumerWidget {
     AppLocalizations l10n,
     TextTheme textTheme,
     Set<Platform> connectedSet,
+    bool saving,
   ) {
     // Items of the slot's category whose platform the owner has connected — the
     // same gating the data menu applies.
@@ -227,16 +239,20 @@ class _SlotFillSheet extends ConsumerWidget {
                         platformDescriptors[item.platform]?.displayName ??
                             item.platform.name,
                       ),
-                      onTap: () {
-                        ref
-                            .read(profileWidgetsControllerProvider.notifier)
-                            .setTemplateSlot(
-                              widgetId: widget.id,
-                              slotId: slot.id,
-                              itemId: item.id,
-                            );
-                        Navigator.of(context).pop();
-                      },
+                      onTap: saving
+                          ? null
+                          : () {
+                              ref
+                                  .read(
+                                    profileWidgetsControllerProvider.notifier,
+                                  )
+                                  .setTemplateSlot(
+                                    widgetId: widget.id,
+                                    slotId: slot.id,
+                                    itemId: item.id,
+                                  );
+                              Navigator.of(context).pop();
+                            },
                     ),
                 ],
               ),
