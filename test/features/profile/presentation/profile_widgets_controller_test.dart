@@ -13,10 +13,13 @@ import 'package:fpdart/fpdart.dart';
 
 /// Records every mutation call and returns the configured outcome.
 final class _RecordingRepository implements ProfileWidgetsRepository {
-  _RecordingRepository({this.failure});
+  _RecordingRepository({this.failure, this.widgets = const []});
 
   /// When non-null, every mutation returns this failure.
   final Failure? failure;
+
+  /// The widgets the read returns — the read-modify-write source of truth.
+  final List<ProfileWidget> widgets;
 
   int fetchCalls = 0;
   final List<String> mutations = [];
@@ -29,7 +32,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async {
     fetchCalls++;
-    return right(const []);
+    return right(widgets);
   }
 
   @override
@@ -180,13 +183,7 @@ void main() {
       );
     });
 
-    test('setTemplateFill writes the fill and invalidates the read', () async {
-      final repo = _RecordingRepository();
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-      final fetchesBefore = repo.fetchCalls;
-
+    test('setTemplateSlot patches one slot against the live read', () async {
       const widget = ProfileWidget(
         id: 'w-1',
         kind: ProfileWidgetKind.template,
@@ -194,18 +191,29 @@ void main() {
         position: 0,
         isEnabled: true,
         size: ProfileWidgetSize.wide,
-        templateFill: TemplateFill('my_ranks', {}),
+        templateFill: TemplateFill('my_ranks', {'slot_2': 'gw2.wvw_rank'}),
       );
+      final repo = _RecordingRepository(widgets: const [widget]);
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .setTemplateFill(
-            widget,
-            widget.templateFill.withSlot('slot_1', 'chess.rating'),
+          .setTemplateSlot(
+            widgetId: 'w-1',
+            slotId: 'slot_1',
+            itemId: 'chess.rating',
           );
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['setTemplateFill']);
+      // The patched fill keeps the already-saved slot and the template id —
+      // proving the write derives from the live state, not an empty snapshot.
+      expect(repo.lastTemplateFill!.templateId, 'my_ranks');
       expect(repo.lastTemplateFill!.itemIdFor('slot_1'), 'chess.rating');
+      expect(repo.lastTemplateFill!.itemIdFor('slot_2'), 'gw2.wvw_rank');
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,
@@ -213,13 +221,30 @@ void main() {
       );
     });
 
-    test(
-      'a Left on setTemplateFill lands in the error state, no invalidate',
-      () async {
-        final repo = _RecordingRepository(failure: const NetworkFailure());
-        final container = _container(repo);
-        final fetchesBefore = repo.fetchCalls;
+    test('setTemplateSlot is a no-op when the widget is gone', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
 
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .setTemplateSlot(
+            widgetId: 'missing',
+            slotId: 'slot_1',
+            itemId: 'chess.rating',
+          );
+
+      expect(repo.mutations, isEmpty);
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test(
+      'a Left on setTemplateSlot lands in the error state, no invalidate',
+      () async {
         const widget = ProfileWidget(
           id: 'w-1',
           kind: ProfileWidgetKind.template,
@@ -229,9 +254,22 @@ void main() {
           size: ProfileWidgetSize.small,
           templateFill: TemplateFill('my_ranks', {}),
         );
+        final repo = _RecordingRepository(
+          failure: const NetworkFailure(),
+          widgets: const [widget],
+        );
+        final container = _container(repo);
+        container.listen(ownerProfileWidgetsProvider, (_, _) {});
+        await _primeRead(container);
+        final fetchesBefore = repo.fetchCalls;
+
         await container
             .read(profileWidgetsControllerProvider.notifier)
-            .setTemplateFill(widget, widget.templateFill);
+            .setTemplateSlot(
+              widgetId: 'w-1',
+              slotId: 'slot_1',
+              itemId: 'chess.rating',
+            );
 
         final state = container.read(profileWidgetsControllerProvider);
         expect(state.hasError, isTrue);

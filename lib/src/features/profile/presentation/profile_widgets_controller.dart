@@ -8,7 +8,6 @@ import '../../connections/domain/connection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
-import '../domain/template_catalog.dart';
 import 'profile_widgets_provider.dart';
 
 part 'profile_widgets_controller.g.dart';
@@ -52,9 +51,32 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ),
   );
 
-  /// Persists the template [fill] for [widget], preserving its current size.
-  Future<void> setTemplateFill(ProfileWidget widget, TemplateFill fill) =>
-      _run((repo) => repo.setTemplateFill(widget.id, widget.size, fill));
+  /// Fills a single [slotId] of template widget [widgetId] with [itemId].
+  ///
+  /// Read-modify-write against the live read provider, not a snapshot from the
+  /// caller: the slot picker captures the widget when it opens, so a fill
+  /// computed from that snapshot would clobber a slot saved in the meantime.
+  /// No-op if the widget is gone by the time the write runs.
+  Future<void> setTemplateSlot({
+    required String widgetId,
+    required String slotId,
+    required String itemId,
+  }) => _run((repo) async {
+    final widgets = await ref.read(ownerProfileWidgetsProvider.future);
+    ProfileWidget? current;
+    for (final widget in widgets) {
+      if (widget.id == widgetId) {
+        current = widget;
+        break;
+      }
+    }
+    if (current == null) return right(unit);
+    return repo.setTemplateFill(
+      current.id,
+      current.size,
+      current.templateFill.withSlot(slotId, itemId),
+    );
+  });
 
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));

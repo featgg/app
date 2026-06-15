@@ -230,9 +230,10 @@ class _SlotFillSheet extends ConsumerWidget {
                       onTap: () {
                         ref
                             .read(profileWidgetsControllerProvider.notifier)
-                            .setTemplateFill(
-                              widget,
-                              widget.templateFill.withSlot(slot.id, item.id),
+                            .setTemplateSlot(
+                              widgetId: widget.id,
+                              slotId: slot.id,
+                              itemId: item.id,
                             );
                         Navigator.of(context).pop();
                       },
