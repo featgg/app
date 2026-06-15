@@ -15,6 +15,7 @@ import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
 import 'profile_widgets_grid.dart';
 import 'profile_widgets_provider.dart';
+import 'template_picker.dart';
 
 /// Builds the full card view for the signed-in owner's [GameCard]. Injected at
 /// the composition root (the router) so this feature's presentation stays
@@ -162,6 +163,13 @@ class _ProfileContent extends ConsumerWidget {
                     existing: widgetsState.value!,
                     connected: connectedState.value!,
                   ),
+                // Templates need no connection to add (slots soft-omit until
+                // filled), so the add is gated only by the widgets read for the
+                // position math.
+                if (widgetsState.hasValue) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _AddTemplateButton(existing: widgetsState.value!),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 AsyncValueWidget<List<ProfileWidget>>(
                   value: widgetsState,
@@ -275,6 +283,43 @@ class _AddWidgetButton extends ConsumerWidget {
           const Icon(Icons.add),
           const SizedBox(width: AppSpacing.xs),
           Text(l10n.profileWidgetAdd),
+        ],
+      ),
+    );
+  }
+}
+
+/// Adds a template widget to the owner's arrangement. Always available (a
+/// template needs no connection to be added; slots soft-omit until filled).
+/// The backend stays authoritative on the ≤50-widget cap and `position`
+/// uniqueness — a rejected insert surfaces through the controller's error
+/// channel and the read reconciles on invalidate.
+class _AddTemplateButton extends ConsumerWidget {
+  const _AddTemplateButton({required this.existing});
+
+  final List<ProfileWidget> existing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
+    return InkWell(
+      key: const Key('profileTemplateAddButton'),
+      onTap: () {
+        // Append after the current max position to avoid a foreseeable unique
+        // collision; the backend constraint stays authoritative.
+        final nextPosition = existing.isEmpty
+            ? 0
+            : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) +
+                  1;
+        showTemplatePicker(context, nextPosition);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.dashboard_customize_outlined),
+          const SizedBox(width: AppSpacing.xs),
+          Text(l10n.templateAdd),
         ],
       ),
     );

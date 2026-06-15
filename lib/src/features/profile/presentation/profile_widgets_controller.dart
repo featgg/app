@@ -38,6 +38,46 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ),
   );
 
+  /// Adds a template widget for [templateId] at [position] with [size].
+  Future<void> addTemplate({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addTemplateWidget(
+      templateId: templateId,
+      position: position,
+      size: size,
+    ),
+  );
+
+  /// Fills a single [slotId] of template widget [widgetId] with [itemId].
+  ///
+  /// Read-modify-write against the live read provider, not a snapshot from the
+  /// caller: the slot picker captures the widget when it opens, so a fill
+  /// computed from that snapshot would clobber a slot saved in the meantime.
+  /// No-op if the widget is gone by the time the write runs.
+  Future<void> setTemplateSlot({
+    required String widgetId,
+    required String slotId,
+    required String itemId,
+  }) => _run((repo) async {
+    final widgets = await ref.read(ownerProfileWidgetsProvider.future);
+    ProfileWidget? current;
+    for (final widget in widgets) {
+      if (widget.id == widgetId) {
+        current = widget;
+        break;
+      }
+    }
+    if (current == null) return right(unit);
+    return repo.setTemplateFill(
+      current.id,
+      current.size,
+      current.templateFill.withSlot(slotId, itemId),
+    );
+  });
+
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 

@@ -10,6 +10,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/data_menu_screen.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +43,20 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>
@@ -97,6 +112,20 @@ final class _ConfigurableWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>

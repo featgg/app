@@ -8,6 +8,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -61,6 +62,20 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>
       throw UnimplementedError();
 
@@ -82,17 +97,32 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 }
 
-GameCard _card(Platform platform) => GameCard(
-  schemaVersion: 1,
-  platform: platform,
-  title: '${platform.name}-card',
-  subtitle: null,
-  iconImage: null,
-  heroImage: null,
-  profileUrl: null,
-  stats: const [],
-  lastUpdated: DateTime.utc(2026, 6, 1),
-  data: null,
+GameCard _card(Platform platform, {List<CardStat> stats = const []}) =>
+    GameCard(
+      schemaVersion: 1,
+      platform: platform,
+      title: '${platform.name}-card',
+      subtitle: null,
+      iconImage: null,
+      heroImage: null,
+      profileUrl: null,
+      stats: stats,
+      lastUpdated: DateTime.utc(2026, 6, 1),
+      data: null,
+    );
+
+ProfileWidget _templateWidget({
+  required String id,
+  required int position,
+  required TemplateFill fill,
+}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.template,
+  platform: null,
+  position: position,
+  isEnabled: true,
+  size: ProfileWidgetSize.small,
+  templateFill: fill,
 );
 
 ProfileWidget _widget({
@@ -528,5 +558,75 @@ void main() {
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
     // The menu surfaces exactly the four kept actions — no hide/show item.
     expect(find.bySubtype<PopupMenuItem>(), findsNWidgets(4));
+  });
+
+  testWidgets('renders a template-kind tile via TemplateCardView and a '
+      'platform-kind tile via cardBuilder', (tester) async {
+    final widgets = [
+      _widget(
+        id: 'plat',
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      ),
+      _templateWidget(
+        id: 'tmpl',
+        position: 1,
+        fill: const TemplateFill('my_ranks', {'slot_1': 'chess.rating'}),
+      ),
+    ];
+    await tester.pumpWidget(
+      _harness(
+        widgets: widgets,
+        cards: {
+          Platform.steam: _card(Platform.steam),
+          Platform.chess: _card(
+            Platform.chess,
+            stats: const [CardStat(key: 'rating', value: 1500)],
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The platform tile renders via the injected cardBuilder (its title text).
+    expect(find.text('${Platform.steam.name}-card'), findsOneWidget);
+    // The template tile renders via TemplateCardView (keyed card + resolved row).
+    expect(find.byKey(const Key('templateCard_tmpl')), findsOneWidget);
+    expect(
+      find.byKey(const Key('templateSlotRow_tmpl_slot_1')),
+      findsOneWidget,
+    );
+
+    // Both tiles render as full-width column tiles.
+    expect(find.byKey(const Key('profileWidgetTile_plat')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetTile_tmpl')), findsOneWidget);
+  });
+
+  testWidgets('a template tile menu offers fill-slots and stays manageable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _templateWidget(
+            id: 'tmpl',
+            position: 0,
+            fill: const TemplateFill('my_ranks', {}),
+          ),
+        ],
+        cards: const {},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_tmpl')));
+    await tester.pumpAndSettle();
+
+    // The template menu shows Fill slots (not Customize data) and Remove.
+    expect(find.text(l10n.templateFillSlots), findsOneWidget);
+    expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
   });
 }

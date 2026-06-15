@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
 import 'data_menu_selection.dart';
+import 'template_catalog.dart';
 
 /// Forward-compatible widget kinds. Only [platform] is implemented today; the
 /// others are reserved for later personalization phases and degrade to
@@ -32,6 +33,7 @@ final class ProfileWidget extends Equatable {
     required this.isEnabled,
     required this.size,
     this.selection = DataMenuSelection.empty,
+    this.templateFill = TemplateFill.empty,
   });
 
   final String id;
@@ -47,11 +49,16 @@ final class ProfileWidget extends Equatable {
   /// widget that has not been customized.
   final DataMenuSelection selection;
 
+  /// The owner's template choice + per-slot fills for a
+  /// [ProfileWidgetKind.template] widget. Empty (default) otherwise.
+  final TemplateFill templateFill;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
     ProfileWidgetSize? size,
     DataMenuSelection? selection,
+    TemplateFill? templateFill,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -60,6 +67,7 @@ final class ProfileWidget extends Equatable {
     isEnabled: isEnabled ?? this.isEnabled,
     size: size ?? this.size,
     selection: selection ?? this.selection,
+    templateFill: templateFill ?? this.templateFill,
   );
 
   @override
@@ -71,5 +79,6 @@ final class ProfileWidget extends Equatable {
     isEnabled,
     size,
     selection,
+    templateFill,
   ];
 }

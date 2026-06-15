@@ -8,6 +8,8 @@ import 'data_menu_screen.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
+import 'template_card_view.dart';
+import 'template_picker.dart';
 
 /// Renders the owner's profile widgets as a single full-width column, each tile
 /// at its natural content height (the connections card is designed to render
@@ -92,6 +94,27 @@ class _WidgetTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // A template widget composes its own value rows (each watching its slot's
+    // card) and is never resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.template) {
+      return Stack(
+        children: [
+          ClipRect(child: TemplateCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
     final platform = widget.platform;
     // A kind with no platform has nothing to resolve; treat it as a missing
     // card so it still renders the placeholder-with-menu and stays removable.
@@ -167,7 +190,7 @@ class _PlaceholderTile extends StatelessWidget {
   }
 }
 
-enum _WidgetMenuAction { customizeData, remove, moveUp, moveDown }
+enum _WidgetMenuAction { customizeData, fillSlots, remove, moveUp, moveDown }
 
 class _WidgetOptionsMenu extends ConsumerWidget {
   const _WidgetOptionsMenu({
@@ -197,6 +220,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         switch (value) {
           case _WidgetMenuAction.customizeData:
             showDataMenu(context, widget);
+          case _WidgetMenuAction.fillSlots:
+            showTemplateSlots(context, widget);
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
           case _WidgetMenuAction.moveUp:
@@ -206,10 +231,19 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: _WidgetMenuAction.customizeData,
-          child: Text(l10n.profileWidgetCustomizeData),
-        ),
+        // A template widget fills its slots from the data menu; a platform
+        // widget customizes which stats its card surfaces. The two are
+        // mutually exclusive so each kind shows exactly one of the two.
+        if (widget.kind == ProfileWidgetKind.template)
+          PopupMenuItem(
+            value: _WidgetMenuAction.fillSlots,
+            child: Text(l10n.templateFillSlots),
+          )
+        else
+          PopupMenuItem(
+            value: _WidgetMenuAction.customizeData,
+            child: Text(l10n.profileWidgetCustomizeData),
+          ),
         if (canMoveUp)
           PopupMenuItem(
             value: _WidgetMenuAction.moveUp,

@@ -16,3 +16,6 @@ export 'profile_screen.dart';
 export 'profile_widgets_controller.dart';
 export 'profile_widgets_grid.dart';
 export 'profile_widgets_provider.dart';
+export 'template_card_view.dart';
+export 'template_labels.dart';
+export 'template_picker.dart';

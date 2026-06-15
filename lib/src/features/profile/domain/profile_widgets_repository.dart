@@ -4,6 +4,7 @@ import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
 import 'data_menu_selection.dart';
 import 'profile_widget.dart';
+import 'template_catalog.dart';
 
 /// Reads and mutates the signed-in owner's `profile_widgets` arrangement.
 /// All methods return `Either<Failure, T>`; the Shape-2 SDK errors are mapped
@@ -15,6 +16,14 @@ abstract interface class ProfileWidgetsRepository {
   /// Inserts a platform widget at [position] with [size], enabled.
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
+  /// Inserts a template widget for [templateId] at [position] with [size],
+  /// enabled and with no slots filled yet (`platform` null).
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
     required int position,
     required ProfileWidgetSize size,
   });
@@ -32,6 +41,15 @@ abstract interface class ProfileWidgetsRepository {
     String id,
     ProfileWidgetSize size,
     DataMenuSelection selection,
+  );
+
+  /// Persists the template [fill] for [id], merged into the existing `settings`
+  /// envelope alongside [size] (preserved verbatim). Additive: it keeps
+  /// `schema_version` and `size`.
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
   );
 
   /// Persists a new ordering: [orderedIds] in target position order.

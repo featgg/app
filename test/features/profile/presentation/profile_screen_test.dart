@@ -94,6 +94,34 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    final failure = mutationFailure;
+    if (failure != null) return left(failure);
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.template,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+        templateFill: TemplateFill(templateId, const {}),
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>
       throw UnimplementedError();
 
@@ -130,6 +158,20 @@ final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>

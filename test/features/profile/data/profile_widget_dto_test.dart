@@ -2,6 +2,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
+import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _row({
@@ -14,11 +15,13 @@ Map<String, dynamic> _row({
   int? schemaVersion = kProfileWidgetSettingsVersion,
   bool includeSettings = true,
   Object? dataMenuItems,
+  Object? template,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
   if (size != null) settings['size'] = size;
   if (dataMenuItems != null) settings['data_menu_items'] = dataMenuItems;
+  if (template != null) settings['template'] = template;
   return {
     'id': id,
     'platform': platform,
@@ -92,8 +95,8 @@ void main() {
     test('reserved (unwired) kind tokens all degrade to null (omit)', () {
       // The reserved kinds are named in the wire taxonomy but not yet wired on
       // read; an older client must omit a row a newer client writes, never
-      // crash. Mirrors profileWidgetKindToWire's reserved branches.
-      for (final token in const ['data_menu', 'template', 'composed_card']) {
+      // crash. `template` is now a wired kind, so it leaves this set.
+      for (final token in const ['data_menu', 'composed_card']) {
         final widget = profileWidgetFromDto(
           ProfileWidgetDto.fromJson(_row(type: token)),
         );
@@ -216,6 +219,164 @@ void main() {
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
       expect(merged['size'], 'small');
       expect(merged.containsKey('data_menu_items'), isFalse);
+    });
+  });
+
+  group('template fill round-trip (additive to the v1 envelope)', () {
+    test('a template row maps to a template-kind widget with its fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'template',
+            platform: null,
+            size: 'wide',
+            template: {
+              'id': 'my_ranks',
+              'slots': {'slot_1': 'chess.rating'},
+            },
+          ),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.template);
+      expect(widget.platform, isNull);
+      expect(widget.size, ProfileWidgetSize.wide);
+      expect(widget.templateFill.templateId, 'my_ranks');
+      expect(widget.templateFill.itemIdFor('slot_1'), 'chess.rating');
+    });
+
+    test('a template row with no slots maps to an empty-slot fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'template', platform: null, template: {'id': 'my_levels'}),
+        ),
+      );
+
+      expect(widget!.templateFill.templateId, 'my_levels');
+      expect(widget.templateFill.slotItemIds, isEmpty);
+    });
+
+    test(
+      'a template row preserves size + leaves data-menu selection empty',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'template',
+              platform: null,
+              size: 'large',
+              template: {'id': 'my_ranks'},
+            ),
+          ),
+        );
+
+        expect(widget!.size, ProfileWidgetSize.large);
+        expect(widget.selection, DataMenuSelection.empty);
+      },
+    );
+
+    test('a platform row carries an empty template fill (no disturbance)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(size: 'wide', dataMenuItems: ['steam.hours_played']),
+        ),
+      );
+
+      expect(widget!.kind, ProfileWidgetKind.platform);
+      expect(widget.templateFill, TemplateFill.empty);
+      expect(widget.size, ProfileWidgetSize.wide);
+      expect(widget.selection.selectedIds, {'steam.hours_played'});
+    });
+
+    test('unknown / garbage slot item ids are dropped on read', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'template',
+            platform: null,
+            template: {
+              'id': 'my_ranks',
+              'slots': {
+                'slot_1': 'chess.rating', // known → kept
+                'slot_2': 'not.a.real.id', // unknown → dropped
+                'slot_3': 42, // non-string → dropped
+              },
+            },
+          ),
+        ),
+      );
+
+      expect(widget!.templateFill.slotItemIds, {'slot_1': 'chess.rating'});
+    });
+
+    test('a stale template id is kept raw (renderer soft-resolves it)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'template', platform: null, template: {'id': 'gone'}),
+        ),
+      );
+
+      expect(widget!.templateFill.templateId, 'gone');
+    });
+
+    test('a malformed template (non-object) → empty fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'template', platform: null, template: 'oops'),
+        ),
+      );
+
+      expect(widget!.templateFill, TemplateFill.empty);
+    });
+
+    test('a template with a non-string id → empty fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'template', platform: null, template: {'id': 7}),
+        ),
+      );
+
+      expect(widget!.templateFill, TemplateFill.empty);
+    });
+
+    test('templateFillFromSettings is lenient on a null envelope', () {
+      expect(templateFillFromSettings(null), TemplateFill.empty);
+    });
+
+    test('merge writer preserves schema_version + size and sets the fill', () {
+      final merged = mergeTemplateFillIntoSettings(
+        ProfileWidgetSize.wide,
+        const TemplateFill('my_ranks', {'slot_1': 'chess.rating'}),
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'wide');
+      final template = merged['template'] as Map<String, dynamic>;
+      expect(template['id'], 'my_ranks');
+      expect(template['slots'], {'slot_1': 'chess.rating'});
+    });
+
+    test('merge writer omits slots for an empty-slot fill', () {
+      final merged = mergeTemplateFillIntoSettings(
+        ProfileWidgetSize.small,
+        const TemplateFill('my_ranks', {}),
+      );
+
+      final template = merged['template'] as Map<String, dynamic>;
+      expect(template['id'], 'my_ranks');
+      expect(template.containsKey('slots'), isFalse);
+    });
+
+    test('merge writer omits the template key for an un-chosen template', () {
+      final merged = mergeTemplateFillIntoSettings(
+        ProfileWidgetSize.small,
+        TemplateFill.empty,
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'small');
+      expect(merged.containsKey('template'), isFalse);
     });
   });
 }
