@@ -2,6 +2,8 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/data_menu_catalog.dart';
+import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
 
 part 'profile_widget_dto.g.dart';
@@ -75,8 +77,47 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     position: dto.position,
     isEnabled: dto.isEnabled,
     size: size,
+    selection: dataMenuSelectionFromSettings(settings),
   );
 }
+
+/// Stable `settings` key the data-menu selection is stored under. Additive
+/// beside `size` in the same `schema_version: 1` envelope.
+const String _dataMenuItemsKey = 'data_menu_items';
+
+/// The set of known catalog ids, for dropping unknown/stale tokens on read.
+final Set<String> _knownCatalogIds = {
+  for (final item in dataMenuCatalog) item.id,
+};
+
+/// Reads the data-menu selection leniently from a `settings` envelope. An
+/// absent key, a non-list value, non-string entries, and ids not in the
+/// current catalog are all dropped (soft resolution, mirroring the feed
+/// compatibility rule); the result defaults to [DataMenuSelection.empty].
+DataMenuSelection dataMenuSelectionFromSettings(
+  Map<String, dynamic>? settings,
+) {
+  final raw = settings?[_dataMenuItemsKey];
+  if (raw is! List) return DataMenuSelection.empty;
+  final ids = <String>{
+    for (final entry in raw)
+      if (entry is String && _knownCatalogIds.contains(entry)) entry,
+  };
+  return ids.isEmpty ? DataMenuSelection.empty : DataMenuSelection(ids);
+}
+
+/// Builds the full `settings` envelope to write for a selection change:
+/// preserves `schema_version` and `size` and sets `data_menu_items` to the
+/// selected ids (an empty selection omits the key). Additive — never bumps the
+/// version.
+Map<String, dynamic> mergeDataMenuSelectionIntoSettings(
+  ProfileWidgetSize size,
+  DataMenuSelection selection,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (!selection.isDefault) _dataMenuItemsKey: selection.selectedIds.toList(),
+};
 
 /// Serializes [size] to its stable wire token.
 String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {

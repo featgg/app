@@ -1,5 +1,6 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
@@ -31,6 +32,13 @@ final class _FakeRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
   ) async => throw UnimplementedError();
 
   @override

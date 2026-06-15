@@ -255,5 +255,18 @@
   "profileWidgetSizeLarge": "Grande",
   "profileWidgetCardUnavailable": "Tarjeta no disponible",
   "profileWidgetAddConnectFirst": "Conecta una cuenta primero para añadir un widget.",
-  "profileWidgetAddAllAdded": "Todas tus plataformas conectadas ya están en tu perfil."
+  "profileWidgetAddAllAdded": "Todas tus plataformas conectadas ya están en tu perfil.",
+  "profileWidgetCustomizeData": "Personalizar datos",
+  "dataMenuTitle": "Personalizar datos",
+  "dataMenuFilterAll": "Todas",
+  "dataMenuConnectFirst": "Conecta una cuenta primero para elegir datos.",
+  "dataMenuCategoryRanksCompetitive": "Rangos y competitivo",
+  "dataMenuCategoryHoursDedication": "Horas y dedicación",
+  "dataMenuCategoryAchievements": "Logros",
+  "dataMenuCategoryGamesCharacters": "Juegos y personajes",
+  "dataMenuCategoryLevelsIdentity": "Niveles e identidad",
+  "dataMenuItemLeagueRank": "Rango",
+  "dataMenuItemSteamLibraryShowcase": "Biblioteca destacada",
+  "dataMenuItemLeagueTopMastery": "Mejores campeones",
+  "dataMenuItemWowClassRace": "Clase y raza"
 }

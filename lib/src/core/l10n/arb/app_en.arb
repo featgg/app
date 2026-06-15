@@ -1078,5 +1078,57 @@
   "profileWidgetAddAllAdded": "All your connected platforms are already on your profile.",
   "@profileWidgetAddAllAdded": {
     "description": "Hint shown in place of the Add-widget action when every connected platform is already placed as a widget."
+  },
+  "profileWidgetCustomizeData": "Customize data",
+  "@profileWidgetCustomizeData": {
+    "description": "Widget options-menu action that opens the data menu to choose which stats the card surfaces."
+  },
+  "dataMenuTitle": "Customize data",
+  "@dataMenuTitle": {
+    "description": "Title of the data menu sheet where the owner picks which stats and showcases a card surfaces."
+  },
+  "dataMenuFilterAll": "All",
+  "@dataMenuFilterAll": {
+    "description": "Platform filter chip in the data menu that clears the per-platform filter and shows every connected platform's items."
+  },
+  "dataMenuConnectFirst": "Connect an account first to choose data.",
+  "@dataMenuConnectFirst": {
+    "description": "Hint shown in the data menu when the owner has no connected platforms, so nothing is selectable."
+  },
+  "dataMenuCategoryRanksCompetitive": "Ranks & competitive",
+  "@dataMenuCategoryRanksCompetitive": {
+    "description": "Data menu category heading for ranks and competitive ratings."
+  },
+  "dataMenuCategoryHoursDedication": "Hours & dedication",
+  "@dataMenuCategoryHoursDedication": {
+    "description": "Data menu category heading for time-played and dedication stats."
+  },
+  "dataMenuCategoryAchievements": "Achievements",
+  "@dataMenuCategoryAchievements": {
+    "description": "Data menu category heading for achievement and points stats."
+  },
+  "dataMenuCategoryGamesCharacters": "Games & characters",
+  "@dataMenuCategoryGamesCharacters": {
+    "description": "Data menu category heading for game libraries and character showcases."
+  },
+  "dataMenuCategoryLevelsIdentity": "Levels & identity",
+  "@dataMenuCategoryLevelsIdentity": {
+    "description": "Data menu category heading for levels and identity stats."
+  },
+  "dataMenuItemLeagueRank": "Rank",
+  "@dataMenuItemLeagueRank": {
+    "description": "Data menu label for the League of Legends ranked tier/division/LP composed entry."
+  },
+  "dataMenuItemSteamLibraryShowcase": "Library showcase",
+  "@dataMenuItemSteamLibraryShowcase": {
+    "description": "Data menu label for the Steam library showcase list entry."
+  },
+  "dataMenuItemLeagueTopMastery": "Top champions",
+  "@dataMenuItemLeagueTopMastery": {
+    "description": "Data menu label for the League of Legends top champion mastery list entry."
+  },
+  "dataMenuItemWowClassRace": "Class & race",
+  "@dataMenuItemWowClassRace": {
+    "description": "Data menu label for the World of Warcraft character class and race identity entry."
   }
 }

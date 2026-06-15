@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,10 +13,12 @@ Map<String, dynamic> _row({
   Object? size = 'small',
   int? schemaVersion = kProfileWidgetSettingsVersion,
   bool includeSettings = true,
+  Object? dataMenuItems,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
   if (size != null) settings['size'] = size;
+  if (dataMenuItems != null) settings['data_menu_items'] = dataMenuItems;
   return {
     'id': id,
     'platform': platform,
@@ -135,6 +138,84 @@ void main() {
         profileWidgetKindToWire(ProfileWidgetKind.composed),
         'composed_card',
       );
+    });
+  });
+
+  group('data-menu selection round-trip (additive to the v1 envelope)', () {
+    test('a row with data_menu_items parses selection AND keeps size', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            size: 'wide',
+            dataMenuItems: ['steam.hours_played', 'steam.library_showcase'],
+          ),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.size, ProfileWidgetSize.wide);
+      expect(widget.selection.selectedIds, {
+        'steam.hours_played',
+        'steam.library_showcase',
+      });
+    });
+
+    test('a row with no data_menu_items → empty selection, size unchanged', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(size: 'large')),
+      );
+
+      expect(widget!.selection, DataMenuSelection.empty);
+      expect(widget.size, ProfileWidgetSize.large);
+    });
+
+    test('unknown / garbage ids are dropped on read', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            dataMenuItems: [
+              'steam.hours_played', // known
+              'not.a.real.id', // unknown → dropped
+              42, // non-string → dropped
+            ],
+          ),
+        ),
+      );
+
+      expect(widget!.selection.selectedIds, {'steam.hours_played'});
+    });
+
+    test('a non-list data_menu_items → empty selection', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(dataMenuItems: 'oops')),
+      );
+      expect(widget!.selection, DataMenuSelection.empty);
+    });
+
+    test('dataMenuSelectionFromSettings is lenient on a null envelope', () {
+      expect(dataMenuSelectionFromSettings(null), DataMenuSelection.empty);
+    });
+
+    test('merge writer preserves schema_version + size and sets the ids', () {
+      final merged = mergeDataMenuSelectionIntoSettings(
+        ProfileWidgetSize.wide,
+        const DataMenuSelection({'gw2.total_ap'}),
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'wide');
+      expect(merged['data_menu_items'], ['gw2.total_ap']);
+    });
+
+    test('merge writer omits data_menu_items for an empty selection', () {
+      final merged = mergeDataMenuSelectionIntoSettings(
+        ProfileWidgetSize.small,
+        DataMenuSelection.empty,
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'small');
+      expect(merged.containsKey('data_menu_items'), isFalse);
     });
   });
 }

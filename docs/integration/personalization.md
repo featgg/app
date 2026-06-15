@@ -62,7 +62,13 @@ from the invalid-`type` rejection above.
     rejected.
   - `position` is a non-negative integer (`>= 0`), unique per user.
   - `settings` is a JSON object up to ~50 KB. Versioned envelope:
-    `{ "schema_version": 1, "size": "small" | "wide" | "large" }`.
+    `{ "schema_version": 1, "size": "small" | "wide" | "large" }`. The
+    `settings` schema is client-owned; the client may add fields additively
+    under the same `schema_version: 1`. The data-menu curation is one such
+    field — `"data_menu_items": ["<platform>.<stat_or_field>", ...]`, the
+    stable pointers a `platform` widget surfaces. It is additive, ignored when
+    absent (an un-customized widget behaves as before), and never bumps the
+    version.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.
