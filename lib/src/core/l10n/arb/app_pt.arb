@@ -268,5 +268,22 @@
   "dataMenuItemLeagueRank": "Rank",
   "dataMenuItemSteamLibraryShowcase": "Biblioteca em destaque",
   "dataMenuItemLeagueTopMastery": "Melhores campeões",
-  "dataMenuItemWowClassRace": "Classe e raça"
+  "dataMenuItemWowClassRace": "Classe e raça",
+  "templateAdd": "Adicionar modelo",
+  "templateChooseTitle": "Escolha um modelo",
+  "templateMyRanksTitle": "Meus ranks",
+  "templateMyAchievementsTitle": "Minhas conquistas",
+  "templateMyLevelsTitle": "Meus níveis",
+  "templateSlotRank1": "Rank 1",
+  "templateSlotRank2": "Rank 2",
+  "templateSlotRank3": "Rank 3",
+  "templateSlotAchievement1": "Conquista 1",
+  "templateSlotAchievement2": "Conquista 2",
+  "templateSlotAchievement3": "Conquista 3",
+  "templateSlotLevel1": "Nível 1",
+  "templateSlotLevel2": "Nível 2",
+  "templateSlotLevel3": "Nível 3",
+  "templateFillSlots": "Preencher espaços",
+  "templateEmpty": "Ainda não há dados. Preencha um espaço para mostrar um valor.",
+  "templateSlotEmpty": "Não definido"
 }

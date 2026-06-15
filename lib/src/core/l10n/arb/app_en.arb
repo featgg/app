@@ -1130,5 +1130,73 @@
   "dataMenuItemWowClassRace": "Class & race",
   "@dataMenuItemWowClassRace": {
     "description": "Data menu label for the World of Warcraft character class and race identity entry."
+  },
+  "templateAdd": "Add template",
+  "@templateAdd": {
+    "description": "Button that opens the template picker to add a composed template card to the profile."
+  },
+  "templateChooseTitle": "Choose a template",
+  "@templateChooseTitle": {
+    "description": "Title of the sheet where the owner picks which template card to add."
+  },
+  "templateMyRanksTitle": "My ranks",
+  "@templateMyRanksTitle": {
+    "description": "Title of the My Ranks template card, which composes a few competitive rank values."
+  },
+  "templateMyAchievementsTitle": "My achievements",
+  "@templateMyAchievementsTitle": {
+    "description": "Title of the My Achievements template card, which composes a few achievement values."
+  },
+  "templateMyLevelsTitle": "My levels",
+  "@templateMyLevelsTitle": {
+    "description": "Title of the My Levels template card, which composes a few level and identity values."
+  },
+  "templateSlotRank1": "Rank 1",
+  "@templateSlotRank1": {
+    "description": "Label for the first rank slot in the My Ranks template card."
+  },
+  "templateSlotRank2": "Rank 2",
+  "@templateSlotRank2": {
+    "description": "Label for the second rank slot in the My Ranks template card."
+  },
+  "templateSlotRank3": "Rank 3",
+  "@templateSlotRank3": {
+    "description": "Label for the third rank slot in the My Ranks template card."
+  },
+  "templateSlotAchievement1": "Achievement 1",
+  "@templateSlotAchievement1": {
+    "description": "Label for the first achievement slot in the My Achievements template card."
+  },
+  "templateSlotAchievement2": "Achievement 2",
+  "@templateSlotAchievement2": {
+    "description": "Label for the second achievement slot in the My Achievements template card."
+  },
+  "templateSlotAchievement3": "Achievement 3",
+  "@templateSlotAchievement3": {
+    "description": "Label for the third achievement slot in the My Achievements template card."
+  },
+  "templateSlotLevel1": "Level 1",
+  "@templateSlotLevel1": {
+    "description": "Label for the first level slot in the My Levels template card."
+  },
+  "templateSlotLevel2": "Level 2",
+  "@templateSlotLevel2": {
+    "description": "Label for the second level slot in the My Levels template card."
+  },
+  "templateSlotLevel3": "Level 3",
+  "@templateSlotLevel3": {
+    "description": "Label for the third level slot in the My Levels template card."
+  },
+  "templateFillSlots": "Fill slots",
+  "@templateFillSlots": {
+    "description": "Template card options-menu action that opens the slot-fill flow to pick a value for each slot."
+  },
+  "templateEmpty": "No data yet. Fill a slot to show a value.",
+  "@templateEmpty": {
+    "description": "Placeholder shown inside a template card when none of its slots resolve to a value yet."
+  },
+  "templateSlotEmpty": "Not set",
+  "@templateSlotEmpty": {
+    "description": "Shown in the slot-fill flow for a slot that has not been filled with a value."
   }
 }
