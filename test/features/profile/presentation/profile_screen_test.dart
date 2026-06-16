@@ -74,6 +74,11 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
+
+  @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,
@@ -177,6 +182,11 @@ final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() =>
       _completer.future;
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
 
   @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({

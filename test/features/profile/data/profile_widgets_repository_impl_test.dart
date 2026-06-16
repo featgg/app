@@ -67,6 +67,13 @@ final class _FakeDataSource implements ProfileWidgetsDataSource {
   }
 
   @override
+  Future<List<ProfileWidgetDto>> fetchPublicWidgets(String userId) {
+    lastFetchUserId = userId;
+    if (onFetchFor != null) return onFetchFor!(userId);
+    return (onFetch ?? () async => <ProfileWidgetDto>[])();
+  }
+
+  @override
   Future<ProfileWidgetDto> insertWidget(Map<String, dynamic> row) {
     lastInsert = row;
     return (onInsert ?? (r) async => ProfileWidgetDto.fromJson(_rowMap()))(row);
@@ -278,6 +285,101 @@ void main() {
       );
       final reporter = _RecordingReporter();
       final result = await _repo(source, reporter).fetchMyWidgets();
+
+      result.fold(
+        (f) => expect(f, isA<UnexpectedFailure>()),
+        (_) => fail('want Left'),
+      );
+      expect(reporter.reported, hasLength(1));
+    });
+  });
+
+  group('fetchPublicWidgets', () {
+    test('returns mapped rows with NO auth gate (null user session)', () async {
+      // The public read does not gate on a current session — it succeeds even
+      // when _currentUserId is null, unlike the owner read.
+      final source = _FakeDataSource(
+        onFetch: () async => [
+          _dto(_rowMap(id: 'a', position: 0)),
+          _dto(_rowMap(id: 'b', position: 1, platform: 'chess')),
+        ],
+      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+        userId: null,
+      ).fetchPublicWidgets('owner-2');
+
+      result.fold((f) => fail('want Right, got $f'), (widgets) {
+        expect(widgets.map((w) => w.id), ['a', 'b']);
+      });
+    });
+
+    test('scopes the read to the supplied target user id', () async {
+      final source = _FakeDataSource(onFetch: () async => <ProfileWidgetDto>[]);
+      await _repo(source, _RecordingReporter()).fetchPublicWidgets('owner-2');
+
+      expect(source.lastFetchUserId, 'owner-2');
+    });
+
+    test('a private/non-existent profile (no rows) → Right([])', () async {
+      final source = _FakeDataSource(onFetch: () async => <ProfileWidgetDto>[]);
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).fetchPublicWidgets('owner-2');
+
+      result.fold(
+        (f) => fail('want Right, got $f'),
+        (widgets) => expect(widgets, isEmpty),
+      );
+    });
+
+    test('soft-drops unknown-kind / wrong-version rows', () async {
+      final source = _FakeDataSource(
+        onFetch: () async => [
+          _dto(_rowMap(id: 'ok')),
+          _dto(_rowMap(id: 'badVersion', schemaVersion: 2)),
+          _dto(_rowMap(id: 'badPlatform', platform: 'nope')),
+        ],
+      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).fetchPublicWidgets('owner-2');
+
+      result.fold(
+        (f) => fail('want Right, got $f'),
+        (widgets) => expect(widgets.map((w) => w.id), ['ok']),
+      );
+    });
+
+    test('SocketException → Left(NetworkFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onFetch: () async => throw const SocketException('offline'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(
+        source,
+        reporter,
+      ).fetchPublicWidgets('owner-2');
+
+      result.fold(
+        (f) => expect(f, isA<NetworkFailure>()),
+        (_) => fail('want Left'),
+      );
+      expect(reporter.reported, isEmpty);
+    });
+
+    test('parse fault → Left(UnexpectedFailure), reported', () async {
+      final source = _FakeDataSource(
+        onFetch: () async => throw const FormatException('bad row'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(
+        source,
+        reporter,
+      ).fetchPublicWidgets('owner-2');
 
       result.fold(
         (f) => expect(f, isA<UnexpectedFailure>()),

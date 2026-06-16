@@ -10,6 +10,13 @@ abstract interface class ProfileWidgetsDataSource {
   /// an unscoped select would also return foreign rows.
   Future<List<ProfileWidgetDto>> fetchMyWidgets(String userId);
 
+  /// Returns any user's widget rows ordered by `position` for the public visitor
+  /// render. [userId] scopes the read to that profile. The query is the same
+  /// `user_id`-scoped select as [fetchMyWidgets]; this method exists so the
+  /// repository can expose a public read with no auth gate (RLS returns no rows
+  /// for a private profile).
+  Future<List<ProfileWidgetDto>> fetchPublicWidgets(String userId);
+
   /// Inserts a widget [row] (writable columns only) and returns the new row.
   Future<ProfileWidgetDto> insertWidget(Map<String, dynamic> row);
 

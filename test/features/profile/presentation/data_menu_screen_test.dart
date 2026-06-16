@@ -29,6 +29,11 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
       right(const []);
 
   @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
+
+  @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
     String id,
     ProfileWidgetSize size,
@@ -107,6 +112,11 @@ final class _ConfigurableWidgetsRepository implements ProfileWidgetsRepository {
     fetchCalls++;
     return right(const []);
   }
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
 
   @override
   Future<Either<Failure, Unit>> setDataMenuSelection(

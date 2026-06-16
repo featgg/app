@@ -31,9 +31,17 @@ final class SupabaseProfileWidgetsDataSource
       'created_at, last_updated_at';
 
   @override
-  Future<List<ProfileWidgetDto>> fetchMyWidgets(String userId) async {
-    // The table is publicly readable for public profiles, so an authenticated
-    // unscoped select would also return foreign rows; filter by the owner.
+  Future<List<ProfileWidgetDto>> fetchMyWidgets(String userId) =>
+      _selectByUser(userId);
+
+  @override
+  Future<List<ProfileWidgetDto>> fetchPublicWidgets(String userId) =>
+      _selectByUser(userId);
+
+  /// Shared `user_id`-scoped select for both the owner and public reads. The
+  /// table is publicly readable for public profiles, so an unscoped select would
+  /// also return foreign rows; filter by the owner.
+  Future<List<ProfileWidgetDto>> _selectByUser(String userId) async {
     final rows = await _client
         .from(_table)
         .select(_columns)
