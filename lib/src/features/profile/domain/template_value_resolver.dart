@@ -87,6 +87,8 @@ ResolvedSlotValue? _resolveDataBlock(DataMenuItem item, GameCard card) {
       rank == null
           ? null
           : ResolvedSlotValue(item: item, value: formatLolRank(rank)),
+    WowRetailCardData(:final profile) when item.id == 'wow_retail.profile' =>
+      ResolvedSlotValue(item: item, value: formatWowClassRace(profile)),
     _ => null,
   };
 }
@@ -98,3 +100,9 @@ ResolvedSlotValue? _resolveDataBlock(DataMenuItem item, GameCard card) {
 /// 'LP' suffix token, not user-facing prose.
 String formatLolRank(LolRank rank) =>
     '${rank.tier} ${rank.division} · ${rank.lp} LP';
+
+/// Composes a WoW character's class and race as one line, e.g. 'Mage · Orc'.
+/// className and race are raw contract tokens (the same tokens the connections
+/// card view renders verbatim); never localized here.
+String formatWowClassRace(WowProfile profile) =>
+    '${profile.className} · ${profile.race}';

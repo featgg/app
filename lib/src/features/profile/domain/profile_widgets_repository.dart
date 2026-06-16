@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'profile_widget.dart';
 import 'template_catalog.dart';
@@ -28,6 +29,13 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a composed-card widget at [position] with [size], enabled and with
+  /// no items picked yet (`platform` null).
+  Future<Either<Failure, ProfileWidget>> addComposedWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
@@ -50,6 +58,15 @@ abstract interface class ProfileWidgetsRepository {
     String id,
     ProfileWidgetSize size,
     TemplateFill fill,
+  );
+
+  /// Persists the composed-card [fill] for [id], merged into the existing
+  /// `settings` envelope alongside [size] (preserved verbatim). Additive: it
+  /// keeps `schema_version` and `size`.
+  Future<Either<Failure, Unit>> setComposedFill(
+    String id,
+    ProfileWidgetSize size,
+    ComposedFill fill,
   );
 
   /// Persists a new ordering: [orderedIds] in target position order.

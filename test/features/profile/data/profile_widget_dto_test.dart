@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
@@ -16,12 +17,14 @@ Map<String, dynamic> _row({
   bool includeSettings = true,
   Object? dataMenuItems,
   Object? template,
+  Object? composed,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
   if (size != null) settings['size'] = size;
   if (dataMenuItems != null) settings['data_menu_items'] = dataMenuItems;
   if (template != null) settings['template'] = template;
+  if (composed != null) settings['composed'] = composed;
   return {
     'id': id,
     'platform': platform,
@@ -95,8 +98,9 @@ void main() {
     test('reserved (unwired) kind tokens all degrade to null (omit)', () {
       // The reserved kinds are named in the wire taxonomy but not yet wired on
       // read; an older client must omit a row a newer client writes, never
-      // crash. `template` is now a wired kind, so it leaves this set.
-      for (final token in const ['data_menu', 'composed_card']) {
+      // crash. `template` and `composed_card` are now wired kinds, so they
+      // leave this set.
+      for (final token in const ['data_menu']) {
         final widget = profileWidgetFromDto(
           ProfileWidgetDto.fromJson(_row(type: token)),
         );
@@ -377,6 +381,119 @@ void main() {
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
       expect(merged['size'], 'small');
       expect(merged.containsKey('template'), isFalse);
+    });
+  });
+
+  group('composed fill round-trip (additive to the v1 envelope)', () {
+    test(
+      'a composed_card row maps to a composed-kind widget with its fill',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'composed_card',
+              platform: null,
+              size: 'wide',
+              composed: {
+                'items': ['chess.rating', 'wow_retail.profile'],
+              },
+            ),
+          ),
+        );
+
+        expect(widget, isNotNull);
+        expect(widget!.kind, ProfileWidgetKind.composed);
+        expect(widget.platform, isNull);
+        expect(widget.size, ProfileWidgetSize.wide);
+        // Order is preserved from the stored list.
+        expect(widget.composedFill.itemIds, [
+          'chess.rating',
+          'wow_retail.profile',
+        ]);
+      },
+    );
+
+    test('unknown / garbage / duplicate item ids are dropped on read', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'composed_card',
+            platform: null,
+            composed: {
+              'items': [
+                'chess.rating', // known → kept
+                'chess.rating', // duplicate → dropped
+                'not.a.real.id', // unknown → dropped
+                42, // non-string → dropped
+              ],
+            },
+          ),
+        ),
+      );
+
+      expect(widget!.composedFill.itemIds, ['chess.rating']);
+    });
+
+    test('a non-object composed → empty fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'composed_card', platform: null, composed: 'oops'),
+        ),
+      );
+
+      expect(widget!.composedFill, ComposedFill.empty);
+    });
+
+    test('a composed with a non-list items → empty fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'composed_card',
+            platform: null,
+            composed: {'items': 'oops'},
+          ),
+        ),
+      );
+
+      expect(widget!.composedFill, ComposedFill.empty);
+    });
+
+    test('a platform row carries an empty composed fill (no disturbance)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(size: 'wide', dataMenuItems: ['steam.hours_played']),
+        ),
+      );
+
+      expect(widget!.kind, ProfileWidgetKind.platform);
+      expect(widget.composedFill, ComposedFill.empty);
+    });
+
+    test('composedFillFromSettings is lenient on a null envelope', () {
+      expect(composedFillFromSettings(null), ComposedFill.empty);
+    });
+
+    test('merge writer preserves schema_version + size and sets the items', () {
+      final merged = mergeComposedFillIntoSettings(
+        ProfileWidgetSize.wide,
+        const ComposedFill(['chess.rating', 'wow_retail.profile']),
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'wide');
+      final composed = merged['composed'] as Map<String, dynamic>;
+      expect(composed['items'], ['chess.rating', 'wow_retail.profile']);
+    });
+
+    test('merge writer omits the composed key for an empty fill', () {
+      final merged = mergeComposedFillIntoSettings(
+        ProfileWidgetSize.small,
+        ComposedFill.empty,
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'small');
+      expect(merged.containsKey('composed'), isFalse);
     });
   });
 }

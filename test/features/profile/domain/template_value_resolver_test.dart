@@ -31,6 +31,20 @@ const _rank = LolRank(
 LeagueOfLegendsCardData _lolData({LolRank? rank}) =>
     LeagueOfLegendsCardData(rank: rank, topMastery: const []);
 
+WowRetailCardData _wowData({String className = 'Mage', String race = 'Orc'}) =>
+    WowRetailCardData(
+      profile: WowProfile(
+        race: race,
+        faction: 'HORDE',
+        className: className,
+        level: 70,
+        ilvlAvg: 480,
+        ilvlEquipped: 478,
+      ),
+      recentAchievements: const [],
+      attribution: 'Data provided by Blizzard',
+    );
+
 void main() {
   group('resolveSlot — envelope stats (dataPath == null)', () {
     test('returns the matching stat value and unit', () {
@@ -120,6 +134,41 @@ void main() {
     });
   });
 
+  group('resolveSlot — WoW class+race (data-block composite)', () {
+    test('resolves to a string containing the raw class and race tokens', () {
+      final card = _card(
+        platform: Platform.wowRetail,
+        data: _wowData(className: 'Mage', race: 'Orc'),
+      );
+
+      final resolved = resolveSlot('wow_retail.profile', card);
+
+      expect(resolved, isNotNull);
+      final value = resolved!.value.toString();
+      // Structural assertion — contains the raw class/race tokens, never a
+      // localized literal.
+      expect(value, contains('Mage'));
+      expect(value, contains('Orc'));
+    });
+
+    test('soft-omits (null) when card.data is null (absent block)', () {
+      final card = _card(platform: Platform.wowRetail, data: null);
+      expect(resolveSlot('wow_retail.profile', card), isNull);
+    });
+
+    test('soft-omits (null) for a different CardData subtype', () {
+      final card = _card(
+        platform: Platform.wowRetail,
+        data: const SteamCardData(libraryShowcase: [], recentGames: []),
+      );
+      expect(resolveSlot('wow_retail.profile', card), isNull);
+    });
+
+    test('soft-omits (null) for a null card', () {
+      expect(resolveSlot('wow_retail.profile', null), isNull);
+    });
+  });
+
   group('resolveSlot — showcase pointer', () {
     test('returns null for a ShowcasePointer item (non-scalar, v1)', () {
       final card = _card(
@@ -136,6 +185,16 @@ void main() {
       expect(out, contains('GOLD'));
       expect(out, contains('II'));
       expect(out, contains('47'));
+    });
+  });
+
+  group('formatWowClassRace', () {
+    test('composes class and race with the separator', () {
+      final out = formatWowClassRace(_wowData().profile);
+      expect(out, contains('Mage'));
+      expect(out, contains('Orc'));
+      // The two tokens are joined on one line with the separator between them.
+      expect(out, contains('·'));
     });
   });
 }

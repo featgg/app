@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/composed_card.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
@@ -80,6 +81,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     size: size,
     selection: dataMenuSelectionFromSettings(settings),
     templateFill: templateFillFromSettings(settings),
+    composedFill: composedFillFromSettings(settings),
   );
 }
 
@@ -165,6 +167,44 @@ Map<String, dynamic> mergeTemplateFillIntoSettings(
     },
 };
 
+/// Stable `settings` key the composed-card fill is stored under. Additive
+/// beside `size`, `data_menu_items`, and `template` in the same
+/// `schema_version: 1` envelope. Shape: `{ "items": ["<dataMenuItemId>", ...] }`.
+const String _composedKey = 'composed';
+
+/// Reads the composed-card fill leniently from a `settings` envelope. A
+/// non-object value, a missing/non-list `items`, non-string entries, ids not in
+/// the current catalog, and duplicates are all dropped (mirrors
+/// [dataMenuSelectionFromSettings] and [templateFillFromSettings]); the result
+/// defaults to [ComposedFill.empty]. Order is preserved from the stored list.
+ComposedFill composedFillFromSettings(Map<String, dynamic>? settings) {
+  final raw = settings?[_composedKey];
+  if (raw is! Map) return ComposedFill.empty;
+  final items = raw['items'];
+  if (items is! List) return ComposedFill.empty;
+  final ids = <String>[];
+  for (final entry in items) {
+    if (entry is String &&
+        _knownCatalogIds.contains(entry) &&
+        !ids.contains(entry)) {
+      ids.add(entry);
+    }
+  }
+  return ids.isEmpty ? ComposedFill.empty : ComposedFill(ids);
+}
+
+/// Builds the full `settings` envelope to write for a composed-card change:
+/// preserves `schema_version` and `size` and sets the `composed` sub-object from
+/// [fill]. Additive — never bumps the version. An empty fill omits the key.
+Map<String, dynamic> mergeComposedFillIntoSettings(
+  ProfileWidgetSize size,
+  ComposedFill fill,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (!fill.isEmpty) _composedKey: {'items': fill.itemIds},
+};
+
 /// Serializes [size] to its stable wire token.
 String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.small => 'small',
@@ -185,6 +225,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'platform' => ProfileWidgetKind.platform,
   'template' => ProfileWidgetKind.template,
+  'composed_card' => ProfileWidgetKind.composed,
   _ => null,
 };
 

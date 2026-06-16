@@ -39,10 +39,9 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `template` — a pre-designed, slot-filled card.
 - `data_menu` — a curated stat/showcase widget. *(upcoming)*
 - `composed_card` — a user-assembled, cross-platform composed card.
-  *(upcoming)*
 
-`platform` and `template` are the kinds the client writes today; `data_menu`
-and `composed_card` are reserved for later phases. (Data-menu curation already
+`platform`, `template`, and `composed_card` are the kinds the client writes
+today; `data_menu` is reserved for a later phase. (Data-menu curation already
 ships, but as the `data_menu_items` setting on a `platform` widget — see below —
 not as a `data_menu`-typed row.)
 
@@ -76,7 +75,11 @@ from the invalid-`type` rejection above.
     version. A `template` widget carries its choice under another such field —
     `"template": { "id": "<templateId>", "slots": { "<slotId>":
     "<data_menu_item_id>" } }` — the chosen template and its per-slot fills. It
-    is likewise additive, ignored when absent, and never bumps the version.
+    is likewise additive, ignored when absent, and never bumps the version. A
+    `composed_card` widget carries its freely-picked item set under another such
+    field — `"composed": { "items": ["<data_menu_item_id>", ...] }` — the
+    ordered data-menu items the card surfaces. It is likewise additive, ignored
+    when absent, and never bumps the version.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.
