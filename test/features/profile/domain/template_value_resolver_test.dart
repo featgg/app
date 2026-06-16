@@ -134,43 +134,40 @@ void main() {
     });
   });
 
-  group(
-    'resolveSlot — WoW class+race (data-block pointer, #160 composite)',
-    () {
-      test('resolves to a string containing the raw class and race tokens', () {
-        final card = _card(
-          platform: Platform.wowRetail,
-          data: _wowData(className: 'Mage', race: 'Orc'),
-        );
+  group('resolveSlot — WoW class+race (data-block composite)', () {
+    test('resolves to a string containing the raw class and race tokens', () {
+      final card = _card(
+        platform: Platform.wowRetail,
+        data: _wowData(className: 'Mage', race: 'Orc'),
+      );
 
-        final resolved = resolveSlot('wow_retail.profile', card);
+      final resolved = resolveSlot('wow_retail.profile', card);
 
-        expect(resolved, isNotNull);
-        final value = resolved!.value.toString();
-        // Structural assertion — contains the raw class/race tokens, never a
-        // localized literal.
-        expect(value, contains('Mage'));
-        expect(value, contains('Orc'));
-      });
+      expect(resolved, isNotNull);
+      final value = resolved!.value.toString();
+      // Structural assertion — contains the raw class/race tokens, never a
+      // localized literal.
+      expect(value, contains('Mage'));
+      expect(value, contains('Orc'));
+    });
 
-      test('soft-omits (null) when card.data is null (absent block)', () {
-        final card = _card(platform: Platform.wowRetail, data: null);
-        expect(resolveSlot('wow_retail.profile', card), isNull);
-      });
+    test('soft-omits (null) when card.data is null (absent block)', () {
+      final card = _card(platform: Platform.wowRetail, data: null);
+      expect(resolveSlot('wow_retail.profile', card), isNull);
+    });
 
-      test('soft-omits (null) for a different CardData subtype', () {
-        final card = _card(
-          platform: Platform.wowRetail,
-          data: const SteamCardData(libraryShowcase: [], recentGames: []),
-        );
-        expect(resolveSlot('wow_retail.profile', card), isNull);
-      });
+    test('soft-omits (null) for a different CardData subtype', () {
+      final card = _card(
+        platform: Platform.wowRetail,
+        data: const SteamCardData(libraryShowcase: [], recentGames: []),
+      );
+      expect(resolveSlot('wow_retail.profile', card), isNull);
+    });
 
-      test('soft-omits (null) for a null card', () {
-        expect(resolveSlot('wow_retail.profile', null), isNull);
-      });
-    },
-  );
+    test('soft-omits (null) for a null card', () {
+      expect(resolveSlot('wow_retail.profile', null), isNull);
+    });
+  });
 
   group('resolveSlot — showcase pointer', () {
     test('returns null for a ShowcasePointer item (non-scalar, v1)', () {

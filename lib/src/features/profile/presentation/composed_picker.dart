@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/composed_card.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/profile_widget.dart';
 import '../domain/template_value_resolver.dart';
@@ -35,8 +36,20 @@ class _ComposedItemSheet extends ConsumerStatefulWidget {
 }
 
 class _ComposedItemSheetState extends ConsumerState<_ComposedItemSheet> {
+  /// Ephemeral edit buffer for the open sheet so a toggle flips its switch
+  /// immediately; the persisted truth is the controller + read provider, re-read
+  /// on invalidate after each write. Mirrors the data-menu sheet.
+  late ComposedFill _fill = widget.profileWidget.composedFill;
+
   /// Null means "All"; otherwise the platform the chip row narrows to.
   Platform? _platformFilter;
+
+  void _toggle(String id) {
+    setState(() => _fill = _fill.toggle(id));
+    ref
+        .read(profileWidgetsControllerProvider.notifier)
+        .toggleComposedItem(widgetId: widget.profileWidget.id, itemId: id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +85,9 @@ class _ComposedItemSheetState extends ConsumerState<_ComposedItemSheet> {
     // same gating the data menu applies.
     final catalogPlatforms = {
       for (final item in dataMenuCatalog)
-        if (connectedSet.contains(item.platform)) item.platform,
+        if (item.pointer is! ShowcasePointer &&
+            connectedSet.contains(item.platform))
+          item.platform,
     }.toList();
 
     if (catalogPlatforms.isEmpty) {
@@ -142,7 +157,11 @@ class _ComposedItemSheetState extends ConsumerState<_ComposedItemSheet> {
   ) {
     final items = [
       for (final item in dataMenuCatalog)
+        // Showcase pointers (e.g. library, top mastery) have no composed-card
+        // render path yet — resolveSlot always omits them — so offering them
+        // here would only persist dead picks.
         if (item.category == category &&
+            item.pointer is! ShowcasePointer &&
             connectedSet.contains(item.platform) &&
             (_platformFilter == null || item.platform == _platformFilter))
           item,
@@ -159,9 +178,10 @@ class _ComposedItemSheetState extends ConsumerState<_ComposedItemSheet> {
       ),
       for (final item in items)
         _ComposedItem(
-          profileWidget: widget.profileWidget,
           item: item,
+          selected: _fill.contains(item.id),
           saving: saving,
+          onToggle: () => _toggle(item.id),
         ),
     ];
   }
@@ -178,14 +198,16 @@ class _ComposedItemSheetState extends ConsumerState<_ComposedItemSheet> {
 /// data" mid-load.
 class _ComposedItem extends ConsumerWidget {
   const _ComposedItem({
-    required this.profileWidget,
     required this.item,
+    required this.selected,
     required this.saving,
+    required this.onToggle,
   });
 
-  final ProfileWidget profileWidget;
   final DataMenuItem item;
+  final bool selected;
   final bool saving;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -202,15 +224,8 @@ class _ComposedItem extends ConsumerWidget {
 
     return SwitchListTile(
       key: Key('composedItem_${item.id}'),
-      value: profileWidget.composedFill.contains(item.id),
-      onChanged: saving
-          ? null
-          : (_) => ref
-                .read(profileWidgetsControllerProvider.notifier)
-                .toggleComposedItem(
-                  widgetId: profileWidget.id,
-                  itemId: item.id,
-                ),
+      value: selected,
+      onChanged: saving ? null : (_) => onToggle(),
       title: Text(dataMenuItemLabel(l10n, item.labelKey) ?? item.id),
       subtitle: showNoData
           ? Text(

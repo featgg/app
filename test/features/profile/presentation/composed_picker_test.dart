@@ -345,4 +345,51 @@ void main() {
     expect(repo.fills, hasLength(1));
     expect(repo.fills.single.itemIds, ['chess.rating']);
   });
+
+  testWidgets('toggling flips the switch immediately, without reopening', (
+    tester,
+  ) async {
+    final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
+    await tester.pumpWidget(_app(_container(repo)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pumpAndSettle();
+
+    SwitchListTile tile() => tester.widget<SwitchListTile>(
+      find.byKey(const Key('composedItem_chess.rating')),
+    );
+    expect(tile().value, isFalse);
+
+    await tester.tap(find.byKey(const Key('composedItem_chess.rating')));
+    await tester.pumpAndSettle();
+
+    // The optimistic edit buffer flips the switch in place — the sheet is never
+    // reopened, so the value cannot be coming from the captured widget snapshot.
+    expect(tile().value, isTrue);
+  });
+
+  testWidgets('does not offer showcase items (no composed render path yet)', (
+    tester,
+  ) async {
+    final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
+    await tester.pumpWidget(
+      _app(_container(repo, connected: const [Platform.steam])),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pumpAndSettle();
+
+    // A scalar steam stat is offered; the showcase pointer is filtered out
+    // because resolveSlot would always omit it on the card.
+    expect(
+      find.byKey(const Key('composedItem_steam.hours_played')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('composedItem_steam.library_showcase')),
+      findsNothing,
+    );
+  });
 }
