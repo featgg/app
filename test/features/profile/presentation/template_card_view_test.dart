@@ -79,6 +79,7 @@ ProfileWidget _templateWidget(TemplateFill fill) => ProfileWidget(
 Widget _harness({
   required ProfileWidget widget,
   required Map<Platform, GameCard?> cards,
+  bool showEmptyPlaceholder = true,
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
@@ -98,7 +99,12 @@ Widget _harness({
       ],
       supportedLocales: const [Locale('en')],
       home: Scaffold(
-        body: SingleChildScrollView(child: TemplateCardView(widget: widget)),
+        body: SingleChildScrollView(
+          child: TemplateCardView(
+            widget: widget,
+            showEmptyPlaceholder: showEmptyPlaceholder,
+          ),
+        ),
       ),
     ),
   );
@@ -280,6 +286,21 @@ void main() {
     expect(find.text(l10n.templateEmpty), findsOneWidget);
     expect(find.byKey(const Key('templateSlotRow_t-1_slot_1')), findsNothing);
   });
+
+  testWidgets(
+    'showEmptyPlaceholder:false omits an empty card entirely (visitor)',
+    (tester) async {
+      final widget = _templateWidget(const TemplateFill('my_ranks', {}));
+      await tester.pumpWidget(
+        _harness(widget: widget, cards: const {}, showEmptyPlaceholder: false),
+      );
+      await tester.pumpAndSettle();
+
+      // No card and no owner-only placeholder — the visitor sees nothing.
+      expect(find.byKey(const Key('templateCard_t-1')), findsNothing);
+      expect(find.byKey(const Key('templateEmpty_t-1')), findsNothing);
+    },
+  );
 
   testWidgets('renders the all-empty placeholder for an unknown template id', (
     tester,

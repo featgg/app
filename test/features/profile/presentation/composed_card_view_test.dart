@@ -79,6 +79,7 @@ ProfileWidget _composedWidget(ComposedFill fill) => ProfileWidget(
 Widget _harness({
   required ProfileWidget widget,
   required Map<Platform, GameCard?> cards,
+  bool showEmptyPlaceholder = true,
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
@@ -98,7 +99,12 @@ Widget _harness({
       ],
       supportedLocales: const [Locale('en')],
       home: Scaffold(
-        body: SingleChildScrollView(child: ComposedCardView(widget: widget)),
+        body: SingleChildScrollView(
+          child: ComposedCardView(
+            widget: widget,
+            showEmptyPlaceholder: showEmptyPlaceholder,
+          ),
+        ),
       ),
     ),
   );
@@ -264,6 +270,21 @@ void main() {
 
     expect(find.byKey(const Key('composedEmpty_c-1')), findsOneWidget);
   });
+
+  testWidgets(
+    'showEmptyPlaceholder:false omits an empty card entirely (visitor)',
+    (tester) async {
+      final widget = _composedWidget(ComposedFill.empty);
+      await tester.pumpWidget(
+        _harness(widget: widget, cards: const {}, showEmptyPlaceholder: false),
+      );
+      await tester.pumpAndSettle();
+
+      // No card and no owner-only placeholder — the visitor sees nothing.
+      expect(find.byKey(const Key('composedCard_c-1')), findsNothing);
+      expect(find.byKey(const Key('composedEmpty_c-1')), findsNothing);
+    },
+  );
 
   testWidgets(
     'owner=visitor: a resolved card carries no owner-only affordance',

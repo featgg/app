@@ -25,7 +25,12 @@ import 'profile_owner_cards_provider.dart';
 /// renderer needs no injected card builder. An item whose card is loading or
 /// errored simply omits its row — it never errors the whole card.
 class ComposedCardView extends ConsumerWidget {
-  const ComposedCardView({super.key, required this.widget, this.cardSource});
+  const ComposedCardView({
+    super.key,
+    required this.widget,
+    this.cardSource,
+    this.showEmptyPlaceholder = true,
+  });
 
   final ProfileWidget widget;
 
@@ -33,6 +38,11 @@ class ComposedCardView extends ConsumerWidget {
   /// ([ownerCardProvider]); the visitor render injects a public source so the
   /// same view renders a profile's PUBLIC cards.
   final CardSource? cardSource;
+
+  /// When no item resolves, the owner sees a "pick an item" placeholder so the
+  /// card stays actionable. A visitor has no such action, so the visitor render
+  /// passes false to omit an empty card entirely instead of showing it.
+  final bool showEmptyPlaceholder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,6 +94,10 @@ class ComposedCardView extends ConsumerWidget {
         ),
       );
     }
+
+    // Omit an empty card for a visitor (the placeholder is an owner-only
+    // call-to-action).
+    if (rows.isEmpty && !showEmptyPlaceholder) return const SizedBox.shrink();
 
     return Container(
       key: Key('composedCard_${widget.id}'),
