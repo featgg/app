@@ -1,12 +1,5 @@
-import 'dart:async';
-
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
-import 'package:featgg/src/features/connections/domain/cards_repository.dart';
-import 'package:featgg/src/features/connections/domain/connection.dart';
-import 'package:featgg/src/features/connections/domain/connections_providers.dart';
-import 'package:featgg/src/features/connections/domain/game_card.dart';
-import 'package:featgg/src/features/connections/presentation/connections_presentation.dart';
 import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:flutter/material.dart';
@@ -37,41 +30,6 @@ final class _FakeProfileRepository implements ProfileRepository {
       publicResult(userId);
 }
 
-/// Injects a fixed `fetchPublicCard` outcome per test. `fetchMyCard` is never
-/// called by the visitor screen, but must satisfy the interface.
-final class _FakeCardsRepository implements CardsRepository {
-  _FakeCardsRepository({required this.publicCardResult});
-
-  final Either<Failure, GameCard?> Function(String userId, Platform platform)
-  publicCardResult;
-
-  @override
-  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
-      right(null);
-
-  @override
-  Future<Either<Failure, GameCard?>> fetchPublicCard(
-    String userId,
-    Platform platform,
-  ) async => publicCardResult(userId, platform);
-}
-
-/// Holds all public card futures open indefinitely so the loading state is
-/// observable. `fetchMyCard` is never called by the visitor screen.
-final class _PendingCardsRepository implements CardsRepository {
-  final _completer = Completer<Either<Failure, GameCard?>>();
-
-  @override
-  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
-      right(null);
-
-  @override
-  Future<Either<Failure, GameCard?>> fetchPublicCard(
-    String userId,
-    Platform platform,
-  ) => _completer.future;
-}
-
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -89,45 +47,14 @@ const _publicProfile = Profile(
   featuredPlatform: null,
 );
 
-GameCard _staleWowCard() => GameCard(
-  schemaVersion: 1,
-  platform: Platform.wowRetail,
-  title: 'Arthas',
-  subtitle: 'icecrown-US',
-  iconImage: null,
-  heroImage: null,
-  profileUrl: null,
-  stats: const [CardStat(key: 'item_level', value: 480, unit: 'count')],
-  lastUpdated: DateTime.now().subtract(const Duration(days: 40)),
-  data: const WowRetailCardData(
-    profile: WowProfile(
-      race: 'Human',
-      faction: 'ALLIANCE',
-      className: 'Paladin',
-      level: 70,
-      ilvlAvg: 480,
-      ilvlEquipped: 478,
-    ),
-    recentAchievements: [],
-    attribution: 'Data provided by Blizzard',
-  ),
-);
-
 // ---------------------------------------------------------------------------
 // Pump helper
 // ---------------------------------------------------------------------------
 
-Widget _screen(
-  ProfileRepository profileRepo,
-  CardsRepository cardsRepo, {
-  String userId = _userId,
-}) {
+Widget _screen(ProfileRepository profileRepo, {String userId = _userId}) {
   final container = ProviderContainer(
     retry: (count, error) => null,
-    overrides: [
-      profileRepositoryProvider.overrideWithValue(profileRepo),
-      cardsRepositoryProvider.overrideWithValue(cardsRepo),
-    ],
+    overrides: [profileRepositoryProvider.overrideWithValue(profileRepo)],
   );
   addTearDown(container.dispose);
   return UncontrolledProviderScope(
@@ -137,34 +64,42 @@ Widget _screen(
       supportedLocales: AppLocalizations.supportedLocales,
       home: PublicProfileScreen(
         userId: userId,
-        // Mirrors the router's composition-root wiring.
-        cardBuilder: (card) => GameCardView(card: card),
+        // A keyed sentinel stands in for the composition-root-injected widgets
+        // view; the screen only delegates the body to it.
+        widgetsBuilder: (id) =>
+            SizedBox(key: Key('widgetsSentinel_$id'), height: 80),
       ),
     ),
   );
 }
-
-/// All platforms return null — models a public profile with no cards.
-final _allNullCards = _FakeCardsRepository(
-  publicCardResult: (_, _) => right(null),
-);
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 void main() {
-  testWidgets('public profile renders identity', (tester) async {
+  testWidgets('renders identity and delegates the body to widgetsBuilder', (
+    tester,
+  ) async {
     final profileRepo = _FakeProfileRepository(
       publicResult: (_) async => right(_publicProfile),
     );
-    await tester.pumpWidget(_screen(profileRepo, _allNullCards));
+    await tester.pumpWidget(_screen(profileRepo));
     await tester.pumpAndSettle();
 
+    // Identity.
     expect(find.text(_publicProfile.displayName), findsOneWidget);
     expect(find.textContaining(_publicProfile.username), findsOneWidget);
     expect(find.text(_publicProfile.bio!), findsOneWidget);
     expect(find.byIcon(Icons.person), findsOneWidget);
+
+    // The injected widgets body renders, keyed by the screen's userId, below
+    // the identity block.
+    final sentinel = find.byKey(const Key('widgetsSentinel_$_userId'));
+    expect(sentinel, findsOneWidget);
+    final yName = tester.getTopLeft(find.text(_publicProfile.displayName)).dy;
+    final ySentinel = tester.getTopLeft(sentinel).dy;
+    expect(yName, lessThan(ySentinel));
 
     // The screen body is wrapped in SafeArea (architecture convention).
     expect(
@@ -180,120 +115,30 @@ void main() {
     final profileRepo = _FakeProfileRepository(
       publicResult: (_) async => right(_publicProfile),
     );
-    await tester.pumpWidget(_screen(profileRepo, _allNullCards));
+    await tester.pumpWidget(_screen(profileRepo));
     await tester.pumpAndSettle();
 
-    // No Edit button on a visitor screen.
     expect(find.byKey(const Key('profileEditButton')), findsNothing);
-    // No owner stale affordance.
-    expect(find.byKey(const Key('wowStaleState')), findsNothing);
-  });
-
-  testWidgets('stale WoW hidden for visitor; identity still renders', (
-    tester,
-  ) async {
-    final profileRepo = _FakeProfileRepository(
-      publicResult: (_) async => right(_publicProfile),
-    );
-    final cardsRepo = _FakeCardsRepository(
-      publicCardResult: (_, platform) =>
-          platform == Platform.wowRetail ? right(_staleWowCard()) : right(null),
-    );
-
-    await tester.pumpWidget(_screen(profileRepo, cardsRepo));
-    await tester.pumpAndSettle();
-
-    // Identity is present.
-    expect(find.text(_publicProfile.displayName), findsOneWidget);
-    // The WoW card content is hidden for a non-owner with a stale card.
-    expect(find.byKey(const Key('gameCardContent')), findsNothing);
   });
 
   testWidgets('private/not-found shows the unavailable state', (tester) async {
     final profileRepo = _FakeProfileRepository(
       publicResult: (_) async => right(null),
     );
-    await tester.pumpWidget(_screen(profileRepo, _allNullCards));
+    await tester.pumpWidget(_screen(profileRepo));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('publicProfileUnavailable')), findsOneWidget);
-    // No identity fields visible.
+    // No identity fields, and the widgets body is not built for a null profile.
     expect(find.byIcon(Icons.person), findsNothing);
-  });
-
-  testWidgets('no visible cards shows the generic empty state', (tester) async {
-    final profileRepo = _FakeProfileRepository(
-      publicResult: (_) async => right(_publicProfile),
-    );
-    await tester.pumpWidget(_screen(profileRepo, _allNullCards));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('publicProfileNoCards')), findsOneWidget);
-  });
-
-  testWidgets('shows a single section loader while card reads are in flight', (
-    tester,
-  ) async {
-    // Public profile resolves immediately; cards are held pending so only the
-    // card section is loading — isolates the single-spinner requirement.
-    final profileRepo = _FakeProfileRepository(
-      publicResult: (_) async => right(_publicProfile),
-    );
-    final cardsRepo = _PendingCardsRepository();
-
-    await tester.pumpWidget(_screen(profileRepo, cardsRepo));
-    // Pump enough frames for the profile future to resolve while card futures
-    // remain pending. pumpAndSettle cannot be used here because the pending
-    // card futures never quiesce.
-    await tester.pump();
-    await tester.pump();
-
-    // Card-shaped skeleton in the cards area — no N-spinner reflow.
-    expect(find.byKey(const Key('profileCardsSkeleton')), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-    // Per-platform card keys are absent until settle.
-    expect(find.byKey(const Key('publicCard_minecraftHypixel')), findsNothing);
-  });
-
-  testWidgets('renders only one card padding per real card', (tester) async {
-    // Two non-adjacent platforms have cards; all others are null.
-    final profileRepo = _FakeProfileRepository(
-      publicResult: (_) async => right(_publicProfile),
-    );
-    final populated = {Platform.minecraftHypixel, Platform.steam};
-    final cardsRepo = _FakeCardsRepository(
-      publicCardResult: (_, p) =>
-          populated.contains(p) ? right(_staleWowCard()) : right(null),
-    );
-
-    await tester.pumpWidget(_screen(profileRepo, cardsRepo));
-    await tester.pumpAndSettle();
-
-    // Both real cards are present.
-    expect(
-      find.byKey(const Key('publicCard_minecraftHypixel')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('publicCard_steam')), findsOneWidget);
-
-    // Only 2 Padding(bottom: AppSpacing.md) wrappers around card slots —
-    // not Platform.values.length (phantom gaps from card-less platforms).
-    final paddingFinder = find.ancestor(
-      of: find.byWidgetPredicate((w) => w is AsyncValueWidget),
-      matching: find.byWidgetPredicate(
-        (w) =>
-            w is Padding &&
-            w.padding == const EdgeInsets.only(bottom: AppSpacing.md),
-      ),
-    );
-    expect(paddingFinder, findsNWidgets(populated.length));
+    expect(find.byKey(const Key('widgetsSentinel_$_userId')), findsNothing);
   });
 
   testWidgets('loading then error with retry', (tester) async {
     final profileRepo = _FakeProfileRepository(
       publicResult: (_) async => left(const NetworkFailure()),
     );
-    await tester.pumpWidget(_screen(profileRepo, _allNullCards));
+    await tester.pumpWidget(_screen(profileRepo));
     await tester.pump();
     await tester.pump();
 

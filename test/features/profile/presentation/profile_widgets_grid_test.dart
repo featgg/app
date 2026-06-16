@@ -56,6 +56,11 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
       right(const []);
 
   @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
+
+  @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,

@@ -14,6 +14,13 @@ abstract interface class ProfileWidgetsRepository {
   /// Owner's widgets ordered by position. Right([]) when none.
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets();
 
+  /// Any user's widgets ordered by position for the public visitor render, with
+  /// no auth gate. Right([]) when none — a private or non-existent profile
+  /// returns no rows (RLS), so the visitor sees the empty state.
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  );
+
   /// Inserts a platform widget at [position] with [size], enabled.
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,

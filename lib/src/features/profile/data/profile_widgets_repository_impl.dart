@@ -46,6 +46,25 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async {
+    try {
+      final dtos = await _source.fetchPublicWidgets(userId);
+      // Same soft resolution as the owner read: a row that maps to null
+      // (unknown kind, wrong envelope version, or unknown platform) is dropped
+      // rather than failing the read.
+      final widgets = dtos
+          .map(profileWidgetFromDto)
+          .whereType<ProfileWidget>()
+          .toList();
+      return right(widgets);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,

@@ -6,6 +6,14 @@ import '../../connections/domain/game_card.dart';
 
 part 'profile_owner_cards_provider.g.dart';
 
+/// Maps a [Platform] to the provider that yields its card. The card views
+/// resolve each row's card through a [CardSource]; it defaults to
+/// [ownerCardProvider] (the signed-in user's own card), and the visitor render
+/// injects a public source so the SAME views render a profile's PUBLIC cards
+/// without any per-view branching.
+typedef CardSource =
+    ProviderListenable<AsyncValue<GameCard?>> Function(Platform);
+
 /// Returns null for every error so Riverpod never auto-retries. A Left(Failure)
 /// is surfaced immediately as AsyncError; retrying authed reads behind the error
 /// UI would re-issue privileged calls and amplify crash reports.

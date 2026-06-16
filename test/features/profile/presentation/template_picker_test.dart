@@ -47,6 +47,11 @@ final class _GatedWidgetsRepository implements ProfileWidgetsRepository {
       right(widgets);
 
   @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
+
+  @override
   Future<Either<Failure, Unit>> setTemplateFill(
     String id,
     ProfileWidgetSize size,
