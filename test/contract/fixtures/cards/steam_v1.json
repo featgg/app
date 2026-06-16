@@ -1,0 +1,30 @@
+{
+  "__PLACEHOLDER__": true,
+  "payload": {
+    "schema_version": 1,
+    "platform": "steam",
+    "title": "REPLACE_ME",
+    "subtitle": null,
+    "icon_image": "REPLACE_ME_https_url_or_null",
+    "hero_image": "REPLACE_ME_https_url_or_null",
+    "profile_url": "REPLACE_ME_https_url_or_null",
+    "stats": [
+      { "key": "REPLACE_ME", "value": 0, "unit": "REPLACE_ME_or_omit" }
+    ],
+    "last_updated": "REPLACE_ME_ISO_8601_UTC",
+    "data": {
+      "library_showcase": [
+        {
+          "app_id": 0,
+          "title": "REPLACE_ME",
+          "hours": 0,
+          "icon_image": "REPLACE_ME_https_url_or_null",
+          "hero_image": "REPLACE_ME_https_url_or_null"
+        }
+      ],
+      "recent_games": [
+        { "app_id": 0, "title": "REPLACE_ME", "hours_2weeks": 0 }
+      ]
+    }
+  }
+}

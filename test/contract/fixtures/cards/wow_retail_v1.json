@@ -1,0 +1,44 @@
+{
+  "__PLACEHOLDER__": true,
+  "payload": {
+    "schema_version": 1,
+    "platform": "wow_retail",
+    "title": "REPLACE_ME",
+    "subtitle": "REPLACE_ME_realm-REGION",
+    "icon_image": "REPLACE_ME_https_url_or_null",
+    "hero_image": "REPLACE_ME_https_url_or_null",
+    "profile_url": null,
+    "stats": [
+      { "key": "REPLACE_ME", "value": 0, "unit": "REPLACE_ME_or_omit" }
+    ],
+    "last_updated": "REPLACE_ME_ISO_8601_UTC",
+    "data": {
+      "profile": {
+        "race": "REPLACE_ME",
+        "faction": "REPLACE_ME_ALLIANCE_or_HORDE",
+        "class": "REPLACE_ME",
+        "spec": "REPLACE_ME_or_null",
+        "level": 0,
+        "ilvl_avg": 0,
+        "ilvl_equipped": 0
+      },
+      "mythic_plus": {
+        "rating": 0,
+        "best_runs": [
+          {
+            "keystone_level": 0,
+            "dungeon": { "name": "REPLACE_ME" },
+            "completed_timestamp": 0,
+            "duration": 0,
+            "is_completed_within_time": true,
+            "mythic_rating": { "rating": 0 }
+          }
+        ]
+      },
+      "recent_achievements": [
+        { "id": 0, "name": "REPLACE_ME", "completed_at": "REPLACE_ME_ISO_8601_UTC" }
+      ],
+      "attribution": "Data provided by Blizzard"
+    }
+  }
+}

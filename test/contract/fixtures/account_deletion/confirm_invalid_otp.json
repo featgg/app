@@ -1,0 +1,9 @@
+{
+  "__PLACEHOLDER__": true,
+  "status": 401,
+  "payload": {
+    "success": false,
+    "code": "INVALID_OTP",
+    "message": "REPLACE_ME_developer_message"
+  }
+}
