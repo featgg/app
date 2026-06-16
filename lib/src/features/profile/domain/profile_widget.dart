@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'template_catalog.dart';
 
@@ -34,6 +35,7 @@ final class ProfileWidget extends Equatable {
     required this.size,
     this.selection = DataMenuSelection.empty,
     this.templateFill = TemplateFill.empty,
+    this.composedFill = ComposedFill.empty,
   });
 
   final String id;
@@ -53,12 +55,17 @@ final class ProfileWidget extends Equatable {
   /// [ProfileWidgetKind.template] widget. Empty (default) otherwise.
   final TemplateFill templateFill;
 
+  /// The owner's freely-picked item set for a [ProfileWidgetKind.composed]
+  /// widget. Empty (default) otherwise.
+  final ComposedFill composedFill;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
     ProfileWidgetSize? size,
     DataMenuSelection? selection,
     TemplateFill? templateFill,
+    ComposedFill? composedFill,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -68,6 +75,7 @@ final class ProfileWidget extends Equatable {
     size: size ?? this.size,
     selection: selection ?? this.selection,
     templateFill: templateFill ?? this.templateFill,
+    composedFill: composedFill ?? this.composedFill,
   );
 
   @override
@@ -80,5 +88,6 @@ final class ProfileWidget extends Equatable {
     size,
     selection,
     templateFill,
+    composedFill,
   ];
 }

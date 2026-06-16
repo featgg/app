@@ -1202,5 +1202,21 @@
   "templateSlotEmpty": "Not set",
   "@templateSlotEmpty": {
     "description": "Shown in the slot-fill flow for a slot that has not been filled with a value."
+  },
+  "composedAdd": "Add composed card",
+  "@composedAdd": {
+    "description": "Button that adds a composed card to the profile; the owner freely picks which data-menu items it surfaces."
+  },
+  "composedEmpty": "No data yet. Pick an item to show a value.",
+  "@composedEmpty": {
+    "description": "Placeholder shown inside a composed card when none of its picked items resolve to a value yet."
+  },
+  "composedChooseTitle": "Choose items",
+  "@composedChooseTitle": {
+    "description": "Title of the sheet where the owner picks which data-menu items a composed card surfaces."
+  },
+  "composedEditItems": "Edit items",
+  "@composedEditItems": {
+    "description": "Composed card options-menu action that opens the item picker to add or remove the items the card surfaces."
   }
 }

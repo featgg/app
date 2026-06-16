@@ -170,6 +170,13 @@ class _ProfileContent extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
                   _AddTemplateButton(existing: widgetsState.value!),
                 ],
+                // A composed card needs no connection to add (its items
+                // soft-omit until picked and resolving), so the add is gated
+                // only by the widgets read for the position math.
+                if (widgetsState.hasValue) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _AddComposedButton(existing: widgetsState.value!),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 AsyncValueWidget<List<ProfileWidget>>(
                   value: widgetsState,
@@ -320,6 +327,45 @@ class _AddTemplateButton extends ConsumerWidget {
           const Icon(Icons.dashboard_customize_outlined),
           const SizedBox(width: AppSpacing.xs),
           Text(l10n.templateAdd),
+        ],
+      ),
+    );
+  }
+}
+
+/// Adds a composed-card widget to the owner's arrangement. Always available (a
+/// composed card needs no connection to be added; its items soft-omit until
+/// picked and resolving). The backend stays authoritative on the ≤50-widget cap
+/// and `position` uniqueness — a rejected insert surfaces through the
+/// controller's error channel and the read reconciles on invalidate.
+class _AddComposedButton extends ConsumerWidget {
+  const _AddComposedButton({required this.existing});
+
+  final List<ProfileWidget> existing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
+    return InkWell(
+      key: const Key('profileComposedAddButton'),
+      onTap: () {
+        // Append after the current max position to avoid a foreseeable unique
+        // collision; the backend constraint stays authoritative.
+        final nextPosition = existing.isEmpty
+            ? 0
+            : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) +
+                  1;
+        ref
+            .read(profileWidgetsControllerProvider.notifier)
+            .addComposed(position: nextPosition, size: ProfileWidgetSize.small);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.view_agenda_outlined),
+          const SizedBox(width: AppSpacing.xs),
+          Text(l10n.composedAdd),
         ],
       ),
     );
