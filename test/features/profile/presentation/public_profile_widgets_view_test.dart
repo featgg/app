@@ -373,6 +373,33 @@ void main() {
     expect(find.text('2800'), findsOneWidget);
   });
 
+  testWidgets('an empty template widget is omitted for the visitor', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: const [
+          ProfileWidget(
+            id: 'empty-tmpl',
+            kind: ProfileWidgetKind.template,
+            platform: null,
+            position: 0,
+            isEnabled: true,
+            size: ProfileWidgetSize.small,
+            templateFill: TemplateFill('my_ranks', {}),
+          ),
+        ],
+        publicCards: const {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A visitor never sees an empty card — neither the card nor the owner-only
+    // "fill a slot" placeholder renders.
+    expect(find.byKey(const Key('templateCard_empty-tmpl')), findsNothing);
+    expect(find.byKey(const Key('templateEmpty_empty-tmpl')), findsNothing);
+  });
+
   testWidgets('no enabled widgets → empty state', (tester) async {
     await tester.pumpWidget(_harness(widgets: const []));
     await tester.pumpAndSettle();

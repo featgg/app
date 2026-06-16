@@ -29,7 +29,12 @@ import 'template_labels.dart';
 /// renderer needs no injected card builder. A slot whose card is loading or
 /// errored simply omits its row — it never errors the whole card.
 class TemplateCardView extends ConsumerWidget {
-  const TemplateCardView({super.key, required this.widget, this.cardSource});
+  const TemplateCardView({
+    super.key,
+    required this.widget,
+    this.cardSource,
+    this.showEmptyPlaceholder = true,
+  });
 
   final ProfileWidget widget;
 
@@ -37,6 +42,11 @@ class TemplateCardView extends ConsumerWidget {
   /// ([ownerCardProvider]); the visitor render injects a public source so the
   /// same view renders a profile's PUBLIC cards.
   final CardSource? cardSource;
+
+  /// When no slot resolves, the owner sees a "fill a slot" placeholder so the
+  /// card stays actionable. A visitor has no such action, so the visitor render
+  /// passes false to omit an empty card entirely instead of showing it.
+  final bool showEmptyPlaceholder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -94,6 +104,10 @@ class TemplateCardView extends ConsumerWidget {
         );
       }
     }
+
+    // Omit an empty card for a visitor (the placeholder is an owner-only
+    // call-to-action).
+    if (rows.isEmpty && !showEmptyPlaceholder) return const SizedBox.shrink();
 
     final title = definition == null
         ? null

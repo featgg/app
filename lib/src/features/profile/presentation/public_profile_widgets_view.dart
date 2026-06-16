@@ -93,12 +93,22 @@ class _VisitorTile extends ConsumerWidget {
 
     if (widget.kind == ProfileWidgetKind.template) {
       return ClipRect(
-        child: TemplateCardView(widget: widget, cardSource: publicSource()),
+        child: TemplateCardView(
+          widget: widget,
+          cardSource: publicSource(),
+          // A visitor never sees an empty card — omit it instead of the
+          // owner-only "fill a slot" placeholder.
+          showEmptyPlaceholder: false,
+        ),
       );
     }
     if (widget.kind == ProfileWidgetKind.composed) {
       return ClipRect(
-        child: ComposedCardView(widget: widget, cardSource: publicSource()),
+        child: ComposedCardView(
+          widget: widget,
+          cardSource: publicSource(),
+          showEmptyPlaceholder: false,
+        ),
       );
     }
 
