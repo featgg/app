@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../connections/domain/connection.dart';
@@ -26,5 +27,12 @@ Future<GameCard?> publicOwnerCard(
 ) async {
   final repo = ref.watch(cardsRepositoryProvider);
   final result = await repo.fetchPublicCard(userId, platform);
-  return result.fold((failure) => throw failure, (c) => c);
+  final card = result.fold((failure) => throw failure, (c) => c);
+  // Viewer-aware freshness gate (feed contract): every visitor is a non-owner,
+  // so a stale WoW card is hidden entirely. Nulling it here hides it across ALL
+  // visitor paths — platform, template, and composed — because each resolves
+  // through this source; the platform card view's own gate only covers the
+  // platform path.
+  if (card != null && card.isStaleAt(clock.now())) return null;
+  return card;
 }

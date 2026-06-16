@@ -115,19 +115,22 @@ final class _SplitCardsRepository implements CardsRepository {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-GameCard _card(Platform platform, {List<CardStat> stats = const []}) =>
-    GameCard(
-      schemaVersion: 1,
-      platform: platform,
-      title: '${platform.name}-public-card',
-      subtitle: null,
-      iconImage: null,
-      heroImage: null,
-      profileUrl: null,
-      stats: stats,
-      lastUpdated: DateTime.utc(2026, 6, 1),
-      data: null,
-    );
+GameCard _card(
+  Platform platform, {
+  List<CardStat> stats = const [],
+  DateTime? lastUpdated,
+}) => GameCard(
+  schemaVersion: 1,
+  platform: platform,
+  title: '${platform.name}-public-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: stats,
+  lastUpdated: lastUpdated ?? DateTime.utc(2026, 6, 1),
+  data: null,
+);
 
 ProfileWidget _widget({
   required String id,
@@ -307,6 +310,68 @@ void main() {
       expect(find.text('1500'), findsNWidgets(2));
     },
   );
+
+  testWidgets(
+    'a stale WoW card is hidden from the visitor (viewer-aware freshness gate)',
+    (tester) async {
+      // A composed widget bound to a WoW stat, with a STALE public WoW card
+      // (>30 days). The feed contract hides stale WoW from any non-owner viewer
+      // entirely, so the value must not render on the visitor profile.
+      await tester.pumpWidget(
+        _harness(
+          widgets: const [
+            ProfileWidget(
+              id: 'comp',
+              kind: ProfileWidgetKind.composed,
+              platform: null,
+              position: 0,
+              isEnabled: true,
+              size: ProfileWidgetSize.small,
+              composedFill: ComposedFill(['wow_retail.mythic_plus_rating']),
+            ),
+          ],
+          publicCards: {
+            Platform.wowRetail: _card(
+              Platform.wowRetail,
+              stats: const [CardStat(key: 'mythic_plus_rating', value: 2800)],
+              lastUpdated: DateTime.now().subtract(const Duration(days: 40)),
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('2800'), findsNothing);
+    },
+  );
+
+  testWidgets('a fresh WoW card renders for the visitor', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: const [
+          ProfileWidget(
+            id: 'comp',
+            kind: ProfileWidgetKind.composed,
+            platform: null,
+            position: 0,
+            isEnabled: true,
+            size: ProfileWidgetSize.small,
+            composedFill: ComposedFill(['wow_retail.mythic_plus_rating']),
+          ),
+        ],
+        publicCards: {
+          Platform.wowRetail: _card(
+            Platform.wowRetail,
+            stats: const [CardStat(key: 'mythic_plus_rating', value: 2800)],
+            lastUpdated: DateTime.now(),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2800'), findsOneWidget);
+  });
 
   testWidgets('no enabled widgets → empty state', (tester) async {
     await tester.pumpWidget(_harness(widgets: const []));
