@@ -132,6 +132,7 @@ class AccountDeletionController extends _$AccountDeletionController {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(accountDeletionRepositoryProvider);
     final result = await repo.confirmDeletion(code);
+    if (!ref.mounted) return;
     result.fold(
       _applyFailure,
       (schedule) => state = state.copyWith(
@@ -150,6 +151,7 @@ class AccountDeletionController extends _$AccountDeletionController {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(accountDeletionRepositoryProvider);
     final result = await repo.cancelDeletion();
+    if (!ref.mounted) return;
     result.fold(
       (failure) => state = state.copyWith(submitting: false, failure: failure),
       (_) => state = state.copyWith(
@@ -171,6 +173,7 @@ class AccountDeletionController extends _$AccountDeletionController {
     state = state.copyWith(submitting: true, clearFailure: true);
     final repo = ref.read(accountDeletionRepositoryProvider);
     final result = await repo.requestDeletion();
+    if (!ref.mounted) return;
     result.fold(_applyFailure, (_) {
       state = state.copyWith(
         step: DeletionStep.awaitingCode,
