@@ -1218,5 +1218,9 @@
   "composedEditItems": "Edit items",
   "@composedEditItems": {
     "description": "Composed card options-menu action that opens the item picker to add or remove the items the card surfaces."
+  },
+  "showcaseGameUnavailable": "Game unavailable",
+  "@showcaseGameUnavailable": {
+    "description": "Placeholder shown in place of a showcase card when the selected game is not available — the platform is unlinked, its card is still loading, or the game rotated out of the current library."
   }
 }

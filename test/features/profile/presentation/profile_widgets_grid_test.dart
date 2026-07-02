@@ -9,6 +9,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_grid.dart';
 import 'package:flutter/material.dart';
@@ -142,6 +143,37 @@ ProfileWidget _templateWidget({
   isEnabled: true,
   size: ProfileWidgetSize.small,
   templateFill: fill,
+);
+
+ProfileWidget _showcaseWidget({required String id, required int position}) =>
+    ProfileWidget(
+      id: id,
+      kind: ProfileWidgetKind.showcase,
+      platform: Platform.steam,
+      position: position,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+      showcaseSelection: const ShowcaseSelection(gameRef: '730'),
+    );
+
+/// A Steam card carrying one library-showcase entry (art-less to avoid decoding
+/// a real image in tests) that the showcase view resolves against.
+GameCard _steamShowcaseCard() => GameCard(
+  schemaVersion: 1,
+  platform: Platform.steam,
+  title: 'steam-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+  data: const SteamCardData(
+    libraryShowcase: [
+      LibraryShowcaseEntry(appId: 730, title: 'Counter-Strike 2', hours: 1234),
+    ],
+    recentGames: [],
+  ),
 );
 
 ProfileWidget _widget({
@@ -646,6 +678,31 @@ void main() {
     // The template menu shows Fill slots (not Customize data) and Remove.
     expect(find.text(l10n.templateFillSlots), findsOneWidget);
     expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+  });
+
+  testWidgets('a showcase tile routes to ShowcaseCardView with a customize-less '
+      'menu', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // The showcase tile renders via ShowcaseCardView (its keyed card).
+    expect(find.byKey(const Key('profileWidgetTile_sc')), findsOneWidget);
+    expect(find.byKey(const Key('showcaseCard_sc')), findsOneWidget);
+
+    // Its options menu offers only remove (the game picker is a later slice), so
+    // no customize / fill-slots / edit-items entry is surfaced.
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
+    expect(find.text(l10n.templateFillSlots), findsNothing);
+    expect(find.text(l10n.composedEditItems), findsNothing);
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
   });
 }

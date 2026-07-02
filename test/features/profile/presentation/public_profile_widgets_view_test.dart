@@ -9,6 +9,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/public_profile_widgets_view.dart';
 import 'package:flutter/material.dart';
@@ -144,6 +145,26 @@ ProfileWidget _widget({
   position: position,
   isEnabled: isEnabled,
   size: ProfileWidgetSize.small,
+);
+
+/// A public Steam card carrying one art-less library-showcase entry the showcase
+/// view resolves against (art-less to avoid decoding a real image in tests).
+GameCard _steamShowcaseCard() => GameCard(
+  schemaVersion: 1,
+  platform: Platform.steam,
+  title: 'steam-public-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+  data: const SteamCardData(
+    libraryShowcase: [
+      LibraryShowcaseEntry(appId: 730, title: 'Counter-Strike 2', hours: 1234),
+    ],
+    recentGames: [],
+  ),
 );
 
 Widget _harness({
@@ -426,6 +447,34 @@ void main() {
 
     expect(find.byKey(const Key('publicProfileNoCards')), findsOneWidget);
   });
+
+  testWidgets(
+    'a showcase widget renders via ShowcaseCardView using the public source',
+    (tester) async {
+      // fetchPublicCard returns the Steam card; fetchMyCard is null. The
+      // showcase resolves only if the visitor tile bound the public source.
+      await tester.pumpWidget(
+        _harness(
+          widgets: const [
+            ProfileWidget(
+              id: 'sc',
+              kind: ProfileWidgetKind.showcase,
+              platform: Platform.steam,
+              position: 0,
+              isEnabled: true,
+              size: ProfileWidgetSize.small,
+              showcaseSelection: ShowcaseSelection(gameRef: '730'),
+            ),
+          ],
+          publicCards: {Platform.steam: _steamShowcaseCard()},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('publicWidgetTile_sc')), findsOneWidget);
+      expect(find.byKey(const Key('showcaseCard_sc')), findsOneWidget);
+    },
+  );
 
   testWidgets('read-only: no options menu and no add affordance', (
     tester,
