@@ -134,5 +134,22 @@ void main() {
       expect(state, isA<AsyncError<void>>());
       expect(state.error, isA<NetworkFailure>());
     });
+
+    test(
+      'an after-await state write on a disposed provider is a no-op',
+      () async {
+        final repo = _RecordingProfileRepository();
+        final container = _container(repo);
+        final notifier = container.read(privacyControllerProvider.notifier);
+
+        // Start the change, then dispose before the first await (fetchMyProfile)
+        // resolves. The ref.mounted guard must skip the post-await state write.
+        final future = notifier.setPrivacy(ProfilePrivacy.private);
+        container.dispose();
+
+        // Must complete without throwing UnmountedRefException.
+        await expectLater(future, completes);
+      },
+    );
   });
 }

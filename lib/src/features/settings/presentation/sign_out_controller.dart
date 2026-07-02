@@ -17,6 +17,7 @@ class SignOutController extends _$SignOutController {
   Future<void> signOut() async {
     state = const AsyncLoading();
     final result = await ref.read(authRepositoryProvider).signOut();
+    if (!ref.mounted) return;
     result.fold(
       (failure) => state = AsyncError(failure, StackTrace.current),
       (_) => state = const AsyncData(null),

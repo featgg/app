@@ -81,5 +81,23 @@ void main() {
       expect(state, isA<AsyncError<void>>());
       expect(state.error, isA<NetworkFailure>());
     });
+
+    test(
+      'an after-await state write on a disposed provider is a no-op',
+      () async {
+        final repo = _RecordingAuthRepository();
+        final container = _container(repo);
+        final notifier = container.read(signOutControllerProvider.notifier);
+
+        // Start the sign-out, then dispose before the await resolves — the case
+        // where a successful sign-out's redirect tears down the Settings screen
+        // mid-flight. The ref.mounted guard must skip the post-await state write.
+        final future = notifier.signOut();
+        container.dispose();
+
+        // Must complete without throwing UnmountedRefException.
+        await expectLater(future, completes);
+      },
+    );
   });
 }

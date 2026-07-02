@@ -24,12 +24,14 @@ class AccountSectionCancelController extends _$AccountSectionCancelController {
 
   Future<void> cancel() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    final next = await AsyncValue.guard(() async {
       final result = await ref
           .read(accountDeletionRepositoryProvider)
           .cancelDeletion();
       result.fold((f) => throw f, (_) {});
-      ref.invalidate(settingsDeletionStatusProvider);
     });
+    if (!ref.mounted) return;
+    state = next;
+    if (!next.hasError) ref.invalidate(settingsDeletionStatusProvider);
   }
 }

@@ -27,6 +27,7 @@ class PrivacyController extends _$PrivacyController {
     final repo = ref.read(profileRepositoryProvider);
 
     final fetchResult = await repo.fetchMyProfile();
+    if (!ref.mounted) return;
     final profile = fetchResult.fold((failure) {
       state = AsyncError(failure, StackTrace.current);
       return null;
@@ -42,6 +43,7 @@ class PrivacyController extends _$PrivacyController {
     );
 
     final updateResult = await repo.updateMyProfile(edit);
+    if (!ref.mounted) return;
     updateResult.fold(
       (failure) {
         state = AsyncError(failure, StackTrace.current);
