@@ -5,17 +5,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/core.dart';
 import '../../../core/error/failure.dart';
-import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
-import '../../connections/domain/platform_descriptor.dart';
 import '../domain/profile.dart';
 import '../domain/profile_widget.dart';
-import 'featured_platform_provider.dart';
 import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
 import 'profile_widgets_grid.dart';
 import 'profile_widgets_provider.dart';
-import 'template_picker.dart';
+import 'showcase_picker.dart';
 
 /// Builds the full card view for the signed-in owner's [GameCard]. Injected at
 /// the composition root (the router) so this feature's presentation stays
@@ -112,7 +109,6 @@ class _ProfileContent extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     final widgetsState = ref.watch(ownerProfileWidgetsProvider);
-    final connectedState = ref.watch(connectedPlatformsProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -153,30 +149,11 @@ class _ProfileContent extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 _PrivacyIndicator(privacy: profile.privacy, l10n: l10n),
                 const SizedBox(height: AppSpacing.lg),
-                // Offer Add only once BOTH the widgets read and the connected-
-                // platforms read have a value: the widgets read supplies the
-                // position math (no collision on the unique column) and the
-                // addable set is connected − already-added. While either read is
-                // loading or errored, Add is absent.
-                if (widgetsState.hasValue && connectedState.hasValue)
-                  _AddWidgetButton(
-                    existing: widgetsState.value!,
-                    connected: connectedState.value!,
-                  ),
-                // Templates need no connection to add (slots soft-omit until
-                // filled), so the add is gated only by the widgets read for the
-                // position math.
-                if (widgetsState.hasValue) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _AddTemplateButton(existing: widgetsState.value!),
-                ],
-                // A composed card needs no connection to add (its items
-                // soft-omit until picked and resolving), so the add is gated
-                // only by the widgets read for the position math.
-                if (widgetsState.hasValue) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _AddComposedButton(existing: widgetsState.value!),
-                ],
+                // One add entry point, shown once the widgets read has a value:
+                // the read supplies the position math (no collision on the
+                // unique column). While it is loading or errored, Add is absent.
+                if (widgetsState.hasValue)
+                  _AddCardButton(existing: widgetsState.value!),
                 const SizedBox(height: AppSpacing.md),
                 AsyncValueWidget<List<ProfileWidget>>(
                   value: widgetsState,
@@ -209,163 +186,30 @@ class _ProfileContent extends ConsumerWidget {
   }
 }
 
-/// Adds a platform widget to the owner's arrangement. Lists only the platforms
-/// the user has connected and has not already added; shows a hint when there is
-/// nothing to add. The backend remains authoritative on the ≤50-widget cap and
-/// `position` uniqueness — a rejected insert surfaces through the controller's
-/// error channel and the read reconciles on invalidate.
-class _AddWidgetButton extends ConsumerWidget {
-  const _AddWidgetButton({required this.existing, required this.connected});
+/// The single add-card entry point on the owner's profile. Opens the visual
+/// game picker (a sheet of the connected account's library art). The backend
+/// stays authoritative on the ≤50-widget cap and `position` uniqueness — a
+/// rejected insert surfaces through the controller's error channel and the read
+/// reconciles on invalidate. Shown only once the widgets read has a value, so
+/// the sheet can compute the insert position from the current arrangement.
+class _AddCardButton extends StatelessWidget {
+  const _AddCardButton({required this.existing});
 
   final List<ProfileWidget> existing;
-  final List<Platform> connected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    // A platform is addable when it is connected AND not already placed as a
-    // widget (at most one widget per platform is supported, so a platform that
-    // already has a widget is excluded to avoid adding it twice).
-    final alreadyAdded = {
-      for (final w in existing)
-        if (w.platform != null) w.platform!,
-    };
-    final addable = [
-      for (final p in connected)
-        if (!alreadyAdded.contains(p)) p,
-    ];
-
-    if (addable.isEmpty) {
-      // Nothing connectable to add: surface a clear, non-actionable hint rather
-      // than an enabled menu that opens empty. Distinguish "no connections at
-      // all" (connect first) from "every connected platform already added".
-      final noConnections = connected.isEmpty;
-      return Text(
-        noConnections
-            ? l10n.profileWidgetAddConnectFirst
-            : l10n.profileWidgetAddAllAdded,
-        key: noConnections
-            ? const Key('profileWidgetAddNoConnections')
-            : const Key('profileWidgetAddAllAdded'),
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        textAlign: TextAlign.center,
-      );
-    }
-
-    return PopupMenuButton<Platform>(
-      key: const Key('profileWidgetAddButton'),
-      tooltip: l10n.profileWidgetAdd,
-      onSelected: (platform) {
-        // Append after the current max position to avoid a foreseeable unique
-        // collision; the backend constraint stays authoritative.
-        final nextPosition = existing.isEmpty
-            ? 0
-            : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) +
-                  1;
-        ref
-            .read(profileWidgetsControllerProvider.notifier)
-            .addPlatform(
-              platform: platform,
-              position: nextPosition,
-              size: ProfileWidgetSize.small,
-            );
-      },
-      itemBuilder: (context) => [
-        for (final platform in addable)
-          PopupMenuItem(
-            value: platform,
-            child: Text(
-              l10n.profileWidgetAddPlatform(
-                platformDescriptors[platform]?.displayName ?? platform.name,
-              ),
-            ),
-          ),
-      ],
+    return InkWell(
+      key: const Key('profileAddCardButton'),
+      onTap: () => showShowcasePicker(context, existing: existing),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.add),
           const SizedBox(width: AppSpacing.xs),
-          Text(l10n.profileWidgetAdd),
-        ],
-      ),
-    );
-  }
-}
-
-/// Adds a template widget to the owner's arrangement. Always available (a
-/// template needs no connection to be added; slots soft-omit until filled).
-/// The backend stays authoritative on the ≤50-widget cap and `position`
-/// uniqueness — a rejected insert surfaces through the controller's error
-/// channel and the read reconciles on invalidate.
-class _AddTemplateButton extends ConsumerWidget {
-  const _AddTemplateButton({required this.existing});
-
-  final List<ProfileWidget> existing;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-
-    return InkWell(
-      key: const Key('profileTemplateAddButton'),
-      onTap: () {
-        // Append after the current max position to avoid a foreseeable unique
-        // collision; the backend constraint stays authoritative.
-        final nextPosition = existing.isEmpty
-            ? 0
-            : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) +
-                  1;
-        showTemplatePicker(context, nextPosition);
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.dashboard_customize_outlined),
-          const SizedBox(width: AppSpacing.xs),
-          Text(l10n.templateAdd),
-        ],
-      ),
-    );
-  }
-}
-
-/// Adds a composed-card widget to the owner's arrangement. Always available (a
-/// composed card needs no connection to be added; its items soft-omit until
-/// picked and resolving). The backend stays authoritative on the ≤50-widget cap
-/// and `position` uniqueness — a rejected insert surfaces through the
-/// controller's error channel and the read reconciles on invalidate.
-class _AddComposedButton extends ConsumerWidget {
-  const _AddComposedButton({required this.existing});
-
-  final List<ProfileWidget> existing;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-
-    return InkWell(
-      key: const Key('profileComposedAddButton'),
-      onTap: () {
-        // Append after the current max position to avoid a foreseeable unique
-        // collision; the backend constraint stays authoritative.
-        final nextPosition = existing.isEmpty
-            ? 0
-            : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) +
-                  1;
-        ref
-            .read(profileWidgetsControllerProvider.notifier)
-            .addComposed(position: nextPosition, size: ProfileWidgetSize.small);
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.view_agenda_outlined),
-          const SizedBox(width: AppSpacing.xs),
-          Text(l10n.composedAdd),
+          Text(l10n.profileAddCard),
         ],
       ),
     );

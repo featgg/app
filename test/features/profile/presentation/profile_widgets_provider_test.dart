@@ -5,6 +5,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,6 +53,14 @@ final class _FakeRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -66,6 +75,13 @@ final class _FakeRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
   ) async => throw UnimplementedError();
 
   @override

@@ -8,6 +8,7 @@ import '../../connections/domain/connection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
+import '../domain/showcase_selection.dart';
 import 'profile_widgets_provider.dart';
 
 part 'profile_widgets_controller.g.dart';
@@ -84,6 +85,22 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     required ProfileWidgetSize size,
   }) => _run((repo) => repo.addComposedWidget(position: position, size: size));
 
+  /// Adds a showcase widget for [platform] and [selection] at [position] with
+  /// [size].
+  Future<void> addShowcase({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addShowcaseWidget(
+      platform: platform,
+      selection: selection,
+      position: position,
+      size: size,
+    ),
+  );
+
   /// Toggles [itemId] in composed-card widget [widgetId]'s picked set.
   ///
   /// Read-modify-write against the live read provider, not a snapshot from the
@@ -116,6 +133,14 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
   /// Sets the size on the widget [id].
   Future<void> resize(String id, ProfileWidgetSize size) =>
       _run((repo) => repo.setSize(id, size));
+
+  /// Sets the size on the showcase widget [id], carrying its [selection]
+  /// through the rewritten settings envelope.
+  Future<void> resizeShowcase(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
 
   /// Persists a new ordering of widget ids.
   Future<void> reorder(List<String> orderedIds) =>

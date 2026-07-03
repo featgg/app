@@ -234,7 +234,7 @@ class _TextBlock extends StatelessWidget {
     );
     final hero = _TintedText(
       textKey: Key('showcaseHero_$widgetId'),
-      text: formatShowcaseHeroValue(resolved.heroValue),
+      text: _heroText(l10n, size, resolved),
       heroImage: resolved.heroImage,
       style: textTheme.headlineMedium?.copyWith(fontWeight: AppTypography.bold),
       blend: _heroTintBlend,
@@ -316,6 +316,21 @@ class _TintedText extends ConsumerWidget {
       style: (style ?? const TextStyle()).copyWith(color: color),
     );
   }
+}
+
+/// Hero text by size: the large card renders the bare value (its meta line
+/// names the stat); wide and small drop the meta line, so the value carries
+/// its unit instead of rendering context-free.
+String _heroText(
+  AppLocalizations l10n,
+  ProfileWidgetSize size,
+  ResolvedShowcase resolved,
+) {
+  final value = formatShowcaseHeroValue(resolved.heroValue);
+  if (size == ProfileWidgetSize.large) return value;
+  return switch (resolved.hero) {
+    ShowcaseHeroStat.hours => l10n.showcaseHeroHoursCompact(value),
+  };
 }
 
 /// Maps the hero stat to its localized descriptor. In slice 1 the meta line

@@ -5,6 +5,7 @@ import '../../connections/domain/connection.dart';
 import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'profile_widget.dart';
+import 'showcase_selection.dart';
 import 'template_catalog.dart';
 
 /// Reads and mutates the signed-in owner's `profile_widgets` arrangement.
@@ -43,11 +44,29 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a showcase widget for [platform] with [selection] at [position]
+  /// and [size], enabled.
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
   /// Sets the size (`settings.size`) for [id].
   Future<Either<Failure, Unit>> setSize(String id, ProfileWidgetSize size);
+
+  /// Sets the size for the showcase widget [id]. The settings envelope
+  /// carries the game [selection] alongside the size, so a size change must
+  /// rewrite both — a size-only write would drop the selection.
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  );
 
   /// Persists the data-menu [selection] for [id], merged into the existing
   /// `settings` envelope alongside [size] (preserved verbatim). Additive: it

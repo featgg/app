@@ -12,6 +12,7 @@ import '../domain/composed_card.dart';
 import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_repository.dart';
+import '../domain/showcase_selection.dart';
 import '../domain/template_catalog.dart';
 import 'profile_widget_dto.dart';
 import 'profile_widgets_data_source.dart';
@@ -153,6 +154,36 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final wireValue =
+          platformDescriptors[platform]?.wireValue ?? platform.name;
+      final dto = await _source.insertWidget({
+        'platform': wireValue,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.showcase),
+        'position': position,
+        'is_enabled': true,
+        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     try {
       final userId = _currentUserId();
@@ -177,6 +208,24 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
           'schema_version': kProfileWidgetSettingsVersion,
           'size': profileWidgetSizeToWire(size),
         },
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(id, {
+        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
       });
       return right(unit);
     } catch (e, st) {

@@ -130,6 +130,8 @@ void main() {
       expect(find.byKey(const Key('showcaseLabel_s-1')), findsOneWidget);
       expect(find.byKey(const Key('showcaseHero_s-1')), findsOneWidget);
       expect(find.byKey(const Key('showcaseMeta_s-1')), findsOneWidget);
+      // The meta line names the stat, so the hero stays the bare value.
+      expect(find.text('1234'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -181,7 +183,10 @@ void main() {
       // Fixture-controlled data values (game title uppercased, hero number),
       // not localized copy.
       expect(find.text('COUNTER-STRIKE 2'), findsOneWidget);
-      expect(find.text('1234'), findsOneWidget);
+      // Small drops the meta line, so the hero carries a unit: the fixture
+      // value must be present but no longer renders bare.
+      expect(find.text('1234'), findsNothing);
+      expect(find.textContaining('1234'), findsOneWidget);
     });
   });
 

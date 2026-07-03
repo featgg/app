@@ -65,6 +65,14 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -79,6 +87,13 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
   ) async => throw UnimplementedError();
 
   @override

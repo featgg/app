@@ -10,6 +10,7 @@ import 'package:featgg/src/features/profile/data/profile_widgets_data_source.dar
 import 'package:featgg/src/features/profile/data/profile_widgets_repository_impl.dart';
 import 'package:featgg/src/features/profile/data/supabase_profile_widgets_data_source.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -482,6 +483,74 @@ void main() {
     );
   });
 
+  group('addShowcaseWidget', () {
+    test('writes the showcase envelope and maps the row', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'sc',
+          'platform': 'steam',
+          'type': 'showcase',
+          'position': 3,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'small',
+            'showcase': {'game': '730', 'hero': 'hours'},
+          },
+        }),
+      );
+      final result = await _repo(source, _RecordingReporter())
+          .addShowcaseWidget(
+            platform: Platform.steam,
+            selection: const ShowcaseSelection(gameRef: '730'),
+            position: 3,
+            size: ProfileWidgetSize.small,
+          );
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'sc');
+        expect(widget.kind, ProfileWidgetKind.showcase);
+        expect(widget.platform, Platform.steam);
+        expect(widget.showcaseSelection.gameRef, '730');
+      });
+
+      // The captured write is the personalization.md showcase contract: a
+      // non-null Steam platform plus the showcase settings sub-object.
+      expect(source.lastInsert!['type'], 'showcase');
+      expect(source.lastInsert!['platform'], 'steam');
+      expect(source.lastInsert!['position'], 3);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'small');
+      final showcase = settings['showcase'] as Map<String, dynamic>;
+      expect(showcase['game'], '730');
+      expect(showcase['hero'], 'hours');
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      // A stale-snapshot position collision or the per-user cap surfaces as a
+      // 23xxx violation; the backend constraint stays authoritative.
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'duplicate', code: '23505'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).addShowcaseWidget(
+        platform: Platform.steam,
+        selection: const ShowcaseSelection(gameRef: '730'),
+        position: 0,
+        size: ProfileWidgetSize.small,
+      );
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
   group('mutations write the expected values', () {
     test('setSize writes the v1 envelope', () async {
       final source = _FakeDataSource();
@@ -495,6 +564,28 @@ void main() {
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
       expect(settings['size'], 'wide');
     });
+
+    test(
+      'setShowcaseSize rewrites the envelope preserving the selection',
+      () async {
+        final source = _FakeDataSource();
+        await _repo(source, _RecordingReporter()).setShowcaseSize(
+          'sc',
+          ProfileWidgetSize.wide,
+          const ShowcaseSelection(gameRef: '730'),
+        );
+
+        // A showcase size change rides the full envelope: the game selection
+        // must survive the write or the card resolves as unavailable.
+        final settings =
+            source.lastUpdate!.values['settings'] as Map<String, dynamic>;
+        expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+        expect(settings['size'], 'wide');
+        final showcase = settings['showcase'] as Map<String, dynamic>;
+        expect(showcase['game'], '730');
+        expect(showcase['hero'], 'hours');
+      },
+    );
 
     test('reorder writes a contiguous 0..n-1 sequence', () async {
       final source = _FakeDataSource();
