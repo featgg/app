@@ -1223,6 +1223,15 @@
   "@showcaseGameUnavailable": {
     "description": "Placeholder shown in place of a showcase card when the selected game is not available — the platform is unlinked, its card is still loading, or the game rotated out of the current library."
   },
+  "showcaseHeroHoursCompact": "{value} h",
+  "@showcaseHeroHoursCompact": {
+    "description": "Hero stat on the small and wide showcase cards, where the meta descriptor line does not fit: the hours value carries its unit so the number never renders context-free.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "profileAddCard": "Add card",
   "@profileAddCard": {
     "description": "Label for the single add-card entry point on the owner's profile that opens the visual game picker."
