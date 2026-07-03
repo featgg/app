@@ -291,5 +291,9 @@
   "composedEmpty": "Ainda não há dados. Escolha um item para mostrar um valor.",
   "composedChooseTitle": "Escolher itens",
   "composedEditItems": "Editar itens",
-  "showcaseGameUnavailable": "Jogo indisponível"
+  "showcaseGameUnavailable": "Jogo indisponível",
+  "profileAddCard": "Adicionar cartão",
+  "showcasePickerTitle": "Escolha um jogo",
+  "showcasePickerEmpty": "Ainda não há jogos para exibir. Conecte uma conta de jogo para começar.",
+  "showcasePickerAllAdded": "Você já exibiu todos os jogos disponíveis."
 }

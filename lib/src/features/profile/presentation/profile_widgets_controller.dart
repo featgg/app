@@ -8,6 +8,7 @@ import '../../connections/domain/connection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
+import '../domain/showcase_selection.dart';
 import 'profile_widgets_provider.dart';
 
 part 'profile_widgets_controller.g.dart';
@@ -83,6 +84,22 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     required int position,
     required ProfileWidgetSize size,
   }) => _run((repo) => repo.addComposedWidget(position: position, size: size));
+
+  /// Adds a showcase widget for [platform] and [selection] at [position] with
+  /// [size].
+  Future<void> addShowcase({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addShowcaseWidget(
+      platform: platform,
+      selection: selection,
+      position: position,
+      size: size,
+    ),
+  );
 
   /// Toggles [itemId] in composed-card widget [widgetId]'s picked set.
   ///

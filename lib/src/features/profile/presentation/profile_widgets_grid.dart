@@ -240,6 +240,9 @@ enum _WidgetMenuAction {
   customizeData,
   fillSlots,
   editItems,
+  resizeSmall,
+  resizeWide,
+  resizeLarge,
   remove,
   moveUp,
   moveDown,
@@ -277,6 +280,12 @@ class _WidgetOptionsMenu extends ConsumerWidget {
             showTemplateSlots(context, widget);
           case _WidgetMenuAction.editItems:
             showComposedItemPicker(context, widget);
+          case _WidgetMenuAction.resizeSmall:
+            controller.resize(widget.id, ProfileWidgetSize.small);
+          case _WidgetMenuAction.resizeWide:
+            controller.resize(widget.id, ProfileWidgetSize.wide);
+          case _WidgetMenuAction.resizeLarge:
+            controller.resize(widget.id, ProfileWidgetSize.large);
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
           case _WidgetMenuAction.moveUp:
@@ -300,13 +309,28 @@ class _WidgetOptionsMenu extends ConsumerWidget {
             value: _WidgetMenuAction.editItems,
             child: Text(l10n.composedEditItems),
           )
-        // A showcase widget has no in-app customize entry yet (its game picker
-        // is a later slice), so only move/remove are surfaced for it.
         else if (widget.kind == ProfileWidgetKind.platform)
           PopupMenuItem(
             value: _WidgetMenuAction.customizeData,
             child: Text(l10n.profileWidgetCustomizeData),
           ),
+        // A showcase widget surfaces its size on the card itself: pick a
+        // footprint and the card re-renders at that size. Scoped to showcase —
+        // the other kinds' size is not yet in-card editable.
+        if (widget.kind == ProfileWidgetKind.showcase) ...[
+          PopupMenuItem(
+            value: _WidgetMenuAction.resizeSmall,
+            child: Text(l10n.profileWidgetSizeSmall),
+          ),
+          PopupMenuItem(
+            value: _WidgetMenuAction.resizeWide,
+            child: Text(l10n.profileWidgetSizeWide),
+          ),
+          PopupMenuItem(
+            value: _WidgetMenuAction.resizeLarge,
+            child: Text(l10n.profileWidgetSizeLarge),
+          ),
+        ],
         if (canMoveUp)
           PopupMenuItem(
             value: _WidgetMenuAction.moveUp,

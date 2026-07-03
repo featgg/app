@@ -11,6 +11,7 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dar
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
+import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -89,6 +90,14 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -104,6 +113,87 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
     String id,
     ProfileWidgetSize size,
   ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setDataMenuSelection(
+    String id,
+    ProfileWidgetSize size,
+    DataMenuSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
+      throw UnimplementedError();
+}
+
+/// Records the size passed to [setSize] so the showcase resize flow is provable
+/// at the repository boundary the controller drives.
+final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
+  ProfileWidgetSize? lastSetSize;
+
+  @override
+  Future<Either<Failure, Unit>> setSize(
+    String id,
+    ProfileWidgetSize size,
+  ) async {
+    lastSetSize = size;
+    return right(unit);
+  }
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
+      right(const []);
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addPlatformWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
+    String id,
+    ProfileWidgetSize size,
+    TemplateFill fill,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addComposedWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setComposedFill(
+    String id,
+    ProfileWidgetSize size,
+    ComposedFill fill,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> removeWidget(String id) async =>
+      throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
@@ -194,13 +284,14 @@ ProfileWidget _widget({
 Widget _harness({
   required List<ProfileWidget> widgets,
   required Map<Platform, GameCard?> cards,
+  ProfileWidgetsRepository? widgetsRepo,
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
       cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository(cards)),
       profileWidgetsRepositoryProvider.overrideWithValue(
-        _StubWidgetsRepository(),
+        widgetsRepo ?? _StubWidgetsRepository(),
       ),
     ],
   );
@@ -216,14 +307,23 @@ Widget _harness({
       ],
       supportedLocales: const [Locale('en')],
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: ProfileWidgetsGrid(
-            widgets: widgets,
-            // A full-height card stand-in (the real connections card is tall):
-            // gives the tile enough content height for the options-menu overlay
-            // to sit within its bounds, and keeps the title assertable.
-            cardBuilder: (card) =>
-                SizedBox(height: 200, child: Text(card.title)),
+        // Observe the mutation controller so the autoDispose notifier stays
+        // alive across a menu-driven mutation, mirroring the profile screen's
+        // own listener (a grid tile alone would let it dispose mid-write).
+        body: Consumer(
+          builder: (context, ref, child) {
+            ref.listen(profileWidgetsControllerProvider, (_, _) {});
+            return child!;
+          },
+          child: SingleChildScrollView(
+            child: ProfileWidgetsGrid(
+              widgets: widgets,
+              // A full-height card stand-in (the real connections card is tall):
+              // gives the tile enough content height for the options-menu
+              // overlay to sit within its bounds, keeping the title assertable.
+              cardBuilder: (card) =>
+                  SizedBox(height: 200, child: Text(card.title)),
+            ),
           ),
         ),
       ),
@@ -681,8 +781,8 @@ void main() {
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
   });
 
-  testWidgets('a showcase tile routes to ShowcaseCardView with a customize-less '
-      'menu', (tester) async {
+  testWidgets('a showcase tile routes to ShowcaseCardView and offers size '
+      'options, not the other kinds\' customize entries', (tester) async {
     await tester.pumpWidget(
       _harness(
         widgets: [_showcaseWidget(id: 'sc', position: 0)],
@@ -696,13 +796,40 @@ void main() {
     expect(find.byKey(const Key('profileWidgetTile_sc')), findsOneWidget);
     expect(find.byKey(const Key('showcaseCard_sc')), findsOneWidget);
 
-    // Its options menu offers only remove (the game picker is a later slice), so
-    // no customize / fill-slots / edit-items entry is surfaced.
+    // Its options menu surfaces the three in-card size options plus remove, and
+    // none of the other kinds' customize entries.
     await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
     await tester.pumpAndSettle();
+    expect(find.text(l10n.profileWidgetSizeSmall), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeWide), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeLarge), findsOneWidget);
     expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
     expect(find.text(l10n.templateFillSlots), findsNothing);
     expect(find.text(l10n.composedEditItems), findsNothing);
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+  });
+
+  testWidgets('showcase options menu resizes the card via the controller', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard()},
+        widgetsRepo: widgetsRepo,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Open the menu and pick the wide footprint; the controller drives setSize
+    // with that size — the edit-in-card size contract.
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.profileWidgetSizeWide));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastSetSize, ProfileWidgetSize.wide);
   });
 }

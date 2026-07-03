@@ -5,6 +5,7 @@ import '../../connections/domain/connection.dart';
 import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'profile_widget.dart';
+import 'showcase_selection.dart';
 import 'template_catalog.dart';
 
 /// Reads and mutates the signed-in owner's `profile_widgets` arrangement.
@@ -39,6 +40,15 @@ abstract interface class ProfileWidgetsRepository {
   /// Inserts a composed-card widget at [position] with [size], enabled and with
   /// no items picked yet (`platform` null).
   Future<Either<Failure, ProfileWidget>> addComposedWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
+  /// Inserts a showcase widget for [platform] with [selection] at [position]
+  /// and [size], enabled.
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
     required int position,
     required ProfileWidgetSize size,
   });

@@ -1222,5 +1222,21 @@
   "showcaseGameUnavailable": "Game unavailable",
   "@showcaseGameUnavailable": {
     "description": "Placeholder shown in place of a showcase card when the selected game is not available — the platform is unlinked, its card is still loading, or the game rotated out of the current library."
+  },
+  "profileAddCard": "Add card",
+  "@profileAddCard": {
+    "description": "Label for the single add-card entry point on the owner's profile that opens the visual game picker."
+  },
+  "showcasePickerTitle": "Choose a game",
+  "@showcasePickerTitle": {
+    "description": "Title of the add-card picker sheet where the owner taps a game to add it as a showcase card."
+  },
+  "showcasePickerEmpty": "No games to showcase yet. Connect a game account to get started.",
+  "@showcasePickerEmpty": {
+    "description": "Shown in the add-card picker when the connected account has no library games to showcase, or no game account is connected yet."
+  },
+  "showcasePickerAllAdded": "You've showcased every available game.",
+  "@showcasePickerAllAdded": {
+    "description": "Shown in the add-card picker when every available library game is already on the profile as a showcase card."
   }
 }

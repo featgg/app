@@ -5,6 +5,7 @@ import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
@@ -106,6 +107,27 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         position: position,
         isEnabled: true,
         size: size,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addShowcase');
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.showcase,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+        showcaseSelection: selection,
       ),
     );
   }
@@ -232,6 +254,31 @@ void main() {
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addComposed']);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addShowcase', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addShowcase(
+            platform: Platform.steam,
+            selection: const ShowcaseSelection(gameRef: '730'),
+            position: 0,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addShowcase']);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,
