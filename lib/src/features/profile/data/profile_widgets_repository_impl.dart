@@ -216,6 +216,24 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(id, {
+        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
     String id,
     ProfileWidgetSize size,

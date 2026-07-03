@@ -115,6 +115,13 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
     String id,
     ProfileWidgetSize size,
@@ -126,19 +133,29 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 }
 
-/// Records the size passed to [setSize] so the showcase resize flow is provable
+/// Records the size and selection passed to [setShowcaseSize] so the showcase
+/// resize flow is provable
 /// at the repository boundary the controller drives.
 final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   ProfileWidgetSize? lastSetSize;
+  ShowcaseSelection? lastShowcaseSelection;
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async {
+    lastSetSize = size;
+    lastShowcaseSelection = selection;
+    return right(unit);
+  }
 
   @override
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
-  ) async {
-    lastSetSize = size;
-    return right(unit);
-  }
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
@@ -823,13 +840,18 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    // Open the menu and pick the wide footprint; the controller drives setSize
-    // with that size — the edit-in-card size contract.
+    // Open the menu and pick the wide footprint; the controller drives
+    // setShowcaseSize with that size AND the widget's selection — a size
+    // change must not drop the game choice from the settings envelope.
     await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.profileWidgetSizeWide));
     await tester.pumpAndSettle();
 
     expect(widgetsRepo.lastSetSize, ProfileWidgetSize.wide);
+    expect(
+      widgetsRepo.lastShowcaseSelection,
+      const ShowcaseSelection(gameRef: '730'),
+    );
   });
 }

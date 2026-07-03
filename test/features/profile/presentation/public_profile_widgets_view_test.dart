@@ -90,6 +90,13 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
     String id,
     ProfileWidgetSize size,

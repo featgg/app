@@ -159,6 +159,16 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async {
+    mutations.add('resizeShowcase');
+    return _result(unit);
+  }
+
+  @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
     String id,
     ProfileWidgetSize size,

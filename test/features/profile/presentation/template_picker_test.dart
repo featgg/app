@@ -116,6 +116,13 @@ final class _GatedWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
       throw UnimplementedError();
 }

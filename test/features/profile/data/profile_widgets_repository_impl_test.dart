@@ -565,6 +565,28 @@ void main() {
       expect(settings['size'], 'wide');
     });
 
+    test(
+      'setShowcaseSize rewrites the envelope preserving the selection',
+      () async {
+        final source = _FakeDataSource();
+        await _repo(source, _RecordingReporter()).setShowcaseSize(
+          'sc',
+          ProfileWidgetSize.wide,
+          const ShowcaseSelection(gameRef: '730'),
+        );
+
+        // A showcase size change rides the full envelope: the game selection
+        // must survive the write or the card resolves as unavailable.
+        final settings =
+            source.lastUpdate!.values['settings'] as Map<String, dynamic>;
+        expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+        expect(settings['size'], 'wide');
+        final showcase = settings['showcase'] as Map<String, dynamic>;
+        expect(showcase['game'], '730');
+        expect(showcase['hero'], 'hours');
+      },
+    );
+
     test('reorder writes a contiguous 0..n-1 sequence', () async {
       final source = _FakeDataSource();
       await _repo(source, _RecordingReporter()).reorder(['c', 'a', 'b']);

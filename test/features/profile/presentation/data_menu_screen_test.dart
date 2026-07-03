@@ -97,6 +97,13 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
       throw UnimplementedError();
 }
@@ -189,6 +196,13 @@ final class _ConfigurableWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
   ) async => throw UnimplementedError();
 
   @override

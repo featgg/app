@@ -59,6 +59,15 @@ abstract interface class ProfileWidgetsRepository {
   /// Sets the size (`settings.size`) for [id].
   Future<Either<Failure, Unit>> setSize(String id, ProfileWidgetSize size);
 
+  /// Sets the size for the showcase widget [id]. The settings envelope
+  /// carries the game [selection] alongside the size, so a size change must
+  /// rewrite both — a size-only write would drop the selection.
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  );
+
   /// Persists the data-menu [selection] for [id], merged into the existing
   /// `settings` envelope alongside [size] (preserved verbatim). Additive: it
   /// keeps `schema_version` and `size` and never changes the grid behavior.

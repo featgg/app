@@ -281,11 +281,23 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           case _WidgetMenuAction.editItems:
             showComposedItemPicker(context, widget);
           case _WidgetMenuAction.resizeSmall:
-            controller.resize(widget.id, ProfileWidgetSize.small);
+            controller.resizeShowcase(
+              widget.id,
+              ProfileWidgetSize.small,
+              widget.showcaseSelection,
+            );
           case _WidgetMenuAction.resizeWide:
-            controller.resize(widget.id, ProfileWidgetSize.wide);
+            controller.resizeShowcase(
+              widget.id,
+              ProfileWidgetSize.wide,
+              widget.showcaseSelection,
+            );
           case _WidgetMenuAction.resizeLarge:
-            controller.resize(widget.id, ProfileWidgetSize.large);
+            controller.resizeShowcase(
+              widget.id,
+              ProfileWidgetSize.large,
+              widget.showcaseSelection,
+            );
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
           case _WidgetMenuAction.moveUp:
