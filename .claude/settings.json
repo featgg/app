@@ -20,7 +20,9 @@
       "Bash(git merge *)",
       "Bash(git rebase *)",
       "Bash(git push *)",
-      "Bash(gh issue close *)"
+      "Bash(gh issue close *)",
+      "Bash(curl *)",
+      "Bash(wget *)"
     ],
     "deny": [
       "Bash(rm *)",
@@ -37,8 +39,6 @@
       "Bash(git checkout -- *)",
       "Bash(git restore *)",
       "Bash(gh pr merge *)",
-      "Bash(curl *)",
-      "Bash(wget *)",
       "Read(./env.staging.json)",
       "Read(./env.production.json)",
       "Read(./.env)",
