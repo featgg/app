@@ -291,13 +291,44 @@ void main() {
     final colorScheme = Theme.of(ctx).colorScheme;
 
     // Both the label and the hero derive from the extracted tint, so neither is
-    // the neutral onSurface fallback.
+    // the neutral on-art fallback.
     expect(_colorOf(tester, 'showcaseLabel_s-1'), isNot(colorScheme.onSurface));
     expect(_colorOf(tester, 'showcaseHero_s-1'), isNot(colorScheme.onSurface));
-    // The meta stays whisper-quiet neutral, never tinted.
-    expect(_colorOf(tester, 'showcaseMeta_s-1'), colorScheme.onSurfaceVariant);
+    // The meta stays whisper-quiet neutral (on-art secondary), never tinted.
+    // MaterialApp's default theme is light, where the on-art secondary is the
+    // inverse role — the text sits on the dark scrim in both themes.
+    expect(
+      _colorOf(tester, 'showcaseMeta_s-1'),
+      colorScheme.onInverseSurface.withValues(alpha: 0.8),
+    );
 
     // Drain any error the un-awaited art loader may surface in the test env.
     tester.takeException();
+  });
+
+  testWidgets('the neutral text fallback stays light over the scrim in the '
+      'light theme', (tester) async {
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        cardsRepositoryProvider.overrideWithValue(
+          // No art url → no tint watch → the pure fallback path renders.
+          _FakeCardsRepository({Platform.steam: _steamCard(heroImage: null)}),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(_app(container, _showcaseWidget()));
+    await tester.pumpAndSettle();
+
+    final ctx = tester.element(find.byKey(const Key('showcaseCard_s-1')));
+    final colorScheme = Theme.of(ctx).colorScheme;
+
+    // MaterialApp defaults to the light theme, whose onSurface is near-black —
+    // unreadable over the always-dark scrim. The fallback must use the light
+    // inverse role instead.
+    expect(_colorOf(tester, 'showcaseLabel_s-1'), colorScheme.onInverseSurface);
+    expect(_colorOf(tester, 'showcaseHero_s-1'), colorScheme.onInverseSurface);
+    expect(_colorOf(tester, 'showcaseLabel_s-1'), isNot(colorScheme.onSurface));
   });
 }

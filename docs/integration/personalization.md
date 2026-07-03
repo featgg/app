@@ -39,7 +39,10 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `template` — a pre-designed, slot-filled card.
 - `data_menu` — a curated stat/showcase widget. *(upcoming)*
 - `composed_card` — a user-assembled, cross-platform composed card.
-- `showcase` — a single-game art showcase card.
+- `showcase` — a single-game art showcase card. *(client rendering is
+  Steam-first: a showcase row bound to another platform is accepted and stored,
+  but the client renders it as unavailable — owner placeholder, hidden from
+  visitors — until that platform's showcase source ships)*
 - `collection` — a multi-game collection card. *(collection: client support
   upcoming)*
 

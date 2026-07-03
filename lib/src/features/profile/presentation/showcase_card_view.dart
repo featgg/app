@@ -27,6 +27,18 @@ const double _heroTintBlend = 0.55;
 /// Uppercase tag tracking (+0.5) for the label.
 const double _labelTracking = 0.5;
 
+/// Showcase text always sits on the dark art scrim — in BOTH themes — so its
+/// neutral color must always be light. Dark theme's `onSurface` already is;
+/// light theme needs the inverse role or the text goes dark-on-dark.
+Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
+    ? scheme.onSurface
+    : scheme.onInverseSurface;
+
+Color _onArtSecondaryColor(ColorScheme scheme) =>
+    scheme.brightness == Brightness.dark
+    ? scheme.onSurfaceVariant
+    : scheme.onInverseSurface.withValues(alpha: 0.8);
+
 /// Renders ONE game from a Steam `library_showcase` as a full-bleed art card:
 /// the real art behind a bottom scrim, an uppercase art-tinted label, one hero
 /// stat, and (at 2x2) a whisper-quiet meta line. The art is constitutive — it
@@ -227,13 +239,15 @@ class _TextBlock extends StatelessWidget {
       style: textTheme.headlineMedium?.copyWith(fontWeight: AppTypography.bold),
       blend: _heroTintBlend,
     );
-    // Deliberately NOT tinted — whisper-quiet secondary text.
+    // Deliberately NOT tinted — whisper-quiet secondary text (on-art light).
     final meta = Text(
       _metaDescriptor(l10n, resolved.hero),
       key: Key('showcaseMeta_$widgetId'),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+      style: textTheme.bodySmall?.copyWith(
+        color: _onArtSecondaryColor(colorScheme),
+      ),
     );
 
     switch (size) {
@@ -265,9 +279,10 @@ class _TextBlock extends StatelessWidget {
 /// Text tinted by the art's extracted swatch (single line unless the caller
 /// grants more — the large card lets the game title wrap). Watches
 /// [showcaseTintProvider] only when [heroImage] is non-null; while the tint
-/// loads, is null, or the art is absent, it falls back to the neutral
-/// [ColorScheme.onSurface] so the card renders immediately and never blocks on
-/// extraction. The resolved tint is blended toward onSurface by [blend].
+/// loads, is null, or the art is absent, it falls back to the neutral on-art
+/// color (always light — the text sits on the dark scrim in both themes) so
+/// the card renders immediately and never blocks on extraction. The resolved
+/// tint is blended toward that color by [blend].
 class _TintedText extends ConsumerWidget {
   const _TintedText({
     required this.textKey,
@@ -287,14 +302,12 @@ class _TintedText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onArt = _onArtColor(Theme.of(context).colorScheme);
     final url = heroImage;
     final tint = url == null
         ? null
         : ref.watch(showcaseTintProvider(url)).value;
-    final color = tint == null
-        ? onSurface
-        : Color.lerp(tint, onSurface, blend)!;
+    final color = tint == null ? onArt : Color.lerp(tint, onArt, blend)!;
     return Text(
       text,
       key: textKey,
