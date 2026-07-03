@@ -39,11 +39,17 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `template` — a pre-designed, slot-filled card.
 - `data_menu` — a curated stat/showcase widget. *(upcoming)*
 - `composed_card` — a user-assembled, cross-platform composed card.
+- `showcase` — a single-game art showcase card. *(client rendering is
+  Steam-first: a showcase row bound to another platform is accepted and stored,
+  but the client renders it as unavailable — owner placeholder, hidden from
+  visitors — until that platform's showcase source ships)*
+- `collection` — a multi-game collection card. *(collection: client support
+  upcoming)*
 
-`platform`, `template`, and `composed_card` are the kinds the client writes
-today; `data_menu` is reserved for a later phase. (Data-menu curation already
-ships, but as the `data_menu_items` setting on a `platform` widget — see below —
-not as a `data_menu`-typed row.)
+`platform`, `template`, `composed_card`, and `showcase` are the kinds the client
+writes today; `data_menu` and `collection` are reserved for a later phase.
+(Data-menu curation already ships, but as the `data_menu_items` setting on a
+`platform` widget — see below — not as a `data_menu`-typed row.)
 
 ### `platform` — valid values and binding rule
 
@@ -55,8 +61,12 @@ Whether `platform` is required or must be null depends on `type`:
 
 - `type = platform` → `platform`
   **must be a non-null** value from the list above.
+- `type = showcase` → `platform` **must be a non-null** value from the list
+  above (the single source platform the showcase draws from).
 - `type` in {`composed_card`, `data_menu`, `template`} → `platform`
   **must be null**.
+- `type = collection` → `platform` **must be null** (a collection spans multiple
+  games).
 
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
@@ -79,7 +89,11 @@ from the invalid-`type` rejection above.
     `composed_card` widget carries its freely-picked item set under another such
     field — `"composed": { "items": ["<data_menu_item_id>", ...] }` — the
     ordered data-menu items the card surfaces. It is likewise additive, ignored
-    when absent, and never bumps the version.
+    when absent, and never bumps the version. A `showcase` widget carries its
+    single-game choice under another such field —
+    `"showcase": { "game": "<gameKey>", "hero": "<stat>", "meta"?: "<stat>" }` —
+    the game to render and which stat is the hero. It is likewise additive,
+    ignored when absent, and never bumps the version.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.

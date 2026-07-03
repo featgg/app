@@ -9,6 +9,7 @@ import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'public_owner_cards_provider.dart';
 import 'public_profile_widgets_provider.dart';
+import 'showcase_card_view.dart';
 import 'template_card_view.dart';
 
 /// Read-only visitor render of a public profile's `profile_widgets` arrangement.
@@ -105,6 +106,15 @@ class _VisitorTile extends ConsumerWidget {
     if (widget.kind == ProfileWidgetKind.composed) {
       return ClipRect(
         child: ComposedCardView(
+          widget: widget,
+          cardSource: publicSource(),
+          showEmptyPlaceholder: false,
+        ),
+      );
+    }
+    if (widget.kind == ProfileWidgetKind.showcase) {
+      return ClipRect(
+        child: ShowcaseCardView(
           widget: widget,
           cardSource: publicSource(),
           showEmptyPlaceholder: false,

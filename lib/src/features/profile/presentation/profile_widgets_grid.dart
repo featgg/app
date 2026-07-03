@@ -10,6 +10,7 @@ import 'data_menu_screen.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
+import 'showcase_card_view.dart';
 import 'template_card_view.dart';
 import 'template_picker.dart';
 
@@ -124,6 +125,27 @@ class _WidgetTile extends ConsumerWidget {
       return Stack(
         children: [
           ClipRect(child: ComposedCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // A showcase widget resolves its own single-game art card and is never
+    // resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.showcase) {
+      return Stack(
+        children: [
+          ClipRect(child: ShowcaseCardView(widget: widget)),
           Positioned(
             top: AppSpacing.xs,
             right: AppSpacing.xs,
@@ -278,7 +300,9 @@ class _WidgetOptionsMenu extends ConsumerWidget {
             value: _WidgetMenuAction.editItems,
             child: Text(l10n.composedEditItems),
           )
-        else
+        // A showcase widget has no in-app customize entry yet (its game picker
+        // is a later slice), so only move/remove are surfaced for it.
+        else if (widget.kind == ProfileWidgetKind.platform)
           PopupMenuItem(
             value: _WidgetMenuAction.customizeData,
             child: Text(l10n.profileWidgetCustomizeData),
