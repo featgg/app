@@ -262,6 +262,108 @@ void main() {
       expect(find.text('1234'), findsOneWidget);
       expect(find.text('142/167'), findsNothing);
     });
+
+    testWidgets('shows a trophy icon at small size', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.small,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          cards: {
+            Platform.steam: _steamCard(
+              heroImage: null,
+              achieved: 142,
+              total: 167,
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The trophy fronts the value where no meta line names the stat.
+      expect(find.byKey(const Key('showcaseHeroIcon_s-1')), findsOneWidget);
+      expect(find.text('142/167'), findsOneWidget);
+      expect(find.byKey(const Key('showcaseMeta_s-1')), findsNothing);
+    });
+
+    testWidgets('shows a trophy icon at wide size', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.wide,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          cards: {
+            Platform.steam: _steamCard(
+              heroImage: null,
+              achieved: 142,
+              total: 167,
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('showcaseHeroIcon_s-1')), findsOneWidget);
+      expect(find.byKey(const Key('showcaseMeta_s-1')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows no trophy icon at large size', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.large,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          cards: {
+            Platform.steam: _steamCard(
+              heroImage: null,
+              achieved: 142,
+              total: 167,
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The large card's meta line names the stat, so no trophy is needed.
+      expect(find.byKey(const Key('showcaseHeroIcon_s-1')), findsNothing);
+      expect(find.byKey(const Key('showcaseMeta_s-1')), findsOneWidget);
+      expect(find.text('142/167'), findsOneWidget);
+    });
+
+    testWidgets('hours hero shows no trophy icon', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(size: ProfileWidgetSize.small),
+          cards: {Platform.steam: _steamCard(heroImage: null)},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The trophy is achievements-only.
+      expect(find.byKey(const Key('showcaseHeroIcon_s-1')), findsNothing);
+    });
+
+    testWidgets('a pair-less achievements choice shows no trophy', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.small,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          // No achievement pair → effective hero falls back to hours.
+          cards: {Platform.steam: _steamCard(heroImage: null)},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('showcaseHeroIcon_s-1')), findsNothing);
+    });
   });
 
   testWidgets(
@@ -380,6 +482,50 @@ void main() {
       _colorOf(tester, 'showcaseMeta_s-1'),
       colorScheme.onInverseSurface.withValues(alpha: 0.8),
     );
+
+    // Drain any error the un-awaited art loader may surface in the test env.
+    tester.takeException();
+  });
+
+  testWidgets('the trophy icon shares the hero text tint', (tester) async {
+    const tint = Color(0xFFFF0000);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        cardsRepositoryProvider.overrideWithValue(
+          _FakeCardsRepository({
+            Platform.steam: _steamCard(achieved: 142, total: 167),
+          }),
+        ),
+        showcaseTintProvider(_heroUrl).overrideWith((ref) => tint),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      _app(
+        container,
+        _showcaseWidget(
+          size: ProfileWidgetSize.small,
+          hero: ShowcaseHeroStat.achievements,
+        ),
+      ),
+    );
+    // Build and let the (synchronous) tint override resolve; the art loader is
+    // not awaited (no real image is decoded).
+    await tester.pump();
+    await tester.pump();
+
+    final ctx = tester.element(find.byKey(const Key('showcaseCard_s-1')));
+    final colorScheme = Theme.of(ctx).colorScheme;
+
+    // Icon and value read their color from the one _ArtTinted, so the trophy
+    // tint equals the hero text tint — and is the extracted tint, not the
+    // neutral on-art fallback.
+    final iconColor = tester
+        .widget<Icon>(find.byKey(const Key('showcaseHeroIcon_s-1')))
+        .color;
+    expect(iconColor, _colorOf(tester, 'showcaseHero_s-1'));
+    expect(iconColor, isNot(colorScheme.onInverseSurface));
 
     // Drain any error the un-awaited art loader may surface in the test env.
     tester.takeException();

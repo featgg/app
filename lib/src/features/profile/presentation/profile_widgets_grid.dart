@@ -288,7 +288,7 @@ class _WidgetOptionsMenu extends ConsumerWidget {
 
     return PopupMenuButton<_WidgetMenuAction>(
       key: Key('profileWidgetMenu_${widget.id}'),
-      icon: const Icon(Icons.more_vert),
+      icon: _MenuGlyph(widgetId: widget.id),
       tooltip: l10n.profileWidgetOptions,
       onSelected: (value) {
         switch (value) {
@@ -338,73 +338,185 @@ class _WidgetOptionsMenu extends ConsumerWidget {
             onMoveDown();
         }
       },
-      itemBuilder: (context) => [
-        // A template widget fills its slots, a composed widget edits its freely
-        // picked items, and a platform widget customizes which stats its card
-        // surfaces. The three are mutually exclusive so each kind shows exactly
-        // one customize entry.
-        if (widget.kind == ProfileWidgetKind.template)
-          PopupMenuItem(
-            value: _WidgetMenuAction.fillSlots,
-            child: Text(l10n.templateFillSlots),
-          )
-        else if (widget.kind == ProfileWidgetKind.composed)
-          PopupMenuItem(
-            value: _WidgetMenuAction.editItems,
-            child: Text(l10n.composedEditItems),
-          )
-        else if (widget.kind == ProfileWidgetKind.platform)
-          PopupMenuItem(
-            value: _WidgetMenuAction.customizeData,
-            child: Text(l10n.profileWidgetCustomizeData),
-          ),
+      itemBuilder: (context) {
+        PopupMenuItem<_WidgetMenuAction> selectable(
+          _WidgetMenuAction value,
+          String label,
+          bool selected,
+        ) => PopupMenuItem(
+          value: value,
+          padding: EdgeInsets.zero,
+          child: _SelectableMenuRow(label: label, selected: selected),
+        );
+
+        final sections = <List<PopupMenuEntry<_WidgetMenuAction>>>[];
+
+        // Customize: a template widget fills its slots, a composed widget edits
+        // its freely picked items, and a platform widget customizes which stats
+        // its card surfaces. The three are mutually exclusive so each kind shows
+        // exactly one customize entry; the showcase has none.
+        final customize = <PopupMenuEntry<_WidgetMenuAction>>[
+          if (widget.kind == ProfileWidgetKind.template)
+            PopupMenuItem(
+              value: _WidgetMenuAction.fillSlots,
+              child: Text(l10n.templateFillSlots),
+            )
+          else if (widget.kind == ProfileWidgetKind.composed)
+            PopupMenuItem(
+              value: _WidgetMenuAction.editItems,
+              child: Text(l10n.composedEditItems),
+            )
+          else if (widget.kind == ProfileWidgetKind.platform)
+            PopupMenuItem(
+              value: _WidgetMenuAction.customizeData,
+              child: Text(l10n.profileWidgetCustomizeData),
+            ),
+        ];
+        if (customize.isNotEmpty) sections.add(customize);
+
         // A showcase widget surfaces its size on the card itself: pick a
-        // footprint and the card re-renders at that size. Scoped to showcase —
-        // the other kinds' size is not yet in-card editable.
-        if (widget.kind == ProfileWidgetKind.showcase) ...[
-          PopupMenuItem(
-            value: _WidgetMenuAction.resizeSmall,
-            child: Text(l10n.profileWidgetSizeSmall),
-          ),
-          PopupMenuItem(
-            value: _WidgetMenuAction.resizeWide,
-            child: Text(l10n.profileWidgetSizeWide),
-          ),
-          PopupMenuItem(
-            value: _WidgetMenuAction.resizeLarge,
-            child: Text(l10n.profileWidgetSizeLarge),
-          ),
-        ],
+        // footprint and the card re-renders at that size, the active size shown
+        // by row highlight. Scoped to showcase — the other kinds' size is not
+        // yet in-card editable.
+        if (widget.kind == ProfileWidgetKind.showcase) {
+          sections.add([
+            selectable(
+              _WidgetMenuAction.resizeSmall,
+              l10n.profileWidgetSizeSmall,
+              widget.size == ProfileWidgetSize.small,
+            ),
+            selectable(
+              _WidgetMenuAction.resizeWide,
+              l10n.profileWidgetSizeWide,
+              widget.size == ProfileWidgetSize.wide,
+            ),
+            selectable(
+              _WidgetMenuAction.resizeLarge,
+              l10n.profileWidgetSizeLarge,
+              widget.size == ProfileWidgetSize.large,
+            ),
+          ]);
+        }
+
         // The hero-stat choice appears only when the showcased game currently
         // carries the achievement pair — so the option is offered only when
-        // there is a real choice between hours and achievements.
+        // there is a real choice between hours and achievements; the active hero
+        // is shown by row highlight.
         if (widget.kind == ProfileWidgetKind.showcase &&
-            achievementsAvailable) ...[
-          CheckedPopupMenuItem(
-            value: _WidgetMenuAction.heroHours,
-            checked: widget.showcaseSelection.hero == ShowcaseHeroStat.hours,
-            child: Text(l10n.showcaseHeroHours),
-          ),
-          CheckedPopupMenuItem(
-            value: _WidgetMenuAction.heroAchievements,
-            checked:
-                widget.showcaseSelection.hero == ShowcaseHeroStat.achievements,
-            child: Text(l10n.showcaseHeroAchievements),
-          ),
-        ],
-        if (canMoveUp)
+            achievementsAvailable) {
+          final hero = widget.showcaseSelection.hero;
+          sections.add([
+            selectable(
+              _WidgetMenuAction.heroHours,
+              l10n.showcaseHeroHours,
+              hero == ShowcaseHeroStat.hours,
+            ),
+            selectable(
+              _WidgetMenuAction.heroAchievements,
+              l10n.showcaseHeroAchievements,
+              hero == ShowcaseHeroStat.achievements,
+            ),
+          ]);
+        }
+
+        // Actions: always at least Remove; move gating unchanged.
+        sections.add([
+          if (canMoveUp)
+            PopupMenuItem(
+              value: _WidgetMenuAction.moveUp,
+              child: Text(l10n.profileWidgetMoveUp),
+            ),
+          if (canMoveDown)
+            PopupMenuItem(
+              value: _WidgetMenuAction.moveDown,
+              child: Text(l10n.profileWidgetMoveDown),
+            ),
           PopupMenuItem(
-            value: _WidgetMenuAction.moveUp,
-            child: Text(l10n.profileWidgetMoveUp),
+            value: _WidgetMenuAction.remove,
+            child: Text(l10n.profileWidgetRemove),
           ),
-        if (canMoveDown)
-          PopupMenuItem(
-            value: _WidgetMenuAction.moveDown,
-            child: Text(l10n.profileWidgetMoveDown),
+        ]);
+
+        // A skipped (empty) section emits no divider, so there is never a
+        // leading divider before an absent hero section.
+        final items = <PopupMenuEntry<_WidgetMenuAction>>[];
+        for (final section in sections) {
+          if (section.isEmpty) continue;
+          if (items.isNotEmpty) items.add(const PopupMenuDivider());
+          items.addAll(section);
+        }
+        return items;
+      },
+    );
+  }
+}
+
+/// The options-menu glyph on a semi-opaque circular scrim so it keeps
+/// guaranteed contrast on any tile surface — full-bleed showcase art or a plain
+/// surface tile — the same on-art-light idea the showcase text uses on its
+/// scrim in both themes.
+class _MenuGlyph extends StatelessWidget {
+  const _MenuGlyph({required this.widgetId});
+
+  final String widgetId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Always-light on the dark scrim in both themes: dark theme's onSurface is
+    // already light; light theme needs the inverse role or the glyph goes dark.
+    final glyph = scheme.brightness == Brightness.dark
+        ? scheme.onSurface
+        : scheme.onInverseSurface;
+    return DecoratedBox(
+      key: Key('profileWidgetMenuIcon_$widgetId'),
+      decoration: BoxDecoration(
+        color: scheme.scrim.withValues(alpha: 0.45),
+        shape: BoxShape.circle,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        child: Icon(Icons.more_vert, color: glyph),
+      ),
+    );
+  }
+}
+
+/// A menu row that marks the active choice by highlighting the whole row (a
+/// filled container + emphasized label) instead of a checkmark, so every row —
+/// selected or not — keeps the same left text origin and nothing shifts. Used
+/// for the mutually-exclusive size and hero choices.
+class _SelectableMenuRow extends StatelessWidget {
+  const _SelectableMenuRow({required this.label, required this.selected});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: kMinInteractiveDimension,
+            ),
+            alignment: AlignmentDirectional.centerStart,
+            // Match PopupMenuItem's default 16 inset so selectable rows align
+            // horizontally with the plain action rows below.
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            color: selected ? scheme.secondaryContainer : null,
+            child: Text(
+              label,
+              // Only color+weight are overridden; size/family inherit the menu's
+              // default text style so selectable rows match the plain rows.
+              style: TextStyle(
+                color: selected ? scheme.onSecondaryContainer : null,
+                fontWeight: selected ? AppTypography.semiBold : null,
+              ),
+            ),
           ),
-        PopupMenuItem(
-          value: _WidgetMenuAction.remove,
-          child: Text(l10n.profileWidgetRemove),
         ),
       ],
     );

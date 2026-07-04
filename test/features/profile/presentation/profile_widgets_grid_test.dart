@@ -252,15 +252,27 @@ ProfileWidget _templateWidget({
   templateFill: fill,
 );
 
-ProfileWidget _showcaseWidget({required String id, required int position}) =>
-    ProfileWidget(
-      id: id,
-      kind: ProfileWidgetKind.showcase,
-      platform: Platform.steam,
-      position: position,
-      isEnabled: true,
-      size: ProfileWidgetSize.small,
-      showcaseSelection: const ShowcaseSelection(gameRef: '730'),
+ProfileWidget _showcaseWidget({
+  required String id,
+  required int position,
+  ShowcaseHeroStat hero = ShowcaseHeroStat.hours,
+}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.showcase,
+  platform: Platform.steam,
+  position: position,
+  isEnabled: true,
+  size: ProfileWidgetSize.small,
+  showcaseSelection: ShowcaseSelection(gameRef: '730', hero: hero),
+);
+
+/// The Container that fills a selectable menu row (its `color` marks the active
+/// choice); the nearest Container ancestor of the row's label text.
+Container _rowContainer(WidgetTester tester, String label) =>
+    tester.widget<Container>(
+      find
+          .ancestor(of: find.text(label), matching: find.byType(Container))
+          .first,
     );
 
 /// A Steam card carrying one library-showcase entry (art-less to avoid decoding
@@ -912,13 +924,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
     await tester.pumpAndSettle();
-    // CheckedPopupMenuItem overlays its checkmark in an opacity layer, so the
-    // Text center reports a hit-test miss though the tap still fires the row's
-    // onTap — the recorded selection below proves the correct item activated.
-    await tester.tap(
-      find.text(l10n.showcaseHeroAchievements),
-      warnIfMissed: false,
-    );
+    // The selectable row has no opacity overlay, so the Text taps cleanly; the
+    // recorded selection below proves the correct item activated.
+    await tester.tap(find.text(l10n.showcaseHeroAchievements));
     await tester.pumpAndSettle();
 
     // The choice persists through setShowcaseSize: the hero is achievements and
@@ -931,5 +939,146 @@ void main() {
         hero: ShowcaseHeroStat.achievements,
       ),
     );
+  });
+
+  testWidgets('the options-menu glyph sits on a scrim backing', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _widget(
+            id: 'on',
+            platform: Platform.steam,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+        ],
+        cards: {Platform.steam: _card(Platform.steam)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The glyph sits on a filled circular scrim (guaranteed contrast on any
+    // tile), not the bare default icon.
+    final box = tester.widget<DecoratedBox>(
+      find.byKey(const Key('profileWidgetMenuIcon_on')),
+    );
+    final decoration = box.decoration as BoxDecoration;
+    expect(decoration.shape, BoxShape.circle);
+    expect(decoration.color, isNotNull);
+    expect(decoration.color!.a, greaterThan(0));
+
+    final icon = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const Key('profileWidgetMenuIcon_on')),
+        matching: find.byType(Icon),
+      ),
+    );
+    expect(icon.icon, Icons.more_vert);
+    expect(icon.color, isNotNull);
+  });
+
+  testWidgets('the active size row is highlighted, the others are not', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+
+    final colorScheme = Theme.of(
+      tester.element(find.text(l10n.profileWidgetSizeSmall)),
+    ).colorScheme;
+    // The showcase is small, so the Small row is filled and the Wide row is not.
+    expect(
+      _rowContainer(tester, l10n.profileWidgetSizeSmall).color,
+      colorScheme.secondaryContainer,
+    );
+    expect(_rowContainer(tester, l10n.profileWidgetSizeWide).color, isNull);
+  });
+
+  testWidgets('the active hero row is highlighted', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _showcaseWidget(
+            id: 'sc',
+            position: 0,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+        ],
+        cards: {Platform.steam: _steamShowcaseCard(achieved: 142, total: 167)},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+
+    final colorScheme = Theme.of(
+      tester.element(find.text(l10n.showcaseHeroAchievements)),
+    ).colorScheme;
+    // The selected hero is achievements, so its row is filled and Hours is not.
+    expect(
+      _rowContainer(tester, l10n.showcaseHeroAchievements).color,
+      colorScheme.secondaryContainer,
+    );
+    expect(_rowContainer(tester, l10n.showcaseHeroHours).color, isNull);
+  });
+
+  testWidgets('the menu uses no checkmarks', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard(achieved: 142, total: 167)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+
+    // Selection is shown by row highlight, never a checkmark.
+    expect(find.byType(CheckedPopupMenuItem), findsNothing);
+  });
+
+  testWidgets('one divider separates the sections without the pair', (
+    tester,
+  ) async {
+    // Without the pair: size | actions → one divider (no hero section, so no
+    // leading divider before an absent section).
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PopupMenuDivider), findsOneWidget);
+  });
+
+  testWidgets('two dividers separate the sections with the pair', (
+    tester,
+  ) async {
+    // With the pair: size | hero | actions → two dividers.
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard(achieved: 142, total: 167)},
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PopupMenuDivider), findsNWidgets(2));
   });
 }
