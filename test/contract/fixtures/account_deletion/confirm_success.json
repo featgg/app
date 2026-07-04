@@ -1,8 +1,4 @@
 {
-  "__PLACEHOLDER__": true,
   "status": 200,
-  "payload": {
-    "success": true,
-    "deletion_scheduled_at": "REPLACE_ME_ISO_8601_UTC"
-  }
+  "payload": { "success": true, "deletion_scheduled_at": "2026-05-11T12:00:00.000Z" }
 }

@@ -1,43 +1,44 @@
 {
-  "__PLACEHOLDER__": true,
   "payload": {
     "schema_version": 1,
     "platform": "wow_retail",
-    "title": "REPLACE_ME",
-    "subtitle": "REPLACE_ME_realm-REGION",
-    "icon_image": "REPLACE_ME_https_url_or_null",
-    "hero_image": "REPLACE_ME_https_url_or_null",
+    "title": "Arthas",
+    "subtitle": "Silvermoon-EU",
+    "icon_image": "https://render-eu.worldofwarcraft.com/character/silvermoon/100/123456789-avatar.jpg",
+    "hero_image": "https://render-eu.worldofwarcraft.com/character/silvermoon/100/123456789-main.jpg",
     "profile_url": null,
     "stats": [
-      { "key": "REPLACE_ME", "value": 0, "unit": "REPLACE_ME_or_omit" }
+      { "key": "item_level", "value": 480, "unit": "count" },
+      { "key": "achievement_points", "value": 15000, "unit": "points" },
+      { "key": "mythic_plus_rating", "value": 2450 }
     ],
-    "last_updated": "REPLACE_ME_ISO_8601_UTC",
+    "last_updated": "2026-06-03T12:00:00Z",
     "data": {
       "profile": {
-        "race": "REPLACE_ME",
-        "faction": "REPLACE_ME_ALLIANCE_or_HORDE",
-        "class": "REPLACE_ME",
-        "spec": "REPLACE_ME_or_null",
-        "level": 0,
-        "ilvl_avg": 0,
-        "ilvl_equipped": 0
+        "race": "Human",
+        "faction": "ALLIANCE",
+        "class": "Death Knight",
+        "spec": "Unholy",
+        "level": 70,
+        "ilvl_avg": 482,
+        "ilvl_equipped": 480
       },
+      "recent_achievements": [
+        { "id": 1234, "name": "Glory of the Hero", "completed_at": "2026-05-01T10:00:00Z" }
+      ],
       "mythic_plus": {
-        "rating": 0,
+        "rating": 2450,
         "best_runs": [
           {
-            "keystone_level": 0,
-            "dungeon": { "name": "REPLACE_ME" },
-            "completed_timestamp": 0,
-            "duration": 0,
+            "keystone_level": 12,
+            "dungeon": { "name": "Ara-Kara, City of Echoes" },
+            "completed_timestamp": 1717101240000,
+            "duration": 1834000,
             "is_completed_within_time": true,
-            "mythic_rating": { "rating": 0 }
+            "mythic_rating": { "rating": 245.6 }
           }
         ]
       },
-      "recent_achievements": [
-        { "id": 0, "name": "REPLACE_ME", "completed_at": "REPLACE_ME_ISO_8601_UTC" }
-      ],
       "attribution": "Data provided by Blizzard"
     }
   }

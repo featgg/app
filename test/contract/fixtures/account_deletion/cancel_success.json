@@ -1,8 +1,4 @@
 {
-  "__PLACEHOLDER__": true,
   "status": 200,
-  "payload": {
-    "success": true,
-    "cancelled": true
-  }
+  "payload": { "success": true, "cancelled": true }
 }

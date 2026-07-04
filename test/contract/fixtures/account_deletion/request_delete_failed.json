@@ -1,9 +1,8 @@
 {
-  "__PLACEHOLDER__": true,
   "status": 500,
   "payload": {
     "success": false,
     "code": "ACCOUNT_DELETE_FAILED",
-    "message": "REPLACE_ME_developer_message"
+    "message": "Could not send the deletion code."
   }
 }

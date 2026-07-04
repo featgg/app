@@ -1,9 +1,9 @@
 {
-  "__PLACEHOLDER__": true,
   "status": 429,
   "payload": {
     "success": false,
-    "code": "REPLACE_ME_RATE_LIMIT_CODE",
-    "message": "REPLACE_ME_developer_message"
+    "code": "OTP_RATE_LIMIT",
+    "message": "Too many requests. Try again shortly.",
+    "retry_after": 42
   }
 }
