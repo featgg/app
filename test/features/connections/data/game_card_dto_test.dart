@@ -28,6 +28,8 @@ const _steamWidgetData = {
             'https://shared.akamai.steamstatic.com/steam/apps/730/capsule_184x69.jpg',
         'hero_image':
             'https://shared.akamai.steamstatic.com/steam/apps/730/library_600x900.jpg',
+        'achieved': 142,
+        'total': 167,
       },
     ],
     'recent_games': [
@@ -146,9 +148,67 @@ void main() {
       expect(data.libraryShowcase[0].appId, 730);
       expect(data.libraryShowcase[0].title, 'CS2');
       expect(data.libraryShowcase[0].hours, 540);
+      // The per-game achievement pair parses when both fields are present.
+      expect(data.libraryShowcase[0].achieved, 142);
+      expect(data.libraryShowcase[0].total, 167);
+      expect(data.libraryShowcase[0].hasAchievements, isTrue);
       expect(data.recentGames, hasLength(1));
       expect(data.recentGames[0].appId, 730);
       expect(data.recentGames[0].hours2Weeks, 12);
+    });
+  });
+
+  group('gameCardFromDto — Steam library_showcase achievement pair', () {
+    LibraryShowcaseEntry parseFirstShowcase(Object? achieved, Object? total) {
+      final entry = <String, dynamic>{
+        'app_id': 570,
+        'title': 'Dota 2',
+        'hours': 42,
+      };
+      if (achieved != null) entry['achieved'] = achieved;
+      if (total != null) entry['total'] = total;
+      final raw = Map<String, dynamic>.from(_steamWidgetData);
+      raw['data'] = <String, dynamic>{
+        'library_showcase': [entry],
+        'recent_games': <dynamic>[],
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+      return (card.data! as SteamCardData).libraryShowcase.first;
+    }
+
+    test('absent pair → both null, hasAchievements false', () {
+      final entry = parseFirstShowcase(null, null);
+      expect(entry.achieved, isNull);
+      expect(entry.total, isNull);
+      expect(entry.hasAchievements, isFalse);
+    });
+
+    test('half-pair (only achieved) → both null (together-or-absent)', () {
+      final entry = parseFirstShowcase(10, null);
+      expect(entry.achieved, isNull);
+      expect(entry.total, isNull);
+      expect(entry.hasAchievements, isFalse);
+    });
+
+    test('half-pair (only total) → both null (together-or-absent)', () {
+      final entry = parseFirstShowcase(null, 20);
+      expect(entry.achieved, isNull);
+      expect(entry.total, isNull);
+      expect(entry.hasAchievements, isFalse);
+    });
+
+    test('degenerate total:0 → parsed but hasAchievements false', () {
+      final entry = parseFirstShowcase(0, 0);
+      expect(entry.achieved, 0);
+      expect(entry.total, 0);
+      expect(entry.hasAchievements, isFalse);
+    });
+
+    test('legitimate 0/22 → hasAchievements true (not the forbidden 0/0)', () {
+      final entry = parseFirstShowcase(0, 22);
+      expect(entry.achieved, 0);
+      expect(entry.total, 22);
+      expect(entry.hasAchievements, isTrue);
     });
   });
 

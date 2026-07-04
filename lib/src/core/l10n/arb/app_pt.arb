@@ -293,6 +293,8 @@
   "composedEditItems": "Editar itens",
   "showcaseGameUnavailable": "Jogo indisponível",
   "showcaseHeroHoursCompact": "{value} h",
+  "showcaseHeroHours": "Horas",
+  "showcaseHeroAchievements": "Conquistas",
   "profileAddCard": "Adicionar cartão",
   "showcasePickerTitle": "Escolha um jogo",
   "showcasePickerEmpty": "Ainda não há jogos para exibir. Conecte uma conta de jogo para começar.",

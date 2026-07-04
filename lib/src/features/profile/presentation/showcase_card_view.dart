@@ -318,25 +318,31 @@ class _TintedText extends ConsumerWidget {
   }
 }
 
-/// Hero text by size: the large card renders the bare value (its meta line
-/// names the stat); wide and small drop the meta line, so the value carries
-/// its unit instead of rendering context-free.
+/// Hero text by the effective hero and size. The hours hero renders the bare
+/// value on the large card (its meta line names the stat) and carries its unit
+/// on wide/small (no meta line there). The achievements hero renders `X/Y` at
+/// every size — the slash is self-describing, so no size-dependent unit suffix.
 String _heroText(
   AppLocalizations l10n,
   ProfileWidgetSize size,
   ResolvedShowcase resolved,
-) {
-  final value = formatShowcaseHeroValue(resolved.heroValue);
-  if (size == ProfileWidgetSize.large) return value;
-  return switch (resolved.hero) {
-    ShowcaseHeroStat.hours => l10n.showcaseHeroHoursCompact(value),
-  };
-}
+) => switch (resolved.hero) {
+  ShowcaseHeroStat.hours =>
+    size == ProfileWidgetSize.large
+        ? formatShowcaseHeroValue(resolved.heroValue)
+        : l10n.showcaseHeroHoursCompact(
+            formatShowcaseHeroValue(resolved.heroValue),
+          ),
+  ShowcaseHeroStat.achievements => formatShowcaseAchievements(
+    resolved.achieved!,
+    resolved.total!,
+  ),
+};
 
-/// Maps the hero stat to its localized descriptor. In slice 1 the meta line
-/// renders the hero stat's descriptor (no second per-game datum exists yet); a
-/// real second stat renders here once it arrives.
+/// Maps the effective hero stat to its localized meta descriptor (the large
+/// card's second line names the stat the hero represents).
 String _metaDescriptor(AppLocalizations l10n, ShowcaseHeroStat hero) =>
     switch (hero) {
       ShowcaseHeroStat.hours => l10n.connectionsStatHoursPlayed,
+      ShowcaseHeroStat.achievements => l10n.showcaseHeroAchievements,
     };

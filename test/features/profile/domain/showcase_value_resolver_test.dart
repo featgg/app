@@ -13,6 +13,15 @@ const _cs2 = LibraryShowcaseEntry(
   heroImage: 'https://cdn.example/730/hero.jpg',
 );
 
+const _cs2WithAchievements = LibraryShowcaseEntry(
+  appId: 730,
+  title: 'Counter-Strike 2',
+  hours: 1234,
+  heroImage: 'https://cdn.example/730/hero.jpg',
+  achieved: 142,
+  total: 167,
+);
+
 void main() {
   group('resolveShowcase', () {
     test('resolves the entry matched by gameRef, hours as the hero', () {
@@ -63,6 +72,90 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test(
+      'achievements hero on a game WITH the pair resolves achieved/total',
+      () {
+        final resolved = resolveShowcase(
+          _steam(const [_cs2WithAchievements]),
+          const ShowcaseSelection(
+            gameRef: '730',
+            hero: ShowcaseHeroStat.achievements,
+          ),
+        );
+
+        expect(resolved, isNotNull);
+        expect(resolved!.hero, ShowcaseHeroStat.achievements);
+        expect(resolved.achieved, 142);
+        expect(resolved.total, 167);
+      },
+    );
+
+    test(
+      'achievements hero on a game WITHOUT the pair falls back to hours',
+      () {
+        final resolved = resolveShowcase(
+          // _cs2 carries no achievement pair.
+          _steam(const [_cs2]),
+          const ShowcaseSelection(
+            gameRef: '730',
+            hero: ShowcaseHeroStat.achievements,
+          ),
+        );
+
+        expect(resolved, isNotNull);
+        expect(resolved!.hero, ShowcaseHeroStat.hours);
+        expect(resolved.heroValue, 1234);
+        expect(resolved.achieved, isNull);
+        expect(resolved.total, isNull);
+      },
+    );
+  });
+
+  group('showcaseAchievementsAvailable', () {
+    test('true when the referenced game carries the pair', () {
+      expect(
+        showcaseAchievementsAvailable(
+          _steam(const [_cs2WithAchievements]),
+          const ShowcaseSelection(gameRef: '730'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('false when the referenced game lacks the pair', () {
+      expect(
+        showcaseAchievementsAvailable(
+          _steam(const [_cs2]),
+          const ShowcaseSelection(gameRef: '730'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('false for a null card or an empty selection', () {
+      expect(
+        showcaseAchievementsAvailable(
+          null,
+          const ShowcaseSelection(gameRef: '730'),
+        ),
+        isFalse,
+      );
+      expect(
+        showcaseAchievementsAvailable(
+          _steam(const [_cs2WithAchievements]),
+          ShowcaseSelection.empty,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('formatShowcaseAchievements', () {
+    test('renders the structural achieved/total figure', () {
+      expect(formatShowcaseAchievements(142, 167), '142/167');
+      expect(formatShowcaseAchievements(0, 22), '0/22');
     });
   });
 

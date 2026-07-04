@@ -28,6 +28,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   List<String>? lastReorder;
   TemplateFill? lastTemplateFill;
   ComposedFill? lastComposedFill;
+  ProfileWidgetSize? lastShowcaseSize;
+  ShowcaseSelection? lastShowcaseSelection;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -165,6 +167,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
     ShowcaseSelection selection,
   ) async {
     mutations.add('resizeShowcase');
+    lastShowcaseSize = size;
+    lastShowcaseSelection = selection;
     return _result(unit);
   }
 
@@ -442,6 +446,41 @@ void main() {
         expect(repo.fetchCalls, fetchesBefore);
       },
     );
+
+    test('setShowcaseHero writes size + selection and invalidates', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .setShowcaseHero(
+            'sc',
+            ProfileWidgetSize.large,
+            const ShowcaseSelection(
+              gameRef: '730',
+              hero: ShowcaseHeroStat.achievements,
+            ),
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['resizeShowcase']);
+      expect(repo.lastShowcaseSize, ProfileWidgetSize.large);
+      expect(
+        repo.lastShowcaseSelection,
+        const ShowcaseSelection(
+          gameRef: '730',
+          hero: ShowcaseHeroStat.achievements,
+        ),
+      );
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
 
     test('remove / resize / reorder each invoke their repo method', () async {
       final repo = _RecordingRepository();

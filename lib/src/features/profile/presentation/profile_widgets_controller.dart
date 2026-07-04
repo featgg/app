@@ -142,6 +142,14 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ShowcaseSelection selection,
   ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
 
+  /// Sets the hero stat on the showcase widget [id]. The settings envelope holds
+  /// both size and selection, so this is the same single rewrite as a resize.
+  Future<void> setShowcaseHero(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
+
   /// Persists a new ordering of widget ids.
   Future<void> reorder(List<String> orderedIds) =>
       _run((repo) => repo.reorder(orderedIds));

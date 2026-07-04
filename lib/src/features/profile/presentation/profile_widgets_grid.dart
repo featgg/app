@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
+import '../domain/showcase_selection.dart';
+import '../domain/showcase_value_resolver.dart';
 import 'composed_card_view.dart';
 import 'composed_picker.dart';
 import 'data_menu_screen.dart';
@@ -243,6 +245,8 @@ enum _WidgetMenuAction {
   resizeSmall,
   resizeWide,
   resizeLarge,
+  heroHours,
+  heroAchievements,
   remove,
   moveUp,
   moveDown,
@@ -267,6 +271,20 @@ class _WidgetOptionsMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final controller = ref.read(profileWidgetsControllerProvider.notifier);
+
+    // The achievements hero is offered only when the showcased game currently
+    // carries a renderable achievement pair; otherwise only the hours hero
+    // exists, so no in-card stat choice is surfaced.
+    var achievementsAvailable = false;
+    if (widget.kind == ProfileWidgetKind.showcase && widget.platform != null) {
+      final cardState = ref.watch(ownerCardProvider(widget.platform!));
+      final data = cardState.hasError ? null : cardState.value?.data;
+      final steam = data is SteamCardData ? data : null;
+      achievementsAvailable = showcaseAchievementsAvailable(
+        steam,
+        widget.showcaseSelection,
+      );
+    }
 
     return PopupMenuButton<_WidgetMenuAction>(
       key: Key('profileWidgetMenu_${widget.id}'),
@@ -297,6 +315,20 @@ class _WidgetOptionsMenu extends ConsumerWidget {
               widget.id,
               ProfileWidgetSize.large,
               widget.showcaseSelection,
+            );
+          case _WidgetMenuAction.heroHours:
+            controller.setShowcaseHero(
+              widget.id,
+              widget.size,
+              widget.showcaseSelection.copyWith(hero: ShowcaseHeroStat.hours),
+            );
+          case _WidgetMenuAction.heroAchievements:
+            controller.setShowcaseHero(
+              widget.id,
+              widget.size,
+              widget.showcaseSelection.copyWith(
+                hero: ShowcaseHeroStat.achievements,
+              ),
             );
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
@@ -341,6 +373,23 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           PopupMenuItem(
             value: _WidgetMenuAction.resizeLarge,
             child: Text(l10n.profileWidgetSizeLarge),
+          ),
+        ],
+        // The hero-stat choice appears only when the showcased game currently
+        // carries the achievement pair — so the option is offered only when
+        // there is a real choice between hours and achievements.
+        if (widget.kind == ProfileWidgetKind.showcase &&
+            achievementsAvailable) ...[
+          CheckedPopupMenuItem(
+            value: _WidgetMenuAction.heroHours,
+            checked: widget.showcaseSelection.hero == ShowcaseHeroStat.hours,
+            child: Text(l10n.showcaseHeroHours),
+          ),
+          CheckedPopupMenuItem(
+            value: _WidgetMenuAction.heroAchievements,
+            checked:
+                widget.showcaseSelection.hero == ShowcaseHeroStat.achievements,
+            child: Text(l10n.showcaseHeroAchievements),
           ),
         ],
         if (canMoveUp)

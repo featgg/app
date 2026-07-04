@@ -33,7 +33,11 @@ final class _FakeCardsRepository implements CardsRepository {
 
 const _heroUrl = 'https://cdn.example/730/hero.jpg';
 
-GameCard _steamCard({String? heroImage = _heroUrl}) => GameCard(
+GameCard _steamCard({
+  String? heroImage = _heroUrl,
+  int? achieved,
+  int? total,
+}) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
   title: 'steam-card',
@@ -50,6 +54,8 @@ GameCard _steamCard({String? heroImage = _heroUrl}) => GameCard(
         title: 'Counter-Strike 2',
         hours: 1234,
         heroImage: heroImage,
+        achieved: achieved,
+        total: total,
       ),
     ],
     recentGames: const [],
@@ -59,6 +65,7 @@ GameCard _steamCard({String? heroImage = _heroUrl}) => GameCard(
 ProfileWidget _showcaseWidget({
   ProfileWidgetSize size = ProfileWidgetSize.large,
   String gameRef = '730',
+  ShowcaseHeroStat hero = ShowcaseHeroStat.hours,
 }) => ProfileWidget(
   id: 's-1',
   kind: ProfileWidgetKind.showcase,
@@ -66,7 +73,7 @@ ProfileWidget _showcaseWidget({
   position: 0,
   isEnabled: true,
   size: size,
-  showcaseSelection: ShowcaseSelection(gameRef: gameRef),
+  showcaseSelection: ShowcaseSelection(gameRef: gameRef, hero: hero),
 );
 
 Widget _app(
@@ -187,6 +194,73 @@ void main() {
       // value must be present but no longer renders bare.
       expect(find.text('1234'), findsNothing);
       expect(find.textContaining('1234'), findsOneWidget);
+    });
+  });
+
+  group('achievements hero', () {
+    testWidgets('renders X/Y with the meta line at large size', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.large,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          cards: {
+            Platform.steam: _steamCard(
+              heroImage: null,
+              achieved: 142,
+              total: 167,
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Structural figure (achieved/total), not localized copy.
+      expect(find.text('142/167'), findsOneWidget);
+      expect(find.byKey(const Key('showcaseMeta_s-1')), findsOneWidget);
+    });
+
+    testWidgets('renders X/Y with no meta line at small size', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.small,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          cards: {
+            Platform.steam: _steamCard(
+              heroImage: null,
+              achieved: 142,
+              total: 167,
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Self-describing at every size — the same X/Y, and no meta line here.
+      expect(find.text('142/167'), findsOneWidget);
+      expect(find.byKey(const Key('showcaseMeta_s-1')), findsNothing);
+    });
+
+    testWidgets('an achievements choice on a pair-less card falls back to '
+        'hours', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _showcaseWidget(
+            size: ProfileWidgetSize.large,
+            hero: ShowcaseHeroStat.achievements,
+          ),
+          // No achievement pair on this card.
+          cards: {Platform.steam: _steamCard(heroImage: null)},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The hours hero renders; never the forbidden empty / 0/0 achievements.
+      expect(find.text('1234'), findsOneWidget);
+      expect(find.text('142/167'), findsNothing);
     });
   });
 
