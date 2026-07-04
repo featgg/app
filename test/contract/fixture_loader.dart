@@ -12,7 +12,8 @@ typedef RecordedFixture = ({int? status, Map<String, dynamic> payload});
 /// Decodes a recorded-fixture wrapper. If `__PLACEHOLDER__` is `true` the
 /// fixture still holds scaffold data, so this fails loudly (naming [source])
 /// rather than asserting against invented values — the runtime gate that keeps
-/// the contract suite red until a human drops cleaned real data.
+/// the contract suite red until the slot is filled with published fixture
+/// data (published fixtures omit the key entirely).
 RecordedFixture parseRecordedFixture(
   String jsonContent, {
   required String source,
@@ -20,9 +21,9 @@ RecordedFixture parseRecordedFixture(
   final map = jsonDecode(jsonContent) as Map<String, dynamic>;
   if (map['__PLACEHOLDER__'] == true) {
     fail(
-      'Fixture "$source" is still a placeholder. Capture a real cleaned '
-      'response (see test/contract/README.md), drop it into "payload", and '
-      'set "__PLACEHOLDER__": false.',
+      'Fixture "$source" is still a placeholder — its slot has not been '
+      'provisioned with published fixture data yet '
+      '(see test/contract/README.md).',
     );
   }
   return (

@@ -119,7 +119,7 @@ void main() {
     });
 
     test('request_rate_limited (429) → AuthRateLimitFailure carrying the '
-        'captured code, expected, not crash-reported', () async {
+        'documented code, expected, not crash-reported', () async {
       final fixture = loadRecordedFixture('$_dir/request_rate_limited.json');
       final s = _subject(_FixtureDataSource(requestFixture: fixture));
       final failure = (await s.repo.requestDeletion()).fold(
@@ -128,8 +128,9 @@ void main() {
       );
       expect(failure, isA<AuthRateLimitFailure>());
       expect(failure!.isExpected, isTrue);
-      // Resolves OTP_RATE_LIMIT vs DELETE_OTP_COOLDOWN by the real fixture.
-      expect(failure.code, fixture.payload['code']);
+      // account-deletion.md pins the rate-limit token; assert the documented
+      // code rather than echoing the fixture, so a renamed code fails here.
+      expect(failure.code, 'OTP_RATE_LIMIT');
       expect(s.reporter.reported, isEmpty);
     });
 
