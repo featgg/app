@@ -1,0 +1,8 @@
+{
+  "status": 401,
+  "payload": {
+    "success": false,
+    "code": "INVALID_OTP",
+    "message": "The code is invalid or expired."
+  }
+}

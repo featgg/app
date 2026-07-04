@@ -1,0 +1,8 @@
+{
+  "status": 500,
+  "payload": {
+    "success": false,
+    "code": "ACCOUNT_DELETE_FAILED",
+    "message": "Could not send the deletion code."
+  }
+}

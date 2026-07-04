@@ -1,0 +1,45 @@
+{
+  "payload": {
+    "schema_version": 1,
+    "platform": "wow_retail",
+    "title": "Arthas",
+    "subtitle": "Silvermoon-EU",
+    "icon_image": "https://render-eu.worldofwarcraft.com/character/silvermoon/100/123456789-avatar.jpg",
+    "hero_image": "https://render-eu.worldofwarcraft.com/character/silvermoon/100/123456789-main.jpg",
+    "profile_url": null,
+    "stats": [
+      { "key": "item_level", "value": 480, "unit": "count" },
+      { "key": "achievement_points", "value": 15000, "unit": "points" },
+      { "key": "mythic_plus_rating", "value": 2450 }
+    ],
+    "last_updated": "2026-06-03T12:00:00Z",
+    "data": {
+      "profile": {
+        "race": "Human",
+        "faction": "ALLIANCE",
+        "class": "Death Knight",
+        "spec": "Unholy",
+        "level": 70,
+        "ilvl_avg": 482,
+        "ilvl_equipped": 480
+      },
+      "recent_achievements": [
+        { "id": 1234, "name": "Glory of the Hero", "completed_at": "2026-05-01T10:00:00Z" }
+      ],
+      "mythic_plus": {
+        "rating": 2450,
+        "best_runs": [
+          {
+            "keystone_level": 12,
+            "dungeon": { "name": "Ara-Kara, City of Echoes" },
+            "completed_timestamp": 1717101240000,
+            "duration": 1834000,
+            "is_completed_within_time": true,
+            "mythic_rating": { "rating": 245.6 }
+          }
+        ]
+      },
+      "attribution": "Data provided by Blizzard"
+    }
+  }
+}

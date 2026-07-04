@@ -1,0 +1,4 @@
+{
+  "status": 200,
+  "payload": { "success": true, "otp_sent": true }
+}

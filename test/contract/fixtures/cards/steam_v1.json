@@ -1,0 +1,38 @@
+{
+  "payload": {
+    "schema_version": 1,
+    "platform": "steam",
+    "title": "TestUser",
+    "subtitle": null,
+    "icon_image": "https://avatars.akamai.steamstatic.com/1111111111111111111111111111111111111111_full.jpg",
+    "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg",
+    "profile_url": "https://steamcommunity.com/id/testuser/",
+    "stats": [
+      { "key": "hours_played", "value": 1240, "unit": "hours" },
+      { "key": "games_owned", "value": 312, "unit": "count" },
+      { "key": "steam_level", "value": 42 }
+    ],
+    "last_updated": "2026-06-03T12:00:00Z",
+    "data": {
+      "library_showcase": [
+        {
+          "app_id": 730,
+          "title": "Counter-Strike 2",
+          "hours": 540,
+          "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+          "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg"
+        },
+        {
+          "app_id": 570,
+          "title": "Dota 2",
+          "hours": 210,
+          "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/570/capsule_184x69.jpg",
+          "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/570/library_600x900.jpg"
+        }
+      ],
+      "recent_games": [
+        { "app_id": 730, "title": "Counter-Strike 2", "hours_2weeks": 12 }
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "status": 429,
+  "payload": {
+    "success": false,
+    "code": "OTP_RATE_LIMIT",
+    "message": "Too many requests. Try again shortly.",
+    "retry_after": 42
+  }
+}
