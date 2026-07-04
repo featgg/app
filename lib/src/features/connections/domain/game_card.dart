@@ -24,7 +24,9 @@ final class CardStat extends Equatable {
   List<Object?> get props => [key, value, unit];
 }
 
-/// A library-showcase game entry in Steam `widget_data.data`.
+/// A library-showcase game entry in Steam `widget_data.data`. [achieved] and
+/// [total] carry the per-game achievement pair when present (together-or-absent
+/// per the feed contract); both null when the game has no achievement data.
 final class LibraryShowcaseEntry extends Equatable {
   const LibraryShowcaseEntry({
     required this.appId,
@@ -32,6 +34,8 @@ final class LibraryShowcaseEntry extends Equatable {
     required this.hours,
     this.iconImage,
     this.heroImage,
+    this.achieved,
+    this.total,
   });
 
   final int appId;
@@ -39,9 +43,23 @@ final class LibraryShowcaseEntry extends Equatable {
   final num hours;
   final String? iconImage;
   final String? heroImage;
+  final int? achieved;
+  final int? total;
+
+  /// True only when the entry carries a renderable achievement pair. Guards the
+  /// "never 0/0 / never total:0" invariant defensively at the entity boundary.
+  bool get hasAchievements => achieved != null && total != null && total! > 0;
 
   @override
-  List<Object?> get props => [appId, title, hours, iconImage, heroImage];
+  List<Object?> get props => [
+    appId,
+    title,
+    hours,
+    iconImage,
+    heroImage,
+    achieved,
+    total,
+  ];
 }
 
 /// A recently-played game entry in Steam `widget_data.data`.

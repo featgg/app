@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
 
-/// Which per-game stat a showcase card surfaces. Forward-compatible: only
-/// [hours] exists today; `achievements` (and others) land as one enum value plus
-/// one resolver case once the backend ships the per-game datum.
-enum ShowcaseHeroStat { hours }
+/// Which per-game stat a showcase card surfaces. [achievements] is available
+/// only for a game that carries the per-game achievement pair; the resolver
+/// falls back to [hours] when it does not.
+enum ShowcaseHeroStat { hours, achievements }
 
 /// The owner's per-game choice for a [ProfileWidgetKind.showcase] widget: which
 /// game to render and which stat is the hero (with an optional second `meta`
@@ -28,6 +28,15 @@ final class ShowcaseSelection extends Equatable {
   static const empty = ShowcaseSelection(gameRef: '');
 
   bool get isEmpty => gameRef.isEmpty;
+
+  /// Returns a copy with the given fields replaced. `meta` is preserved as-is —
+  /// this feature does not touch the second-stat slot.
+  ShowcaseSelection copyWith({String? gameRef, ShowcaseHeroStat? hero}) =>
+      ShowcaseSelection(
+        gameRef: gameRef ?? this.gameRef,
+        hero: hero ?? this.hero,
+        meta: meta,
+      );
 
   @override
   List<Object?> get props => [gameRef, hero, meta];

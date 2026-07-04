@@ -1232,6 +1232,14 @@
       }
     }
   },
+  "showcaseHeroHours": "Hours",
+  "@showcaseHeroHours": {
+    "description": "Menu option that sets the showcase hero stat to hours played."
+  },
+  "showcaseHeroAchievements": "Achievements",
+  "@showcaseHeroAchievements": {
+    "description": "Menu option that sets the showcase hero stat to the game's achievement count; also the meta descriptor for the achievements hero on the large card."
+  },
   "profileAddCard": "Add card",
   "@profileAddCard": {
     "description": "Label for the single add-card entry point on the owner's profile that opens the visual game picker."

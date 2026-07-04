@@ -254,11 +254,13 @@ Map<String, dynamic> mergeShowcaseSelectionIntoSettings(
 /// Serializes a [ShowcaseHeroStat] to its stable wire token.
 String showcaseHeroStatToWire(ShowcaseHeroStat s) => switch (s) {
   ShowcaseHeroStat.hours => 'hours',
+  ShowcaseHeroStat.achievements => 'achievements',
 };
 
 /// Parses a wire hero-stat token; null on an unknown/absent token (lenient).
 ShowcaseHeroStat? showcaseHeroStatFromWire(Object? v) => switch (v) {
   'hours' => ShowcaseHeroStat.hours,
+  'achievements' => ShowcaseHeroStat.achievements,
   _ => null,
 };
 

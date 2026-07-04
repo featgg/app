@@ -32,6 +32,26 @@ void main() {
       expect(card.lastUpdated, isA<DateTime>());
     });
 
+    test('steam_v1 → the per-game achievement pair is present-together-or-'
+        'absent across entries', () {
+      final card = _cardFrom(loadRecordedFixture('$_dir/steam_v1.json'));
+      final steam = card.data! as SteamCardData;
+
+      LibraryShowcaseEntry entryFor(int appId) =>
+          steam.libraryShowcase.firstWhere((e) => e.appId == appId);
+
+      // The fixture carries the pair on the CS2 entry and omits it on Dota.
+      final cs2 = entryFor(730);
+      expect(cs2.achieved, isNotNull);
+      expect(cs2.total, isNotNull);
+      expect(cs2.hasAchievements, isTrue);
+
+      final dota = entryFor(570);
+      expect(dota.achieved, isNull);
+      expect(dota.total, isNull);
+      expect(dota.hasAchievements, isFalse);
+    });
+
     test('wow_retail_v1 → WowRetailCardData; best-run completedTimestamp '
         'derives from epoch ms', () {
       final card = _cardFrom(loadRecordedFixture('$_dir/wow_retail_v1.json'));

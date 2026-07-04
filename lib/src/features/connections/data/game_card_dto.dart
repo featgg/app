@@ -119,18 +119,22 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
   final showcaseRaw = data['library_showcase'] as List<dynamic>? ?? [];
   final recentRaw = data['recent_games'] as List<dynamic>? ?? [];
   return SteamCardData(
-    libraryShowcase: showcaseRaw
-        .whereType<Map<String, dynamic>>()
-        .map(
-          (e) => LibraryShowcaseEntry(
-            appId: (e['app_id'] as num).toInt(),
-            title: e['title'] as String,
-            hours: e['hours'] as num,
-            iconImage: e['icon_image'] as String?,
-            heroImage: e['hero_image'] as String?,
-          ),
-        )
-        .toList(),
+    libraryShowcase: showcaseRaw.whereType<Map<String, dynamic>>().map((e) {
+      // The achievement pair is present-together-or-absent: keep it only
+      // when both fields are present, so a half-pair degrades to unavailable.
+      final achievedRaw = (e['achieved'] as num?)?.toInt();
+      final totalRaw = (e['total'] as num?)?.toInt();
+      final bothPresent = achievedRaw != null && totalRaw != null;
+      return LibraryShowcaseEntry(
+        appId: (e['app_id'] as num).toInt(),
+        title: e['title'] as String,
+        hours: e['hours'] as num,
+        iconImage: e['icon_image'] as String?,
+        heroImage: e['hero_image'] as String?,
+        achieved: bothPresent ? achievedRaw : null,
+        total: bothPresent ? totalRaw : null,
+      );
+    }).toList(),
     recentGames: recentRaw
         .whereType<Map<String, dynamic>>()
         .map(

@@ -647,5 +647,54 @@ void main() {
       expect(widget.showcaseSelection.gameRef, '730');
       expect(widget.showcaseSelection.hero, ShowcaseHeroStat.hours);
     });
+
+    test('an achievements hero token maps to the achievements stat', () {
+      final sel = showcaseSelectionFromSettings({
+        'showcase': {'game': '730', 'hero': 'achievements'},
+      });
+      expect(sel.gameRef, '730');
+      expect(sel.hero, ShowcaseHeroStat.achievements);
+    });
+
+    test('round-trips an achievements hero through merge → fromDto', () {
+      final merged = mergeShowcaseSelectionIntoSettings(
+        ProfileWidgetSize.large,
+        const ShowcaseSelection(
+          gameRef: '730',
+          hero: ShowcaseHeroStat.achievements,
+        ),
+      );
+      expect(
+        (merged['showcase'] as Map<String, dynamic>)['hero'],
+        'achievements',
+      );
+
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson({
+          'id': 'w-showcase',
+          'platform': 'steam',
+          'type': 'showcase',
+          'position': 0,
+          'is_enabled': true,
+          'settings': merged,
+        }),
+      );
+
+      expect(widget!.showcaseSelection.hero, ShowcaseHeroStat.achievements);
+    });
+
+    test('hero-stat wire helpers round-trip both tokens', () {
+      expect(showcaseHeroStatToWire(ShowcaseHeroStat.hours), 'hours');
+      expect(
+        showcaseHeroStatToWire(ShowcaseHeroStat.achievements),
+        'achievements',
+      );
+      expect(showcaseHeroStatFromWire('hours'), ShowcaseHeroStat.hours);
+      expect(
+        showcaseHeroStatFromWire('achievements'),
+        ShowcaseHeroStat.achievements,
+      );
+      expect(showcaseHeroStatFromWire('bananas'), isNull);
+    });
   });
 }

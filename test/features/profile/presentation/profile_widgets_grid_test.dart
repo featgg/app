@@ -264,8 +264,9 @@ ProfileWidget _showcaseWidget({required String id, required int position}) =>
     );
 
 /// A Steam card carrying one library-showcase entry (art-less to avoid decoding
-/// a real image in tests) that the showcase view resolves against.
-GameCard _steamShowcaseCard() => GameCard(
+/// a real image in tests) that the showcase view resolves against. The
+/// achievement pair is present only when [achieved]/[total] are passed.
+GameCard _steamShowcaseCard({int? achieved, int? total}) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
   title: 'steam-card',
@@ -275,11 +276,17 @@ GameCard _steamShowcaseCard() => GameCard(
   profileUrl: null,
   stats: const [],
   lastUpdated: DateTime.utc(2026, 6, 1),
-  data: const SteamCardData(
+  data: SteamCardData(
     libraryShowcase: [
-      LibraryShowcaseEntry(appId: 730, title: 'Counter-Strike 2', hours: 1234),
+      LibraryShowcaseEntry(
+        appId: 730,
+        title: 'Counter-Strike 2',
+        hours: 1234,
+        achieved: achieved,
+        total: total,
+      ),
     ],
-    recentGames: [],
+    recentGames: const [],
   ),
 );
 
@@ -852,6 +859,77 @@ void main() {
     expect(
       widgetsRepo.lastShowcaseSelection,
       const ShowcaseSelection(gameRef: '730'),
+    );
+  });
+
+  testWidgets('showcase menu surfaces the hero options only when the game '
+      'carries the achievement pair', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard(achieved: 142, total: 167)},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.showcaseHeroHours), findsOneWidget);
+    expect(find.text(l10n.showcaseHeroAchievements), findsOneWidget);
+  });
+
+  testWidgets('showcase menu omits the hero options when the game lacks the '
+      'pair', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        // No achievement pair on this card.
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.showcaseHeroHours), findsNothing);
+    expect(find.text(l10n.showcaseHeroAchievements), findsNothing);
+  });
+
+  testWidgets('selecting Achievements drives the controller with the '
+      'achievements hero and the same size', (tester) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_showcaseWidget(id: 'sc', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard(achieved: 142, total: 167)},
+        widgetsRepo: widgetsRepo,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+    await tester.pumpAndSettle();
+    // CheckedPopupMenuItem overlays its checkmark in an opacity layer, so the
+    // Text center reports a hit-test miss though the tap still fires the row's
+    // onTap — the recorded selection below proves the correct item activated.
+    await tester.tap(
+      find.text(l10n.showcaseHeroAchievements),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    // The choice persists through setShowcaseSize: the hero is achievements and
+    // the size is unchanged (the game choice is not dropped).
+    expect(widgetsRepo.lastSetSize, ProfileWidgetSize.small);
+    expect(
+      widgetsRepo.lastShowcaseSelection,
+      const ShowcaseSelection(
+        gameRef: '730',
+        hero: ShowcaseHeroStat.achievements,
+      ),
     );
   });
 }
