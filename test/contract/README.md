@@ -12,26 +12,24 @@ They are **contract** tests, not integration tests: offline, fast, no emulator,
 no live network. The only thing different from a unit test is *where the JSON
 comes from*.
 
-## The `__PLACEHOLDER__` gate
+## Fixture wrapper
 
-Every fixture is a wrapper:
+Every fixture is a wrapper around the recorded body:
 
 ```json
-{ "__PLACEHOLDER__": true, "status": 200, "payload": { } }
+{ "status": 200, "payload": { } }
 ```
 
-- `__PLACEHOLDER__` (bool) — `true` while the fixture is scaffolded. A `true`
-  fixture makes `parseRecordedFixture` **fail loudly**, naming the file. This
-  keeps the contract suite red until the slot is filled with published data;
-  published fixtures omit the key entirely.
 - `status` (int, optional) — HTTP status for server-operation (Shape 1)
   fixtures; omitted for direct-data (Shape 2) fixtures.
 - `payload` (object, required) — the recorded response body (Shape 1) or the
   recorded `widget_data` envelope (Shape 2).
+- `__PLACEHOLDER__` (bool) — present (and `true`) only while a slot is
+  scaffolded and still awaiting published data. Such a fixture makes
+  `parseRecordedFixture` **fail loudly**, naming the file, so its suite stays
+  red until the slot is provisioned. Published fixtures omit the key.
 
-`fixture_loader_test.dart` is green: it proves the gate itself. The
-`*_contract_test.dart` suites are red on purpose while their fixtures are
-placeholders — that is the gate working, not a bug.
+`fixture_loader_test.dart` proves the gate itself.
 
 ## Adding a contract test
 
