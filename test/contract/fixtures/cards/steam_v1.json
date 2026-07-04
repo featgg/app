@@ -20,7 +20,9 @@
           "title": "Counter-Strike 2",
           "hours": 540,
           "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
-          "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg"
+          "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg",
+          "achieved": 142,
+          "total": 167
         },
         {
           "app_id": 570,

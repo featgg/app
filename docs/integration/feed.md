@@ -179,7 +179,8 @@ widget-tier avatar and the hero art):
     "library_showcase": [
       { "app_id": 730, "title": "CS2", "hours": 540,
         "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
-        "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg" }
+        "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg",
+        "achieved": 142, "total": 167 }
     ],
     "recent_games": [
       { "app_id": 730, "title": "CS2", "hours_2weeks": 12 }
@@ -187,6 +188,16 @@ widget-tier avatar and the hero art):
   }
 }
 ```
+
+`library_showcase[]` entries may carry an optional achievements pair:
+`achieved` (integer ≥ 0, unlocked count) and `total` (integer > 0,
+achievements the game defines). The two fields appear **together or not at
+all** — absence means the game's achievement data is not available, never
+`0/0` and never `total: 0` — so render an achievements figure only when
+both are present. `achieved: 0` next to a positive `total` is a real value
+(owned, none unlocked). Only a bounded subset of the user's top games by
+playtime carries the pair; do not infer zero from absence. Additive under
+`schema_version: 1`; a card gains the fields on its next natural refresh.
 
 The `data` block's field inventory is platform-specific and ships with
 each platform's own contract; only its image URLs follow the envelope
