@@ -168,7 +168,7 @@ widget-tier avatar and the hero art):
   "title": "TestUser",
   "subtitle": null,
   "icon_image": "https://avatars.akamai.steamstatic.com/<hash>_full.jpg",
-  "hero_image": "https://shared.akamai.steamstatic.com/steam/apps/730/library_600x900.jpg",
+  "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg",
   "profile_url": "https://steamcommunity.com/id/test/",
   "stats": [
     { "key": "hours_played", "value": 1240, "unit": "hours" },
@@ -178,8 +178,8 @@ widget-tier avatar and the hero art):
   "data": {
     "library_showcase": [
       { "app_id": 730, "title": "CS2", "hours": 540,
-        "icon_image": "https://shared.akamai.steamstatic.com/steam/apps/730/capsule_184x69.jpg",
-        "hero_image": "https://shared.akamai.steamstatic.com/steam/apps/730/library_600x900.jpg" }
+        "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+        "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg" }
     ],
     "recent_games": [
       { "app_id": 730, "title": "CS2", "hours_2weeks": 12 }
