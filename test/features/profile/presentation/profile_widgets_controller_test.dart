@@ -1,9 +1,11 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
@@ -25,6 +27,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   final List<String> mutations = [];
   List<String>? lastReorder;
   TemplateFill? lastTemplateFill;
+  ComposedFill? lastComposedFill;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -34,6 +37,11 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
     fetchCalls++;
     return right(widgets);
   }
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(const []);
 
   @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
@@ -86,6 +94,56 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addComposedWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addComposed');
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.composed,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addShowcase');
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.showcase,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+        showcaseSelection: selection,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setComposedFill(
+    String id,
+    ProfileWidgetSize size,
+    ComposedFill fill,
+  ) async {
+    mutations.add('setComposedFill');
+    lastComposedFill = fill;
+    return _result(unit);
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     mutations.add('remove');
     return _result(unit);
@@ -97,6 +155,16 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
     ProfileWidgetSize size,
   ) async {
     mutations.add('resize');
+    return _result(unit);
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async {
+    mutations.add('resizeShowcase');
     return _result(unit);
   }
 
@@ -177,6 +245,103 @@ void main() {
 
       expect(repo.mutations, ['addTemplate']);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addComposed', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addComposed(position: 0, size: ProfileWidgetSize.small);
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addComposed']);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addShowcase', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addShowcase(
+            platform: Platform.steam,
+            selection: const ShowcaseSelection(gameRef: '730'),
+            position: 0,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addShowcase']);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('toggleComposedItem patches the live widget fill', () async {
+      const widget = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.composed,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        size: ProfileWidgetSize.wide,
+        composedFill: ComposedFill(['chess.rating']),
+      );
+      final repo = _RecordingRepository(widgets: const [widget]);
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .toggleComposedItem(widgetId: 'w-1', itemId: 'wow_retail.profile');
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['setComposedFill']);
+      // The patched fill keeps the already-picked item and appends the new one —
+      // proving the write derives from the live state, not an empty snapshot.
+      expect(repo.lastComposedFill!.itemIds, [
+        'chess.rating',
+        'wow_retail.profile',
+      ]);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('toggleComposedItem is a no-op when the widget is gone', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .toggleComposedItem(widgetId: 'missing', itemId: 'chess.rating');
+
+      expect(repo.mutations, isEmpty);
       expect(
         container.read(profileWidgetsControllerProvider).hasError,
         isFalse,

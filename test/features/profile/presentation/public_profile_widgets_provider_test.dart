@@ -7,23 +7,29 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dar
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
-import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
+import 'package:featgg/src/features/profile/presentation/public_profile_widgets_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
+/// Injects a fixed `fetchPublicWidgets` outcome and records the target id.
 final class _FakeRepository implements ProfileWidgetsRepository {
-  _FakeRepository(this.result);
+  _FakeRepository(this.publicResult);
 
-  final Either<Failure, List<ProfileWidget>> result;
-
-  @override
-  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async => result;
+  final Either<Failure, List<ProfileWidget>> publicResult;
+  String? lastPublicUserId;
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
     String userId,
-  ) async => right(const []);
+  ) async {
+    lastPublicUserId = userId;
+    return publicResult;
+  }
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
+      throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
@@ -115,24 +121,40 @@ ProviderContainer _container(ProfileWidgetsRepository repo) {
 }
 
 void main() {
-  test('Right(list) → AsyncData with the list', () async {
-    final widgets = [_widget('a', 0), _widget('b', 1)];
-    final container = _container(_FakeRepository(right(widgets)));
+  test(
+    'Right(list) → AsyncData with the list, scoped to the target id',
+    () async {
+      final widgets = [_widget('a', 0), _widget('b', 1)];
+      final repo = _FakeRepository(right(widgets));
+      final container = _container(repo);
 
-    final result = await container.read(ownerProfileWidgetsProvider.future);
+      final result = await container.read(
+        publicProfileWidgetsProvider('owner-2').future,
+      );
 
-    expect(result, widgets);
+      expect(result, widgets);
+      expect(repo.lastPublicUserId, 'owner-2');
+    },
+  );
+
+  test('private profile (Right([])) → empty list', () async {
+    final container = _container(_FakeRepository(right(const [])));
+
+    final result = await container.read(
+      publicProfileWidgetsProvider('owner-2').future,
+    );
+
+    expect(result, isEmpty);
   });
 
   test('Left(failure) → AsyncError', () async {
     final container = _container(_FakeRepository(left(const NetworkFailure())));
 
-    // Trigger the build, then settle.
-    container.read(ownerProfileWidgetsProvider);
+    container.read(publicProfileWidgetsProvider('owner-2'));
     await Future<void>.microtask(() {});
     await Future<void>.microtask(() {});
 
-    final state = container.read(ownerProfileWidgetsProvider);
+    final state = container.read(publicProfileWidgetsProvider('owner-2'));
     expect(state, isA<AsyncError<List<ProfileWidget>>>());
     expect((state as AsyncError).error, isA<NetworkFailure>());
   });

@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
+import 'composed_card_view.dart';
+import 'composed_picker.dart';
 import 'data_menu_screen.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
+import 'showcase_card_view.dart';
 import 'template_card_view.dart';
 import 'template_picker.dart';
 
@@ -115,6 +118,49 @@ class _WidgetTile extends ConsumerWidget {
       );
     }
 
+    // A composed widget composes its own value rows from the owner's freely
+    // picked items (each watching its item's card) and is never resolved
+    // through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.composed) {
+      return Stack(
+        children: [
+          ClipRect(child: ComposedCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // A showcase widget resolves its own single-game art card and is never
+    // resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.showcase) {
+      return Stack(
+        children: [
+          ClipRect(child: ShowcaseCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
     final platform = widget.platform;
     // A kind with no platform has nothing to resolve; treat it as a missing
     // card so it still renders the placeholder-with-menu and stays removable.
@@ -190,7 +236,17 @@ class _PlaceholderTile extends StatelessWidget {
   }
 }
 
-enum _WidgetMenuAction { customizeData, fillSlots, remove, moveUp, moveDown }
+enum _WidgetMenuAction {
+  customizeData,
+  fillSlots,
+  editItems,
+  resizeSmall,
+  resizeWide,
+  resizeLarge,
+  remove,
+  moveUp,
+  moveDown,
+}
 
 class _WidgetOptionsMenu extends ConsumerWidget {
   const _WidgetOptionsMenu({
@@ -222,6 +278,26 @@ class _WidgetOptionsMenu extends ConsumerWidget {
             showDataMenu(context, widget);
           case _WidgetMenuAction.fillSlots:
             showTemplateSlots(context, widget);
+          case _WidgetMenuAction.editItems:
+            showComposedItemPicker(context, widget);
+          case _WidgetMenuAction.resizeSmall:
+            controller.resizeShowcase(
+              widget.id,
+              ProfileWidgetSize.small,
+              widget.showcaseSelection,
+            );
+          case _WidgetMenuAction.resizeWide:
+            controller.resizeShowcase(
+              widget.id,
+              ProfileWidgetSize.wide,
+              widget.showcaseSelection,
+            );
+          case _WidgetMenuAction.resizeLarge:
+            controller.resizeShowcase(
+              widget.id,
+              ProfileWidgetSize.large,
+              widget.showcaseSelection,
+            );
           case _WidgetMenuAction.remove:
             controller.remove(widget.id);
           case _WidgetMenuAction.moveUp:
@@ -231,19 +307,42 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        // A template widget fills its slots from the data menu; a platform
-        // widget customizes which stats its card surfaces. The two are
-        // mutually exclusive so each kind shows exactly one of the two.
+        // A template widget fills its slots, a composed widget edits its freely
+        // picked items, and a platform widget customizes which stats its card
+        // surfaces. The three are mutually exclusive so each kind shows exactly
+        // one customize entry.
         if (widget.kind == ProfileWidgetKind.template)
           PopupMenuItem(
             value: _WidgetMenuAction.fillSlots,
             child: Text(l10n.templateFillSlots),
           )
-        else
+        else if (widget.kind == ProfileWidgetKind.composed)
+          PopupMenuItem(
+            value: _WidgetMenuAction.editItems,
+            child: Text(l10n.composedEditItems),
+          )
+        else if (widget.kind == ProfileWidgetKind.platform)
           PopupMenuItem(
             value: _WidgetMenuAction.customizeData,
             child: Text(l10n.profileWidgetCustomizeData),
           ),
+        // A showcase widget surfaces its size on the card itself: pick a
+        // footprint and the card re-renders at that size. Scoped to showcase —
+        // the other kinds' size is not yet in-card editable.
+        if (widget.kind == ProfileWidgetKind.showcase) ...[
+          PopupMenuItem(
+            value: _WidgetMenuAction.resizeSmall,
+            child: Text(l10n.profileWidgetSizeSmall),
+          ),
+          PopupMenuItem(
+            value: _WidgetMenuAction.resizeWide,
+            child: Text(l10n.profileWidgetSizeWide),
+          ),
+          PopupMenuItem(
+            value: _WidgetMenuAction.resizeLarge,
+            child: Text(l10n.profileWidgetSizeLarge),
+          ),
+        ],
         if (canMoveUp)
           PopupMenuItem(
             value: _WidgetMenuAction.moveUp,

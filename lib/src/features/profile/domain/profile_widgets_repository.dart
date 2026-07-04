@@ -2,8 +2,10 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'profile_widget.dart';
+import 'showcase_selection.dart';
 import 'template_catalog.dart';
 
 /// Reads and mutates the signed-in owner's `profile_widgets` arrangement.
@@ -12,6 +14,13 @@ import 'template_catalog.dart';
 abstract interface class ProfileWidgetsRepository {
   /// Owner's widgets ordered by position. Right([]) when none.
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets();
+
+  /// Any user's widgets ordered by position for the public visitor render, with
+  /// no auth gate. Right([]) when none — a private or non-existent profile
+  /// returns no rows (RLS), so the visitor sees the empty state.
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  );
 
   /// Inserts a platform widget at [position] with [size], enabled.
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
@@ -28,11 +37,36 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a composed-card widget at [position] with [size], enabled and with
+  /// no items picked yet (`platform` null).
+  Future<Either<Failure, ProfileWidget>> addComposedWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
+  /// Inserts a showcase widget for [platform] with [selection] at [position]
+  /// and [size], enabled.
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
   /// Sets the size (`settings.size`) for [id].
   Future<Either<Failure, Unit>> setSize(String id, ProfileWidgetSize size);
+
+  /// Sets the size for the showcase widget [id]. The settings envelope
+  /// carries the game [selection] alongside the size, so a size change must
+  /// rewrite both — a size-only write would drop the selection.
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  );
 
   /// Persists the data-menu [selection] for [id], merged into the existing
   /// `settings` envelope alongside [size] (preserved verbatim). Additive: it
@@ -50,6 +84,15 @@ abstract interface class ProfileWidgetsRepository {
     String id,
     ProfileWidgetSize size,
     TemplateFill fill,
+  );
+
+  /// Persists the composed-card [fill] for [id], merged into the existing
+  /// `settings` envelope alongside [size] (preserved verbatim). Additive: it
+  /// keeps `schema_version` and `size`.
+  Future<Either<Failure, Unit>> setComposedFill(
+    String id,
+    ProfileWidgetSize size,
+    ComposedFill fill,
   );
 
   /// Persists a new ordering: [orderedIds] in target position order.

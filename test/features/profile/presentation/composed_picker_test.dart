@@ -14,33 +14,33 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dar
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
+import 'package:featgg/src/features/profile/presentation/composed_picker.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
-import 'package:featgg/src/features/profile/presentation/template_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
-const _templateWidget = ProfileWidget(
+const _composedWidget = ProfileWidget(
   id: 'w-1',
-  kind: ProfileWidgetKind.template,
+  kind: ProfileWidgetKind.composed,
   platform: null,
   position: 0,
   isEnabled: true,
   size: ProfileWidgetSize.small,
-  templateFill: TemplateFill('my_ranks', <String, String>{}),
+  composedFill: ComposedFill(<String>[]),
 );
 
-/// A widgets repository whose `setTemplateFill` records each fill and does not
+/// A widgets repository whose `setComposedFill` records each fill and does not
 /// complete until [gate] does — so a write can be held in flight.
 final class _GatedWidgetsRepository implements ProfileWidgetsRepository {
   _GatedWidgetsRepository({this.widgets = const []});
 
   final List<ProfileWidget> widgets;
-  final List<TemplateFill> fills = [];
+  final List<ComposedFill> fills = [];
 
-  /// When set, a template write does not complete until this completes.
+  /// When set, a composed write does not complete until this completes.
   Completer<void>? gate;
 
   @override
@@ -53,29 +53,15 @@ final class _GatedWidgetsRepository implements ProfileWidgetsRepository {
   ) async => right(const []);
 
   @override
-  Future<Either<Failure, Unit>> setTemplateFill(
+  Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
-    TemplateFill fill,
+    ComposedFill fill,
   ) async {
     fills.add(fill);
     if (gate != null) await gate!.future;
     return right(unit);
   }
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addPlatformWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addComposedWidget({
@@ -92,10 +78,24 @@ final class _GatedWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setComposedFill(
+  Future<Either<Failure, ProfileWidget>> addPlatformWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
+    required String templateId,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setTemplateFill(
     String id,
     ProfileWidgetSize size,
-    ComposedFill fill,
+    TemplateFill fill,
   ) async => throw UnimplementedError();
 
   @override
@@ -162,7 +162,7 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
 }
 
 /// Returns a fixed card per platform from the injected map; null for the rest.
-/// A platform mapped to a never-completing future keeps its owner card loading.
+/// A platform mapped to pending keeps its owner card loading.
 final class _FakeCardsRepository implements CardsRepository {
   _FakeCardsRepository({this.cards = const {}, this.pending = const {}});
 
@@ -198,21 +198,20 @@ GameCard _card({required Platform platform, List<CardStat> stats = const []}) =>
       data: null,
     );
 
-/// Opens the slot-fill sheet for [_templateWidget]'s first rank slot and
-/// observes the controller so it stays alive across the sheet's pop — mirroring
-/// the profile screen host that keeps an in-flight save observable.
+/// Opens the composed-item picker and observes the controller so it stays alive
+/// across the sheet — mirroring the profile screen host that keeps an in-flight
+/// save observable.
 class _Host extends ConsumerWidget {
   const _Host();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(profileWidgetsControllerProvider);
-    final slot = templateCatalog.first.slots.first;
     return Scaffold(
       body: Builder(
         builder: (context) => ElevatedButton(
           key: const Key('open'),
-          onPressed: () => showTemplateSlotFill(context, _templateWidget, slot),
+          onPressed: () => showComposedItemPicker(context, _composedWidget),
           child: const Text('open'),
         ),
       ),
@@ -237,16 +236,15 @@ Widget _app(ProviderContainer container) => UncontrolledProviderScope(
 ProviderContainer _container(
   ProfileWidgetsRepository repo, {
   CardsRepository? cardsRepository,
+  List<Platform> connected = const [Platform.chess, Platform.gw2],
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
       connectionsRepositoryProvider.overrideWithValue(
-        _FakeConnectionsRepository(const [Platform.chess, Platform.gw2]),
+        _FakeConnectionsRepository(connected),
       ),
       profileWidgetsRepositoryProvider.overrideWithValue(repo),
-      // The fill sheet watches ownerCardProvider per item; default to a
-      // repository with no cards so every watch resolves to null.
       cardsRepositoryProvider.overrideWithValue(
         cardsRepository ?? _FakeCardsRepository(),
       ),
@@ -257,45 +255,44 @@ ProviderContainer _container(
 }
 
 void main() {
-  testWidgets('slot choices are disabled while a save is in flight', (
-    tester,
-  ) async {
-    final repo = _GatedWidgetsRepository(widgets: const [_templateWidget])
-      ..gate = Completer<void>();
-    await tester.pumpWidget(_app(_container(repo)));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'item choices are disabled while a save is in flight; a rapid second pick records one write',
+    (tester) async {
+      final repo = _GatedWidgetsRepository(widgets: const [_composedWidget])
+        ..gate = Completer<void>();
+      await tester.pumpWidget(_app(_container(repo)));
+      await tester.pumpAndSettle();
 
-    // Fill the first rank slot; the write is held open by the gate.
-    await tester.tap(find.byKey(const Key('open')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('slotFillItem_chess.rating')));
-    await tester
-        .pump(); // sheet pops; the gated write keeps the controller loading
+      await tester.tap(find.byKey(const Key('open')));
+      await tester.pumpAndSettle();
 
-    // Reopen the sheet: with a save pending, a different choice is disabled.
-    await tester.tap(find.byKey(const Key('open')));
-    await tester.pumpAndSettle();
-    final tile = tester.widget<ListTile>(
-      find.byKey(const Key('slotFillItem_gw2.wvw_rank')),
-    );
-    expect(tile.onTap, isNull);
+      // Toggle the first item on; the write is held open by the gate.
+      await tester.tap(find.byKey(const Key('composedItem_chess.rating')));
+      await tester.pump();
 
-    // Tapping the disabled choice is a no-op: still exactly one write recorded.
-    await tester.tap(find.byKey(const Key('slotFillItem_gw2.wvw_rank')));
-    await tester.pump();
-    expect(repo.fills, hasLength(1));
+      // With a save pending, a different choice is disabled.
+      final tile = tester.widget<SwitchListTile>(
+        find.byKey(const Key('composedItem_gw2.wvw_rank')),
+      );
+      expect(tile.onChanged, isNull);
 
-    // Release the first write; the single recorded write carries that slot.
-    repo.gate!.complete();
-    await tester.pumpAndSettle();
-    expect(repo.fills, hasLength(1));
-    expect(repo.fills.single.itemIdFor('slot_1'), 'chess.rating');
-  });
+      // Tapping the disabled choice is a no-op: still exactly one write.
+      await tester.tap(find.byKey(const Key('composedItem_gw2.wvw_rank')));
+      await tester.pump();
+      expect(repo.fills, hasLength(1));
+
+      // Release the first write; the single recorded write carries that item.
+      repo.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(repo.fills, hasLength(1));
+      expect(repo.fills.single.contains('chess.rating'), isTrue);
+    },
+  );
 
   testWidgets(
     "marks a pickable item with no current value as 'no data yet' and keeps it tappable",
     (tester) async {
-      final repo = _GatedWidgetsRepository(widgets: const [_templateWidget]);
+      final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
       final cards = _FakeCardsRepository(
         cards: {
           // chess resolves (has the rating stat); gw2 does not (no wvw_rank).
@@ -314,33 +311,33 @@ void main() {
 
       // The unresolved item carries the annotation; the resolved one does not.
       expect(
-        find.byKey(const Key('slotFillNoData_gw2.wvw_rank')),
+        find.byKey(const Key('composedNoData_gw2.wvw_rank')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('slotFillNoData_chess.rating')),
+        find.byKey(const Key('composedNoData_chess.rating')),
         findsNothing,
       );
       // The annotated item stays pickable — no current value never disables it.
-      final tile = tester.widget<ListTile>(
-        find.byKey(const Key('slotFillItem_gw2.wvw_rank')),
+      final tile = tester.widget<SwitchListTile>(
+        find.byKey(const Key('composedItem_gw2.wvw_rank')),
       );
-      expect(tile.onTap, isNotNull);
+      expect(tile.onChanged, isNotNull);
     },
   );
 
   testWidgets('does not mark an item whose card is still loading', (
     tester,
   ) async {
-    final repo = _GatedWidgetsRepository(widgets: const [_templateWidget]);
+    final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
     final cards = _FakeCardsRepository(
-      // gw2's card never completes, so its owner card stays loading.
       cards: {
         Platform.chess: _card(
           platform: Platform.chess,
           stats: const [CardStat(key: 'rating', value: 1500)],
         ),
       },
+      // gw2's card never completes, so its owner card stays loading.
       pending: const {Platform.gw2},
     );
     await tester.pumpWidget(_app(_container(repo, cardsRepository: cards)));
@@ -350,7 +347,70 @@ void main() {
     // Pump without settling so gw2's card stays in its loading state.
     await tester.pump();
 
-    // No "no data yet" annotation while the card is still loading.
-    expect(find.byKey(const Key('slotFillNoData_gw2.wvw_rank')), findsNothing);
+    expect(find.byKey(const Key('composedNoData_gw2.wvw_rank')), findsNothing);
+  });
+
+  testWidgets('toggling an item records the picked id via setComposedFill', (
+    tester,
+  ) async {
+    final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
+    await tester.pumpWidget(_app(_container(repo)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('composedItem_chess.rating')));
+    await tester.pumpAndSettle();
+
+    expect(repo.fills, hasLength(1));
+    expect(repo.fills.single.itemIds, ['chess.rating']);
+  });
+
+  testWidgets('toggling flips the switch immediately, without reopening', (
+    tester,
+  ) async {
+    final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
+    await tester.pumpWidget(_app(_container(repo)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pumpAndSettle();
+
+    SwitchListTile tile() => tester.widget<SwitchListTile>(
+      find.byKey(const Key('composedItem_chess.rating')),
+    );
+    expect(tile().value, isFalse);
+
+    await tester.tap(find.byKey(const Key('composedItem_chess.rating')));
+    await tester.pumpAndSettle();
+
+    // The optimistic edit buffer flips the switch in place — the sheet is never
+    // reopened, so the value cannot be coming from the captured widget snapshot.
+    expect(tile().value, isTrue);
+  });
+
+  testWidgets('does not offer showcase items (no composed render path yet)', (
+    tester,
+  ) async {
+    final repo = _GatedWidgetsRepository(widgets: const [_composedWidget]);
+    await tester.pumpWidget(
+      _app(_container(repo, connected: const [Platform.steam])),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pumpAndSettle();
+
+    // A scalar steam stat is offered; the showcase pointer is filtered out
+    // because resolveSlot would always omit it on the card.
+    expect(
+      find.byKey(const Key('composedItem_steam.hours_played')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('composedItem_steam.library_showcase')),
+      findsNothing,
+    );
   });
 }

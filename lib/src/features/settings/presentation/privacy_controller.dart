@@ -13,6 +13,8 @@ part 'privacy_controller.g.dart';
 /// field, mutates only `privacy`, calls `updateMyProfile`, then invalidates
 /// `settingsCurrentPrivacyProvider` on success. On a Left the Failure is
 /// surfaced as AsyncError — the screen maps it via `FailureL10n.localizedMessage`.
+/// A change the user already initiated is sent even if the screen is disposed
+/// mid-read; disposal only skips state writes and the invalidate.
 ///
 /// No reference to `profileProvider` (a profile-presentation symbol) appears
 /// here; this notifier depends only on profile domain.
@@ -28,7 +30,7 @@ class PrivacyController extends _$PrivacyController {
 
     final fetchResult = await repo.fetchMyProfile();
     final profile = fetchResult.fold((failure) {
-      state = AsyncError(failure, StackTrace.current);
+      if (ref.mounted) state = AsyncError(failure, StackTrace.current);
       return null;
     }, (p) => p);
     if (profile == null) return;
@@ -42,6 +44,7 @@ class PrivacyController extends _$PrivacyController {
     );
 
     final updateResult = await repo.updateMyProfile(edit);
+    if (!ref.mounted) return;
     updateResult.fold(
       (failure) {
         state = AsyncError(failure, StackTrace.current);

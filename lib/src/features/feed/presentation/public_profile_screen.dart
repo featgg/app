@@ -3,15 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
-import '../../connections/domain/connection.dart';
-import '../../connections/domain/game_card.dart';
 import '../../profile/domain/profile.dart';
 import 'public_profile_provider.dart';
 
-/// Builds the full card view for a loaded public [GameCard]. Injected at the
-/// composition root (the router) so this feature's presentation stays
-/// decoupled from the card renderer's owning feature.
-typedef PublicCardBuilder = Widget Function(GameCard card);
+/// Builds the read-only visitor render of a user's `profile_widgets` arrangement
+/// for [userId]. Injected at the composition root (the router) so this feature's
+/// presentation stays decoupled from the profile feature that owns the widgets
+/// view and the card renderer.
+typedef PublicWidgetsBuilder = Widget Function(String userId);
 
 /// Displays any user's public profile in read-only visitor mode.
 /// No edit affordance and no privacy indicator — the data is public by
@@ -20,11 +19,11 @@ class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({
     super.key,
     required this.userId,
-    required this.cardBuilder,
+    required this.widgetsBuilder,
   });
 
   final String userId;
-  final PublicCardBuilder cardBuilder;
+  final PublicWidgetsBuilder widgetsBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +42,7 @@ class PublicProfileScreen extends ConsumerWidget {
               : _PublicProfileContent(
                   userId: userId,
                   profile: profile,
-                  cardBuilder: cardBuilder,
+                  widgetsBuilder: widgetsBuilder,
                 ),
         ),
       ),
@@ -51,50 +50,22 @@ class PublicProfileScreen extends ConsumerWidget {
   }
 }
 
-class _PublicProfileContent extends ConsumerWidget {
+class _PublicProfileContent extends StatelessWidget {
   const _PublicProfileContent({
     required this.userId,
     required this.profile,
-    required this.cardBuilder,
+    required this.widgetsBuilder,
   });
 
   final String userId;
   final Profile profile;
-  final PublicCardBuilder cardBuilder;
+  final PublicWidgetsBuilder widgetsBuilder;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-
-    // One watch per platform feeds both the per-card rendering and the
-    // all-null empty-state predicate.
-    final cardStates = {
-      for (final p in Platform.values)
-        p: ref.watch(publicCardProvider(userId, p)),
-    };
-
-    // Section is ready once every read has settled (data or error — not loading).
-    // This prevents N independent spinners from appearing while reads are in
-    // flight and ensures the cards render together.
-    final allSettled = cardStates.values.every((s) => s is! AsyncLoading);
-
-    final allResolved = cardStates.values.every((s) => s is AsyncData);
-    final allNull =
-        allResolved &&
-        cardStates.values.every((s) => (s as AsyncData).value == null);
-
-    // Platforms that will render visible content (non-null data or an error
-    // tile). Card-less platforms (AsyncData(null)) contribute no padding.
-    final renderablePlatforms = Platform.values
-        .where(
-          (p) =>
-              cardStates[p] is AsyncError ||
-              (cardStates[p] is AsyncData &&
-                  (cardStates[p] as AsyncData).value != null),
-        )
-        .toList();
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -104,8 +75,8 @@ class _PublicProfileContent extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               // Top-anchored so the avatar/identity block stays put while the
-              // cards section settles — vertical centering made the whole page
-              // jump as the cards loaded in.
+              // widgets section settles — vertical centering made the whole page
+              // jump as content loaded in.
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -133,43 +104,9 @@ class _PublicProfileContent extends ConsumerWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                if (!allSettled)
-                  // Card-shaped placeholders while any platform read is still
-                  // loading: they occupy realistic space, so the page does not
-                  // reflow when the real cards resolve.
-                  const ProfileCardsSkeleton()
-                else if (allNull)
-                  Text(
-                    l10n.publicProfileNoCards,
-                    key: const Key('publicProfileNoCards'),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  )
-                else
-                  // Renderable platforms carry bottom padding; card-less
-                  // platforms (null data) get none so there are no phantom gaps.
-                  ...Platform.values.map((p) {
-                    final isRenderable = renderablePlatforms.contains(p);
-                    final widget = AsyncValueWidget<GameCard?>(
-                      key: Key('publicCard_${p.name}'),
-                      value: cardStates[p]!,
-                      onRetry: () =>
-                          ref.invalidate(publicCardProvider(userId, p)),
-                      data: (card) => card == null
-                          ? const SizedBox.shrink()
-                          : cardBuilder(card),
-                    );
-                    return isRenderable
-                        ? Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppSpacing.md,
-                            ),
-                            child: widget,
-                          )
-                        : widget;
-                  }),
+                // The visitor render is driven entirely by the owner's saved
+                // widget arrangement, assembled at the composition root.
+                widgetsBuilder(userId),
               ],
             ),
           ),

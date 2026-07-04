@@ -286,5 +286,15 @@
   "templateFillSlots": "Rellenar espacios",
   "templateEmpty": "Aún no hay datos. Rellena un espacio para mostrar un valor.",
   "templateSlotNoData": "Sin datos todavía",
-  "templateSlotEmpty": "Sin definir"
+  "templateSlotEmpty": "Sin definir",
+  "composedAdd": "Añadir tarjeta compuesta",
+  "composedEmpty": "Aún no hay datos. Elige un elemento para mostrar un valor.",
+  "composedChooseTitle": "Elegir elementos",
+  "composedEditItems": "Editar elementos",
+  "showcaseGameUnavailable": "Juego no disponible",
+  "showcaseHeroHoursCompact": "{value} h",
+  "profileAddCard": "Añadir tarjeta",
+  "showcasePickerTitle": "Elige un juego",
+  "showcasePickerEmpty": "Aún no hay juegos para mostrar. Conecta una cuenta de juego para empezar.",
+  "showcasePickerAllAdded": "Ya mostraste todos los juegos disponibles."
 }

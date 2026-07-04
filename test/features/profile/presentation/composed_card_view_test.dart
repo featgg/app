@@ -7,9 +7,9 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
+import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
-import 'package:featgg/src/features/profile/domain/template_catalog.dart';
-import 'package:featgg/src/features/profile/presentation/template_card_view.dart';
+import 'package:featgg/src/features/profile/presentation/composed_card_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,14 +66,14 @@ GameCard _card({
   data: data,
 );
 
-ProfileWidget _templateWidget(TemplateFill fill) => ProfileWidget(
-  id: 't-1',
-  kind: ProfileWidgetKind.template,
+ProfileWidget _composedWidget(ComposedFill fill) => ProfileWidget(
+  id: 'c-1',
+  kind: ProfileWidgetKind.composed,
   platform: null,
   position: 0,
   isEnabled: true,
   size: ProfileWidgetSize.small,
-  templateFill: fill,
+  composedFill: fill,
 );
 
 Widget _harness({
@@ -100,7 +100,7 @@ Widget _harness({
       supportedLocales: const [Locale('en')],
       home: Scaffold(
         body: SingleChildScrollView(
-          child: TemplateCardView(
+          child: ComposedCardView(
             widget: widget,
             showEmptyPlaceholder: showEmptyPlaceholder,
           ),
@@ -111,14 +111,9 @@ Widget _harness({
 }
 
 void main() {
-  testWidgets('renders the template title and a row per resolved slot', (
-    tester,
-  ) async {
-    final widget = _templateWidget(
-      const TemplateFill('my_ranks', {
-        'slot_1': 'chess.rating',
-        'slot_2': 'gw2.wvw_rank',
-      }),
+  testWidgets('renders one row per resolved picked item', (tester) async {
+    final widget = _composedWidget(
+      const ComposedFill(['chess.rating', 'gw2.wvw_rank']),
     );
     await tester.pumpWidget(
       _harness(
@@ -136,61 +131,27 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    expect(find.text(l10n.templateMyRanksTitle), findsOneWidget);
-    expect(find.byKey(const Key('templateSlotRow_t-1_slot_1')), findsOneWidget);
-    expect(find.byKey(const Key('templateSlotRow_t-1_slot_2')), findsOneWidget);
-    expect(find.byKey(const Key('templateEmpty_t-1')), findsNothing);
-  });
-
-  testWidgets('renders the LoL rank slot as the composed rank value', (
-    tester,
-  ) async {
-    final widget = _templateWidget(
-      const TemplateFill('my_ranks', {'slot_1': 'league_of_legends.rank'}),
-    );
-    await tester.pumpWidget(
-      _harness(
-        widget: widget,
-        cards: {
-          Platform.leagueOfLegends: _card(
-            platform: Platform.leagueOfLegends,
-            data: const LeagueOfLegendsCardData(
-              rank: LolRank(
-                tier: 'GOLD',
-                division: 'II',
-                lp: 47,
-                wins: 10,
-                losses: 5,
-              ),
-              topMastery: [],
-            ),
-          ),
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('templateSlotRow_t-1_slot_1')), findsOneWidget);
-    // Structural assertion on the composed rank value, never a localized literal.
     expect(
-      find.textContaining('GOLD'),
+      find.byKey(const Key('composedItemRow_c-1_chess.rating')),
       findsOneWidget,
-      reason: 'the composed rank string is rendered',
     );
-    expect(find.textContaining('47'), findsOneWidget);
+    expect(
+      find.byKey(const Key('composedItemRow_c-1_gw2.wvw_rank')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('composedEmpty_c-1')), findsNothing);
   });
 
   testWidgets(
-    'soft-omits filled slots that do not resolve, keeping resolved rows',
+    'soft-omits an unresolved item, keeping resolved rows and naming the platform',
     (tester) async {
-      final widget = _templateWidget(
-        const TemplateFill('my_ranks', {
-          'slot_1': 'chess.rating', // card null → soft-omit
-          'slot_2': 'gw2.wvw_rank', // stat absent → soft-omit
-          'slot_3': 'wow_retail.mythic_plus_rating', // resolves to a value
-        }),
+      final widget = _composedWidget(
+        const ComposedFill([
+          'chess.rating', // card null → soft-omit
+          'gw2.wvw_rank', // stat absent → soft-omit
+          'wow_retail.mythic_plus_rating', // resolves to a value
+        ]),
       );
       await tester.pumpWidget(
         _harness(
@@ -207,39 +168,42 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Only the resolved slot contributes a row; the two unresolved slots
-      // soft-omit so the card never shows an empty/placeholder row.
-      expect(find.byKey(const Key('templateSlotRow_t-1_slot_1')), findsNothing);
-      expect(find.byKey(const Key('templateSlotRow_t-1_slot_2')), findsNothing);
       expect(
-        find.byKey(const Key('templateSlotRow_t-1_slot_3')),
+        find.byKey(const Key('composedItemRow_c-1_chess.rating')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('composedItemRow_c-1_gw2.wvw_rank')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(
+          const Key('composedItemRow_c-1_wow_retail.mythic_plus_rating'),
+        ),
         findsOneWidget,
       );
-      // The resolved slot shows its value; no placeholder glyph anywhere.
+      // The resolved item shows its value; no placeholder glyph anywhere.
       expect(find.text('2800'), findsOneWidget);
       expect(find.text('—'), findsNothing);
-      // The resolved row names the bound platform so the value's source is
-      // legible. Asserted against the descriptor constant, never a literal.
+      // The resolved row names the bound platform. Asserted against the
+      // descriptor constant, never a literal.
       expect(
         find.text(platformDescriptors[Platform.wowRetail]!.displayName),
         findsOneWidget,
       );
-      // One row remains, so the all-empty placeholder is absent.
-      expect(find.byKey(const Key('templateEmpty_t-1')), findsNothing);
+      expect(find.byKey(const Key('composedEmpty_c-1')), findsNothing);
     },
   );
 
   testWidgets(
-    'omits a slot whose card is still loading (no row, no placeholder)',
+    'omits an item whose card is still loading (no row, no placeholder)',
     (tester) async {
-      final widget = _templateWidget(
-        const TemplateFill('my_ranks', {'slot_1': 'chess.rating'}),
-      );
+      final widget = _composedWidget(const ComposedFill(['chess.rating']));
       final container = ProviderContainer(
         retry: (count, error) => null,
         overrides: [
           // A card that never completes keeps ownerCardProvider loading, so the
-          // slot must omit its row rather than claim a value or "no data".
+          // item must omit its row rather than claim a value or "no data".
           cardsRepositoryProvider.overrideWithValue(
             const _PendingCardsRepository(),
           ),
@@ -259,7 +223,7 @@ void main() {
             supportedLocales: const [Locale('en')],
             home: Scaffold(
               body: SingleChildScrollView(
-                child: TemplateCardView(widget: widget),
+                child: ComposedCardView(widget: widget),
               ),
             ),
           ),
@@ -268,47 +232,88 @@ void main() {
       // Pump without settling so the card stays in its loading state.
       await tester.pump();
 
-      expect(find.byKey(const Key('templateSlotRow_t-1_slot_1')), findsNothing);
+      expect(
+        find.byKey(const Key('composedItemRow_c-1_chess.rating')),
+        findsNothing,
+      );
       expect(find.text('—'), findsNothing);
-      expect(find.text('1500'), findsNothing);
+      // No placeholder row text while loading; the all-empty placeholder is the
+      // only fallback and appears only because no row resolved.
+      expect(find.byKey(const Key('composedEmpty_c-1')), findsOneWidget);
     },
   );
 
-  testWidgets('renders the all-empty placeholder when no slot is filled', (
+  testWidgets('renders the empty placeholder when no item resolves', (
     tester,
   ) async {
-    final widget = _templateWidget(const TemplateFill('my_ranks', {}));
-    await tester.pumpWidget(_harness(widget: widget, cards: const {}));
+    final widget = _composedWidget(const ComposedFill(['chess.rating']));
+    await tester.pumpWidget(
+      _harness(widget: widget, cards: const {Platform.chess: null}),
+    );
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    expect(find.byKey(const Key('templateEmpty_t-1')), findsOneWidget);
-    expect(find.text(l10n.templateEmpty), findsOneWidget);
-    expect(find.byKey(const Key('templateSlotRow_t-1_slot_1')), findsNothing);
+    expect(find.byKey(const Key('composedEmpty_c-1')), findsOneWidget);
+    expect(find.text(l10n.composedEmpty), findsOneWidget);
+    expect(
+      find.byKey(const Key('composedItemRow_c-1_chess.rating')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('renders the empty placeholder when nothing is picked', (
+    tester,
+  ) async {
+    final widget = _composedWidget(ComposedFill.empty);
+    await tester.pumpWidget(_harness(widget: widget, cards: const {}));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('composedEmpty_c-1')), findsOneWidget);
   });
 
   testWidgets(
     'showEmptyPlaceholder:false omits an empty card entirely (visitor)',
     (tester) async {
-      final widget = _templateWidget(const TemplateFill('my_ranks', {}));
+      final widget = _composedWidget(ComposedFill.empty);
       await tester.pumpWidget(
         _harness(widget: widget, cards: const {}, showEmptyPlaceholder: false),
       );
       await tester.pumpAndSettle();
 
       // No card and no owner-only placeholder — the visitor sees nothing.
-      expect(find.byKey(const Key('templateCard_t-1')), findsNothing);
-      expect(find.byKey(const Key('templateEmpty_t-1')), findsNothing);
+      expect(find.byKey(const Key('composedCard_c-1')), findsNothing);
+      expect(find.byKey(const Key('composedEmpty_c-1')), findsNothing);
     },
   );
 
-  testWidgets('renders the all-empty placeholder for an unknown template id', (
-    tester,
-  ) async {
-    final widget = _templateWidget(const TemplateFill('gone', {}));
-    await tester.pumpWidget(_harness(widget: widget, cards: const {}));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'owner=visitor: a resolved card carries no owner-only affordance',
+    (tester) async {
+      final widget = _composedWidget(const ComposedFill(['chess.rating']));
+      await tester.pumpWidget(
+        _harness(
+          widget: widget,
+          cards: {
+            Platform.chess: _card(
+              platform: Platform.chess,
+              stats: const [CardStat(key: 'rating', value: 1500)],
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('templateEmpty_t-1')), findsOneWidget);
-  });
+      // The resolved row is present and there is no placeholder/"—" glyph; the
+      // card is identical to what a visitor would see (no owner-only widget).
+      expect(
+        find.byKey(const Key('composedItemRow_c-1_chess.rating')),
+        findsOneWidget,
+      );
+      expect(find.text('—'), findsNothing);
+      expect(find.byKey(const Key('composedEmpty_c-1')), findsNothing);
+      // No edit/menu affordance is baked into the view itself.
+      expect(find.byType(PopupMenuButton<Object?>), findsNothing);
+      expect(find.byType(IconButton), findsNothing);
+    },
+  );
 }

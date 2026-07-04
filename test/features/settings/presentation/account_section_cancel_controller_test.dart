@@ -75,5 +75,24 @@ void main() {
       expect(state, isA<AsyncError<void>>());
       expect(state.error, isA<NetworkFailure>());
     });
+
+    test(
+      'an after-await state write on a disposed provider is a no-op',
+      () async {
+        final repo = _RecordingAccountDeletionRepository();
+        final container = _container(repo);
+        final notifier = container.read(
+          accountSectionCancelControllerProvider.notifier,
+        );
+
+        // Start the cancel, then dispose before the guarded await resolves. The
+        // ref.mounted guard must skip the post-await state write and invalidate.
+        final future = notifier.cancel();
+        container.dispose();
+
+        // Must complete without throwing UnmountedRefException.
+        await expectLater(future, completes);
+      },
+    );
   });
 }

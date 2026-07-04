@@ -1,7 +1,9 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,12 +18,16 @@ Map<String, dynamic> _row({
   bool includeSettings = true,
   Object? dataMenuItems,
   Object? template,
+  Object? composed,
+  Object? showcase,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
   if (size != null) settings['size'] = size;
   if (dataMenuItems != null) settings['data_menu_items'] = dataMenuItems;
   if (template != null) settings['template'] = template;
+  if (composed != null) settings['composed'] = composed;
+  if (showcase != null) settings['showcase'] = showcase;
   return {
     'id': id,
     'platform': platform,
@@ -95,8 +101,9 @@ void main() {
     test('reserved (unwired) kind tokens all degrade to null (omit)', () {
       // The reserved kinds are named in the wire taxonomy but not yet wired on
       // read; an older client must omit a row a newer client writes, never
-      // crash. `template` is now a wired kind, so it leaves this set.
-      for (final token in const ['data_menu', 'composed_card']) {
+      // crash. `template` and `composed_card` are now wired kinds, so they
+      // leave this set.
+      for (final token in const ['data_menu']) {
         final widget = profileWidgetFromDto(
           ProfileWidgetDto.fromJson(_row(type: token)),
         );
@@ -141,6 +148,7 @@ void main() {
         profileWidgetKindToWire(ProfileWidgetKind.composed),
         'composed_card',
       );
+      expect(profileWidgetKindToWire(ProfileWidgetKind.showcase), 'showcase');
     });
   });
 
@@ -377,6 +385,267 @@ void main() {
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
       expect(merged['size'], 'small');
       expect(merged.containsKey('template'), isFalse);
+    });
+  });
+
+  group('composed fill round-trip (additive to the v1 envelope)', () {
+    test(
+      'a composed_card row maps to a composed-kind widget with its fill',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'composed_card',
+              platform: null,
+              size: 'wide',
+              composed: {
+                'items': ['chess.rating', 'wow_retail.profile'],
+              },
+            ),
+          ),
+        );
+
+        expect(widget, isNotNull);
+        expect(widget!.kind, ProfileWidgetKind.composed);
+        expect(widget.platform, isNull);
+        expect(widget.size, ProfileWidgetSize.wide);
+        // Order is preserved from the stored list.
+        expect(widget.composedFill.itemIds, [
+          'chess.rating',
+          'wow_retail.profile',
+        ]);
+      },
+    );
+
+    test('unknown / garbage / duplicate item ids are dropped on read', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'composed_card',
+            platform: null,
+            composed: {
+              'items': [
+                'chess.rating', // known → kept
+                'chess.rating', // duplicate → dropped
+                'not.a.real.id', // unknown → dropped
+                42, // non-string → dropped
+              ],
+            },
+          ),
+        ),
+      );
+
+      expect(widget!.composedFill.itemIds, ['chess.rating']);
+    });
+
+    test('a non-object composed → empty fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'composed_card', platform: null, composed: 'oops'),
+        ),
+      );
+
+      expect(widget!.composedFill, ComposedFill.empty);
+    });
+
+    test('a composed with a non-list items → empty fill', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'composed_card',
+            platform: null,
+            composed: {'items': 'oops'},
+          ),
+        ),
+      );
+
+      expect(widget!.composedFill, ComposedFill.empty);
+    });
+
+    test('a platform row carries an empty composed fill (no disturbance)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(size: 'wide', dataMenuItems: ['steam.hours_played']),
+        ),
+      );
+
+      expect(widget!.kind, ProfileWidgetKind.platform);
+      expect(widget.composedFill, ComposedFill.empty);
+    });
+
+    test('composedFillFromSettings is lenient on a null envelope', () {
+      expect(composedFillFromSettings(null), ComposedFill.empty);
+    });
+
+    test('merge writer preserves schema_version + size and sets the items', () {
+      final merged = mergeComposedFillIntoSettings(
+        ProfileWidgetSize.wide,
+        const ComposedFill(['chess.rating', 'wow_retail.profile']),
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'wide');
+      final composed = merged['composed'] as Map<String, dynamic>;
+      expect(composed['items'], ['chess.rating', 'wow_retail.profile']);
+    });
+
+    test('merge writer omits the composed key for an empty fill', () {
+      final merged = mergeComposedFillIntoSettings(
+        ProfileWidgetSize.small,
+        ComposedFill.empty,
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'small');
+      expect(merged.containsKey('composed'), isFalse);
+    });
+  });
+
+  group('showcase selection round-trip (additive to the v1 envelope)', () {
+    test(
+      'a showcase row maps to a showcase kind with platform + selection',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'showcase',
+              platform: 'steam',
+              size: 'large',
+              showcase: {'game': '730', 'hero': 'hours'},
+            ),
+          ),
+        );
+
+        expect(widget, isNotNull);
+        expect(widget!.kind, ProfileWidgetKind.showcase);
+        // The source platform is the row's `platform` column, non-null per the
+        // binding rule — not duplicated inside settings.
+        expect(widget.platform, Platform.steam);
+        expect(widget.size, ProfileWidgetSize.large);
+        expect(widget.showcaseSelection.gameRef, '730');
+        expect(widget.showcaseSelection.hero, ShowcaseHeroStat.hours);
+        expect(widget.showcaseSelection.meta, isNull);
+      },
+    );
+
+    test('a showcase row with a null platform → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'showcase', platform: null, showcase: {'game': '730'}),
+        ),
+      );
+      expect(widget, isNull);
+    });
+
+    test(
+      'a showcase row with an unknown platform token → null (binding rule)',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'showcase',
+              platform: 'not_a_platform',
+              showcase: {'game': '730'},
+            ),
+          ),
+        );
+        expect(widget, isNull);
+      },
+    );
+
+    test(
+      'an unknown hero token → default hours (lenient, forward-compatible)',
+      () {
+        final sel = showcaseSelectionFromSettings({
+          'showcase': {'game': '730', 'hero': 'bananas'},
+        });
+        expect(sel.gameRef, '730');
+        expect(sel.hero, ShowcaseHeroStat.hours);
+        expect(sel.meta, isNull);
+      },
+    );
+
+    test(
+      'showcaseSelectionFromSettings is lenient on null/non-map/missing game',
+      () {
+        expect(showcaseSelectionFromSettings(null), ShowcaseSelection.empty);
+        expect(
+          showcaseSelectionFromSettings({'showcase': 'oops'}),
+          ShowcaseSelection.empty,
+        );
+        expect(
+          showcaseSelectionFromSettings({
+            'showcase': {'hero': 'hours'},
+          }),
+          ShowcaseSelection.empty,
+        );
+        expect(
+          showcaseSelectionFromSettings({
+            'showcase': {'game': ''},
+          }),
+          ShowcaseSelection.empty,
+        );
+      },
+    );
+
+    test(
+      'a platform row carries an empty showcase selection (no disturbance)',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(_row(size: 'wide')),
+        );
+
+        expect(widget!.kind, ProfileWidgetKind.platform);
+        expect(widget.showcaseSelection, ShowcaseSelection.empty);
+      },
+    );
+
+    test('merge writer preserves schema_version + size and sets game/hero', () {
+      final merged = mergeShowcaseSelectionIntoSettings(
+        ProfileWidgetSize.large,
+        const ShowcaseSelection(gameRef: '730'),
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'large');
+      final showcase = merged['showcase'] as Map<String, dynamic>;
+      expect(showcase['game'], '730');
+      expect(showcase['hero'], 'hours');
+      expect(showcase.containsKey('meta'), isFalse);
+    });
+
+    test('merge writer omits the showcase key for an empty selection', () {
+      final merged = mergeShowcaseSelectionIntoSettings(
+        ProfileWidgetSize.small,
+        ShowcaseSelection.empty,
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'small');
+      expect(merged.containsKey('showcase'), isFalse);
+    });
+
+    test('round-trips merge → fromDto with non-null platform + selection', () {
+      final merged = mergeShowcaseSelectionIntoSettings(
+        ProfileWidgetSize.large,
+        const ShowcaseSelection(gameRef: '730'),
+      );
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson({
+          'id': 'w-showcase',
+          'platform': 'steam',
+          'type': 'showcase',
+          'position': 0,
+          'is_enabled': true,
+          'settings': merged,
+        }),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.showcase);
+      expect(widget.platform, Platform.steam);
+      expect(widget.showcaseSelection.gameRef, '730');
+      expect(widget.showcaseSelection.hero, ShowcaseHeroStat.hours);
     });
   });
 }

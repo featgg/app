@@ -8,9 +8,11 @@ import '../../../core/error/failure.dart';
 import '../../../core/observability/observability.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/composed_card.dart';
 import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_repository.dart';
+import '../domain/showcase_selection.dart';
 import '../domain/template_catalog.dart';
 import 'profile_widget_dto.dart';
 import 'profile_widgets_data_source.dart';
@@ -34,6 +36,25 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dtos = await _source.fetchMyWidgets(userId);
       // Soft resolution: a row that maps to null (unknown kind, wrong envelope
       // version, or unknown platform) is dropped rather than failing the read.
+      final widgets = dtos
+          .map(profileWidgetFromDto)
+          .whereType<ProfileWidget>()
+          .toList();
+      return right(widgets);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async {
+    try {
+      final dtos = await _source.fetchPublicWidgets(userId);
+      // Same soft resolution as the owner read: a row that maps to null
+      // (unknown kind, wrong envelope version, or unknown platform) is dropped
+      // rather than failing the read.
       final widgets = dtos
           .map(profileWidgetFromDto)
           .whereType<ProfileWidget>()
@@ -107,6 +128,62 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addComposedWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final dto = await _source.insertWidget({
+        'platform': null,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.composed),
+        'position': position,
+        'is_enabled': true,
+        'settings': mergeComposedFillIntoSettings(size, ComposedFill.empty),
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final wireValue =
+          platformDescriptors[platform]?.wireValue ?? platform.name;
+      final dto = await _source.insertWidget({
+        'platform': wireValue,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.showcase),
+        'position': position,
+        'is_enabled': true,
+        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     try {
       final userId = _currentUserId();
@@ -131,6 +208,24 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
           'schema_version': kProfileWidgetSettingsVersion,
           'size': profileWidgetSizeToWire(size),
         },
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setShowcaseSize(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(id, {
+        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
       });
       return right(unit);
     } catch (e, st) {
@@ -167,6 +262,24 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(id, {
         'settings': mergeTemplateFillIntoSettings(size, fill),
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setComposedFill(
+    String id,
+    ProfileWidgetSize size,
+    ComposedFill fill,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(id, {
+        'settings': mergeComposedFillIntoSettings(size, fill),
       });
       return right(unit);
     } catch (e, st) {

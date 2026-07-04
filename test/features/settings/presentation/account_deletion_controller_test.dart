@@ -210,5 +210,25 @@ void main() {
         notifier.reset();
       },
     );
+
+    test(
+      'an after-await state write on a disposed provider is a no-op',
+      () async {
+        final repo = _FakeRepo();
+        final container = _container(repo);
+        final notifier = container.read(
+          accountDeletionControllerProvider.notifier,
+        );
+
+        // Start the request, then dispose before the await resolves. The
+        // ref.mounted guard must skip the post-await state write, so no cooldown
+        // timer is started on a disposed provider.
+        final future = notifier.requestCode();
+        container.dispose();
+
+        // Must complete without throwing UnmountedRefException.
+        await expectLater(future, completes);
+      },
+    );
   });
 }

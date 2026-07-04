@@ -8,6 +8,7 @@ import '../../connections/domain/connection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
+import '../domain/showcase_selection.dart';
 import 'profile_widgets_provider.dart';
 
 part 'profile_widgets_controller.g.dart';
@@ -78,12 +79,68 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     );
   });
 
+  /// Adds a composed-card widget at [position] with [size].
+  Future<void> addComposed({
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run((repo) => repo.addComposedWidget(position: position, size: size));
+
+  /// Adds a showcase widget for [platform] and [selection] at [position] with
+  /// [size].
+  Future<void> addShowcase({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addShowcaseWidget(
+      platform: platform,
+      selection: selection,
+      position: position,
+      size: size,
+    ),
+  );
+
+  /// Toggles [itemId] in composed-card widget [widgetId]'s picked set.
+  ///
+  /// Read-modify-write against the live read provider, not a snapshot from the
+  /// caller: the picker captures the widget when it opens, so a fill computed
+  /// from that snapshot would clobber an item picked in the meantime. No-op if
+  /// the widget is gone by the time the write runs.
+  Future<void> toggleComposedItem({
+    required String widgetId,
+    required String itemId,
+  }) => _run((repo) async {
+    final widgets = await ref.read(ownerProfileWidgetsProvider.future);
+    ProfileWidget? current;
+    for (final widget in widgets) {
+      if (widget.id == widgetId) {
+        current = widget;
+        break;
+      }
+    }
+    if (current == null) return right(unit);
+    return repo.setComposedFill(
+      current.id,
+      current.size,
+      current.composedFill.toggle(itemId),
+    );
+  });
+
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 
   /// Sets the size on the widget [id].
   Future<void> resize(String id, ProfileWidgetSize size) =>
       _run((repo) => repo.setSize(id, size));
+
+  /// Sets the size on the showcase widget [id], carrying its [selection]
+  /// through the rewritten settings envelope.
+  Future<void> resizeShowcase(
+    String id,
+    ProfileWidgetSize size,
+    ShowcaseSelection selection,
+  ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
 
   /// Persists a new ordering of widget ids.
   Future<void> reorder(List<String> orderedIds) =>

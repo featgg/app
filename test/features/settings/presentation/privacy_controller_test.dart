@@ -134,5 +134,26 @@ void main() {
       expect(state, isA<AsyncError<void>>());
       expect(state.error, isA<NetworkFailure>());
     });
+
+    test(
+      'a mid-flight dispose neither throws nor drops the initiated write',
+      () async {
+        final repo = _RecordingProfileRepository();
+        final container = _container(repo);
+        final notifier = container.read(privacyControllerProvider.notifier);
+
+        // Start the change, then dispose before the first await (fetchMyProfile)
+        // resolves.
+        final future = notifier.setPrivacy(ProfilePrivacy.private);
+        container.dispose();
+
+        // Must complete without throwing UnmountedRefException.
+        await expectLater(future, completes);
+        // The privacy change the user already initiated is still sent —
+        // disposal only skips the state writes and the invalidate.
+        expect(repo.updateCalls, 1);
+        expect(repo.lastEdit!.privacy, ProfilePrivacy.private);
+      },
+    );
   });
 }

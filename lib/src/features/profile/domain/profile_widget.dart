@@ -1,14 +1,16 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'composed_card.dart';
 import 'data_menu_selection.dart';
+import 'showcase_selection.dart';
 import 'template_catalog.dart';
 
 /// Forward-compatible widget kinds. Only [platform] is implemented today; the
 /// others are reserved for later personalization phases and degrade to
 /// "unknown → omit" on read. The full set is listed up front so later phases
 /// add no enum churn.
-enum ProfileWidgetKind { platform, dataMenu, template, composed }
+enum ProfileWidgetKind { platform, dataMenu, template, composed, showcase }
 
 /// Grid footprint a widget occupies. Maps to staggered-grid spans in
 /// presentation: small→1x1, wide→2x1, large→2x2. Unknown wire tokens degrade
@@ -34,12 +36,15 @@ final class ProfileWidget extends Equatable {
     required this.size,
     this.selection = DataMenuSelection.empty,
     this.templateFill = TemplateFill.empty,
+    this.composedFill = ComposedFill.empty,
+    this.showcaseSelection = ShowcaseSelection.empty,
   });
 
   final String id;
   final ProfileWidgetKind kind;
 
-  /// Non-null for [ProfileWidgetKind.platform]; null otherwise.
+  /// Non-null for [ProfileWidgetKind.platform] and [ProfileWidgetKind.showcase]
+  /// (the single source platform); null otherwise.
   final Platform? platform;
   final int position;
   final bool isEnabled;
@@ -53,12 +58,22 @@ final class ProfileWidget extends Equatable {
   /// [ProfileWidgetKind.template] widget. Empty (default) otherwise.
   final TemplateFill templateFill;
 
+  /// The owner's freely-picked item set for a [ProfileWidgetKind.composed]
+  /// widget. Empty (default) otherwise.
+  final ComposedFill composedFill;
+
+  /// The owner's per-game choice for a [ProfileWidgetKind.showcase] widget.
+  /// Empty (default) otherwise.
+  final ShowcaseSelection showcaseSelection;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
     ProfileWidgetSize? size,
     DataMenuSelection? selection,
     TemplateFill? templateFill,
+    ComposedFill? composedFill,
+    ShowcaseSelection? showcaseSelection,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -68,6 +83,8 @@ final class ProfileWidget extends Equatable {
     size: size ?? this.size,
     selection: selection ?? this.selection,
     templateFill: templateFill ?? this.templateFill,
+    composedFill: composedFill ?? this.composedFill,
+    showcaseSelection: showcaseSelection ?? this.showcaseSelection,
   );
 
   @override
@@ -80,5 +97,7 @@ final class ProfileWidget extends Equatable {
     size,
     selection,
     templateFill,
+    composedFill,
+    showcaseSelection,
   ];
 }

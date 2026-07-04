@@ -2,9 +2,11 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/composed_card.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
+import '../domain/showcase_selection.dart';
 import '../domain/template_catalog.dart';
 
 part 'profile_widget_dto.g.dart';
@@ -47,7 +49,8 @@ final class ProfileWidgetDto {
 /// - the `type` token is an unknown / unwired kind,
 /// - the `settings` envelope is a version other than
 ///   [kProfileWidgetSettingsVersion],
-/// - a `platform`-kind row carries an unknown / absent platform token.
+/// - a `platform`- or `showcase`-kind row carries an unknown / absent platform
+///   token.
 ///
 /// An unknown or absent `settings.size` token degrades to
 /// [ProfileWidgetSize.small] rather than omitting the row.
@@ -66,7 +69,8 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
   final size = _sizeFromWire(settings?['size']);
 
   Platform? platform;
-  if (kind == ProfileWidgetKind.platform) {
+  if (kind == ProfileWidgetKind.platform ||
+      kind == ProfileWidgetKind.showcase) {
     platform = dto.platform == null ? null : _platformFromWire(dto.platform!);
     if (platform == null) return null;
   }
@@ -80,6 +84,8 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     size: size,
     selection: dataMenuSelectionFromSettings(settings),
     templateFill: templateFillFromSettings(settings),
+    composedFill: composedFillFromSettings(settings),
+    showcaseSelection: showcaseSelectionFromSettings(settings),
   );
 }
 
@@ -165,6 +171,97 @@ Map<String, dynamic> mergeTemplateFillIntoSettings(
     },
 };
 
+/// Stable `settings` key the composed-card fill is stored under. Additive
+/// beside `size`, `data_menu_items`, and `template` in the same
+/// `schema_version: 1` envelope. Shape: `{ "items": ["<dataMenuItemId>", ...] }`.
+const String _composedKey = 'composed';
+
+/// Reads the composed-card fill leniently from a `settings` envelope. A
+/// non-object value, a missing/non-list `items`, non-string entries, ids not in
+/// the current catalog, and duplicates are all dropped (mirrors
+/// [dataMenuSelectionFromSettings] and [templateFillFromSettings]); the result
+/// defaults to [ComposedFill.empty]. Order is preserved from the stored list.
+ComposedFill composedFillFromSettings(Map<String, dynamic>? settings) {
+  final raw = settings?[_composedKey];
+  if (raw is! Map) return ComposedFill.empty;
+  final items = raw['items'];
+  if (items is! List) return ComposedFill.empty;
+  final ids = <String>[];
+  for (final entry in items) {
+    if (entry is String &&
+        _knownCatalogIds.contains(entry) &&
+        !ids.contains(entry)) {
+      ids.add(entry);
+    }
+  }
+  return ids.isEmpty ? ComposedFill.empty : ComposedFill(ids);
+}
+
+/// Builds the full `settings` envelope to write for a composed-card change:
+/// preserves `schema_version` and `size` and sets the `composed` sub-object from
+/// [fill]. Additive — never bumps the version. An empty fill omits the key.
+Map<String, dynamic> mergeComposedFillIntoSettings(
+  ProfileWidgetSize size,
+  ComposedFill fill,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (!fill.isEmpty) _composedKey: {'items': fill.itemIds},
+};
+
+/// Stable `settings` key the showcase selection is stored under. Additive
+/// beside `size` in the same `schema_version: 1` envelope. Shape:
+/// `{ "game": "<gameKey>", "hero": "<stat>", "meta"?: "<stat>" }`. The single
+/// source platform lives in the row's `platform` column, not here.
+const String _showcaseKey = 'showcase';
+
+/// Reads the showcase selection leniently from a `settings` envelope. A
+/// non-object value or a missing/empty `game` yields [ShowcaseSelection.empty];
+/// an unknown `hero` token defaults to hours and an unknown/absent `meta` token
+/// resolves to null (forward-compatible, never drops the row).
+ShowcaseSelection showcaseSelectionFromSettings(
+  Map<String, dynamic>? settings,
+) {
+  final raw = settings?[_showcaseKey];
+  if (raw is! Map) return ShowcaseSelection.empty;
+  final game = raw['game'];
+  if (game is! String || game.isEmpty) return ShowcaseSelection.empty;
+  return ShowcaseSelection(
+    gameRef: game,
+    hero: showcaseHeroStatFromWire(raw['hero']) ?? ShowcaseHeroStat.hours,
+    meta: showcaseHeroStatFromWire(raw['meta']),
+  );
+}
+
+/// Builds the full `settings` envelope to write for a showcase change: preserves
+/// `schema_version` and `size` and sets the `showcase` sub-object from [sel].
+/// Additive — never bumps the version. An empty selection omits the key; `meta`
+/// is written only when set.
+Map<String, dynamic> mergeShowcaseSelectionIntoSettings(
+  ProfileWidgetSize size,
+  ShowcaseSelection sel,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (!sel.isEmpty)
+    _showcaseKey: {
+      'game': sel.gameRef,
+      'hero': showcaseHeroStatToWire(sel.hero),
+      if (sel.meta != null) 'meta': showcaseHeroStatToWire(sel.meta!),
+    },
+};
+
+/// Serializes a [ShowcaseHeroStat] to its stable wire token.
+String showcaseHeroStatToWire(ShowcaseHeroStat s) => switch (s) {
+  ShowcaseHeroStat.hours => 'hours',
+};
+
+/// Parses a wire hero-stat token; null on an unknown/absent token (lenient).
+ShowcaseHeroStat? showcaseHeroStatFromWire(Object? v) => switch (v) {
+  'hours' => ShowcaseHeroStat.hours,
+  _ => null,
+};
+
 /// Serializes [size] to its stable wire token.
 String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.small => 'small',
@@ -180,11 +277,14 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.dataMenu => 'data_menu',
   ProfileWidgetKind.template => 'template',
   ProfileWidgetKind.composed => 'composed_card',
+  ProfileWidgetKind.showcase => 'showcase',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'platform' => ProfileWidgetKind.platform,
   'template' => ProfileWidgetKind.template,
+  'composed_card' => ProfileWidgetKind.composed,
+  'showcase' => ProfileWidgetKind.showcase,
   _ => null,
 };
 
