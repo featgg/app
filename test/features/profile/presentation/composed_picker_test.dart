@@ -7,6 +7,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -76,6 +77,20 @@ final class _GatedWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({

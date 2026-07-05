@@ -1255,5 +1255,70 @@
   "showcasePickerAllAdded": "You've showcased every available game.",
   "@showcasePickerAllAdded": {
     "description": "Shown in the add-card picker when every available library game is already on the profile as a showcase card."
+  },
+  "collectionTitleFavorites": "Favorites",
+  "@collectionTitleFavorites": {
+    "description": "Collection card catalog title for a set of the owner's favorite games."
+  },
+  "collectionTitleNowPlaying": "Now Playing",
+  "@collectionTitleNowPlaying": {
+    "description": "Collection card catalog title for the games the owner is currently playing."
+  },
+  "collectionTitleBacklog": "Backlog",
+  "@collectionTitleBacklog": {
+    "description": "Collection card catalog title for games the owner intends to play but has not started."
+  },
+  "collectionTitleCompleted": "Completed",
+  "@collectionTitleCompleted": {
+    "description": "Collection card catalog title for games the owner has finished."
+  },
+  "collectionTitleAllTime": "All-Time",
+  "@collectionTitleAllTime": {
+    "description": "Collection card catalog title for the owner's all-time favorite or defining games."
+  },
+  "collectionTitleHiddenGems": "Hidden Gems",
+  "@collectionTitleHiddenGems": {
+    "description": "Collection card catalog title for lesser-known games the owner recommends."
+  },
+  "collectionTitleMostPlayed": "Most Played",
+  "@collectionTitleMostPlayed": {
+    "description": "Collection card catalog title for the games the owner has played the most."
+  },
+  "addCardModeShowcase": "Game",
+  "@addCardModeShowcase": {
+    "description": "Label of the add-card sheet's mode toggle segment that adds a single-game showcase card."
+  },
+  "addCardModeCollection": "Collection",
+  "@addCardModeCollection": {
+    "description": "Label of the add-card sheet's mode toggle segment that creates a multi-game collection card."
+  },
+  "collectionPickerTitle": "Create a collection",
+  "@collectionPickerTitle": {
+    "description": "Title of the add-card sheet's collection mode, where the owner selects several games for one collection card."
+  },
+  "collectionPickerHint": "Select 3 to 5 games",
+  "@collectionPickerHint": {
+    "description": "Hint under the collection picker title stating the allowed number of games in a collection."
+  },
+  "collectionPickerChooseTitle": "Collection title",
+  "@collectionPickerChooseTitle": {
+    "description": "Label above the catalog title chooser in the collection picker."
+  },
+  "collectionPickerAdd": "Add collection",
+  "@collectionPickerAdd": {
+    "description": "Confirm button that adds the assembled collection card to the profile."
+  },
+  "collectionUnavailable": "Collection unavailable",
+  "@collectionUnavailable": {
+    "description": "Placeholder shown in place of a collection card when none of its games are available — the platform is unlinked, its card is still loading, or the games rotated out of the current library."
+  },
+  "collectionMetaGames": "{count, plural, =1{1 game} other{{count} games}}",
+  "@collectionMetaGames": {
+    "description": "Meta line on a collection card naming how many games it currently renders.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

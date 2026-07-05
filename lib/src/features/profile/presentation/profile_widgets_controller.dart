@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import '../domain/collection_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
@@ -100,6 +101,27 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
       size: size,
     ),
   );
+
+  /// Adds a collection widget for [selection] at [position] with [size].
+  Future<void> addCollection({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addCollectionWidget(
+      selection: selection,
+      position: position,
+      size: size,
+    ),
+  );
+
+  /// Sets the size on the collection widget [id], carrying its [selection]
+  /// through the rewritten settings envelope.
+  Future<void> resizeCollection(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) => _run((repo) => repo.setCollectionSize(id, size, selection));
 
   /// Toggles [itemId] in composed-card widget [widgetId]'s picked set.
   ///

@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import 'collection_selection.dart';
 import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'profile_widget.dart';
@@ -53,6 +54,14 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a collection widget with [selection] at [position] and [size],
+  /// enabled and with a null platform (a collection spans multiple games).
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
@@ -66,6 +75,15 @@ abstract interface class ProfileWidgetsRepository {
     String id,
     ProfileWidgetSize size,
     ShowcaseSelection selection,
+  );
+
+  /// Sets the size for the collection widget [id]. The settings envelope carries
+  /// the game [selection] alongside the size, so a size change must rewrite both
+  /// — a size-only write would drop the games and title.
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
   );
 
   /// Persists the data-menu [selection] for [id], merged into the existing

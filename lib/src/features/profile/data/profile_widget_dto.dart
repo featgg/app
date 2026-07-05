@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/collection_selection.dart';
 import '../domain/composed_card.dart';
 import '../domain/data_menu_catalog.dart';
 import '../domain/data_menu_selection.dart';
@@ -86,6 +87,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     templateFill: templateFillFromSettings(settings),
     composedFill: composedFillFromSettings(settings),
     showcaseSelection: showcaseSelectionFromSettings(settings),
+    collectionSelection: collectionSelectionFromSettings(settings),
   );
 }
 
@@ -251,6 +253,56 @@ Map<String, dynamic> mergeShowcaseSelectionIntoSettings(
     },
 };
 
+/// Stable `settings` key the collection selection is stored under. Additive
+/// beside `size` in the same `schema_version: 1` envelope. Shape:
+/// `{ "games": ["<gameKey>", ...], "title"?: "<titleKey>" }`. A collection spans
+/// multiple games, so — unlike the showcase — it has no single source platform
+/// in the row's `platform` column; its games live here.
+const String _collectionKey = 'collection';
+
+/// Reads the collection selection leniently from a `settings` envelope. A
+/// non-object value or a missing / non-list / empty `games` yields
+/// [CollectionSelection.empty]; non-string and empty entries are dropped, the
+/// order-preserving remainder is de-duplicated (mirrors the composed read), and
+/// `title` is kept only when a non-empty String (else null). Never drops the row.
+CollectionSelection collectionSelectionFromSettings(
+  Map<String, dynamic>? settings,
+) {
+  final raw = settings?[_collectionKey];
+  if (raw is! Map) return CollectionSelection.empty;
+  final games = raw['games'];
+  if (games is! List) return CollectionSelection.empty;
+  final refs = <String>[];
+  for (final entry in games) {
+    if (entry is String && entry.isNotEmpty && !refs.contains(entry)) {
+      refs.add(entry);
+    }
+  }
+  if (refs.isEmpty) return CollectionSelection.empty;
+  final title = raw['title'];
+  return CollectionSelection(
+    gameRefs: refs,
+    titleKey: title is String && title.isNotEmpty ? title : null,
+  );
+}
+
+/// Builds the full `settings` envelope to write for a collection change:
+/// preserves `schema_version` and `size` and sets the `collection` sub-object
+/// from [sel]. Additive — never bumps the version. An empty selection omits the
+/// key; `title` is written only when non-null.
+Map<String, dynamic> mergeCollectionSelectionIntoSettings(
+  ProfileWidgetSize size,
+  CollectionSelection sel,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (!sel.isEmpty)
+    _collectionKey: {
+      'games': sel.gameRefs,
+      if (sel.titleKey != null) 'title': sel.titleKey,
+    },
+};
+
 /// Serializes a [ShowcaseHeroStat] to its stable wire token.
 String showcaseHeroStatToWire(ShowcaseHeroStat s) => switch (s) {
   ShowcaseHeroStat.hours => 'hours',
@@ -280,6 +332,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.template => 'template',
   ProfileWidgetKind.composed => 'composed_card',
   ProfileWidgetKind.showcase => 'showcase',
+  ProfileWidgetKind.collection => 'collection',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
@@ -287,6 +340,7 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'template' => ProfileWidgetKind.template,
   'composed_card' => ProfileWidgetKind.composed,
   'showcase' => ProfileWidgetKind.showcase,
+  'collection' => ProfileWidgetKind.collection,
   _ => null,
 };
 

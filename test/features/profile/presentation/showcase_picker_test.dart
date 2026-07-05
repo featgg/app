@@ -6,6 +6,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -27,6 +28,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   ShowcaseSelection? lastSelection;
   int? lastPosition;
   ProfileWidgetSize? lastSize;
+  CollectionSelection? lastCollectionSelection;
+  int? lastCollectionPosition;
+  ProfileWidgetSize? lastCollectionSize;
 
   @override
   Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
@@ -51,6 +55,35 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
       ),
     );
   }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    lastCollectionSelection = selection;
+    lastCollectionPosition = position;
+    lastCollectionSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.collection,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+        collectionSelection: selection,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>

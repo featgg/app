@@ -298,5 +298,20 @@
   "profileAddCard": "Adicionar cartão",
   "showcasePickerTitle": "Escolha um jogo",
   "showcasePickerEmpty": "Ainda não há jogos para exibir. Conecte uma conta de jogo para começar.",
-  "showcasePickerAllAdded": "Você já exibiu todos os jogos disponíveis."
+  "showcasePickerAllAdded": "Você já exibiu todos os jogos disponíveis.",
+  "collectionTitleFavorites": "Favoritos",
+  "collectionTitleNowPlaying": "Jogando agora",
+  "collectionTitleBacklog": "Fila de jogos",
+  "collectionTitleCompleted": "Concluídos",
+  "collectionTitleAllTime": "De todos os tempos",
+  "collectionTitleHiddenGems": "Joias escondidas",
+  "collectionTitleMostPlayed": "Mais jogados",
+  "addCardModeShowcase": "Jogo",
+  "addCardModeCollection": "Coleção",
+  "collectionPickerTitle": "Criar uma coleção",
+  "collectionPickerHint": "Selecione de 3 a 5 jogos",
+  "collectionPickerChooseTitle": "Título da coleção",
+  "collectionPickerAdd": "Adicionar coleção",
+  "collectionUnavailable": "Coleção indisponível",
+  "collectionMetaGames": "{count, plural, =1{1 jogo} other{{count} jogos}}"
 }

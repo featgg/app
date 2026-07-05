@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'collection_selection.dart';
 import 'composed_card.dart';
 import 'data_menu_selection.dart';
 import 'showcase_selection.dart';
@@ -10,7 +11,14 @@ import 'template_catalog.dart';
 /// others are reserved for later personalization phases and degrade to
 /// "unknown → omit" on read. The full set is listed up front so later phases
 /// add no enum churn.
-enum ProfileWidgetKind { platform, dataMenu, template, composed, showcase }
+enum ProfileWidgetKind {
+  platform,
+  dataMenu,
+  template,
+  composed,
+  showcase,
+  collection,
+}
 
 /// Grid footprint a widget occupies. Maps to staggered-grid spans in
 /// presentation: small→1x1, wide→2x1, large→2x2. Unknown wire tokens degrade
@@ -38,6 +46,7 @@ final class ProfileWidget extends Equatable {
     this.templateFill = TemplateFill.empty,
     this.composedFill = ComposedFill.empty,
     this.showcaseSelection = ShowcaseSelection.empty,
+    this.collectionSelection = CollectionSelection.empty,
   });
 
   final String id;
@@ -66,6 +75,10 @@ final class ProfileWidget extends Equatable {
   /// Empty (default) otherwise.
   final ShowcaseSelection showcaseSelection;
 
+  /// The owner's multi-game choice for a [ProfileWidgetKind.collection] widget.
+  /// Empty (default) otherwise.
+  final CollectionSelection collectionSelection;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
@@ -74,6 +87,7 @@ final class ProfileWidget extends Equatable {
     TemplateFill? templateFill,
     ComposedFill? composedFill,
     ShowcaseSelection? showcaseSelection,
+    CollectionSelection? collectionSelection,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -85,6 +99,7 @@ final class ProfileWidget extends Equatable {
     templateFill: templateFill ?? this.templateFill,
     composedFill: composedFill ?? this.composedFill,
     showcaseSelection: showcaseSelection ?? this.showcaseSelection,
+    collectionSelection: collectionSelection ?? this.collectionSelection,
   );
 
   @override
@@ -99,5 +114,6 @@ final class ProfileWidget extends Equatable {
     templateFill,
     composedFill,
     showcaseSelection,
+    collectionSelection,
   ];
 }

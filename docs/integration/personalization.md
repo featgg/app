@@ -93,7 +93,11 @@ from the invalid-`type` rejection above.
     single-game choice under another such field —
     `"showcase": { "game": "<gameKey>", "hero": "<stat>", "meta"?: "<stat>" }` —
     the game to render and which stat is the hero. It is likewise additive,
-    ignored when absent, and never bumps the version.
+    ignored when absent, and never bumps the version. A `collection` widget
+    carries its multi-game choice under another such field —
+    `"collection": { "games": ["<gameKey>", ...], "title": "<titleKey>" }` — the
+    ordered games it renders and a stable catalog title key. It is likewise
+    additive, ignored when absent, and never bumps the version.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.
