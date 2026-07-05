@@ -133,6 +133,54 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    // Post-creation drift: a stored 3–5 game collection whose library rotated
+    // down to 1–2 present games resolves to a degenerate panel count.
+    testWidgets('one resolved game renders a single panel and no cut layer', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          // Three stored refs, only one still present in the library.
+          widget: _collectionWidget(count: 3),
+          cards: {Platform.steam: _steamCard(1)},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('collectionCard_c-1')), findsOneWidget);
+      expect(find.byKey(const Key('collectionPanel_c-1_0')), findsOneWidget);
+      expect(find.byKey(const Key('collectionPanel_c-1_1')), findsNothing);
+      // A lone panel has no interior dividers, so the cut layer is omitted.
+      expect(find.byKey(const Key('collectionCuts_c-1')), findsNothing);
+      // The identity text still renders on the single-panel card.
+      expect(find.byKey(const Key('collectionLabel_c-1')), findsOneWidget);
+      expect(find.byKey(const Key('collectionMeta_c-1')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('two resolved games render two panels and one cut layer', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          // Three stored refs, two still present in the library.
+          widget: _collectionWidget(count: 3),
+          cards: {Platform.steam: _steamCard(2)},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('collectionCard_c-1')), findsOneWidget);
+      expect(find.byKey(const Key('collectionPanel_c-1_0')), findsOneWidget);
+      expect(find.byKey(const Key('collectionPanel_c-1_1')), findsOneWidget);
+      expect(find.byKey(const Key('collectionPanel_c-1_2')), findsNothing);
+      // Two panels share one interior divider, so the cut layer is present.
+      expect(find.byKey(const Key('collectionCuts_c-1')), findsOneWidget);
+      expect(find.byKey(const Key('collectionLabel_c-1')), findsOneWidget);
+      expect(find.byKey(const Key('collectionMeta_c-1')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('the cut painter is present for a multi-panel panorama', (
