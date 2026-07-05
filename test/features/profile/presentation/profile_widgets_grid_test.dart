@@ -1,5 +1,7 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
+import 'package:featgg/src/core/layout/breakpoints.dart';
+import 'package:featgg/src/core/theme/tokens.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
@@ -14,6 +16,7 @@ import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_grid.dart';
+import 'package:featgg/src/features/profile/presentation/profile_widgets_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -291,13 +294,14 @@ ProfileWidget _showcaseWidget({
   required String id,
   required int position,
   ShowcaseHeroStat hero = ShowcaseHeroStat.hours,
+  ProfileWidgetSize size = ProfileWidgetSize.small,
 }) => ProfileWidget(
   id: id,
   kind: ProfileWidgetKind.showcase,
   platform: Platform.steam,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
+  size: size,
   showcaseSelection: ShowcaseSelection(gameRef: '730', hero: hero),
 );
 
@@ -369,10 +373,22 @@ ProfileWidget _widget({
   size: size,
 );
 
+/// Sizes the test surface so the flow's `LayoutBuilder` resolves a deterministic
+/// window size class. A vertical scroll view tightens its child to the viewport
+/// width, so a `SizedBox` cannot widen past the surface — the surface itself is
+/// sized. The tall height keeps every packed tile within the laid-out region.
+void _useSurfaceWidth(WidgetTester tester, double width) {
+  tester.view.physicalSize = Size(width, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 Widget _harness({
   required List<ProfileWidget> widgets,
   required Map<Platform, GameCard?> cards,
   ProfileWidgetsRepository? widgetsRepo,
+  Widget Function(GameCard card)? cardBuilder,
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
@@ -409,8 +425,9 @@ Widget _harness({
               // A full-height card stand-in (the real connections card is tall):
               // gives the tile enough content height for the options-menu
               // overlay to sit within its bounds, keeping the title assertable.
-              cardBuilder: (card) =>
-                  SizedBox(height: 200, child: Text(card.title)),
+              cardBuilder:
+                  cardBuilder ??
+                  (card) => SizedBox(height: 200, child: Text(card.title)),
             ),
           ),
         ),
@@ -441,6 +458,216 @@ class _TallWideCard extends StatelessWidget {
 }
 
 void main() {
+  group('spanFor / columnsFor', () {
+    // The locked column counts (design-system §9.5).
+    test('columnsFor maps each window size class to its column count', () {
+      expect(columnsFor(WindowSizeClass.compact), 1);
+      expect(columnsFor(WindowSizeClass.medium), 2);
+      expect(columnsFor(WindowSizeClass.expanded), 3);
+    });
+
+    // Art cards claim cells by size; the value is regime-independent (only the
+    // clamp depends on the column count), so 2 and 3 columns cover the medium
+    // and expanded regimes. `wide` = 2 cells is the branch the geometry tests
+    // did not otherwise exercise.
+    test('art cards span small=1, wide=2, large=2 at both multi-column '
+        'regimes', () {
+      for (final columns in const [2, 3]) {
+        expect(
+          spanFor(_showcaseWidget(id: 's', position: 0), columns: columns),
+          1,
+          reason: 'small @ $columns cols',
+        );
+        expect(
+          spanFor(
+            _showcaseWidget(id: 'w', position: 0, size: ProfileWidgetSize.wide),
+            columns: columns,
+          ),
+          2,
+          reason: 'wide @ $columns cols',
+        );
+        expect(
+          spanFor(
+            _showcaseWidget(
+              id: 'l',
+              position: 0,
+              size: ProfileWidgetSize.large,
+            ),
+            columns: columns,
+          ),
+          2,
+          reason: 'large @ $columns cols',
+        );
+      }
+    });
+
+    test('collection art cards span by size like showcases', () {
+      expect(
+        spanFor(
+          _collectionWidget(id: 'c', position: 0),
+          columns: 3,
+        ), // default wide
+        2,
+      );
+      expect(
+        spanFor(
+          _collectionWidget(
+            id: 'c',
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+          columns: 3,
+        ),
+        1,
+      );
+    });
+
+    test('content-rich cards fill the row (span the column count)', () {
+      final platform = _widget(
+        id: 'p',
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      );
+      final template = _templateWidget(
+        id: 't',
+        position: 0,
+        fill: const TemplateFill('my_ranks', {}),
+      );
+      const composed = ProfileWidget(
+        id: 'co',
+        kind: ProfileWidgetKind.composed,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        size: ProfileWidgetSize.wide,
+        composedFill: ComposedFill(['chess.rating']),
+      );
+      for (final w in [platform, template, composed]) {
+        expect(spanFor(w, columns: 2), 2, reason: '${w.kind} @ 2 cols');
+        expect(spanFor(w, columns: 3), 3, reason: '${w.kind} @ 3 cols');
+      }
+    });
+
+    test('a span never exceeds the column count (clamped to 1 on compact)', () {
+      expect(
+        spanFor(
+          _showcaseWidget(id: 'w', position: 0, size: ProfileWidgetSize.wide),
+          columns: 1,
+        ),
+        1,
+      );
+      expect(
+        spanFor(
+          _showcaseWidget(id: 'l', position: 0, size: ProfileWidgetSize.large),
+          columns: 1,
+        ),
+        1,
+      );
+    });
+  });
+
+  group('packForLayout', () {
+    // Layout-only reordering: `position` is untouched, only the tiles fed to the
+    // grid are packed so a span-1 art card is not stranded next to a span-2 card.
+    ProfileWidgetTile small(String id) => ProfileWidgetTile(
+      widget: _showcaseWidget(id: id, position: 0),
+      child: const SizedBox.shrink(),
+    );
+    ProfileWidgetTile wide(String id) => ProfileWidgetTile(
+      widget: _showcaseWidget(
+        id: id,
+        position: 0,
+        size: ProfileWidgetSize.wide,
+      ),
+      child: const SizedBox.shrink(),
+    );
+    ProfileWidgetTile large(String id) => ProfileWidgetTile(
+      widget: _showcaseWidget(
+        id: id,
+        position: 0,
+        size: ProfileWidgetSize.large,
+      ),
+      child: const SizedBox.shrink(),
+    );
+    ProfileWidgetTile content(String id) => ProfileWidgetTile(
+      widget: _widget(
+        id: id,
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      ),
+      child: const SizedBox.shrink(),
+    );
+
+    List<String> ids(List<ProfileWidgetTile> tiles) => [
+      for (final t in tiles) t.widget.id,
+    ];
+
+    test('a small then a wide with no later fitter is left unchanged', () {
+      // The gap beside the small is unavoidable (nothing fits it); no reorder.
+      expect(ids(packForLayout([small('s'), wide('w')], 2)), ['s', 'w']);
+    });
+
+    test('pulls the next small up to pair with the first around a wide', () {
+      expect(ids(packForLayout([small('s1'), wide('w'), small('s2')], 2)), [
+        's1',
+        's2',
+        'w',
+      ]);
+    });
+
+    test('two smalls already pair, order unchanged', () {
+      expect(ids(packForLayout([small('s1'), small('s2')], 2)), ['s1', 's2']);
+    });
+
+    test('a full-row content card then a small stays in order', () {
+      expect(ids(packForLayout([content('c'), small('s')], 2)), ['c', 's']);
+    });
+
+    test('interleaved smalls and larges pack into paired rows', () {
+      expect(
+        ids(
+          packForLayout([
+            small('s1'),
+            large('l1'),
+            small('s2'),
+            large('l2'),
+          ], 2),
+        ),
+        ['s1', 's2', 'l1', 'l2'],
+      );
+    });
+
+    test('on three columns a small+wide already co-locate, no reorder', () {
+      expect(ids(packForLayout([small('s1'), wide('w'), small('s2')], 3)), [
+        's1',
+        'w',
+        's2',
+      ]);
+    });
+
+    test('output is a permutation of the input for every case', () {
+      final cases = [
+        [small('s'), wide('w')],
+        [small('s1'), wide('w'), small('s2')],
+        [small('s1'), large('l1'), small('s2'), large('l2')],
+      ];
+      for (final input in cases) {
+        final packed = packForLayout(input, 2);
+        expect(packed.length, input.length);
+        expect(ids(packed).toSet(), ids(input).toSet());
+      }
+    });
+
+    test('order is byte-identical to input when no gap would form', () {
+      final noGap = [small('s1'), small('s2')];
+      expect(ids(packForLayout(noGap, 2)), ids(noGap));
+      final contentThenSmall = [content('c'), small('s')];
+      expect(ids(packForLayout(contentThenSmall, 2)), ids(contentThenSmall));
+    });
+  });
+
   testWidgets('renders a tall, rich card at phone width with no overflow', (
     tester,
   ) async {
@@ -504,8 +731,284 @@ void main() {
     expect(find.byKey(const Key('tallWideCard')), findsOneWidget);
   });
 
+  testWidgets('compact renders a single full-width column', (tester) async {
+    _useSurfaceWidth(tester, 390);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _widget(
+            id: 'a',
+            platform: Platform.steam,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+          _widget(
+            id: 'b',
+            platform: Platform.chess,
+            position: 1,
+            size: ProfileWidgetSize.small,
+          ),
+        ],
+        cards: {
+          Platform.steam: _card(Platform.steam),
+          Platform.chess: _card(Platform.chess),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final a = tester.getRect(find.byKey(const Key('profileWidgetTile_a')));
+    final b = tester.getRect(find.byKey(const Key('profileWidgetTile_b')));
+    // Single column on compact: both tiles share the left edge and the full
+    // surface width, stacked top to bottom — unchanged mobile behavior.
+    expect(a.left, b.left);
+    expect(a.width, closeTo(390, 0.5));
+    expect(b.width, closeTo(390, 0.5));
+    expect(a.top, lessThan(b.top));
+  });
+
+  testWidgets('medium packs content cards full-width and small art cards '
+      'side-by-side', (tester) async {
+    _useSurfaceWidth(tester, 800);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _widget(
+            id: 'plat',
+            platform: Platform.chess,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+          _showcaseWidget(id: 'sc1', position: 1),
+          _showcaseWidget(id: 'sc2', position: 2),
+        ],
+        cards: {
+          Platform.chess: _card(Platform.chess),
+          Platform.steam: _steamShowcaseCard(),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The content (platform) card fills the full two-column row.
+    final plat = tester.getRect(
+      find.byKey(const Key('profileWidgetTile_plat')),
+    );
+    expect(plat.width, closeTo(800, 0.5));
+
+    // The two small showcase art cards each claim one cell and sit side-by-side:
+    // same top, ascending left, each about half the row.
+    final sc1 = tester.getRect(find.byKey(const Key('profileWidgetTile_sc1')));
+    final sc2 = tester.getRect(find.byKey(const Key('profileWidgetTile_sc2')));
+    const oneCell = (800 + AppSpacing.sm) / 2 - AppSpacing.sm;
+    expect(sc1.top, sc2.top);
+    expect(sc1.left, lessThan(sc2.left));
+    expect(sc1.width, closeTo(oneCell, 0.5));
+    expect(sc2.width, closeTo(oneCell, 0.5));
+  });
+
+  testWidgets('medium pairs two small art cards around a span-2 card so no '
+      'cell is stranded (gap-fill packing)', (tester) async {
+    // The operator symptom: a small showcase, then a span-2 (large) card, then
+    // another small. In raw position order the span-2 card cannot fit beside the
+    // first small, stranding that cell. Packing pulls the trailing small up.
+    _useSurfaceWidth(tester, 800);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _showcaseWidget(id: 'sc1', position: 0),
+          _showcaseWidget(id: 'lg', position: 1, size: ProfileWidgetSize.large),
+          _showcaseWidget(id: 'sc2', position: 2),
+        ],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final sc1 = tester.getRect(find.byKey(const Key('profileWidgetTile_sc1')));
+    final sc2 = tester.getRect(find.byKey(const Key('profileWidgetTile_sc2')));
+    final lg = tester.getRect(find.byKey(const Key('profileWidgetTile_lg')));
+
+    // The two smalls share the top row (equal top, ascending left), each one
+    // cell — the trailing small was pulled up to fill the gap.
+    const oneCell = (800 + AppSpacing.sm) / 2 - AppSpacing.sm;
+    expect(sc1.top, sc2.top);
+    expect(sc1.left, lessThan(sc2.left));
+    expect(sc1.width, closeTo(oneCell, 0.5));
+    expect(sc2.width, closeTo(oneCell, 0.5));
+    // The span-2 card is pushed to the next row at full width — the cell beside
+    // the first small is filled, not stranded.
+    expect(lg.top, greaterThan(sc1.top));
+    expect(lg.width, closeTo(800, 0.5));
+  });
+
+  testWidgets('expanded caps content width and spans by size', (tester) async {
+    _useSurfaceWidth(tester, 1400);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _widget(
+            id: 'plat',
+            platform: Platform.chess,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+          _showcaseWidget(id: 'lg', position: 1, size: ProfileWidgetSize.large),
+          _showcaseWidget(id: 'sm', position: 2),
+        ],
+        cards: {
+          Platform.chess: _card(Platform.chess),
+          Platform.steam: _steamShowcaseCard(),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Three columns centered within the design-system max content width (§9.2).
+    const columns = 3;
+    const stride = (AppBreakpoints.maxContentWidth + AppSpacing.sm) / columns;
+    const oneCell = stride - AppSpacing.sm;
+    const twoCell = stride * 2 - AppSpacing.sm;
+    const threeCell = stride * 3 - AppSpacing.sm; // == maxContentWidth
+
+    final plat = tester.getRect(
+      find.byKey(const Key('profileWidgetTile_plat')),
+    );
+    final lg = tester.getRect(find.byKey(const Key('profileWidgetTile_lg')));
+    final sm = tester.getRect(find.byKey(const Key('profileWidgetTile_sm')));
+
+    // The content card is capped at the max content width, not the 1400 surface.
+    expect(plat.width, closeTo(threeCell, 0.5));
+    expect(plat.width, lessThanOrEqualTo(AppBreakpoints.maxContentWidth + 0.5));
+    // Size drives span: large = two cells, small = one cell.
+    expect(lg.width, closeTo(twoCell, 0.5));
+    expect(sm.width, closeTo(oneCell, 0.5));
+  });
+
+  testWidgets('content card at full span does not overflow (medium & '
+      'expanded)', (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(800, 2400);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _widget(
+            id: 'tall',
+            platform: Platform.steam,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          ),
+        ],
+        cards: {Platform.steam: _card(Platform.steam)},
+        cardBuilder: (card) =>
+            const _TallWideCard(cardKey: Key('tallWideCard')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A content-rich card spans the full row (never a narrow cell) with
+    // content-driven height, so neither RenderFlex axis overflows — at medium…
+    expect(tester.takeException(), isNull, reason: 'medium (800)');
+    expect(find.byKey(const Key('tallWideCard')), findsOneWidget);
+
+    // …nor at expanded (re-laying out the same tree at a wider surface).
+    tester.view.physicalSize = const Size(1400, 2400);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: 'expanded (1400)');
+    expect(find.byKey(const Key('tallWideCard')), findsOneWidget);
+  });
+
+  testWidgets('resize section shows for showcase in both compact and '
+      'multi-column, never for platform', (tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(390, 2400);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _showcaseWidget(id: 'sc', position: 0),
+          _widget(
+            id: 'plat',
+            platform: Platform.chess,
+            position: 1,
+            size: ProfileWidgetSize.small,
+          ),
+        ],
+        cards: {
+          Platform.steam: _steamShowcaseCard(),
+          Platform.chess: _card(Platform.chess),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Resize is kind-gated, not width-gated: a showcase keeps the size section
+    // at both a compact and a multi-column width, a platform never shows it at
+    // either. Re-lay out the same tree at each width (a fresh pump would update
+    // the element tree, not just relayout).
+    Future<void> expectSizeGatedByKind(double width) async {
+      tester.view.physicalSize = Size(width, 2400);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.profileWidgetSizeSmall),
+        findsOneWidget,
+        reason: 'showcase @ $width',
+      );
+      expect(
+        find.text(l10n.profileWidgetSizeWide),
+        findsOneWidget,
+        reason: 'showcase @ $width',
+      );
+      expect(
+        find.text(l10n.profileWidgetSizeLarge),
+        findsOneWidget,
+        reason: 'showcase @ $width',
+      );
+      // Dismiss the menu by tapping the (full-screen) modal barrier.
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('profileWidgetMenu_plat')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.profileWidgetSizeSmall),
+        findsNothing,
+        reason: 'platform @ $width',
+      );
+      expect(
+        find.text(l10n.profileWidgetSizeWide),
+        findsNothing,
+        reason: 'platform @ $width',
+      );
+      expect(
+        find.text(l10n.profileWidgetSizeLarge),
+        findsNothing,
+        reason: 'platform @ $width',
+      );
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+    }
+
+    await expectSizeGatedByKind(390);
+    await expectSizeGatedByKind(1000);
+  });
+
   testWidgets('renders one full-width tile per visible widget in position '
       'order', (tester) async {
+    // Pinned to compact: at phone width the flow is a single full-width column,
+    // so the y-order is strictly position-sequential (the multi-column packing
+    // is exercised by the medium/expanded tests below).
+    _useSurfaceWidth(tester, 390);
     final widgets = [
       _widget(
         id: 'l',
@@ -538,8 +1041,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Every widget renders regardless of its (now visually inert) size token,
-    // laid out as a plain column — the staggered grid is gone.
+    // Every widget renders regardless of its size token, stacked as a single
+    // full-width column on compact.
     expect(find.byKey(const Key('profileWidgetTile_s')), findsOneWidget);
     expect(find.byKey(const Key('profileWidgetTile_w')), findsOneWidget);
     expect(find.byKey(const Key('profileWidgetTile_l')), findsOneWidget);

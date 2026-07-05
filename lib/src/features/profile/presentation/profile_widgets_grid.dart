@@ -13,13 +13,15 @@ import 'data_menu_screen.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
+import 'profile_widgets_layout.dart';
 import 'showcase_card_view.dart';
 import 'template_card_view.dart';
 import 'template_picker.dart';
 
-/// Renders the owner's profile widgets as a single full-width column, each tile
-/// at its natural content height (the connections card is designed to render
-/// full width with content-driven height). Each
+/// Renders the owner's profile widgets through [ProfileWidgetsFlow]: a single
+/// full-width column on compact, an auto-packing multi-column grid above the
+/// medium breakpoint (each tile at its natural content height — the connections
+/// card is designed to render full width with content-driven height). Each
 /// [ProfileWidgetKind.platform] widget renders its card via the
 /// composition-root-injected [cardBuilder]; a widget whose card is not
 /// available renders a placeholder that keeps its options menu reachable, so
@@ -27,7 +29,7 @@ import 'template_picker.dart';
 ///
 /// Every widget renders regardless of `is_enabled`, so no row is stuck.
 ///
-/// The column is non-scrolling and is composed inside the profile screen's own
+/// The flow is non-scrolling and is composed inside the profile screen's own
 /// scroll view. The per-tile options menu drives the
 /// [ProfileWidgetsController] (remove / reorder).
 class ProfileWidgetsGrid extends ConsumerWidget {
@@ -57,21 +59,21 @@ class ProfileWidgetsGrid extends ConsumerWidget {
       ref.read(profileWidgetsControllerProvider.notifier).reorder(next);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < ordered.length; i++) ...[
-          if (i > 0) const SizedBox(height: AppSpacing.sm),
-          _WidgetTile(
-            key: Key('profileWidgetTile_${ordered[i].id}'),
+    return ProfileWidgetsFlow(
+      tiles: [
+        for (var i = 0; i < ordered.length; i++)
+          ProfileWidgetTile(
             widget: ordered[i],
-            cardBuilder: cardBuilder,
-            canMoveUp: i > 0,
-            canMoveDown: i < ordered.length - 1,
-            onMoveUp: () => reorderMoving(ordered[i].id, -1),
-            onMoveDown: () => reorderMoving(ordered[i].id, 1),
+            child: _WidgetTile(
+              key: Key('profileWidgetTile_${ordered[i].id}'),
+              widget: ordered[i],
+              cardBuilder: cardBuilder,
+              canMoveUp: i > 0,
+              canMoveDown: i < ordered.length - 1,
+              onMoveUp: () => reorderMoving(ordered[i].id, -1),
+              onMoveDown: () => reorderMoving(ordered[i].id, 1),
+            ),
           ),
-        ],
       ],
     );
   }

@@ -8,6 +8,7 @@ import 'collection_card_view.dart';
 import 'composed_card_view.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
+import 'profile_widgets_layout.dart';
 import 'public_owner_cards_provider.dart';
 import 'public_profile_widgets_provider.dart';
 import 'showcase_card_view.dart';
@@ -50,19 +51,19 @@ class PublicProfileWidgetsView extends ConsumerWidget {
 
         if (visible.isEmpty) return const _EmptyState();
 
-        return Column(
+        return ProfileWidgetsFlow(
           key: const Key('publicProfileWidgetsView'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < visible.length; i++) ...[
-              if (i > 0) const SizedBox(height: AppSpacing.sm),
-              _VisitorTile(
-                key: Key('publicWidgetTile_${visible[i].id}'),
-                userId: userId,
+          tiles: [
+            for (var i = 0; i < visible.length; i++)
+              ProfileWidgetTile(
                 widget: visible[i],
-                cardBuilder: cardBuilder,
+                child: _VisitorTile(
+                  key: Key('publicWidgetTile_${visible[i].id}'),
+                  userId: userId,
+                  widget: visible[i],
+                  cardBuilder: cardBuilder,
+                ),
               ),
-            ],
           ],
         );
       },
