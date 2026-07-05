@@ -6,6 +6,7 @@ import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
 import '../domain/showcase_selection.dart';
 import '../domain/showcase_value_resolver.dart';
+import 'collection_card_view.dart';
 import 'composed_card_view.dart';
 import 'composed_picker.dart';
 import 'data_menu_screen.dart';
@@ -163,6 +164,27 @@ class _WidgetTile extends ConsumerWidget {
       );
     }
 
+    // A collection widget resolves its own multi-game panorama and is never
+    // resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.collection) {
+      return Stack(
+        children: [
+          ClipRect(child: CollectionCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
     final platform = widget.platform;
     // A kind with no platform has nothing to resolve; treat it as a missing
     // card so it still renders the placeholder-with-menu and stays removable.
@@ -272,6 +294,21 @@ class _WidgetOptionsMenu extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final controller = ref.read(profileWidgetsControllerProvider.notifier);
 
+    // A resize rewrites the widget's own settings sub-object so its selection
+    // survives the write: a showcase carries its single game, a collection its
+    // games + title.
+    void resizeTo(ProfileWidgetSize size) {
+      if (widget.kind == ProfileWidgetKind.collection) {
+        controller.resizeCollection(
+          widget.id,
+          size,
+          widget.collectionSelection,
+        );
+      } else {
+        controller.resizeShowcase(widget.id, size, widget.showcaseSelection);
+      }
+    }
+
     // The achievements hero is offered only when the showcased game currently
     // carries a renderable achievement pair; otherwise only the hours hero
     // exists, so no in-card stat choice is surfaced.
@@ -299,23 +336,11 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           case _WidgetMenuAction.editItems:
             showComposedItemPicker(context, widget);
           case _WidgetMenuAction.resizeSmall:
-            controller.resizeShowcase(
-              widget.id,
-              ProfileWidgetSize.small,
-              widget.showcaseSelection,
-            );
+            resizeTo(ProfileWidgetSize.small);
           case _WidgetMenuAction.resizeWide:
-            controller.resizeShowcase(
-              widget.id,
-              ProfileWidgetSize.wide,
-              widget.showcaseSelection,
-            );
+            resizeTo(ProfileWidgetSize.wide);
           case _WidgetMenuAction.resizeLarge:
-            controller.resizeShowcase(
-              widget.id,
-              ProfileWidgetSize.large,
-              widget.showcaseSelection,
-            );
+            resizeTo(ProfileWidgetSize.large);
           case _WidgetMenuAction.heroHours:
             controller.setShowcaseHero(
               widget.id,
@@ -374,11 +399,12 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         ];
         if (customize.isNotEmpty) sections.add(customize);
 
-        // A showcase widget surfaces its size on the card itself: pick a
-        // footprint and the card re-renders at that size, the active size shown
-        // by row highlight. Scoped to showcase — the other kinds' size is not
-        // yet in-card editable.
-        if (widget.kind == ProfileWidgetKind.showcase) {
+        // A showcase or collection widget surfaces its size on the card itself:
+        // pick a footprint and the card re-renders at that size, the active size
+        // shown by row highlight. Scoped to these two art cards — the other
+        // kinds' size is not yet in-card editable.
+        if (widget.kind == ProfileWidgetKind.showcase ||
+            widget.kind == ProfileWidgetKind.collection) {
           sections.add([
             selectable(
               _WidgetMenuAction.resizeSmall,

@@ -4,6 +4,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -98,6 +99,13 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -122,6 +130,13 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setDataMenuSelection(
     String id,
     ProfileWidgetSize size,
@@ -133,12 +148,14 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 }
 
-/// Records the size and selection passed to [setShowcaseSize] so the showcase
-/// resize flow is provable
-/// at the repository boundary the controller drives.
+/// Records the size and selection passed to [setShowcaseSize] / [setCollectionSize]
+/// so the resize flow is provable at the repository boundary the controller
+/// drives.
 final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   ProfileWidgetSize? lastSetSize;
   ShowcaseSelection? lastShowcaseSelection;
+  ProfileWidgetSize? lastCollectionSetSize;
+  CollectionSelection? lastCollectionSelection;
 
   @override
   Future<Either<Failure, Unit>> setShowcaseSize(
@@ -150,6 +167,24 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
     lastShowcaseSelection = selection;
     return right(unit);
   }
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async {
+    lastCollectionSetSize = size;
+    lastCollectionSelection = selection;
+    return right(unit);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> setSize(
@@ -264,6 +299,23 @@ ProfileWidget _showcaseWidget({
   isEnabled: true,
   size: ProfileWidgetSize.small,
   showcaseSelection: ShowcaseSelection(gameRef: '730', hero: hero),
+);
+
+ProfileWidget _collectionWidget({
+  required String id,
+  required int position,
+  ProfileWidgetSize size = ProfileWidgetSize.wide,
+}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.collection,
+  platform: null,
+  position: position,
+  isEnabled: true,
+  size: size,
+  collectionSelection: const CollectionSelection(
+    gameRefs: ['730'],
+    titleKey: 'collectionTitleFavorites',
+  ),
 );
 
 /// The Container that fills a selectable menu row (its `color` marks the active
@@ -1080,5 +1132,64 @@ void main() {
     await tester.tap(find.byKey(const Key('profileWidgetMenu_sc')));
     await tester.pumpAndSettle();
     expect(find.byType(PopupMenuDivider), findsNWidgets(2));
+  });
+
+  testWidgets('a collection tile routes to CollectionCardView and offers size '
+      'options, not the other kinds\' customize entries', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_collectionWidget(id: 'col', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // The collection tile renders via CollectionCardView (its keyed card) with a
+    // reachable options menu.
+    expect(find.byKey(const Key('profileWidgetTile_col')), findsOneWidget);
+    expect(find.byKey(const Key('collectionCard_col')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetMenu_col')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_col')));
+    await tester.pumpAndSettle();
+    // The size section is present; no hero or customize entries for a collection.
+    expect(find.text(l10n.profileWidgetSizeSmall), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeWide), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeLarge), findsOneWidget);
+    expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
+    expect(find.text(l10n.showcaseHeroHours), findsNothing);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+  });
+
+  testWidgets('collection options menu resizes the card via the controller', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_collectionWidget(id: 'col', position: 0)],
+        cards: {Platform.steam: _steamShowcaseCard()},
+        widgetsRepo: widgetsRepo,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Pick the large footprint; the controller drives setCollectionSize with
+    // that size AND the widget's selection — a resize must not drop the games.
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_col')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.profileWidgetSizeLarge));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastCollectionSetSize, ProfileWidgetSize.large);
+    expect(
+      widgetsRepo.lastCollectionSelection,
+      const CollectionSelection(
+        gameRefs: ['730'],
+        titleKey: 'collectionTitleFavorites',
+      ),
+    );
   });
 }

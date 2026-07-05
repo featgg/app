@@ -5,6 +5,7 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/observability/observability.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_data_source.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_repository_impl.dart';
@@ -541,6 +542,79 @@ void main() {
         selection: const ShowcaseSelection(gameRef: '730'),
         position: 0,
         size: ProfileWidgetSize.small,
+      );
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
+  group('addCollectionWidget', () {
+    test('writes type collection, null platform, and the games/title', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'col',
+          'platform': null,
+          'type': 'collection',
+          'position': 3,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'wide',
+            'collection': {
+              'games': ['730', '570', '440'],
+              'title': 'collectionTitleFavorites',
+            },
+          },
+        }),
+      );
+      final result = await _repo(source, _RecordingReporter())
+          .addCollectionWidget(
+            selection: const CollectionSelection(
+              gameRefs: ['730', '570', '440'],
+              titleKey: 'collectionTitleFavorites',
+            ),
+            position: 3,
+            size: ProfileWidgetSize.wide,
+          );
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'col');
+        expect(widget.kind, ProfileWidgetKind.collection);
+        expect(widget.platform, isNull);
+        expect(widget.collectionSelection.gameRefs, ['730', '570', '440']);
+      });
+
+      // The captured write is the personalization.md collection contract: a null
+      // platform (binding) plus the collection settings sub-object.
+      expect(source.lastInsert!['type'], 'collection');
+      expect(source.lastInsert!['platform'], isNull);
+      expect(source.lastInsert!['position'], 3);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'wide');
+      final collection = settings['collection'] as Map<String, dynamic>;
+      expect(collection['games'], ['730', '570', '440']);
+      expect(collection['title'], 'collectionTitleFavorites');
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'cap exceeded', code: '23514'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).addCollectionWidget(
+        selection: const CollectionSelection(
+          gameRefs: ['730', '570', '440'],
+          titleKey: 'collectionTitleFavorites',
+        ),
+        position: 0,
+        size: ProfileWidgetSize.wide,
       );
 
       result.fold((f) {

@@ -1,5 +1,6 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -30,6 +31,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   ComposedFill? lastComposedFill;
   ProfileWidgetSize? lastShowcaseSize;
   ShowcaseSelection? lastShowcaseSelection;
+  ProfileWidgetSize? lastCollectionSize;
+  CollectionSelection? lastCollectionSelection;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -132,6 +135,40 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         showcaseSelection: selection,
       ),
     );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addCollection');
+    lastCollectionSize = size;
+    lastCollectionSelection = selection;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.collection,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+        collectionSelection: selection,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async {
+    mutations.add('resizeCollection');
+    lastCollectionSize = size;
+    lastCollectionSelection = selection;
+    return _result(unit);
   }
 
   @override

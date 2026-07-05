@@ -7,6 +7,7 @@ import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
 import '../domain/showcase_selection.dart';
+import 'collection_picker.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_widgets_controller.dart';
 
@@ -34,15 +35,28 @@ Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
     ? scheme.onSurface
     : scheme.onInverseSurface;
 
-class _ShowcasePickerSheet extends ConsumerWidget {
+/// The two add-card modes the sheet toggles between: a single-game showcase
+/// (default) or a multi-game collection.
+enum _AddCardMode { showcase, collection }
+
+class _ShowcasePickerSheet extends ConsumerStatefulWidget {
   const _ShowcasePickerSheet({required this.existing});
 
   final List<ProfileWidget> existing;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ShowcasePickerSheet> createState() =>
+      _ShowcasePickerSheetState();
+}
+
+class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
+  _AddCardMode _mode = _AddCardMode.showcase;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final existing = widget.existing;
 
     // Append after the current max position to avoid a foreseeable unique
     // collision; the backend constraint stays authoritative.
@@ -63,37 +77,54 @@ class _ShowcasePickerSheet extends ConsumerWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: AsyncValueWidget<GameCard?>(
-          value: cardState,
-          onRetry: () => ref.invalidate(ownerCardProvider(Platform.steam)),
-          data: (card) => _content(
-            context,
-            ref,
-            l10n,
-            textTheme,
-            card,
-            nextPosition,
-            alreadyShowcased,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ModeToggle(
+              mode: _mode,
+              onChanged: (mode) => setState(() => _mode = mode),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Flexible(
+              child: AsyncValueWidget<GameCard?>(
+                value: cardState,
+                onRetry: () =>
+                    ref.invalidate(ownerCardProvider(Platform.steam)),
+                data: (card) {
+                  final data = card?.data;
+                  final games = data is SteamCardData
+                      ? data.libraryShowcase
+                      : const <LibraryShowcaseEntry>[];
+                  return switch (_mode) {
+                    _AddCardMode.showcase => _showcaseBody(
+                      l10n,
+                      textTheme,
+                      games,
+                      nextPosition,
+                      alreadyShowcased,
+                    ),
+                    _AddCardMode.collection => CollectionPickerBody(
+                      games: games,
+                      nextPosition: nextPosition,
+                    ),
+                  };
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _content(
-    BuildContext context,
-    WidgetRef ref,
+  Widget _showcaseBody(
     AppLocalizations l10n,
     TextTheme textTheme,
-    GameCard? card,
+    List<LibraryShowcaseEntry> games,
     int nextPosition,
     Set<String> alreadyShowcased,
   ) {
-    final data = card?.data;
-    final games = data is SteamCardData
-        ? data.libraryShowcase
-        : const <LibraryShowcaseEntry>[];
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -162,6 +193,36 @@ class _ShowcasePickerSheet extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// The two-segment mode toggle at the top of the add-card sheet: Game (a
+/// single-game showcase, the default) or Collection (a multi-game collection).
+class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({required this.mode, required this.onChanged});
+
+  final _AddCardMode mode;
+  final ValueChanged<_AddCardMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SegmentedButton<_AddCardMode>(
+      key: const Key('addCardModeToggle'),
+      showSelectedIcon: false,
+      segments: [
+        ButtonSegment(
+          value: _AddCardMode.showcase,
+          label: Text(l10n.addCardModeShowcase),
+        ),
+        ButtonSegment(
+          value: _AddCardMode.collection,
+          label: Text(l10n.addCardModeCollection),
+        ),
+      ],
+      selected: {mode},
+      onSelectionChanged: (selection) => onChanged(selection.first),
     );
   }
 }

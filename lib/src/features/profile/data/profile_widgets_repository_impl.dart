@@ -8,6 +8,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/observability/observability.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/collection_selection.dart';
 import '../domain/composed_card.dart';
 import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
@@ -184,6 +185,33 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final dto = await _source.insertWidget({
+        'platform': null,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.collection),
+        'position': position,
+        'is_enabled': true,
+        'settings': mergeCollectionSelectionIntoSettings(size, selection),
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     try {
       final userId = _currentUserId();
@@ -226,6 +254,24 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(id, {
         'settings': mergeShowcaseSelectionIntoSettings(size, selection),
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(id, {
+        'settings': mergeCollectionSelectionIntoSettings(size, selection),
       });
       return right(unit);
     } catch (e, st) {

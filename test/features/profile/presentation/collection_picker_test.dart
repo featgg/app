@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
@@ -20,41 +18,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
-/// Records the add-showcase call so the tile-tap write contract is provable,
+/// Records the add-collection call so the confirm write contract is provable,
 /// and returns `[]` for the read the controller re-fetches after a successful
 /// add. Every other mutation is unreachable in these tests.
 final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
-  Platform? lastPlatform;
-  ShowcaseSelection? lastSelection;
-  int? lastPosition;
-  ProfileWidgetSize? lastSize;
   CollectionSelection? lastCollectionSelection;
   int? lastCollectionPosition;
   ProfileWidgetSize? lastCollectionSize;
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
-    required Platform platform,
-    required ShowcaseSelection selection,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async {
-    lastPlatform = platform;
-    lastSelection = selection;
-    lastPosition = position;
-    lastSize = size;
-    return right(
-      ProfileWidget(
-        id: 'new',
-        kind: ProfileWidgetKind.showcase,
-        platform: platform,
-        position: position,
-        isEnabled: true,
-        size: size,
-        showcaseSelection: selection,
-      ),
-    );
-  }
 
   @override
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
@@ -77,13 +47,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
       ),
     );
   }
-
-  @override
-  Future<Either<Failure, Unit>> setCollectionSize(
-    String id,
-    ProfileWidgetSize size,
-    CollectionSelection selection,
-  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
@@ -113,6 +76,21 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
+    required Platform platform,
+    required ShowcaseSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> setTemplateFill(
@@ -174,26 +152,8 @@ final class _FakeCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
-/// Holds the card future open so the picker's loading branch is observable.
-final class _PendingCardsRepository implements CardsRepository {
-  final _completer = Completer<Either<Failure, GameCard?>>();
-
-  @override
-  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) =>
-      _completer.future;
-
-  @override
-  Future<Either<Failure, GameCard?>> fetchPublicCard(
-    String userId,
-    Platform platform,
-  ) async => right(null);
-}
-
-LibraryShowcaseEntry _entry(int appId) =>
-    LibraryShowcaseEntry(appId: appId, title: 'Game $appId', hours: 100);
-
-/// A Steam card carrying [library] (art-less so no real image decodes in tests).
-GameCard _steamCard(List<LibraryShowcaseEntry> library) => GameCard(
+/// A Steam card whose library holds [count] art-less entries (app ids 1..count).
+GameCard _steamCard(int count) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
   title: 'Steam',
@@ -203,17 +163,13 @@ GameCard _steamCard(List<LibraryShowcaseEntry> library) => GameCard(
   profileUrl: null,
   stats: const [],
   lastUpdated: DateTime.utc(2026, 6, 1),
-  data: SteamCardData(libraryShowcase: library, recentGames: const []),
-);
-
-ProfileWidget _showcaseFor(int appId, {required int position}) => ProfileWidget(
-  id: 'w-$appId',
-  kind: ProfileWidgetKind.showcase,
-  platform: Platform.steam,
-  position: position,
-  isEnabled: true,
-  size: ProfileWidgetSize.small,
-  showcaseSelection: ShowcaseSelection(gameRef: appId.toString()),
+  data: SteamCardData(
+    libraryShowcase: [
+      for (var i = 1; i <= count; i++)
+        LibraryShowcaseEntry(appId: i, title: 'Game $i', hours: 100),
+    ],
+    recentGames: const [],
+  ),
 );
 
 ProfileWidget _platformWidget({required int position}) => ProfileWidget(
@@ -256,111 +212,192 @@ Widget _harness({
   );
 }
 
+bool _addEnabled(WidgetTester tester) =>
+    tester
+        .widget<FilledButton>(
+          find.byKey(const Key('collectionPickerAddButton')),
+        )
+        .onPressed !=
+    null;
+
+Future<void> _openCollectionMode(
+  WidgetTester tester,
+  AppLocalizations l10n,
+) async {
+  await tester.tap(find.byKey(const Key('openPicker')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(l10n.addCardModeCollection));
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('offers a tile per addable Steam library game, excluding '
-      'already-showcased', (tester) async {
-    // Library [730, 570]; 730 is already showcased, so only 570 is addable.
+  testWidgets('the mode toggle is present and Collection mode is catalog-only '
+      '(no TextField)', (tester) async {
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard([_entry(730), _entry(570)])),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: [_showcaseFor(730, position: 0)],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('showcasePickerTile_570')), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerTile_730')), findsNothing);
-  });
-
-  testWidgets('empty library shows the localized empty state', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        cardsRepo: _FakeCardsRepository(_steamCard(6)),
         widgetsRepo: _RecordingWidgetsRepository(),
         existing: const [],
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _openCollectionMode(tester, l10n);
 
-    expect(find.byKey(const Key('showcasePickerEmpty')), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerAllAdded')), findsNothing);
+    expect(find.byKey(const Key('addCardModeToggle')), findsOneWidget);
+    expect(find.byKey(const Key('collectionPickerTitle')), findsOneWidget);
+    // Catalog-only: no free-text entry anywhere in the collection body.
+    expect(find.byType(TextField), findsNothing);
+    // The catalog title chips are present.
+    expect(
+      find.byKey(const Key('collectionTitleChip_collectionTitleFavorites')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('all games already showcased shows the all-added state', (
+  testWidgets('Add is disabled below 2, requires a title, and enables at 2–5', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard([_entry(730)])),
+        cardsRepo: _FakeCardsRepository(_steamCard(6)),
         widgetsRepo: _RecordingWidgetsRepository(),
-        existing: [_showcaseFor(730, position: 0)],
+        existing: const [],
       ),
     );
     await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _openCollectionMode(tester, l10n);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
+    // Nothing selected → disabled.
+    expect(_addEnabled(tester), isFalse);
+
+    // One game + a title is still below the minimum → disabled.
+    await tester.tap(find.byKey(const Key('collectionPickerTile_1')));
+    await tester.tap(
+      find.byKey(const Key('collectionTitleChip_collectionTitleFavorites')),
+    );
     await tester.pumpAndSettle();
+    expect(_addEnabled(tester), isFalse);
 
-    expect(find.byKey(const Key('showcasePickerAllAdded')), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerEmpty')), findsNothing);
+    // A second game meets the minimum → enabled.
+    await tester.tap(find.byKey(const Key('collectionPickerTile_2')));
+    await tester.pumpAndSettle();
+    expect(_addEnabled(tester), isTrue);
   });
 
-  testWidgets('tapping a tile adds a showcase for that game and closes', (
+  testWidgets('three games without a title keep Add disabled', (tester) async {
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(6)),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _openCollectionMode(tester, l10n);
+
+    await tester.tap(find.byKey(const Key('collectionPickerTile_1')));
+    await tester.tap(find.byKey(const Key('collectionPickerTile_2')));
+    await tester.tap(find.byKey(const Key('collectionPickerTile_3')));
+    await tester.pumpAndSettle();
+
+    // Three games but no title chosen → still disabled.
+    expect(_addEnabled(tester), isFalse);
+  });
+
+  testWidgets('a tap on an unselected tile at the cap (5) is ignored', (
     tester,
   ) async {
-    // An existing platform widget at position 2 (not a showcase, so it does not
-    // shrink the addable set) proves the insert position is max+1 = 3.
+    tester.view.physicalSize = const Size(420, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(6)),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _openCollectionMode(tester, l10n);
+
+    for (final id in [1, 2, 3, 4, 5]) {
+      await tester.tap(find.byKey(Key('collectionPickerTile_$id')));
+    }
+    await tester.pumpAndSettle();
+
+    // Five tiles carry the selected-check overlay.
+    for (final id in [1, 2, 3, 4, 5]) {
+      expect(find.byKey(Key('collectionTileCheck_$id')), findsOneWidget);
+    }
+
+    // Tapping a sixth unselected tile is a no-op at the cap: it gains no check.
+    await tester.tap(find.byKey(const Key('collectionPickerTile_6')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collectionTileCheck_6')), findsNothing);
+  });
+
+  testWidgets('confirm calls addCollection with the selected refs, chosen '
+      'title, wide size, and max+1 position', (tester) async {
+    tester.view.physicalSize = const Size(420, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard([_entry(570)])),
+        cardsRepo: _FakeCardsRepository(_steamCard(6)),
         widgetsRepo: widgetsRepo,
+        // An existing widget at position 2 proves the insert position is max+1.
         existing: [_platformWidget(position: 2)],
       ),
     );
     await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _openCollectionMode(tester, l10n);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('showcasePickerTile_570')));
-    await tester.pumpAndSettle();
-
-    // The write carries Steam, the tapped game ref, the small default size, and
-    // the max+1 position.
-    expect(widgetsRepo.lastPlatform, Platform.steam);
-    expect(widgetsRepo.lastSelection, const ShowcaseSelection(gameRef: '570'));
-    expect(widgetsRepo.lastSize, ProfileWidgetSize.small);
-    expect(widgetsRepo.lastPosition, 3);
-
-    // The sheet closed on tap.
-    expect(find.byKey(const Key('showcasePickerTile_570')), findsNothing);
-  });
-
-  testWidgets('Steam card loading shows the loader', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _PendingCardsRepository(),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: const [],
-      ),
+    await tester.tap(find.byKey(const Key('collectionPickerTile_1')));
+    await tester.tap(find.byKey(const Key('collectionPickerTile_2')));
+    await tester.tap(find.byKey(const Key('collectionPickerTile_3')));
+    await tester.tap(
+      find.byKey(const Key('collectionTitleChip_collectionTitleBacklog')),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    // Let the sheet animate in while the card future stays pending; the picker
-    // renders the centralized loader, not tiles.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const Key('collectionPickerAddButton')));
+    await tester.pumpAndSettle();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerEmpty')), findsNothing);
+    expect(widgetsRepo.lastCollectionSelection?.gameRefs, ['1', '2', '3']);
+    expect(
+      widgetsRepo.lastCollectionSelection?.titleKey,
+      'collectionTitleBacklog',
+    );
+    expect(widgetsRepo.lastCollectionSize, ProfileWidgetSize.wide);
+    expect(widgetsRepo.lastCollectionPosition, 3);
+
+    // The sheet closed on confirm.
+    expect(find.byKey(const Key('collectionPickerAddButton')), findsNothing);
   });
 }

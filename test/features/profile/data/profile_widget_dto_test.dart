@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -20,6 +21,7 @@ Map<String, dynamic> _row({
   Object? template,
   Object? composed,
   Object? showcase,
+  Object? collection,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
@@ -28,6 +30,7 @@ Map<String, dynamic> _row({
   if (template != null) settings['template'] = template;
   if (composed != null) settings['composed'] = composed;
   if (showcase != null) settings['showcase'] = showcase;
+  if (collection != null) settings['collection'] = collection;
   return {
     'id': id,
     'platform': platform,
@@ -149,6 +152,10 @@ void main() {
         'composed_card',
       );
       expect(profileWidgetKindToWire(ProfileWidgetKind.showcase), 'showcase');
+      expect(
+        profileWidgetKindToWire(ProfileWidgetKind.collection),
+        'collection',
+      );
     });
   });
 
@@ -695,6 +702,180 @@ void main() {
         ShowcaseHeroStat.achievements,
       );
       expect(showcaseHeroStatFromWire('bananas'), isNull);
+    });
+  });
+
+  group('collection selection round-trip (additive to the v1 envelope)', () {
+    test(
+      'a collection row maps to the kind with a null platform + selection',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'collection',
+              platform: null,
+              size: 'wide',
+              collection: {
+                'games': ['730', '570', '440'],
+                'title': 'collectionTitleFavorites',
+              },
+            ),
+          ),
+        );
+
+        expect(widget, isNotNull);
+        expect(widget!.kind, ProfileWidgetKind.collection);
+        // A collection spans multiple games — the binding rule keeps platform
+        // null.
+        expect(widget.platform, isNull);
+        expect(widget.size, ProfileWidgetSize.wide);
+        expect(widget.collectionSelection.gameRefs, ['730', '570', '440']);
+        expect(widget.collectionSelection.titleKey, 'collectionTitleFavorites');
+      },
+    );
+
+    test(
+      'a collection row with a stray platform still maps with null (lenient)',
+      () {
+        final widget = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(
+              type: 'collection',
+              platform: 'steam',
+              collection: {
+                'games': ['730'],
+              },
+            ),
+          ),
+        );
+
+        expect(widget, isNotNull);
+        expect(widget!.kind, ProfileWidgetKind.collection);
+        expect(widget.platform, isNull);
+        expect(widget.collectionSelection.gameRefs, ['730']);
+        expect(widget.collectionSelection.titleKey, isNull);
+      },
+    );
+
+    test('duplicate / garbage game refs are dropped on read', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'collection',
+            platform: null,
+            collection: {
+              'games': ['730', '730', '', 42, '570'],
+            },
+          ),
+        ),
+      );
+
+      expect(widget!.collectionSelection.gameRefs, ['730', '570']);
+    });
+
+    test('a non-object collection → empty selection', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'collection', platform: null, collection: 'oops'),
+        ),
+      );
+
+      expect(widget!.collectionSelection, CollectionSelection.empty);
+    });
+
+    test('a non-list games → empty selection', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'collection',
+            platform: null,
+            collection: {'games': 'oops'},
+          ),
+        ),
+      );
+
+      expect(widget!.collectionSelection, CollectionSelection.empty);
+    });
+
+    test('a platform row carries an empty collection selection', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(size: 'wide')),
+      );
+
+      expect(widget!.kind, ProfileWidgetKind.platform);
+      expect(widget.collectionSelection, CollectionSelection.empty);
+    });
+
+    test('collectionSelectionFromSettings is lenient on a null envelope', () {
+      expect(collectionSelectionFromSettings(null), CollectionSelection.empty);
+    });
+
+    test(
+      'merge writer preserves schema_version + size and sets games/title',
+      () {
+        final merged = mergeCollectionSelectionIntoSettings(
+          ProfileWidgetSize.wide,
+          const CollectionSelection(
+            gameRefs: ['730', '570'],
+            titleKey: 'collectionTitleBacklog',
+          ),
+        );
+
+        expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+        expect(merged['size'], 'wide');
+        final collection = merged['collection'] as Map<String, dynamic>;
+        expect(collection['games'], ['730', '570']);
+        expect(collection['title'], 'collectionTitleBacklog');
+      },
+    );
+
+    test('merge writer omits the title when none is set', () {
+      final merged = mergeCollectionSelectionIntoSettings(
+        ProfileWidgetSize.small,
+        const CollectionSelection(gameRefs: ['730']),
+      );
+
+      final collection = merged['collection'] as Map<String, dynamic>;
+      expect(collection['games'], ['730']);
+      expect(collection.containsKey('title'), isFalse);
+    });
+
+    test('merge writer omits the collection key for an empty selection', () {
+      final merged = mergeCollectionSelectionIntoSettings(
+        ProfileWidgetSize.small,
+        CollectionSelection.empty,
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'small');
+      expect(merged.containsKey('collection'), isFalse);
+    });
+
+    test('round-trips merge → fromDto with a null platform + selection', () {
+      final merged = mergeCollectionSelectionIntoSettings(
+        ProfileWidgetSize.wide,
+        const CollectionSelection(
+          gameRefs: ['730', '570', '440'],
+          titleKey: 'collectionTitleMostPlayed',
+        ),
+      );
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson({
+          'id': 'w-collection',
+          'platform': null,
+          'type': 'collection',
+          'position': 0,
+          'is_enabled': true,
+          'settings': merged,
+        }),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.collection);
+      expect(widget.platform, isNull);
+      expect(widget.collectionSelection.gameRefs, ['730', '570', '440']);
+      expect(widget.collectionSelection.titleKey, 'collectionTitleMostPlayed');
+      expect(widget.size, ProfileWidgetSize.wide);
     });
   });
 }

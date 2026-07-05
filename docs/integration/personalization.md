@@ -43,11 +43,10 @@ snake_case). Any other value is rejected as an invalid value for the field.
   Steam-first: a showcase row bound to another platform is accepted and stored,
   but the client renders it as unavailable — owner placeholder, hidden from
   visitors — until that platform's showcase source ships)*
-- `collection` — a multi-game collection card. *(collection: client support
-  upcoming)*
+- `collection` — a multi-game collection card.
 
-`platform`, `template`, `composed_card`, and `showcase` are the kinds the client
-writes today; `data_menu` and `collection` are reserved for a later phase.
+`platform`, `template`, `composed_card`, `showcase`, and `collection` are the
+kinds the client writes today; `data_menu` is reserved for a later phase.
 (Data-menu curation already ships, but as the `data_menu_items` setting on a
 `platform` widget — see below — not as a `data_menu`-typed row.)
 
@@ -93,7 +92,11 @@ from the invalid-`type` rejection above.
     single-game choice under another such field —
     `"showcase": { "game": "<gameKey>", "hero": "<stat>", "meta"?: "<stat>" }` —
     the game to render and which stat is the hero. It is likewise additive,
-    ignored when absent, and never bumps the version.
+    ignored when absent, and never bumps the version. A `collection` widget
+    carries its multi-game choice under another such field —
+    `"collection": { "games": ["<gameKey>", ...], "title": "<titleKey>" }` — the
+    ordered games it renders and a stable catalog title key. It is likewise
+    additive, ignored when absent, and never bumps the version.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.

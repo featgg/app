@@ -8,6 +8,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
@@ -169,6 +170,34 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    final failure = mutationFailure;
+    if (failure != null) return left(failure);
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.collection,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+        collectionSelection: selection,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -245,6 +274,20 @@ final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> setTemplateFill(

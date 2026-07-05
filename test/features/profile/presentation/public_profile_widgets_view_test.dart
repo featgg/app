@@ -4,6 +4,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -71,6 +72,20 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
+    required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setCollectionSize(
+    String id,
+    ProfileWidgetSize size,
+    CollectionSelection selection,
+  ) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, Unit>> setComposedFill(
@@ -488,6 +503,37 @@ void main() {
 
       expect(find.byKey(const Key('publicWidgetTile_sc')), findsOneWidget);
       expect(find.byKey(const Key('showcaseCard_sc')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a collection widget renders via CollectionCardView using the public source',
+    (tester) async {
+      // fetchPublicCard returns the Steam card; fetchMyCard is null. The
+      // collection resolves only if the visitor tile bound the public source.
+      await tester.pumpWidget(
+        _harness(
+          widgets: const [
+            ProfileWidget(
+              id: 'col',
+              kind: ProfileWidgetKind.collection,
+              platform: null,
+              position: 0,
+              isEnabled: true,
+              size: ProfileWidgetSize.wide,
+              collectionSelection: CollectionSelection(
+                gameRefs: ['730'],
+                titleKey: 'collectionTitleFavorites',
+              ),
+            ),
+          ],
+          publicCards: {Platform.steam: _steamShowcaseCard()},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('publicWidgetTile_col')), findsOneWidget);
+      expect(find.byKey(const Key('collectionCard_col')), findsOneWidget);
     },
   );
 

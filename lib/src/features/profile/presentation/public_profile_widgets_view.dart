@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
+import 'collection_card_view.dart';
 import 'composed_card_view.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
@@ -115,6 +116,15 @@ class _VisitorTile extends ConsumerWidget {
     if (widget.kind == ProfileWidgetKind.showcase) {
       return ClipRect(
         child: ShowcaseCardView(
+          widget: widget,
+          cardSource: publicSource(),
+          showEmptyPlaceholder: false,
+        ),
+      );
+    }
+    if (widget.kind == ProfileWidgetKind.collection) {
+      return ClipRect(
+        child: CollectionCardView(
           widget: widget,
           cardSource: publicSource(),
           showEmptyPlaceholder: false,
