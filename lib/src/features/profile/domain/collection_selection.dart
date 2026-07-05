@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 /// most [kCollectionMaxGames] games. Enforced only at creation in the picker;
 /// read/render stays lenient — a stored collection whose current library
 /// resolves fewer games still renders that resolved subset.
-const int kCollectionMinGames = 3;
+const int kCollectionMinGames = 2;
 const int kCollectionMaxGames = 5;
 
 /// The owner's multi-game choice for a [ProfileWidgetKind.collection] widget: an

@@ -1296,7 +1296,7 @@
   "@collectionPickerTitle": {
     "description": "Title of the add-card sheet's collection mode, where the owner selects several games for one collection card."
   },
-  "collectionPickerHint": "Select 3 to 5 games",
+  "collectionPickerHint": "Select 2 to 5 games",
   "@collectionPickerHint": {
     "description": "Hint under the collection picker title stating the allowed number of games in a collection."
   },

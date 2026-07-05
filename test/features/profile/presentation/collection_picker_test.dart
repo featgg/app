@@ -261,7 +261,7 @@ void main() {
     );
   });
 
-  testWidgets('Add is disabled below 3, requires a title, and enables at 3–5', (
+  testWidgets('Add is disabled below 2, requires a title, and enables at 2–5', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(420, 1400);
@@ -283,17 +283,16 @@ void main() {
     // Nothing selected → disabled.
     expect(_addEnabled(tester), isFalse);
 
-    // Two games + a title is still below the minimum → disabled.
+    // One game + a title is still below the minimum → disabled.
     await tester.tap(find.byKey(const Key('collectionPickerTile_1')));
-    await tester.tap(find.byKey(const Key('collectionPickerTile_2')));
     await tester.tap(
       find.byKey(const Key('collectionTitleChip_collectionTitleFavorites')),
     );
     await tester.pumpAndSettle();
     expect(_addEnabled(tester), isFalse);
 
-    // A third game meets the minimum → enabled.
-    await tester.tap(find.byKey(const Key('collectionPickerTile_3')));
+    // A second game meets the minimum → enabled.
+    await tester.tap(find.byKey(const Key('collectionPickerTile_2')));
     await tester.pumpAndSettle();
     expect(_addEnabled(tester), isTrue);
   });

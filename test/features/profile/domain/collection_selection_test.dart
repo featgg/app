@@ -73,8 +73,8 @@ void main() {
   });
 
   group('creation bounds', () {
-    test('min is 3 and max is 5', () {
-      expect(kCollectionMinGames, 3);
+    test('min is 2 and max is 5', () {
+      expect(kCollectionMinGames, 2);
       expect(kCollectionMaxGames, 5);
     });
   });

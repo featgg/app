@@ -309,7 +309,7 @@
   "addCardModeShowcase": "Juego",
   "addCardModeCollection": "Colección",
   "collectionPickerTitle": "Crear una colección",
-  "collectionPickerHint": "Selecciona de 3 a 5 juegos",
+  "collectionPickerHint": "Selecciona de 2 a 5 juegos",
   "collectionPickerChooseTitle": "Título de la colección",
   "collectionPickerAdd": "Agregar colección",
   "collectionUnavailable": "Colección no disponible",
