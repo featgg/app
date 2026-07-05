@@ -43,11 +43,10 @@ snake_case). Any other value is rejected as an invalid value for the field.
   Steam-first: a showcase row bound to another platform is accepted and stored,
   but the client renders it as unavailable — owner placeholder, hidden from
   visitors — until that platform's showcase source ships)*
-- `collection` — a multi-game collection card. *(collection: client support
-  upcoming)*
+- `collection` — a multi-game collection card.
 
-`platform`, `template`, `composed_card`, and `showcase` are the kinds the client
-writes today; `data_menu` and `collection` are reserved for a later phase.
+`platform`, `template`, `composed_card`, `showcase`, and `collection` are the
+kinds the client writes today; `data_menu` is reserved for a later phase.
 (Data-menu curation already ships, but as the `data_menu_items` setting on a
 `platform` widget — see below — not as a `data_menu`-typed row.)
 
