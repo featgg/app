@@ -232,13 +232,53 @@ class _TextBlock extends StatelessWidget {
       // single ellipsized line so the hero never gets pushed out of the fade.
       maxLines: size == ProfileWidgetSize.large ? 2 : 1,
     );
-    final hero = _TintedText(
-      textKey: Key('showcaseHero_$widgetId'),
-      text: _heroText(l10n, size, resolved),
-      heroImage: resolved.heroImage,
-      style: textTheme.headlineMedium?.copyWith(fontWeight: AppTypography.bold),
-      blend: _heroTintBlend,
+    final heroStyle = textTheme.headlineMedium?.copyWith(
+      fontWeight: AppTypography.bold,
     );
+    final heroText = _heroText(l10n, size, resolved);
+    // The trophy fronts the achievements hero only where there is no meta line
+    // (small & wide); at large the meta line names the stat, and hours never
+    // carries a trophy.
+    final showTrophy =
+        resolved.hero == ShowcaseHeroStat.achievements &&
+        size != ProfileWidgetSize.large;
+
+    final Widget hero = showTrophy
+        ? _ArtTinted(
+            heroImage: resolved.heroImage,
+            blend: _heroTintBlend,
+            builder: (color) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  key: Key('showcaseHeroIcon_$widgetId'),
+                  color: color,
+                  // Tie the glyph to the hero type size (no magic number).
+                  size: heroStyle?.fontSize,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Flexible(
+                  child: Text(
+                    heroText,
+                    key: Key('showcaseHero_$widgetId'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: (heroStyle ?? const TextStyle()).copyWith(
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        : _TintedText(
+            textKey: Key('showcaseHero_$widgetId'),
+            text: heroText,
+            heroImage: resolved.heroImage,
+            style: heroStyle,
+            blend: _heroTintBlend,
+          );
     // Deliberately NOT tinted — whisper-quiet secondary text (on-art light).
     final meta = Text(
       _metaDescriptor(l10n, resolved.hero),
@@ -276,14 +316,42 @@ class _TextBlock extends StatelessWidget {
   }
 }
 
+/// Resolves the art-tinted color once — the art's extracted swatch blended
+/// toward the on-art neutral by [blend], or that neutral while the tint loads,
+/// is null, or the art is absent — and hands it to [builder]. Both the plain
+/// hero value and the icon+value achievements hero read their color from here,
+/// so the tint math lives in one place. Watches [showcaseTintProvider] only
+/// when [heroImage] is non-null, so the card renders immediately and never
+/// blocks on extraction.
+class _ArtTinted extends ConsumerWidget {
+  const _ArtTinted({
+    required this.heroImage,
+    required this.blend,
+    required this.builder,
+  });
+
+  final String? heroImage;
+  final double blend;
+  final Widget Function(Color color) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final onArt = _onArtColor(Theme.of(context).colorScheme);
+    final url = heroImage;
+    final tint = url == null
+        ? null
+        : ref.watch(showcaseTintProvider(url)).value;
+    final color = tint == null ? onArt : Color.lerp(tint, onArt, blend)!;
+    return builder(color);
+  }
+}
+
 /// Text tinted by the art's extracted swatch (single line unless the caller
-/// grants more — the large card lets the game title wrap). Watches
-/// [showcaseTintProvider] only when [heroImage] is non-null; while the tint
-/// loads, is null, or the art is absent, it falls back to the neutral on-art
-/// color (always light — the text sits on the dark scrim in both themes) so
-/// the card renders immediately and never blocks on extraction. The resolved
-/// tint is blended toward that color by [blend].
-class _TintedText extends ConsumerWidget {
+/// grants more — the large card lets the game title wrap). Reads its color from
+/// [_ArtTinted]: while the tint loads, is null, or the art is absent, it falls
+/// back to the neutral on-art color (always light — the text sits on the dark
+/// scrim in both themes).
+class _TintedText extends StatelessWidget {
   const _TintedText({
     required this.textKey,
     required this.text,
@@ -301,21 +369,17 @@ class _TintedText extends ConsumerWidget {
   final int maxLines;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final onArt = _onArtColor(Theme.of(context).colorScheme);
-    final url = heroImage;
-    final tint = url == null
-        ? null
-        : ref.watch(showcaseTintProvider(url)).value;
-    final color = tint == null ? onArt : Color.lerp(tint, onArt, blend)!;
-    return Text(
+  Widget build(BuildContext context) => _ArtTinted(
+    heroImage: heroImage,
+    blend: blend,
+    builder: (color) => Text(
       text,
       key: textKey,
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
       style: (style ?? const TextStyle()).copyWith(color: color),
-    );
-  }
+    ),
+  );
 }
 
 /// Hero text by the effective hero and size. The hours hero renders the bare
