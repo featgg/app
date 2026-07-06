@@ -249,7 +249,7 @@ Mobile-first; aligns with M3 window size classes. Phone is the design target. We
 
 - **Column counts:** `compact` 1 · `medium` 2 · `expanded` 3, centered within the ~1200 max content width on `expanded` (§9.2).
 - **Size → span:** the art cards (`showcase` / `collection`) claim cells by their size token — `small` = 1 cell, `wide` = 2 cells, `large` = 2 cells (the card's own per-size aspect ratio realizes the tall footprint at `large`); content-rich cards (`platform` / `template` / `composed`) always span the **full row**, so they never sit in a too-narrow cell. Spans clamp to the column count.
-- **Packing:** an auto-packing (masonry-style) grid at content height, so a shorter card does not leave a fixed gap. Visual order follows position, but a later small card may fill an earlier gap — this is intended auto-packing, not strict linear order.
+- **Packing:** an explicit row layout at content height. Tiles pack into rows so a span-1 card is not stranded beside a span-2 one — a later small card may fill an earlier gap, so visual order follows position, not strict linear order. A lone card in an under-full row is centered rather than left-stranded.
 - **Compact** stays a single full-width column, unchanged.
 
 ---

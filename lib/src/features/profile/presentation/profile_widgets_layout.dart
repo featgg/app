@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../../../core/core.dart';
 import '../domain/profile_widget.dart';
@@ -71,8 +70,38 @@ List<ProfileWidgetTile> packForLayout(
   return packed;
 }
 
-/// Single full-width column on compact; an auto-packing multi-column staggered
-/// grid (content-height tiles) above the medium breakpoint, centered within
+/// Splits already-packed [tiles] into rows for the [columns]-column grid,
+/// greedily filling each row up to [columns] cells (mirrors packForLayout's own
+/// fill, so the rows are exactly what packing intended). Pure/deterministic.
+List<List<ProfileWidgetTile>> groupRows(
+  List<ProfileWidgetTile> tiles,
+  int columns,
+) {
+  final rows = <List<ProfileWidgetTile>>[];
+  var current = <ProfileWidgetTile>[];
+  var remaining = columns;
+  for (final t in tiles) {
+    final s = spanFor(t.widget, columns: columns);
+    if (s > remaining && current.isNotEmpty) {
+      rows.add(current);
+      current = <ProfileWidgetTile>[];
+      remaining = columns;
+    }
+    current.add(t);
+    remaining -= s;
+    if (remaining <= 0) {
+      rows.add(current);
+      current = <ProfileWidgetTile>[];
+      remaining = columns;
+    }
+  }
+  if (current.isNotEmpty) rows.add(current);
+  return rows;
+}
+
+/// Single full-width column on compact; an explicit multi-column row layout
+/// (content-height tiles packed by [packForLayout], then grouped into rows by
+/// [groupRows]) above the medium breakpoint, centered within
 /// [AppBreakpoints.maxContentWidth] on expanded. Non-scrolling — it embeds in
 /// the profile screen's own scroll view, which gives it a bounded width for its
 /// own [LayoutBuilder].
@@ -100,18 +129,29 @@ class ProfileWidgetsFlow extends StatelessWidget {
         }
 
         final columns = columnsFor(sizeClass);
-        final laidOut = packForLayout(tiles, columns);
-        final grid = StaggeredGrid.count(
-          crossAxisCount: columns,
-          mainAxisSpacing: AppSpacing.sm,
-          crossAxisSpacing: AppSpacing.sm,
-          children: [
-            for (final tile in laidOut)
-              StaggeredGridTile.fit(
-                crossAxisCellCount: spanFor(tile.widget, columns: columns),
-                child: tile.child,
-              ),
-          ],
+        final rows = groupRows(packForLayout(tiles, columns), columns);
+
+        // Measure the real content width (≤ maxContentWidth on expanded, so the
+        // width-measuring LayoutBuilder sits inside that constraint) to size each
+        // cell exactly; a span-s tile absorbs the inter-cell gaps it spans.
+        final grid = LayoutBuilder(
+          builder: (context, inner) {
+            final contentWidth = inner.maxWidth;
+            final cellWidth =
+                (contentWidth - AppSpacing.sm * (columns - 1)) / columns;
+            double tileWidth(int span) =>
+                span * cellWidth + (span - 1) * AppSpacing.sm;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.sm),
+                  _row(rows[i], columns, tileWidth),
+                ],
+              ],
+            );
+          },
         );
 
         if (sizeClass == WindowSizeClass.expanded) {
@@ -128,4 +168,52 @@ class ProfileWidgetsFlow extends StatelessWidget {
       },
     );
   }
+}
+
+/// One grid row. A full row (its spans sum to [columns]) sizes tiles with
+/// [Expanded] so cells distribute exactly and can never overflow; an under-full
+/// row uses explicit widths from [tileWidth] — a lone orphan is centered, while
+/// multiple tiles left-align with the empty cell(s) trailing. Tiles top-align so
+/// unequal heights do not stretch.
+Widget _row(
+  List<ProfileWidgetTile> row,
+  int columns,
+  double Function(int span) tileWidth,
+) {
+  final rowSpan = row.fold<int>(
+    0,
+    (sum, t) => sum + spanFor(t.widget, columns: columns),
+  );
+
+  if (rowSpan == columns) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < row.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            flex: spanFor(row[i].widget, columns: columns),
+            child: row[i].child,
+          ),
+        ],
+      ],
+    );
+  }
+
+  final isOrphan = row.length == 1;
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisAlignment: isOrphan
+        ? MainAxisAlignment.center
+        : MainAxisAlignment.start,
+    children: [
+      for (var i = 0; i < row.length; i++) ...[
+        if (i > 0) const SizedBox(width: AppSpacing.sm),
+        SizedBox(
+          width: tileWidth(spanFor(row[i].widget, columns: columns)),
+          child: row[i].child,
+        ),
+      ],
+    ],
+  );
 }

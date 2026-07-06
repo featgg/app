@@ -668,6 +668,67 @@ void main() {
     });
   });
 
+  group('groupRows', () {
+    // groupRows takes the already-packed order and splits it into rigid rows,
+    // greedily filling each row up to the column count — the row model the
+    // explicit row layout renders (design-system §9.5).
+    ProfileWidgetTile small(String id) => ProfileWidgetTile(
+      widget: _showcaseWidget(id: id, position: 0),
+      child: const SizedBox.shrink(),
+    );
+    ProfileWidgetTile wide(String id) => ProfileWidgetTile(
+      widget: _showcaseWidget(
+        id: id,
+        position: 0,
+        size: ProfileWidgetSize.wide,
+      ),
+      child: const SizedBox.shrink(),
+    );
+
+    List<List<String>> rowIds(List<List<ProfileWidgetTile>> rows) => [
+      for (final row in rows) [for (final t in row) t.widget.id],
+    ];
+
+    test(
+      'three smalls on two columns strand the third alone in its own row',
+      () {
+        expect(rowIds(groupRows([small('s1'), small('s2'), small('s3')], 2)), [
+          ['s1', 's2'],
+          ['s3'],
+        ]);
+      },
+    );
+
+    test('a wide that cannot pair the leftover cell starts its own row', () {
+      expect(rowIds(groupRows([small('s'), wide('w')], 2)), [
+        ['s'],
+        ['w'],
+      ]);
+    });
+
+    test('two smalls fill a single two-column row', () {
+      expect(rowIds(groupRows([small('s1'), small('s2')], 2)), [
+        ['s1', 's2'],
+      ]);
+    });
+
+    test('small+wide co-locate then a trailing small on three columns', () {
+      expect(rowIds(groupRows([small('s1'), wide('w'), small('s2')], 3)), [
+        ['s1', 'w'],
+        ['s2'],
+      ]);
+    });
+
+    test('every tile is preserved exactly once in the packed order', () {
+      final input = [small('s1'), wide('w'), small('s2'), small('s3')];
+      final flat = [for (final row in groupRows(input, 2)) ...row];
+      expect(
+        [for (final t in flat) t.widget.id],
+        [for (final t in input) t.widget.id],
+      );
+    });
+  });
+
   testWidgets('renders a tall, rich card at phone width with no overflow', (
     tester,
   ) async {
@@ -842,6 +903,47 @@ void main() {
     expect(lg.width, closeTo(800, 0.5));
   });
 
+  testWidgets('medium centers a lone orphan card in its under-full row', (
+    tester,
+  ) async {
+    // Three smalls on two columns: the first two pair up, the third is alone in
+    // an under-full row. It must be centered (its cell width preserved, not
+    // stretched), not left-stranded next to an empty cell.
+    _useSurfaceWidth(tester, 800);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _showcaseWidget(id: 's1', position: 0),
+          _showcaseWidget(id: 's2', position: 1),
+          _showcaseWidget(id: 's3', position: 2),
+        ],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final s1 = tester.getRect(find.byKey(const Key('profileWidgetTile_s1')));
+    final s2 = tester.getRect(find.byKey(const Key('profileWidgetTile_s2')));
+    final s3 = tester.getRect(find.byKey(const Key('profileWidgetTile_s3')));
+
+    // The first two share the top row, each one cell.
+    const oneCell = (800 + AppSpacing.sm) / 2 - AppSpacing.sm;
+    expect(s1.top, s2.top);
+    expect(s1.left, lessThan(s2.left));
+    expect(s1.width, closeTo(oneCell, 0.5));
+    expect(s2.width, closeTo(oneCell, 0.5));
+
+    // The orphan drops to the next row at its own cell width (not stretched)…
+    expect(s3.top, greaterThan(s1.top));
+    expect(s3.width, closeTo(oneCell, 0.5));
+    // …and is horizontally centered in the content width: its center sits at the
+    // mid-line, so it is neither left-aligned (left > the first tile's left) nor
+    // full-width (right edge inside the grid's right edge).
+    expect(s3.center.dx, closeTo(800 / 2, 0.5));
+    expect(s3.left, greaterThan(s1.left));
+    expect(s3.right, lessThan(s2.right));
+  });
+
   testWidgets('expanded caps content width and spans by size', (tester) async {
     _useSurfaceWidth(tester, 1400);
     await tester.pumpWidget(
@@ -865,11 +967,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // Three columns centered within the design-system max content width (§9.2).
-    const columns = 3;
-    const stride = (AppBreakpoints.maxContentWidth + AppSpacing.sm) / columns;
-    const oneCell = stride - AppSpacing.sm;
-    const twoCell = stride * 2 - AppSpacing.sm;
-    const threeCell = stride * 3 - AppSpacing.sm; // == maxContentWidth
+    // The content card owns a full row (capped at maxContentWidth); the large +
+    // small pair fill the next full row, so under exact row layout the tiles
+    // distribute proportionally (the span-2 tile is twice the span-1, gaps
+    // absorbed) rather than at strict cell offsets.
+    const contentWidth = AppBreakpoints.maxContentWidth;
+    const paired =
+        contentWidth - AppSpacing.sm; // one inter-tile gap in the row
 
     final plat = tester.getRect(
       find.byKey(const Key('profileWidgetTile_plat')),
@@ -878,11 +982,93 @@ void main() {
     final sm = tester.getRect(find.byKey(const Key('profileWidgetTile_sm')));
 
     // The content card is capped at the max content width, not the 1400 surface.
-    expect(plat.width, closeTo(threeCell, 0.5));
+    expect(plat.width, closeTo(contentWidth, 0.5));
     expect(plat.width, lessThanOrEqualTo(AppBreakpoints.maxContentWidth + 0.5));
-    // Size drives span: large = two cells, small = one cell.
+    // Size drives span: large = two cells, small = one cell — they share the row
+    // (equal top, ascending left), the large twice the small, together filling
+    // the capped content width.
+    expect(lg.top, sm.top);
+    expect(lg.left, lessThan(sm.left));
+    expect(lg.width, closeTo(paired * 2 / 3, 0.5));
+    expect(sm.width, closeTo(paired / 3, 0.5));
+    expect(lg.width, closeTo(sm.width * 2, 0.5));
+  });
+
+  testWidgets('expanded left-aligns a multi-tile under-full row, not centered', (
+    tester,
+  ) async {
+    // Two smalls on three columns fill only two cells — an under-full row with
+    // MORE than one tile. Unlike a lone orphan, it stays left-aligned with the
+    // third cell trailing empty (centering is scoped to the lone orphan).
+    _useSurfaceWidth(tester, 1400);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _showcaseWidget(id: 'a1', position: 0),
+          _showcaseWidget(id: 'a2', position: 1),
+        ],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The grid is centered within maxContentWidth on expanded, so the content's
+    // left edge is inset by the surplus of the 1400 surface.
+    const contentLeft = (1400 - AppBreakpoints.maxContentWidth) / 2;
+    const cellWidth = (AppBreakpoints.maxContentWidth - AppSpacing.sm * 2) / 3;
+
+    final a1 = tester.getRect(find.byKey(const Key('profileWidgetTile_a1')));
+    final a2 = tester.getRect(find.byKey(const Key('profileWidgetTile_a2')));
+
+    // One row, ascending left, each one cell.
+    expect(a1.top, a2.top);
+    expect(a1.left, lessThan(a2.left));
+    expect(a1.width, closeTo(cellWidth, 0.5));
+    expect(a2.width, closeTo(cellWidth, 0.5));
+    // Left-aligned: the first tile starts at the content's left edge (a centered
+    // two-tile block would start ~half a cell in).
+    expect(a1.left, closeTo(contentLeft, 0.5));
+    // The pair occupies only the first two cells; the third cell trails empty —
+    // the row's right edge is a full cell short of the content's right edge.
+    expect(a2.right, closeTo(contentLeft + 2 * cellWidth + AppSpacing.sm, 0.5));
+    expect(
+      a2.right,
+      lessThan(contentLeft + AppBreakpoints.maxContentWidth - cellWidth),
+    );
+  });
+
+  testWidgets('expanded centers a span-2 orphan at two cells, not full width', (
+    tester,
+  ) async {
+    // A lone span-2 (large) art card on three columns: its row is under-full
+    // (2 of 3 cells) with a single tile, so it is centered at its two-cell width
+    // — not stretched to the full three-column row, not shrunk to one cell.
+    _useSurfaceWidth(tester, 1400);
+    await tester.pumpWidget(
+      _harness(
+        widgets: [
+          _showcaseWidget(id: 'lg', position: 0, size: ProfileWidgetSize.large),
+        ],
+        cards: {Platform.steam: _steamShowcaseCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const contentLeft = (1400 - AppBreakpoints.maxContentWidth) / 2;
+    const cellWidth = (AppBreakpoints.maxContentWidth - AppSpacing.sm * 2) / 3;
+    const twoCell = 2 * cellWidth + AppSpacing.sm; // the span absorbs its gap
+
+    final lg = tester.getRect(find.byKey(const Key('profileWidgetTile_lg')));
+
+    // Two cells wide — not the full three-column content width, not one cell.
     expect(lg.width, closeTo(twoCell, 0.5));
-    expect(sm.width, closeTo(oneCell, 0.5));
+    // Centered: its center sits on the content mid-line.
+    expect(
+      lg.center.dx,
+      closeTo(contentLeft + AppBreakpoints.maxContentWidth / 2, 0.5),
+    );
+    // Not left-aligned: its left edge is inset from the content's left edge.
+    expect(lg.left, greaterThan(contentLeft + 0.5));
   });
 
   testWidgets('content card at full span does not overflow (medium & '

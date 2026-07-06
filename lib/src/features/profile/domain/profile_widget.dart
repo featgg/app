@@ -20,7 +20,7 @@ enum ProfileWidgetKind {
   collection,
 }
 
-/// Grid footprint a widget occupies. Maps to staggered-grid spans in
+/// Grid footprint a widget occupies. Maps to row-layout spans in
 /// presentation: small→1x1, wide→2x1, large→2x2. Unknown wire tokens degrade
 /// to [small].
 enum ProfileWidgetSize { small, wide, large }
