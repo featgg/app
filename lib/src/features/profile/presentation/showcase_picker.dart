@@ -35,9 +35,9 @@ Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
     ? scheme.onSurface
     : scheme.onInverseSurface;
 
-/// The two add-card modes the sheet toggles between: a single-game showcase
-/// (default) or a multi-game collection.
-enum _AddCardMode { showcase, collection }
+/// The three add-card modes the sheet toggles between: a single-game showcase
+/// (default), a multi-game collection, or a whole-library game collector.
+enum _AddCardMode { showcase, collection, collector }
 
 class _ShowcasePickerSheet extends ConsumerStatefulWidget {
   const _ShowcasePickerSheet({required this.existing});
@@ -71,6 +71,14 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
             w.platform == Platform.steam)
           w.showcaseSelection.gameRef,
     };
+    // A game collector is platform-bound (Steam) and carries no game selection,
+    // so at most one Steam collector belongs on the profile; the picker offers
+    // Add only when none is placed yet.
+    final alreadyHasCollector = existing.any(
+      (w) =>
+          w.kind == ProfileWidgetKind.gameCollector &&
+          w.platform == Platform.steam,
+    );
 
     final cardState = ref.watch(ownerCardProvider(Platform.steam));
 
@@ -107,6 +115,12 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
                     _AddCardMode.collection => CollectionPickerBody(
                       games: games,
                       nextPosition: nextPosition,
+                    ),
+                    _AddCardMode.collector => _collectorBody(
+                      l10n,
+                      textTheme,
+                      nextPosition,
+                      alreadyHasCollector,
                     ),
                   };
                 },
@@ -149,6 +163,53 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
             nextPosition,
             alreadyShowcased,
           ),
+      ],
+    );
+  }
+
+  /// The Collector mode: a whole-library card bound to Steam. There is no game
+  /// to pick, so the body is a hint plus an Add action — or the already-added
+  /// state (no Add) when a Steam collector is already on the profile.
+  Widget _collectorBody(
+    AppLocalizations l10n,
+    TextTheme textTheme,
+    int nextPosition,
+    bool alreadyHasCollector,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.gameCollectorPickerTitle,
+          key: const Key('gameCollectorPickerTitle'),
+          style: textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (alreadyHasCollector)
+          Text(
+            l10n.gameCollectorPickerAlreadyAdded,
+            key: const Key('gameCollectorPickerAllAdded'),
+            style: textTheme.bodyMedium,
+          )
+        else ...[
+          Text(l10n.gameCollectorPickerHint, style: textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            key: const Key('gameCollectorPickerAddButton'),
+            onPressed: () {
+              ref
+                  .read(profileWidgetsControllerProvider.notifier)
+                  .addGameCollector(
+                    platform: Platform.steam,
+                    position: nextPosition,
+                    size: ProfileWidgetSize.small,
+                  );
+              Navigator.of(context).pop();
+            },
+            child: Text(l10n.gameCollectorPickerAdd),
+          ),
+        ],
       ],
     );
   }
@@ -197,8 +258,9 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
   }
 }
 
-/// The two-segment mode toggle at the top of the add-card sheet: Game (a
-/// single-game showcase, the default) or Collection (a multi-game collection).
+/// The mode toggle at the top of the add-card sheet: Game (a single-game
+/// showcase, the default), Collection (a multi-game collection), or Collector (a
+/// whole-library game collector).
 class _ModeToggle extends StatelessWidget {
   const _ModeToggle({required this.mode, required this.onChanged});
 
@@ -219,6 +281,10 @@ class _ModeToggle extends StatelessWidget {
         ButtonSegment(
           value: _AddCardMode.collection,
           label: Text(l10n.addCardModeCollection),
+        ),
+        ButtonSegment(
+          value: _AddCardMode.collector,
+          label: Text(l10n.addCardModeCollector),
         ),
       ],
       selected: {mode},

@@ -82,6 +82,13 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSize(
     String id,
     ProfileWidgetSize size,
@@ -537,6 +544,67 @@ void main() {
       expect(find.byKey(const Key('collectionCard_col')), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'a game_collector widget renders via GameCollectorCardView using the '
+    'public source',
+    (tester) async {
+      // fetchPublicCard returns a Steam card carrying games_owned; fetchMyCard is
+      // null. The collector resolves only if the visitor tile bound the public
+      // source.
+      await tester.pumpWidget(
+        _harness(
+          widgets: const [
+            ProfileWidget(
+              id: 'gc',
+              kind: ProfileWidgetKind.gameCollector,
+              platform: Platform.steam,
+              position: 0,
+              isEnabled: true,
+              size: ProfileWidgetSize.small,
+            ),
+          ],
+          publicCards: {
+            Platform.steam: _card(
+              Platform.steam,
+              stats: const [
+                CardStat(key: 'games_owned', value: 312, unit: 'count'),
+              ],
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('publicWidgetTile_gc')), findsOneWidget);
+      expect(find.byKey(const Key('gameCollectorCard_gc')), findsOneWidget);
+    },
+  );
+
+  testWidgets('a game_collector widget is hidden from the visitor when '
+      'unresolved', (tester) async {
+    // No public Steam card → the collector resolves to nothing; a visitor sees
+    // neither the card nor the owner-only placeholder.
+    await tester.pumpWidget(
+      _harness(
+        widgets: const [
+          ProfileWidget(
+            id: 'gc',
+            kind: ProfileWidgetKind.gameCollector,
+            platform: Platform.steam,
+            position: 0,
+            isEnabled: true,
+            size: ProfileWidgetSize.small,
+          ),
+        ],
+        publicCards: const {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gameCollectorCard_gc')), findsNothing);
+    expect(find.byKey(const Key('gameCollectorEmpty_gc')), findsNothing);
+  });
 
   testWidgets('read-only: no options menu and no add affordance', (
     tester,

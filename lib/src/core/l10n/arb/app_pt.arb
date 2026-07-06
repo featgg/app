@@ -313,5 +313,12 @@
   "collectionPickerChooseTitle": "Título da coleção",
   "collectionPickerAdd": "Adicionar coleção",
   "collectionUnavailable": "Coleção indisponível",
-  "collectionMetaGames": "{count, plural, =1{1 jogo} other{{count} jogos}}"
+  "collectionMetaGames": "{count, plural, =1{1 jogo} other{{count} jogos}}",
+  "gameCollectorLabel": "Colecionador de jogos",
+  "gameCollectorUnavailable": "Colecionador de jogos indisponível",
+  "addCardModeCollector": "Colecionador",
+  "gameCollectorPickerTitle": "Adicionar um colecionador de jogos",
+  "gameCollectorPickerHint": "Um cartão com toda a sua biblioteca da Steam: jogos, horas totais e a capa do seu jogo principal.",
+  "gameCollectorPickerAdd": "Adicionar colecionador",
+  "gameCollectorPickerAlreadyAdded": "Você já tem um cartão de colecionador de jogos."
 }

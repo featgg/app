@@ -31,6 +31,30 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   CollectionSelection? lastCollectionSelection;
   int? lastCollectionPosition;
   ProfileWidgetSize? lastCollectionSize;
+  Platform? lastCollectorPlatform;
+  int? lastCollectorPosition;
+  ProfileWidgetSize? lastCollectorSize;
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    lastCollectorPlatform = platform;
+    lastCollectorPosition = position;
+    lastCollectorSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.gameCollector,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
@@ -225,6 +249,15 @@ ProfileWidget _platformWidget({required int position}) => ProfileWidget(
   size: ProfileWidgetSize.small,
 );
 
+ProfileWidget _collectorWidget({required int position}) => ProfileWidget(
+  id: 'gc-$position',
+  kind: ProfileWidgetKind.gameCollector,
+  platform: Platform.steam,
+  position: position,
+  isEnabled: true,
+  size: ProfileWidgetSize.small,
+);
+
 Widget _harness({
   required CardsRepository cardsRepo,
   required ProfileWidgetsRepository widgetsRepo,
@@ -362,5 +395,62 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.byKey(const Key('showcasePickerEmpty')), findsNothing);
+  });
+
+  testWidgets('Collector mode: tapping Add records Steam + max+1 + small and '
+      'closes', (tester) async {
+    // A platform widget at position 2 (not a collector, so it does not trip the
+    // already-added guard) proves the insert position is max+1 = 3.
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: widgetsRepo,
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Switch to the Collector mode, then confirm.
+    await tester.tap(find.text(l10n.addCardModeCollector));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('gameCollectorPickerAddButton')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastCollectorPlatform, Platform.steam);
+    expect(widgetsRepo.lastCollectorSize, ProfileWidgetSize.small);
+    expect(widgetsRepo.lastCollectorPosition, 3);
+
+    // The sheet closed on Add.
+    expect(find.byKey(const Key('gameCollectorPickerAddButton')), findsNothing);
+  });
+
+  testWidgets('Collector mode: an existing collector shows the already-added '
+      'state (no Add)', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: [_collectorWidget(position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.text(l10n.addCardModeCollector));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('gameCollectorPickerAllAdded')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('gameCollectorPickerAddButton')), findsNothing);
   });
 }

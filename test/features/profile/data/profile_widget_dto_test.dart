@@ -156,6 +156,10 @@ void main() {
         profileWidgetKindToWire(ProfileWidgetKind.collection),
         'collection',
       );
+      expect(
+        profileWidgetKindToWire(ProfileWidgetKind.gameCollector),
+        'game_collector',
+      );
     });
   });
 
@@ -876,6 +880,50 @@ void main() {
       expect(widget.collectionSelection.gameRefs, ['730', '570', '440']);
       expect(widget.collectionSelection.titleKey, 'collectionTitleMostPlayed');
       expect(widget.size, ProfileWidgetSize.wide);
+    });
+  });
+
+  group('game_collector binding (platform-BOUND, size-only envelope)', () {
+    test('a non-null Steam game_collector row round-trips to the kind', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'game_collector', platform: 'steam', size: 'large'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.gameCollector);
+      // Platform-bound: the source platform lives in the row's `platform` column.
+      expect(widget.platform, Platform.steam);
+      expect(widget.size, ProfileWidgetSize.large);
+    });
+
+    test('a null-platform game_collector row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'game_collector', platform: null)),
+      );
+      expect(widget, isNull);
+    });
+
+    test('an unknown-platform game_collector row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'game_collector', platform: 'not_a_platform'),
+        ),
+      );
+      expect(widget, isNull);
+    });
+
+    test('the row carries no selection sub-object (size-only envelope)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'game_collector', platform: 'steam'),
+        ),
+      );
+
+      // A game collector has no per-widget choice; the empty defaults hold.
+      expect(widget!.showcaseSelection, ShowcaseSelection.empty);
+      expect(widget.collectionSelection, CollectionSelection.empty);
     });
   });
 }

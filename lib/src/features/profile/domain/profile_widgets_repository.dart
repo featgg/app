@@ -62,6 +62,15 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a game-collector widget bound to [platform] at [position] with
+  /// [size], enabled. Platform-bound (the library it aggregates); the settings
+  /// envelope carries only the size (no per-widget selection sub-object).
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
