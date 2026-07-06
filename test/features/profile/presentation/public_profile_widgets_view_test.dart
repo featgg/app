@@ -1,5 +1,6 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
+import 'package:featgg/src/core/theme/tokens.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
@@ -551,5 +552,61 @@ void main() {
     expect(find.byKey(const Key('profileWidgetMenu_on')), findsNothing);
     expect(find.byKey(const Key('profileWidgetAddButton')), findsNothing);
     expect(find.bySubtype<PopupMenuButton>(), findsNothing);
+  });
+
+  testWidgets('visitor grid packs multi-column above the breakpoint, '
+      'single-column on compact', (tester) async {
+    const widgets = [
+      ProfileWidget(
+        id: 'sc1',
+        kind: ProfileWidgetKind.showcase,
+        platform: Platform.steam,
+        position: 0,
+        isEnabled: true,
+        size: ProfileWidgetSize.small,
+        showcaseSelection: ShowcaseSelection(gameRef: '730'),
+      ),
+      ProfileWidget(
+        id: 'sc2',
+        kind: ProfileWidgetKind.showcase,
+        platform: Platform.steam,
+        position: 1,
+        isEnabled: true,
+        size: ProfileWidgetSize.small,
+        showcaseSelection: ShowcaseSelection(gameRef: '730'),
+      ),
+    ];
+    final publicCards = {Platform.steam: _steamShowcaseCard()};
+
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // Medium: the two small art cards sit side-by-side, each about half the row.
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    await tester.pumpWidget(
+      _harness(widgets: widgets, publicCards: publicCards),
+    );
+    await tester.pumpAndSettle();
+
+    var t1 = tester.getRect(find.byKey(const Key('publicWidgetTile_sc1')));
+    var t2 = tester.getRect(find.byKey(const Key('publicWidgetTile_sc2')));
+    const oneCell = (800 + AppSpacing.sm) / 2 - AppSpacing.sm;
+    expect(t1.top, t2.top);
+    expect(t1.left, lessThan(t2.left));
+    expect(t1.width, closeTo(oneCell, 0.5));
+    expect(t2.width, closeTo(oneCell, 0.5));
+
+    // Compact: re-lay out the same tree at phone width — the tiles stack in a
+    // single full-width column (a fresh pump would update the element tree, not
+    // just relayout).
+    tester.view.physicalSize = const Size(390, 2400);
+    await tester.pumpAndSettle();
+
+    t1 = tester.getRect(find.byKey(const Key('publicWidgetTile_sc1')));
+    t2 = tester.getRect(find.byKey(const Key('publicWidgetTile_sc2')));
+    expect(t1.left, t2.left);
+    expect(t1.top, lessThan(t2.top));
+    expect(t1.width, closeTo(390, 0.5));
   });
 }

@@ -241,7 +241,16 @@ Mobile-first; aligns with M3 window size classes. Phone is the design target. We
 
 ### 9.4 Implementation rule
 - One **window-size-class helper** (app `core` layer, per `architecture.md`) is the source; widgets **read the size class, never raw pixel checks** — same anti-hard-coding rule as colors and spacing.
-- Responsive widgets are **deferred until a screen actually reflows** (loose — same posture as the loading widgets).
+- The helper is **implemented** in `core/layout` (`WindowSizeClass`, `AppBreakpoints`, `windowSizeClassForWidth`) now that the profile widgets grid reflows (§9.5). New reflowing surfaces read the size class from it; they never re-derive the pixel thresholds.
+
+### 9.5 Reflowing surfaces (implemented)
+
+**Profile widgets grid** — the first surface to reflow across size classes.
+
+- **Column counts:** `compact` 1 · `medium` 2 · `expanded` 3, centered within the ~1200 max content width on `expanded` (§9.2).
+- **Size → span:** the art cards (`showcase` / `collection`) claim cells by their size token — `small` = 1 cell, `wide` = 2 cells, `large` = 2 cells (the card's own per-size aspect ratio realizes the tall footprint at `large`); content-rich cards (`platform` / `template` / `composed`) always span the **full row**, so they never sit in a too-narrow cell. Spans clamp to the column count.
+- **Packing:** an explicit row layout at content height. Tiles pack into rows so a span-1 card is not stranded beside a span-2 one — a later small card may fill an earlier gap, so visual order follows position, not strict linear order. A lone card in an under-full row is centered rather than left-stranded.
+- **Compact** stays a single full-width column, unchanged.
 
 ---
 
@@ -309,7 +318,7 @@ Used when the screen can't render its core content at all (initial load failed w
 - [ ] **Light-mode glass / art-scrim** — validate text legibility over bright artwork.
 - [ ] **Brand-red vs error-red** separation — monitor in real screens (§5.4).
 - [ ] **Display font** — confirm Space Grotesk + pt/es glyph coverage; KISS fallback is Inter-only.
-- [ ] **Tablet / desktop reflow detail** — master-detail, grid column counts, rail/drawer behavior. Best-effort; lock when that scope is real (§9.2).
+- [ ] **Tablet / desktop reflow detail** — master-detail, rail/drawer behavior. Best-effort; lock when that scope is real (§9.2). *Profile widgets grid column counts are now locked (§9.5); other surfaces remain provisional. Expanded = 3 columns is a taste call, tunable.*
 - [ ] **Per-platform adaptive coverage** — which surfaces need iOS/Android-specific treatment beyond Flutter's adaptive defaults.
 
 ---
@@ -326,3 +335,4 @@ Used when the screen can't render its core content at all (initial load failed w
 | 2026-05-31 | Scales: spacing 8pt grid (base 4), cards `radius-lg` 16, M3 window-class breakpoints. |
 | 2026-05-31 | Responsive & adaptive: mobile-first, reflow-not-redesign; honor iOS/Android via Flutter adaptive constructors (KISS); read window-size class, not pixels (§9). |
 | 2026-06-01 | Adaptive = hybrid: one brand visual language (custom Material 3) on every platform; platform-native only in the *feel* (physics/gestures/haptics/pickers via Flutter `.adaptive`), never the *look* (§9.3). |
+| 2026-07-05 | Window-size-class helper implemented in `core/layout`. Profile widgets grid is the first reflowing surface: columns compact 1 / medium 2 / expanded 3 (centered ~1200); art cards span small=1, wide=2, large=2 cells, content cards full row (§9.5). |
