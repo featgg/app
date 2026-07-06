@@ -6,6 +6,7 @@ import '../../connections/domain/game_card.dart';
 import '../domain/profile_widget.dart';
 import 'collection_card_view.dart';
 import 'composed_card_view.dart';
+import 'game_collector_card_view.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_layout.dart';
@@ -126,6 +127,15 @@ class _VisitorTile extends ConsumerWidget {
     if (widget.kind == ProfileWidgetKind.collection) {
       return ClipRect(
         child: CollectionCardView(
+          widget: widget,
+          cardSource: publicSource(),
+          showEmptyPlaceholder: false,
+        ),
+      );
+    }
+    if (widget.kind == ProfileWidgetKind.gameCollector) {
+      return ClipRect(
+        child: GameCollectorCardView(
           widget: widget,
           cardSource: publicSource(),
           showEmptyPlaceholder: false,

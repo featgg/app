@@ -18,6 +18,7 @@ enum ProfileWidgetKind {
   composed,
   showcase,
   collection,
+  gameCollector,
 }
 
 /// Grid footprint a widget occupies. Maps to row-layout spans in
@@ -52,8 +53,9 @@ final class ProfileWidget extends Equatable {
   final String id;
   final ProfileWidgetKind kind;
 
-  /// Non-null for [ProfileWidgetKind.platform] and [ProfileWidgetKind.showcase]
-  /// (the single source platform); null otherwise.
+  /// Non-null for [ProfileWidgetKind.platform], [ProfileWidgetKind.showcase],
+  /// and [ProfileWidgetKind.gameCollector] (the single source platform whose
+  /// library the card draws from); null otherwise.
   final Platform? platform;
   final int position;
   final bool isEnabled;

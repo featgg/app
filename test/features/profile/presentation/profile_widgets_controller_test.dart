@@ -33,6 +33,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   ShowcaseSelection? lastShowcaseSelection;
   ProfileWidgetSize? lastCollectionSize;
   CollectionSelection? lastCollectionSelection;
+  Platform? lastCollectorPlatform;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -155,6 +156,26 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         isEnabled: true,
         size: size,
         collectionSelection: selection,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addGameCollector');
+    lastCollectorPlatform = platform;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.gameCollector,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
       ),
     );
   }
@@ -330,6 +351,31 @@ void main() {
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addShowcase']);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addGameCollector delegates to addGameCollectorWidget', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addGameCollector(
+            platform: Platform.steam,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addGameCollector']);
+      expect(repo.lastCollectorPlatform, Platform.steam);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,

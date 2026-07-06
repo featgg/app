@@ -50,8 +50,8 @@ final class ProfileWidgetDto {
 /// - the `type` token is an unknown / unwired kind,
 /// - the `settings` envelope is a version other than
 ///   [kProfileWidgetSettingsVersion],
-/// - a `platform`- or `showcase`-kind row carries an unknown / absent platform
-///   token.
+/// - a `platform`-, `showcase`-, or `game_collector`-kind row carries an
+///   unknown / absent platform token.
 ///
 /// An unknown or absent `settings.size` token degrades to
 /// [ProfileWidgetSize.small] rather than omitting the row.
@@ -71,7 +71,8 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
 
   Platform? platform;
   if (kind == ProfileWidgetKind.platform ||
-      kind == ProfileWidgetKind.showcase) {
+      kind == ProfileWidgetKind.showcase ||
+      kind == ProfileWidgetKind.gameCollector) {
     platform = dto.platform == null ? null : _platformFromWire(dto.platform!);
     if (platform == null) return null;
   }
@@ -333,6 +334,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.composed => 'composed_card',
   ProfileWidgetKind.showcase => 'showcase',
   ProfileWidgetKind.collection => 'collection',
+  ProfileWidgetKind.gameCollector => 'game_collector',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
@@ -341,6 +343,7 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'composed_card' => ProfileWidgetKind.composed,
   'showcase' => ProfileWidgetKind.showcase,
   'collection' => ProfileWidgetKind.collection,
+  'game_collector' => ProfileWidgetKind.gameCollector,
   _ => null,
 };
 

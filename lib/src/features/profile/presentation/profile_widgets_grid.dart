@@ -10,6 +10,7 @@ import 'collection_card_view.dart';
 import 'composed_card_view.dart';
 import 'composed_picker.dart';
 import 'data_menu_screen.dart';
+import 'game_collector_card_view.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
@@ -187,6 +188,27 @@ class _WidgetTile extends ConsumerWidget {
       );
     }
 
+    // A game-collector widget resolves its own whole-library art card and is
+    // never resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.gameCollector) {
+      return Stack(
+        children: [
+          ClipRect(child: GameCollectorCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
     final platform = widget.platform;
     // A kind with no platform has nothing to resolve; treat it as a missing
     // card so it still renders the placeholder-with-menu and stays removable.
@@ -298,7 +320,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
 
     // A resize rewrites the widget's own settings sub-object so its selection
     // survives the write: a showcase carries its single game, a collection its
-    // games + title.
+    // games + title. A game collector has no selection sub-object, so it rides
+    // the base size-only rewrite.
     void resizeTo(ProfileWidgetSize size) {
       if (widget.kind == ProfileWidgetKind.collection) {
         controller.resizeCollection(
@@ -306,6 +329,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           size,
           widget.collectionSelection,
         );
+      } else if (widget.kind == ProfileWidgetKind.gameCollector) {
+        controller.resize(widget.id, size);
       } else {
         controller.resizeShowcase(widget.id, size, widget.showcaseSelection);
       }
@@ -401,12 +426,13 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         ];
         if (customize.isNotEmpty) sections.add(customize);
 
-        // A showcase or collection widget surfaces its size on the card itself:
-        // pick a footprint and the card re-renders at that size, the active size
-        // shown by row highlight. Scoped to these two art cards — the other
-        // kinds' size is not yet in-card editable.
+        // A showcase, collection, or game-collector widget surfaces its size on
+        // the card itself: pick a footprint and the card re-renders at that
+        // size, the active size shown by row highlight. Scoped to these art
+        // cards — the other kinds' size is not yet in-card editable.
         if (widget.kind == ProfileWidgetKind.showcase ||
-            widget.kind == ProfileWidgetKind.collection) {
+            widget.kind == ProfileWidgetKind.collection ||
+            widget.kind == ProfileWidgetKind.gameCollector) {
           sections.add([
             selectable(
               _WidgetMenuAction.resizeSmall,

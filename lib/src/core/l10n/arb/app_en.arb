@@ -1320,5 +1320,33 @@
         "type": "int"
       }
     }
+  },
+  "gameCollectorLabel": "Game Collector",
+  "@gameCollectorLabel": {
+    "description": "Fixed label rendered (uppercased) on the game collector card, naming the card type; the hero number below it is the games-owned count."
+  },
+  "gameCollectorUnavailable": "Game Collector unavailable",
+  "@gameCollectorUnavailable": {
+    "description": "Placeholder shown in place of a game collector card when the platform library is not available — the platform is unlinked or its card is still loading."
+  },
+  "addCardModeCollector": "Collector",
+  "@addCardModeCollector": {
+    "description": "Label of the add-card sheet's mode toggle segment that adds a game collector card aggregating the whole library."
+  },
+  "gameCollectorPickerTitle": "Add a Game Collector",
+  "@gameCollectorPickerTitle": {
+    "description": "Title of the add-card sheet's collector mode, where the owner adds one card summarizing their whole library."
+  },
+  "gameCollectorPickerHint": "One card for your whole Steam library: games owned, total hours, and your top game's cover.",
+  "@gameCollectorPickerHint": {
+    "description": "Hint under the collector picker title describing what the game collector card shows."
+  },
+  "gameCollectorPickerAdd": "Add Game Collector",
+  "@gameCollectorPickerAdd": {
+    "description": "Confirm button that adds the game collector card to the profile."
+  },
+  "gameCollectorPickerAlreadyAdded": "You already have a Game Collector card.",
+  "@gameCollectorPickerAlreadyAdded": {
+    "description": "Shown in the collector picker when a game collector card is already on the profile, so the Add action is hidden."
   }
 }

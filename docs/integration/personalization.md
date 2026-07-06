@@ -44,9 +44,13 @@ snake_case). Any other value is rejected as an invalid value for the field.
   but the client renders it as unavailable — owner placeholder, hidden from
   visitors — until that platform's showcase source ships)*
 - `collection` — a multi-game collection card.
+- `game_collector` — a platform-bound card aggregating a connected platform's
+  whole library (games-owned count, total hours, top-game cover). Client
+  rendering is Steam-first.
 
-`platform`, `template`, `composed_card`, `showcase`, and `collection` are the
-kinds the client writes today; `data_menu` is reserved for a later phase.
+`platform`, `template`, `composed_card`, `showcase`, `collection`, and
+`game_collector` are the kinds the client writes today; `data_menu` is reserved
+for a later phase.
 (Data-menu curation already ships, but as the `data_menu_items` setting on a
 `platform` widget — see below — not as a `data_menu`-typed row.)
 
@@ -66,6 +70,8 @@ Whether `platform` is required or must be null depends on `type`:
   **must be null**.
 - `type = collection` → `platform` **must be null** (a collection spans multiple
   games).
+- `type = game_collector` → `platform` **must be a non-null** value from the
+  list above (the platform whose library it aggregates).
 
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
@@ -96,7 +102,11 @@ from the invalid-`type` rejection above.
     carries its multi-game choice under another such field —
     `"collection": { "games": ["<gameKey>", ...], "title": "<titleKey>" }` — the
     ordered games it renders and a stable catalog title key. It is likewise
-    additive, ignored when absent, and never bumps the version.
+    additive, ignored when absent, and never bumps the version. A
+    `game_collector` widget carries no additional settings sub-object beyond
+    `size` — it has no per-widget choice (it aggregates the whole library) — and
+    a future art-source selector may be added additively under the same
+    `schema_version: 1`.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.

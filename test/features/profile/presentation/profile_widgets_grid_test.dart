@@ -109,6 +109,13 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -185,6 +192,13 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
@@ -319,6 +333,43 @@ ProfileWidget _collectionWidget({
   collectionSelection: const CollectionSelection(
     gameRefs: ['730'],
     titleKey: 'collectionTitleFavorites',
+  ),
+);
+
+ProfileWidget _gameCollectorWidget({
+  required String id,
+  required int position,
+  ProfileWidgetSize size = ProfileWidgetSize.large,
+}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.gameCollector,
+  platform: Platform.steam,
+  position: position,
+  isEnabled: true,
+  size: size,
+);
+
+/// A Steam card carrying the collector's figures as envelope stats so the
+/// game-collector view resolves against it (art-less library to avoid decoding
+/// a real image in tests).
+GameCard _steamCollectorCard() => GameCard(
+  schemaVersion: 1,
+  platform: Platform.steam,
+  title: 'steam-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [
+    CardStat(key: 'games_owned', value: 312, unit: 'count'),
+    CardStat(key: 'hours_played', value: 1240, unit: 'hours'),
+  ],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+  data: const SteamCardData(
+    libraryShowcase: [
+      LibraryShowcaseEntry(appId: 730, title: 'Counter-Strike 2', hours: 400),
+    ],
+    recentGames: [],
   ),
 );
 
@@ -520,6 +571,62 @@ void main() {
         ),
         1,
       );
+    });
+
+    test('game_collector art cards span small=1, wide=2, large=2 at both '
+        'multi-column regimes (size-driven, not content-full)', () {
+      for (final columns in const [2, 3]) {
+        expect(
+          spanFor(
+            _gameCollectorWidget(
+              id: 's',
+              position: 0,
+              size: ProfileWidgetSize.small,
+            ),
+            columns: columns,
+          ),
+          1,
+          reason: 'small @ $columns cols',
+        );
+        expect(
+          spanFor(
+            _gameCollectorWidget(
+              id: 'w',
+              position: 0,
+              size: ProfileWidgetSize.wide,
+            ),
+            columns: columns,
+          ),
+          2,
+          reason: 'wide @ $columns cols',
+        );
+        expect(
+          spanFor(
+            _gameCollectorWidget(
+              id: 'l',
+              position: 0,
+              size: ProfileWidgetSize.large,
+            ),
+            columns: columns,
+          ),
+          2,
+          reason: 'large @ $columns cols',
+        );
+        // Size-driven, never the full-column content-card span: a small collector
+        // claims one cell, strictly fewer than the column count.
+        expect(
+          spanFor(
+            _gameCollectorWidget(
+              id: 'sm',
+              position: 0,
+              size: ProfileWidgetSize.small,
+            ),
+            columns: columns,
+          ),
+          lessThan(columns),
+          reason: 'not content-full @ $columns cols',
+        );
+      }
     });
 
     test('content-rich cards fill the row (span the column count)', () {
@@ -1880,5 +1987,35 @@ void main() {
         titleKey: 'collectionTitleFavorites',
       ),
     );
+  });
+
+  testWidgets('a game_collector tile routes to GameCollectorCardView and offers '
+      'size options, no hero-stat rows', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_gameCollectorWidget(id: 'gc', position: 0)],
+        cards: {Platform.steam: _steamCollectorCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // The collector tile renders via GameCollectorCardView (its keyed card) with
+    // a reachable options menu.
+    expect(find.byKey(const Key('profileWidgetTile_gc')), findsOneWidget);
+    expect(find.byKey(const Key('gameCollectorCard_gc')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetMenu_gc')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_gc')));
+    await tester.pumpAndSettle();
+    // The size section is present; no hero-stat or customize entries for a
+    // collector (its figures are fixed).
+    expect(find.text(l10n.profileWidgetSizeSmall), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeWide), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeLarge), findsOneWidget);
+    expect(find.text(l10n.showcaseHeroHours), findsNothing);
+    expect(find.text(l10n.showcaseHeroAchievements), findsNothing);
+    expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
   });
 }
