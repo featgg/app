@@ -7,6 +7,7 @@ import '../domain/profile_widget.dart';
 import '../domain/showcase_selection.dart';
 import '../domain/showcase_value_resolver.dart';
 import 'collection_card_view.dart';
+import 'completionist_card_view.dart';
 import 'composed_card_view.dart';
 import 'composed_picker.dart';
 import 'data_menu_screen.dart';
@@ -209,6 +210,27 @@ class _WidgetTile extends ConsumerWidget {
       );
     }
 
+    // A completionist widget resolves its own whole-library perfect-games card
+    // and is never resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.completionist) {
+      return Stack(
+        children: [
+          ClipRect(child: CompletionistCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
     final platform = widget.platform;
     // A kind with no platform has nothing to resolve; treat it as a missing
     // card so it still renders the placeholder-with-menu and stays removable.
@@ -320,8 +342,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
 
     // A resize rewrites the widget's own settings sub-object so its selection
     // survives the write: a showcase carries its single game, a collection its
-    // games + title. A game collector has no selection sub-object, so it rides
-    // the base size-only rewrite.
+    // games + title. A game collector and a completionist have no selection
+    // sub-object, so they ride the base size-only rewrite.
     void resizeTo(ProfileWidgetSize size) {
       if (widget.kind == ProfileWidgetKind.collection) {
         controller.resizeCollection(
@@ -329,7 +351,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           size,
           widget.collectionSelection,
         );
-      } else if (widget.kind == ProfileWidgetKind.gameCollector) {
+      } else if (widget.kind == ProfileWidgetKind.gameCollector ||
+          widget.kind == ProfileWidgetKind.completionist) {
         controller.resize(widget.id, size);
       } else {
         controller.resizeShowcase(widget.id, size, widget.showcaseSelection);
@@ -426,13 +449,14 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         ];
         if (customize.isNotEmpty) sections.add(customize);
 
-        // A showcase, collection, or game-collector widget surfaces its size on
-        // the card itself: pick a footprint and the card re-renders at that
-        // size, the active size shown by row highlight. Scoped to these art
-        // cards — the other kinds' size is not yet in-card editable.
+        // A showcase, collection, game-collector, or completionist widget
+        // surfaces its size on the card itself: pick a footprint and the card
+        // re-renders at that size, the active size shown by row highlight. Scoped
+        // to these art cards — the other kinds' size is not yet in-card editable.
         if (widget.kind == ProfileWidgetKind.showcase ||
             widget.kind == ProfileWidgetKind.collection ||
-            widget.kind == ProfileWidgetKind.gameCollector) {
+            widget.kind == ProfileWidgetKind.gameCollector ||
+            widget.kind == ProfileWidgetKind.completionist) {
           sections.add([
             selectable(
               _WidgetMenuAction.resizeSmall,

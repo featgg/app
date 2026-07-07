@@ -128,6 +128,19 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ),
   );
 
+  /// Adds a completionist widget bound to [platform] at [position] with [size].
+  Future<void> addCompletionist({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addCompletionistWidget(
+      platform: platform,
+      position: position,
+      size: size,
+    ),
+  );
+
   /// Sets the size on the collection widget [id], carrying its [selection]
   /// through the rewritten settings envelope.
   Future<void> resizeCollection(

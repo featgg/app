@@ -22,14 +22,15 @@ int columnsFor(WindowSizeClass c) => switch (c) {
 };
 
 /// Cells the widget spans in a [columns]-column grid. Content-rich cards fill
-/// the row (never a narrow cell); showcase/collection/game-collector map small→1,
-/// wide→2, large→2 (the card's aspect ratio makes large the tall footprint).
-/// Clamped to [columns].
+/// the row (never a narrow cell); showcase/collection/game-collector/
+/// completionist map small→1, wide→2, large→2 (the card's aspect ratio makes
+/// large the tall footprint). Clamped to [columns].
 int spanFor(ProfileWidget w, {required int columns}) {
   final sized =
       w.kind == ProfileWidgetKind.showcase ||
       w.kind == ProfileWidgetKind.collection ||
-      w.kind == ProfileWidgetKind.gameCollector;
+      w.kind == ProfileWidgetKind.gameCollector ||
+      w.kind == ProfileWidgetKind.completionist;
   if (!sized) return columns;
   final cells = switch (w.size) {
     ProfileWidgetSize.small => 1,

@@ -50,8 +50,8 @@ final class ProfileWidgetDto {
 /// - the `type` token is an unknown / unwired kind,
 /// - the `settings` envelope is a version other than
 ///   [kProfileWidgetSettingsVersion],
-/// - a `platform`-, `showcase`-, or `game_collector`-kind row carries an
-///   unknown / absent platform token.
+/// - a `platform`-, `showcase`-, `game_collector`-, or `completionist`-kind row
+///   carries an unknown / absent platform token.
 ///
 /// An unknown or absent `settings.size` token degrades to
 /// [ProfileWidgetSize.small] rather than omitting the row.
@@ -72,7 +72,8 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
   Platform? platform;
   if (kind == ProfileWidgetKind.platform ||
       kind == ProfileWidgetKind.showcase ||
-      kind == ProfileWidgetKind.gameCollector) {
+      kind == ProfileWidgetKind.gameCollector ||
+      kind == ProfileWidgetKind.completionist) {
     platform = dto.platform == null ? null : _platformFromWire(dto.platform!);
     if (platform == null) return null;
   }
@@ -335,6 +336,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.showcase => 'showcase',
   ProfileWidgetKind.collection => 'collection',
   ProfileWidgetKind.gameCollector => 'game_collector',
+  ProfileWidgetKind.completionist => 'completionist',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
@@ -344,6 +346,7 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'showcase' => ProfileWidgetKind.showcase,
   'collection' => ProfileWidgetKind.collection,
   'game_collector' => ProfileWidgetKind.gameCollector,
+  'completionist' => ProfileWidgetKind.completionist,
   _ => null,
 };
 

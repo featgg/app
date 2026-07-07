@@ -246,6 +246,40 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final wireValue =
+          platformDescriptors[platform]?.wireValue ?? platform.name;
+      final dto = await _source.insertWidget({
+        'platform': wireValue,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.completionist),
+        'position': position,
+        'is_enabled': true,
+        // Size-only envelope: the completionist surfaces a whole-library count,
+        // so it carries no per-widget selection sub-object beyond size.
+        'settings': {
+          'schema_version': kProfileWidgetSettingsVersion,
+          'size': profileWidgetSizeToWire(size),
+        },
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     try {
       final userId = _currentUserId();

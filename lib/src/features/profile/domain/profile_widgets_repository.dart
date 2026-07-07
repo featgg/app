@@ -71,6 +71,16 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a completionist widget bound to [platform] at [position] with
+  /// [size], enabled. Platform-bound (the library whose perfect-games count it
+  /// surfaces); the settings envelope carries only the size (no per-widget
+  /// selection sub-object).
+  Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
