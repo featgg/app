@@ -34,6 +34,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Platform? lastCollectorPlatform;
   int? lastCollectorPosition;
   ProfileWidgetSize? lastCollectorSize;
+  Platform? lastCompletionistPlatform;
+  int? lastCompletionistPosition;
+  ProfileWidgetSize? lastCompletionistSize;
 
   @override
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
@@ -48,6 +51,27 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
       ProfileWidget(
         id: 'new',
         kind: ProfileWidgetKind.gameCollector,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    lastCompletionistPlatform = platform;
+    lastCompletionistPosition = position;
+    lastCompletionistSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.completionist,
         platform: platform,
         position: position,
         isEnabled: true,
@@ -258,6 +282,15 @@ ProfileWidget _collectorWidget({required int position}) => ProfileWidget(
   size: ProfileWidgetSize.small,
 );
 
+ProfileWidget _completionistWidget({required int position}) => ProfileWidget(
+  id: 'cp-$position',
+  kind: ProfileWidgetKind.completionist,
+  platform: Platform.steam,
+  position: position,
+  isEnabled: true,
+  size: ProfileWidgetSize.small,
+);
+
 Widget _harness({
   required CardsRepository cardsRepo,
   required ProfileWidgetsRepository widgetsRepo,
@@ -452,5 +485,62 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('gameCollectorPickerAddButton')), findsNothing);
+  });
+
+  testWidgets('Completionist mode: tapping Add records Steam + max+1 + small '
+      'and closes', (tester) async {
+    // A platform widget at position 2 (not a completionist, so it does not trip
+    // the already-added guard) proves the insert position is max+1 = 3.
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: widgetsRepo,
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Switch to the Completionist mode, then confirm.
+    await tester.tap(find.text(l10n.addCardModeCompletionist));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('completionistPickerAddButton')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastCompletionistPlatform, Platform.steam);
+    expect(widgetsRepo.lastCompletionistSize, ProfileWidgetSize.small);
+    expect(widgetsRepo.lastCompletionistPosition, 3);
+
+    // The sheet closed on Add.
+    expect(find.byKey(const Key('completionistPickerAddButton')), findsNothing);
+  });
+
+  testWidgets('Completionist mode: an existing completionist shows the '
+      'already-added state (no Add)', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: [_completionistWidget(position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.text(l10n.addCardModeCompletionist));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('completionistPickerAllAdded')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('completionistPickerAddButton')), findsNothing);
   });
 }

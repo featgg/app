@@ -34,6 +34,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   ProfileWidgetSize? lastCollectionSize;
   CollectionSelection? lastCollectionSelection;
   Platform? lastCollectorPlatform;
+  Platform? lastCompletionistPlatform;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -172,6 +173,26 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
       ProfileWidget(
         id: 'new',
         kind: ProfileWidgetKind.gameCollector,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addCompletionist');
+    lastCompletionistPlatform = platform;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.completionist,
         platform: platform,
         position: position,
         isEnabled: true,
@@ -376,6 +397,31 @@ void main() {
 
       expect(repo.mutations, ['addGameCollector']);
       expect(repo.lastCollectorPlatform, Platform.steam);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addCompletionist delegates to addCompletionistWidget', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addCompletionist(
+            platform: Platform.steam,
+            position: 0,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addCompletionist']);
+      expect(repo.lastCompletionistPlatform, Platform.steam);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,
