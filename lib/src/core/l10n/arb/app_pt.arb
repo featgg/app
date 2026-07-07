@@ -320,5 +320,13 @@
   "gameCollectorPickerTitle": "Adicionar um colecionador de jogos",
   "gameCollectorPickerHint": "Um cartão com toda a sua biblioteca da Steam: jogos, horas totais e a capa do seu jogo principal.",
   "gameCollectorPickerAdd": "Adicionar colecionador",
-  "gameCollectorPickerAlreadyAdded": "Você já tem um cartão de colecionador de jogos."
+  "gameCollectorPickerAlreadyAdded": "Você já tem um cartão de colecionador de jogos.",
+  "completionistLabel": "Completista",
+  "completionistUnavailable": "Completista indisponível",
+  "completionistMetaOfOwned": "de {count}",
+  "addCardModeCompletionist": "Completista",
+  "completionistPickerTitle": "Adicionar um completista",
+  "completionistPickerHint": "Um cartão com toda a sua biblioteca da Steam: quantos jogos você completou a 100%.",
+  "completionistPickerAdd": "Adicionar completista",
+  "completionistPickerAlreadyAdded": "Você já tem um cartão de completista."
 }

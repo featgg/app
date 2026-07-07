@@ -1348,5 +1348,42 @@
   "gameCollectorPickerAlreadyAdded": "You already have a Game Collector card.",
   "@gameCollectorPickerAlreadyAdded": {
     "description": "Shown in the collector picker when a game collector card is already on the profile, so the Add action is hidden."
+  },
+  "completionistLabel": "Completionist",
+  "@completionistLabel": {
+    "description": "Fixed label rendered (uppercased) on the completionist card, naming the card type; the hero number below it is the perfect-games (100% completed) count."
+  },
+  "completionistUnavailable": "Completionist unavailable",
+  "@completionistUnavailable": {
+    "description": "Placeholder shown in place of a completionist card when the platform library is not available — the platform is unlinked, its card is still loading, or the perfect-games count has not been published yet."
+  },
+  "completionistMetaOfOwned": "of {count}",
+  "@completionistMetaOfOwned": {
+    "description": "Meta line on the large completionist card: the completion denominator read after the hero count (perfect games) as \"42 / of 312\", naming how many games are owned.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardModeCompletionist": "Completionist",
+  "@addCardModeCompletionist": {
+    "description": "Label of the add-card sheet's mode toggle segment that adds a completionist card counting the whole library's perfect games."
+  },
+  "completionistPickerTitle": "Add a Completionist",
+  "@completionistPickerTitle": {
+    "description": "Title of the add-card sheet's completionist mode, where the owner adds one card counting their perfect games across the whole library."
+  },
+  "completionistPickerHint": "One card for your whole Steam library: how many games you've 100% completed.",
+  "@completionistPickerHint": {
+    "description": "Hint under the completionist picker title describing what the completionist card shows."
+  },
+  "completionistPickerAdd": "Add Completionist",
+  "@completionistPickerAdd": {
+    "description": "Confirm button that adds the completionist card to the profile."
+  },
+  "completionistPickerAlreadyAdded": "You already have a Completionist card.",
+  "@completionistPickerAlreadyAdded": {
+    "description": "Shown in the completionist picker when a completionist card is already on the profile, so the Add action is hidden."
   }
 }
