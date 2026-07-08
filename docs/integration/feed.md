@@ -172,7 +172,8 @@ widget-tier avatar and the hero art):
   "profile_url": "https://steamcommunity.com/id/test/",
   "stats": [
     { "key": "hours_played", "value": 1240, "unit": "hours" },
-    { "key": "games_owned", "value": 312, "unit": "count" }
+    { "key": "games_owned", "value": 312, "unit": "count" },
+    { "key": "games_perfect", "value": 42, "unit": "count" }
   ],
   "last_updated": "2026-06-03T12:00:00Z",
   "data": {
@@ -198,6 +199,13 @@ both are present. `achieved: 0` next to a positive `total` is a real value
 (owned, none unlocked). Only a bounded subset of the user's top games by
 playtime carries the pair; do not infer zero from absence. Additive under
 `schema_version: 1`; a card gains the fields on its next natural refresh.
+
+The Steam card additionally publishes a `games_perfect` stat (integer ≥ 0,
+`unit: "count"`) — the whole-library count of games with every achievement
+unlocked. It is **widget-tier only**: it appears in `widget_data.stats[]`,
+never in `feed_preview`. For very large libraries it is a converging
+best-effort lower bound. Additive under `schema_version: 1`; `0` is a real
+value (no perfect games), distinct from absence.
 
 The `data` block's field inventory is platform-specific and ships with
 each platform's own contract; only its image URLs follow the envelope
