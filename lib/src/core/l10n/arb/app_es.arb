@@ -321,6 +321,7 @@
   "gameCollectorPickerHint": "Una tarjeta con toda tu biblioteca de Steam: juegos, horas totales y la portada de tu juego favorito.",
   "gameCollectorPickerAdd": "Agregar coleccionista",
   "gameCollectorPickerAlreadyAdded": "Ya tienes una tarjeta de coleccionista de juegos.",
+  "gameCollectorPickerEmpty": "Tu biblioteca de juegos está vacía por ahora.",
   "completionistLabel": "Completista",
   "completionistUnavailable": "Completista no disponible",
   "completionistMetaOfOwned": "de {count}",
@@ -328,5 +329,6 @@
   "completionistPickerTitle": "Agregar un completista",
   "completionistPickerHint": "Una tarjeta con toda tu biblioteca de Steam: cuántos juegos completaste al 100 %.",
   "completionistPickerAdd": "Agregar completista",
-  "completionistPickerAlreadyAdded": "Ya tienes una tarjeta de completista."
+  "completionistPickerAlreadyAdded": "Ya tienes una tarjeta de completista.",
+  "completionistPickerEmpty": "Todavía no tienes juegos completados al 100%."
 }
