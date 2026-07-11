@@ -690,6 +690,71 @@ void main() {
     });
   });
 
+  group('addCompletionistWidget', () {
+    test('writes type completionist, a Steam platform, and a size-only '
+        'envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'cp',
+          'platform': 'steam',
+          'type': 'completionist',
+          'position': 4,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'small',
+          },
+        }),
+      );
+      final result = await _repo(source, _RecordingReporter())
+          .addCompletionistWidget(
+            platform: Platform.steam,
+            position: 4,
+            size: ProfileWidgetSize.small,
+          );
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'cp');
+        expect(widget.kind, ProfileWidgetKind.completionist);
+        expect(widget.platform, Platform.steam);
+      });
+
+      // The captured write is the personalization.md completionist contract: a
+      // non-null Steam platform and a size-only envelope (no selection
+      // sub-object).
+      expect(source.lastInsert!['type'], 'completionist');
+      expect(source.lastInsert!['platform'], 'steam');
+      expect(source.lastInsert!['position'], 4);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'small');
+      // Size-only: no showcase/collection/completionist sub-object is written.
+      expect(settings.containsKey('showcase'), isFalse);
+      expect(settings.containsKey('collection'), isFalse);
+      expect(settings.containsKey('completionist'), isFalse);
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'cap exceeded', code: '23514'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).addCompletionistWidget(
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      );
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
   group('mutations write the expected values', () {
     test('setSize writes the v1 envelope', () async {
       final source = _FakeDataSource();

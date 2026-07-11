@@ -35,9 +35,10 @@ Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
     ? scheme.onSurface
     : scheme.onInverseSurface;
 
-/// The three add-card modes the sheet toggles between: a single-game showcase
-/// (default), a multi-game collection, or a whole-library game collector.
-enum _AddCardMode { showcase, collection, collector }
+/// The four add-card modes the sheet toggles between: a single-game showcase
+/// (default), a multi-game collection, a whole-library game collector, or a
+/// whole-library completionist.
+enum _AddCardMode { showcase, collection, collector, completionist }
 
 class _ShowcasePickerSheet extends ConsumerStatefulWidget {
   const _ShowcasePickerSheet({required this.existing});
@@ -77,6 +78,14 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
     final alreadyHasCollector = existing.any(
       (w) =>
           w.kind == ProfileWidgetKind.gameCollector &&
+          w.platform == Platform.steam,
+    );
+    // A completionist is likewise platform-bound (Steam) with no game selection,
+    // so at most one belongs on the profile; the picker offers Add only when
+    // none is placed yet.
+    final alreadyHasCompletionist = existing.any(
+      (w) =>
+          w.kind == ProfileWidgetKind.completionist &&
           w.platform == Platform.steam,
     );
 
@@ -121,6 +130,12 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
                       textTheme,
                       nextPosition,
                       alreadyHasCollector,
+                    ),
+                    _AddCardMode.completionist => _completionistBody(
+                      l10n,
+                      textTheme,
+                      nextPosition,
+                      alreadyHasCompletionist,
                     ),
                   };
                 },
@@ -214,6 +229,54 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
     );
   }
 
+  /// The Completionist mode: a whole-library card bound to Steam whose hero is
+  /// the perfect-games count. There is no game to pick, so the body is a hint
+  /// plus an Add action — or the already-added state (no Add) when a Steam
+  /// completionist is already on the profile.
+  Widget _completionistBody(
+    AppLocalizations l10n,
+    TextTheme textTheme,
+    int nextPosition,
+    bool alreadyHasCompletionist,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.completionistPickerTitle,
+          key: const Key('completionistPickerTitle'),
+          style: textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (alreadyHasCompletionist)
+          Text(
+            l10n.completionistPickerAlreadyAdded,
+            key: const Key('completionistPickerAllAdded'),
+            style: textTheme.bodyMedium,
+          )
+        else ...[
+          Text(l10n.completionistPickerHint, style: textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            key: const Key('completionistPickerAddButton'),
+            onPressed: () {
+              ref
+                  .read(profileWidgetsControllerProvider.notifier)
+                  .addCompletionist(
+                    platform: Platform.steam,
+                    position: nextPosition,
+                    size: ProfileWidgetSize.small,
+                  );
+              Navigator.of(context).pop();
+            },
+            child: Text(l10n.completionistPickerAdd),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _tilesOrAllAdded(
     AppLocalizations l10n,
     TextTheme textTheme,
@@ -259,8 +322,9 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
 }
 
 /// The mode toggle at the top of the add-card sheet: Game (a single-game
-/// showcase, the default), Collection (a multi-game collection), or Collector (a
-/// whole-library game collector).
+/// showcase, the default), Collection (a multi-game collection), Collector (a
+/// whole-library game collector), or Completionist (a whole-library
+/// perfect-games count).
 class _ModeToggle extends StatelessWidget {
   const _ModeToggle({required this.mode, required this.onChanged});
 
@@ -285,6 +349,10 @@ class _ModeToggle extends StatelessWidget {
         ButtonSegment(
           value: _AddCardMode.collector,
           label: Text(l10n.addCardModeCollector),
+        ),
+        ButtonSegment(
+          value: _AddCardMode.completionist,
+          label: Text(l10n.addCardModeCompletionist),
         ),
       ],
       selected: {mode},

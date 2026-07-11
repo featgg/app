@@ -160,6 +160,10 @@ void main() {
         profileWidgetKindToWire(ProfileWidgetKind.gameCollector),
         'game_collector',
       );
+      expect(
+        profileWidgetKindToWire(ProfileWidgetKind.completionist),
+        'completionist',
+      );
     });
   });
 
@@ -922,6 +926,50 @@ void main() {
       );
 
       // A game collector has no per-widget choice; the empty defaults hold.
+      expect(widget!.showcaseSelection, ShowcaseSelection.empty);
+      expect(widget.collectionSelection, CollectionSelection.empty);
+    });
+  });
+
+  group('completionist binding (platform-BOUND, size-only envelope)', () {
+    test('a non-null Steam completionist row round-trips to the kind', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'completionist', platform: 'steam', size: 'large'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.completionist);
+      // Platform-bound: the source platform lives in the row's `platform` column.
+      expect(widget.platform, Platform.steam);
+      expect(widget.size, ProfileWidgetSize.large);
+    });
+
+    test('a null-platform completionist row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'completionist', platform: null)),
+      );
+      expect(widget, isNull);
+    });
+
+    test('an unknown-platform completionist row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'completionist', platform: 'not_a_platform'),
+        ),
+      );
+      expect(widget, isNull);
+    });
+
+    test('the row carries no selection sub-object (size-only envelope)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'completionist', platform: 'steam'),
+        ),
+      );
+
+      // A completionist has no per-widget choice; the empty defaults hold.
       expect(widget!.showcaseSelection, ShowcaseSelection.empty);
       expect(widget.collectionSelection, CollectionSelection.empty);
     });
