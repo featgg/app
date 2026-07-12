@@ -1349,6 +1349,10 @@
   "@gameCollectorPickerAlreadyAdded": {
     "description": "Shown in the collector picker when a game collector card is already on the profile, so the Add action is hidden."
   },
+  "gameCollectorPickerEmpty": "Your game library looks empty right now.",
+  "@gameCollectorPickerEmpty": {
+    "description": "Shown in the collector picker when the Steam library resolves as absent or with 0 games owned, so the Add action is disabled — the card would read as empty."
+  },
   "completionistLabel": "Completionist",
   "@completionistLabel": {
     "description": "Fixed label rendered (uppercased) on the completionist card, naming the card type; the hero number below it is the perfect-games (100% completed) count."
@@ -1385,5 +1389,9 @@
   "completionistPickerAlreadyAdded": "You already have a Completionist card.",
   "@completionistPickerAlreadyAdded": {
     "description": "Shown in the completionist picker when a completionist card is already on the profile, so the Add action is hidden."
+  },
+  "completionistPickerEmpty": "You don't have any 100%-completed games yet.",
+  "@completionistPickerEmpty": {
+    "description": "Shown in the completionist picker when the Steam library resolves as absent or with 0 perfect (100% completed) games, so the Add action is disabled — the card would read as empty."
   }
 }

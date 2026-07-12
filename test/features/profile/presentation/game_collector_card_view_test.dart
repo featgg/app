@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
@@ -21,6 +23,24 @@ final class _FakeCardsRepository implements CardsRepository {
   @override
   Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
       right(_cards[platform]);
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
+}
+
+/// Holds the card future open so the view's first-load branch is observable, then
+/// [complete] resolves it so the reactive swap can be asserted with only a pump.
+final class _PendingCardsRepository implements CardsRepository {
+  final _completer = Completer<Either<Failure, GameCard?>>();
+
+  void complete(GameCard? card) => _completer.complete(right(card));
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) =>
+      _completer.future;
 
   @override
   Future<Either<Failure, GameCard?>> fetchPublicCard(
@@ -75,13 +95,16 @@ ProfileWidget _collectorWidget({
 
 Widget _harness({
   required ProfileWidget widget,
-  required Map<Platform, GameCard?> cards,
+  Map<Platform, GameCard?> cards = const {},
+  CardsRepository? cardsRepo,
   bool showEmptyPlaceholder = true,
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
-      cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository(cards)),
+      cardsRepositoryProvider.overrideWithValue(
+        cardsRepo ?? _FakeCardsRepository(cards),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -178,6 +201,22 @@ void main() {
       expect(find.byKey(const Key('gameCollectorHero_gc-1')), findsOneWidget);
       expect(find.byKey(const Key('gameCollectorMeta_gc-1')), findsNothing);
     });
+
+    testWidgets('games_owned = 0 reads as empty (motif, not a bare 0)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _collectorWidget(size: ProfileWidgetSize.small),
+          cards: {Platform.steam: _steamCard(gamesOwned: 0)},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // A zero count reads as empty: the motif, not a bare "0" hero.
+      expect(find.byKey(const Key('gameCollectorEmpty_gc-1')), findsOneWidget);
+      expect(find.byKey(const Key('gameCollectorHero_gc-1')), findsNothing);
+    });
   });
 
   testWidgets('null cover renders a neutral surface, no image', (tester) async {
@@ -202,6 +241,71 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('gameCollectorEmpty_gc-1')), findsOneWidget);
+    expect(find.byKey(const Key('gameCollectorCard_gc-1')), findsNothing);
+  });
+
+  testWidgets('an unresolved card shows the designed motif', (tester) async {
+    await tester.pumpWidget(
+      _harness(widget: _collectorWidget(), cards: const {Platform.steam: null}),
+    );
+    await tester.pumpAndSettle();
+
+    // The empty state is the designed motif, not a bare unavailable line.
+    expect(find.byKey(const Key('gameCollectorEmpty_gc-1')), findsOneWidget);
+    expect(
+      find.byKey(const Key('gameCollectorEmptyMotif_gc-1')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('loading shows the loading tile, not the empty placeholder', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        widget: _collectorWidget(),
+        cardsRepo: _PendingCardsRepository(),
+      ),
+    );
+    await tester.pump();
+
+    // First load is distinct from absent: a clean loading tile, never the motif
+    // or a resolved card.
+    expect(find.byKey(const Key('gameCollectorLoading_gc-1')), findsOneWidget);
+    expect(find.byKey(const Key('gameCollectorEmpty_gc-1')), findsNothing);
+    expect(find.byKey(const Key('gameCollectorCard_gc-1')), findsNothing);
+  });
+
+  testWidgets('data arriving renders the card reactively with no remount', (
+    tester,
+  ) async {
+    final repo = _PendingCardsRepository();
+    await tester.pumpWidget(
+      _harness(widget: _collectorWidget(), cardsRepo: repo),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('gameCollectorLoading_gc-1')), findsOneWidget);
+
+    // The already-present watch swaps the card in on completion — only a pump,
+    // no leave/re-enter.
+    repo.complete(_steamCard(gamesOwned: 312));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gameCollectorCard_gc-1')), findsOneWidget);
+    expect(find.byKey(const Key('gameCollectorLoading_gc-1')), findsNothing);
+  });
+
+  testWidgets('visitor omits during load (no tile, no card)', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widget: _collectorWidget(),
+        cardsRepo: _PendingCardsRepository(),
+        showEmptyPlaceholder: false,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('gameCollectorLoading_gc-1')), findsNothing);
     expect(find.byKey(const Key('gameCollectorCard_gc-1')), findsNothing);
   });
 

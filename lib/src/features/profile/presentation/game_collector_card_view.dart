@@ -74,15 +74,28 @@ class GameCollectorCardView extends ConsumerWidget {
               ? ref.watch(ownerCardProvider(platform))
               : ref.watch(source(platform)));
 
+    // AsyncLoading with nothing resolved yet is distinct from resolved-absent:
+    // during first load show a clean loading tile (owner) / omit (visitor), never
+    // the empty state — so the already-present watch can swap in the card the
+    // instant it resolves, with no leave/re-enter.
+    final isFirstLoad = cardState.isLoading && !cardState.hasValue;
+
     // An errored card resolves as unresolved (mirrors the other card views): the
     // collector never errors the tile. The whole card is needed — the figures
     // live in the envelope `stats`, not just the platform data block.
     final card = cardState.hasError ? null : cardState.value;
     final resolved = resolveGameCollector(card);
 
-    if (resolved == null) {
+    // A card with no value OR a zero count reads as empty — a bare "0" over a
+    // blank surface is the state the motif replaces.
+    if (resolved == null || resolved.gamesOwned == 0) {
+      if (isFirstLoad) {
+        return showEmptyPlaceholder
+            ? _LoadingTile(widgetId: widget.id, size: widget.size)
+            : const SizedBox.shrink();
+      }
       if (!showEmptyPlaceholder) return const SizedBox.shrink();
-      return _Placeholder(widgetId: widget.id);
+      return _Placeholder(widgetId: widget.id, size: widget.size);
     }
 
     return ClipRRect(
@@ -121,12 +134,39 @@ double _ratioFor(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.large => _largeRatio,
 };
 
-/// Owner-only placeholder shown when nothing resolves, so the tile stays
-/// intentional and its options menu reachable. Mirrors the showcase placeholder.
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.widgetId});
+/// Owner-only loading tile shown while the card is fetching for the first time
+/// (no prior value): a clean neutral surface at the card footprint, never the
+/// empty motif, so a still-loading card never reads as absent. No animation (no
+/// shimmer dependency); mirrors the neutral card skeleton.
+class _LoadingTile extends StatelessWidget {
+  const _LoadingTile({required this.widgetId, required this.size});
 
   final String widgetId;
+  final ProfileWidgetSize size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ClipRRect(
+      key: Key('gameCollectorLoading_$widgetId'),
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: AspectRatio(
+        aspectRatio: _ratioFor(size),
+        child: ColoredBox(color: colorScheme.surfaceContainerHighest),
+      ),
+    );
+  }
+}
+
+/// Owner-only motif shown when nothing resolves or the count reads as empty, so
+/// the tile stays intentional and its options menu reachable: a collection glyph
+/// at the card footprint with the localized line beneath. Mirrors the showcase
+/// motif.
+class _Placeholder extends StatelessWidget {
+  const _Placeholder({required this.widgetId, required this.size});
+
+  final String widgetId;
+  final ProfileWidgetSize size;
 
   @override
   Widget build(BuildContext context) {
@@ -134,20 +174,35 @@ class _Placeholder extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
+    return ClipRRect(
       key: Key('gameCollectorEmpty_$widgetId'),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        l10n.gameCollectorUnavailable,
-        style: textTheme.bodySmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: AspectRatio(
+        aspectRatio: _ratioFor(size),
+        child: ColoredBox(
+          color: colorScheme.surfaceContainerHighest,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.videogame_asset_outlined,
+                  key: Key('gameCollectorEmptyMotif_$widgetId'),
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.gameCollectorUnavailable,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
-        textAlign: TextAlign.center,
       ),
     );
   }

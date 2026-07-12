@@ -240,8 +240,12 @@ final class _PendingCardsRepository implements CardsRepository {
 LibraryShowcaseEntry _entry(int appId) =>
     LibraryShowcaseEntry(appId: appId, title: 'Game $appId', hours: 100);
 
-/// A Steam card carrying [library] (art-less so no real image decodes in tests).
-GameCard _steamCard(List<LibraryShowcaseEntry> library) => GameCard(
+/// A Steam card carrying [library] (art-less so no real image decodes in tests)
+/// and optional envelope [stats] (the collector/completionist gate reads these).
+GameCard _steamCard(
+  List<LibraryShowcaseEntry> library, {
+  List<CardStat> stats = const [],
+}) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
   title: 'Steam',
@@ -249,7 +253,7 @@ GameCard _steamCard(List<LibraryShowcaseEntry> library) => GameCard(
   iconImage: null,
   heroImage: null,
   profileUrl: null,
-  stats: const [],
+  stats: stats,
   lastUpdated: DateTime.utc(2026, 6, 1),
   data: SteamCardData(libraryShowcase: library, recentGames: const []),
 );
@@ -433,11 +437,19 @@ void main() {
   testWidgets('Collector mode: tapping Add records Steam + max+1 + small and '
       'closes', (tester) async {
     // A platform widget at position 2 (not a collector, so it does not trip the
-    // already-added guard) proves the insert position is max+1 = 3.
+    // already-added guard) proves the insert position is max+1 = 3. The card
+    // carries games_owned > 0 so the gate offers an enabled Add.
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        cardsRepo: _FakeCardsRepository(
+          _steamCard(
+            const [],
+            stats: const [
+              CardStat(key: 'games_owned', value: 312, unit: 'count'),
+            ],
+          ),
+        ),
         widgetsRepo: widgetsRepo,
         existing: [_platformWidget(position: 2)],
       ),
@@ -487,14 +499,115 @@ void main() {
     expect(find.byKey(const Key('gameCollectorPickerAddButton')), findsNothing);
   });
 
-  testWidgets('Completionist mode: tapping Add records Steam + max+1 + small '
-      'and closes', (tester) async {
-    // A platform widget at position 2 (not a completionist, so it does not trip
-    // the already-added guard) proves the insert position is max+1 = 3.
+  testWidgets('Collector mode: an absent library blocks Add with a message', (
+    tester,
+  ) async {
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
+        // No games_owned stat → resolves absent → the gate blocks creation.
         cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: widgetsRepo,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.text(l10n.addCardModeCollector));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gameCollectorPickerEmpty')), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('gameCollectorPickerAddButton')),
+    );
+    expect(button.onPressed, isNull);
+
+    // The disabled Add records nothing.
+    await tester.tap(find.byKey(const Key('gameCollectorPickerAddButton')));
+    await tester.pumpAndSettle();
+    expect(widgetsRepo.lastCollectorPlatform, isNull);
+  });
+
+  testWidgets('Collector mode: games_owned == 0 blocks Add with a message', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(
+          _steamCard(
+            const [],
+            stats: const [
+              CardStat(key: 'games_owned', value: 0, unit: 'count'),
+            ],
+          ),
+        ),
+        widgetsRepo: widgetsRepo,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.text(l10n.addCardModeCollector));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gameCollectorPickerEmpty')), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('gameCollectorPickerAddButton')),
+    );
+    expect(button.onPressed, isNull);
+    expect(widgetsRepo.lastCollectorPlatform, isNull);
+  });
+
+  testWidgets('Collector mode: a loading card shows the loader, not the empty '
+      'message', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _PendingCardsRepository(),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Even in collector mode, a loading card shows the centralized spinner, never
+    // the empty message — the gate lives inside the data builder.
+    await tester.tap(find.text(l10n.addCardModeCollector));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('gameCollectorPickerEmpty')), findsNothing);
+  });
+
+  testWidgets('Completionist mode: tapping Add records Steam + max+1 + small '
+      'and closes', (tester) async {
+    // A platform widget at position 2 (not a completionist, so it does not trip
+    // the already-added guard) proves the insert position is max+1 = 3. The card
+    // carries games_perfect > 0 so the gate offers an enabled Add.
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(
+          _steamCard(
+            const [],
+            stats: const [
+              CardStat(key: 'games_perfect', value: 42, unit: 'count'),
+            ],
+          ),
+        ),
         widgetsRepo: widgetsRepo,
         existing: [_platformWidget(position: 2)],
       ),
@@ -542,5 +655,98 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('completionistPickerAddButton')), findsNothing);
+  });
+
+  testWidgets(
+    'Completionist mode: an absent library blocks Add with a message',
+    (tester) async {
+      final widgetsRepo = _RecordingWidgetsRepository();
+      await tester.pumpWidget(
+        _harness(
+          // No games_perfect stat → resolves absent → the gate blocks creation.
+          cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+          widgetsRepo: widgetsRepo,
+          existing: const [],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('openPicker')));
+      await tester.pumpAndSettle();
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      await tester.tap(find.text(l10n.addCardModeCompletionist));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('completionistPickerEmpty')), findsOneWidget);
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('completionistPickerAddButton')),
+      );
+      expect(button.onPressed, isNull);
+
+      // The disabled Add records nothing.
+      await tester.tap(find.byKey(const Key('completionistPickerAddButton')));
+      await tester.pumpAndSettle();
+      expect(widgetsRepo.lastCompletionistPlatform, isNull);
+    },
+  );
+
+  testWidgets('Completionist mode: games_perfect == 0 blocks Add with a '
+      'message', (tester) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(
+          _steamCard(
+            const [],
+            stats: const [
+              CardStat(key: 'games_perfect', value: 0, unit: 'count'),
+            ],
+          ),
+        ),
+        widgetsRepo: widgetsRepo,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.text(l10n.addCardModeCompletionist));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('completionistPickerEmpty')), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('completionistPickerAddButton')),
+    );
+    expect(button.onPressed, isNull);
+    expect(widgetsRepo.lastCompletionistPlatform, isNull);
+  });
+
+  testWidgets('Completionist mode: a loading card shows the loader, not the '
+      'empty message', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _PendingCardsRepository(),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Even in completionist mode, a loading card shows the centralized spinner,
+    // never the empty message — the gate lives inside the data builder.
+    await tester.tap(find.text(l10n.addCardModeCompletionist));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('completionistPickerEmpty')), findsNothing);
   });
 }

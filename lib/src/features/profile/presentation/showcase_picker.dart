@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/core.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
+import '../domain/completionist_value_resolver.dart';
+import '../domain/game_collector_value_resolver.dart';
 import '../domain/profile_widget.dart';
 import '../domain/showcase_selection.dart';
 import 'collection_picker.dart';
@@ -130,12 +132,14 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
                       textTheme,
                       nextPosition,
                       alreadyHasCollector,
+                      card,
                     ),
                     _AddCardMode.completionist => _completionistBody(
                       l10n,
                       textTheme,
                       nextPosition,
                       alreadyHasCompletionist,
+                      card,
                     ),
                   };
                 },
@@ -183,14 +187,20 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
   }
 
   /// The Collector mode: a whole-library card bound to Steam. There is no game
-  /// to pick, so the body is a hint plus an Add action — or the already-added
-  /// state (no Add) when a Steam collector is already on the profile.
+  /// to pick, so the body is a hint plus an Add action — the already-added state
+  /// (no Add) when a Steam collector is already on the profile, or a blocked
+  /// state (message + disabled Add) when the library resolves absent or 0 owned,
+  /// so a card that would read as empty is never created. Runs only inside the
+  /// `data:` builder, so it never fires while the card is still loading.
   Widget _collectorBody(
     AppLocalizations l10n,
     TextTheme textTheme,
     int nextPosition,
     bool alreadyHasCollector,
+    GameCard? card,
   ) {
+    final resolved = resolveGameCollector(card);
+    final blocked = resolved == null || resolved.gamesOwned == 0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -207,7 +217,19 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
             key: const Key('gameCollectorPickerAllAdded'),
             style: textTheme.bodyMedium,
           )
-        else ...[
+        else if (blocked) ...[
+          Text(
+            l10n.gameCollectorPickerEmpty,
+            key: const Key('gameCollectorPickerEmpty'),
+            style: textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            key: const Key('gameCollectorPickerAddButton'),
+            onPressed: null,
+            child: Text(l10n.gameCollectorPickerAdd),
+          ),
+        ] else ...[
           Text(l10n.gameCollectorPickerHint, style: textTheme.bodySmall),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
@@ -231,14 +253,20 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
 
   /// The Completionist mode: a whole-library card bound to Steam whose hero is
   /// the perfect-games count. There is no game to pick, so the body is a hint
-  /// plus an Add action — or the already-added state (no Add) when a Steam
-  /// completionist is already on the profile.
+  /// plus an Add action — the already-added state (no Add) when a Steam
+  /// completionist is already on the profile, or a blocked state (message +
+  /// disabled Add) when the library resolves absent or 0 perfect games, so a card
+  /// that would read as empty is never created. Runs only inside the `data:`
+  /// builder, so it never fires while the card is still loading.
   Widget _completionistBody(
     AppLocalizations l10n,
     TextTheme textTheme,
     int nextPosition,
     bool alreadyHasCompletionist,
+    GameCard? card,
   ) {
+    final resolved = resolveCompletionist(card);
+    final blocked = resolved == null || resolved.gamesPerfect == 0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -255,7 +283,19 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
             key: const Key('completionistPickerAllAdded'),
             style: textTheme.bodyMedium,
           )
-        else ...[
+        else if (blocked) ...[
+          Text(
+            l10n.completionistPickerEmpty,
+            key: const Key('completionistPickerEmpty'),
+            style: textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+            key: const Key('completionistPickerAddButton'),
+            onPressed: null,
+            child: Text(l10n.completionistPickerAdd),
+          ),
+        ] else ...[
           Text(l10n.completionistPickerHint, style: textTheme.bodySmall),
           const SizedBox(height: AppSpacing.md),
           FilledButton(
