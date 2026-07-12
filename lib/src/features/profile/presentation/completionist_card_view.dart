@@ -270,7 +270,12 @@ class _Shelf extends StatelessWidget {
     final cells = <Widget>[];
     for (var i = 0; i < shown; i++) {
       if (i > 0) {
-        cells.add(SizedBox(width: 2, child: ColoredBox(color: surface)));
+        cells.add(
+          SizedBox(
+            width: AppSpacing.hairline,
+            child: ColoredBox(color: surface),
+          ),
+        );
       }
       cells.add(
         Expanded(

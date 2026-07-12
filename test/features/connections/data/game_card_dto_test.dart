@@ -298,6 +298,27 @@ void main() {
       expect(data.libraryShowcase, hasLength(1));
       expect(data.recentGames, isEmpty);
     });
+
+    test('non-string image on a valid entry degrades to null, entry kept', () {
+      // Images are optional: a wrong-typed value must degrade to null, not
+      // throw (which would take down the whole Steam block).
+      final data = parseWithPerfect([
+        <String, dynamic>{
+          'app_id': 123,
+          'title': 'CS2',
+          'icon_image': 123,
+          'hero_image': 456,
+        },
+      ]);
+      expect(data.perfectShowcase, hasLength(1));
+      final entry = data.perfectShowcase.first;
+      expect(entry.appId, 123);
+      expect(entry.title, 'CS2');
+      expect(entry.iconImage, isNull);
+      expect(entry.heroImage, isNull);
+      // The rest of the Steam block survives.
+      expect(data.libraryShowcase, hasLength(1));
+    });
   });
 
   group('gameCardFromDto — unknown platform', () {

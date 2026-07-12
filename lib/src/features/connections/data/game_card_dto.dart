@@ -129,12 +129,17 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
     final id = e['app_id'];
     final title = e['title'];
     if (id is! num || title is! String) continue;
+    // Images are optional: a wrong-typed value degrades to null rather than
+    // throwing, so an otherwise-valid entry is kept instead of taking down
+    // the whole Steam block.
+    final iconImage = e['icon_image'];
+    final heroImage = e['hero_image'];
     perfectShowcase.add(
       PerfectShowcaseEntry(
         appId: id.toInt(),
         title: title,
-        iconImage: e['icon_image'] as String?,
-        heroImage: e['hero_image'] as String?,
+        iconImage: iconImage is String ? iconImage : null,
+        heroImage: heroImage is String ? heroImage : null,
       ),
     );
   }
