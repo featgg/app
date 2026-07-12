@@ -55,6 +55,7 @@ GameCard _steamCard({
   int gamesPerfect = 42,
   int? gamesOwned = 312,
   String? cover,
+  List<PerfectShowcaseEntry> perfect = const [],
 }) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
@@ -79,8 +80,16 @@ GameCard _steamCard({
       ),
     ],
     recentGames: const [],
+    perfectShowcase: perfect,
   ),
 );
+
+/// [n] perfect-games entries with null covers — the shelf cells render as neutral
+/// surfaces (no network), so the cap/degrade assertions stay hermetic.
+List<PerfectShowcaseEntry> _perfectEntries(int n) => [
+  for (var i = 0; i < n; i++)
+    PerfectShowcaseEntry(appId: 100 + i, title: 'Game $i'),
+];
 
 ProfileWidget _completionistWidget({
   ProfileWidgetSize size = ProfileWidgetSize.large,
@@ -215,6 +224,125 @@ void main() {
 
       // A zero count reads as empty: the motif, not a bare "0" hero.
       expect(find.byKey(const Key('completionistEmpty_cp-1')), findsOneWidget);
+      expect(find.byKey(const Key('completionistHero_cp-1')), findsNothing);
+    });
+  });
+
+  group('perfect-games shelf', () {
+    Finder shelfCovers() => find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith(
+            'completionistShelfCover_cp-1_',
+          ),
+    );
+
+    for (final size in ProfileWidgetSize.values) {
+      testWidgets('shelf draws completionistShelfCap($size) covers, hero '
+          'intact', (tester) async {
+        await tester.pumpWidget(
+          _harness(
+            widget: _completionistWidget(size: size),
+            // More entries than any cap, so the cap — not the list — bounds it.
+            cards: {Platform.steam: _steamCard(perfect: _perfectEntries(6))},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('completionistShelf_cp-1')),
+          findsOneWidget,
+        );
+        expect(shelfCovers(), findsNWidgets(completionistShelfCap(size)));
+        // The frozen text grammar still renders over the shelf.
+        expect(
+          find.byKey(const Key('completionistLabel_cp-1')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('completionistHero_cp-1')), findsOneWidget);
+        if (size == ProfileWidgetSize.large) {
+          expect(
+            find.byKey(const Key('completionistMeta_cp-1')),
+            findsOneWidget,
+          );
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('a shelf shorter than the cap draws exactly its entries', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _completionistWidget(size: ProfileWidgetSize.large),
+          cards: {Platform.steam: _steamCard(perfect: _perfectEntries(2))},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(shelfCovers(), findsNWidgets(2));
+    });
+
+    testWidgets('count>0 with an empty shelf falls back to the single cover', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _completionistWidget(),
+          cards: {Platform.steam: _steamCard()},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('completionistShelf_cp-1')), findsNothing);
+      expect(find.byKey(const Key('completionistArt_cp-1')), findsOneWidget);
+      expect(find.byKey(const Key('completionistHero_cp-1')), findsOneWidget);
+    });
+
+    testWidgets('a shelf cover with a null url degrades to a neutral surface', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _completionistWidget(size: ProfileWidgetSize.small),
+          cards: {
+            Platform.steam: _steamCard(
+              perfect: const [PerfectShowcaseEntry(appId: 730, title: 'CS2')],
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('completionistShelfCover_cp-1_0')),
+        findsOneWidget,
+      );
+      // No broken-image glyph — the neutral surface carries no Image widget.
+      expect(find.byType(Image), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('games_perfect = 0 with a non-empty shelf still reads empty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          widget: _completionistWidget(size: ProfileWidgetSize.small),
+          cards: {
+            Platform.steam: _steamCard(
+              gamesPerfect: 0,
+              perfect: _perfectEntries(3),
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Emptiness is count-driven: a shelf can never resurrect a zero card.
+      expect(find.byKey(const Key('completionistEmpty_cp-1')), findsOneWidget);
+      expect(find.byKey(const Key('completionistShelf_cp-1')), findsNothing);
       expect(find.byKey(const Key('completionistHero_cp-1')), findsNothing);
     });
   });

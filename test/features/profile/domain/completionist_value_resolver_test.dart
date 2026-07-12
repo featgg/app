@@ -14,6 +14,7 @@ LibraryShowcaseEntry _entry(int appId, {required num hours, String? hero}) =>
 GameCard _card({
   List<CardStat> stats = const [],
   List<LibraryShowcaseEntry> library = const [],
+  List<PerfectShowcaseEntry> perfect = const [],
 }) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
@@ -24,7 +25,11 @@ GameCard _card({
   profileUrl: null,
   stats: stats,
   lastUpdated: DateTime.utc(2026, 6, 1),
-  data: SteamCardData(libraryShowcase: library, recentGames: const []),
+  data: SteamCardData(
+    libraryShowcase: library,
+    recentGames: const [],
+    perfectShowcase: perfect,
+  ),
 );
 
 const _perfect = CardStat(key: 'games_perfect', value: 42, unit: 'count');
@@ -121,6 +126,46 @@ void main() {
       );
 
       expect(resolved!.heroImage, 'https://cdn.example/top.jpg');
+    });
+
+    test('shelf present → resolved.shelf carries the entries in order', () {
+      final resolved = resolveCompletionist(
+        _card(
+          stats: const [_perfect, _owned],
+          perfect: const [
+            PerfectShowcaseEntry(
+              appId: 730,
+              title: 'CS2',
+              heroImage: 'https://cdn.example/730.jpg',
+            ),
+            PerfectShowcaseEntry(
+              appId: 570,
+              title: 'Dota 2',
+              heroImage: 'https://cdn.example/570.jpg',
+            ),
+          ],
+        ),
+      );
+
+      expect(resolved, isNotNull);
+      expect(resolved!.shelf.map((e) => e.appId).toList(), [730, 570]);
+    });
+
+    test('shelf absent → resolved.shelf empty; count + fallback cover still '
+        'resolve', () {
+      final resolved = resolveCompletionist(
+        _card(
+          stats: const [_perfect, _owned],
+          library: [
+            _entry(730, hours: 100, hero: 'https://cdn.example/730.jpg'),
+          ],
+        ),
+      );
+
+      expect(resolved, isNotNull);
+      expect(resolved!.shelf, isEmpty);
+      expect(resolved.gamesPerfect, 42);
+      expect(resolved.heroImage, 'https://cdn.example/730.jpg');
     });
   });
 }
