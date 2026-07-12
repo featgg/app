@@ -106,10 +106,17 @@ class CompletionistCardView extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _Art(
-              key: Key('completionistArt_${widget.id}'),
-              heroImage: resolved.heroImage,
-            ),
+            if (resolved.shelf.isNotEmpty)
+              _Shelf(
+                widgetId: widget.id,
+                size: widget.size,
+                entries: resolved.shelf,
+              )
+            else
+              _Art(
+                key: Key('completionistArt_${widget.id}'),
+                heroImage: resolved.heroImage,
+              ),
             const _Fade(),
             Positioned(
               left: AppSpacing.md,
@@ -132,6 +139,15 @@ double _ratioFor(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.small => _smallRatio,
   ProfileWidgetSize.wide => _wideRatio,
   ProfileWidgetSize.large => _largeRatio,
+};
+
+/// How many perfect-cover cells the shelf draws at each size. Tunable design
+/// values; entries beyond the cap are not drawn — the `games_perfect` count
+/// stays the hero. Public so tests key off it rather than a literal.
+int completionistShelfCap(ProfileWidgetSize size) => switch (size) {
+  ProfileWidgetSize.small => 3,
+  ProfileWidgetSize.wide => 4,
+  ProfileWidgetSize.large => 4,
 };
 
 /// Owner-only loading tile shown while the card is fetching for the first time
@@ -226,6 +242,50 @@ class _Art extends StatelessWidget {
       fit: BoxFit.cover,
       placeholder: (_, _) => ColoredBox(color: surface),
       errorWidget: (_, _, _) => ColoredBox(color: surface),
+    );
+  }
+}
+
+/// The perfect-games cover shelf: a row of equal-width portrait covers behind
+/// the scrim, capped at [completionistShelfCap] per size. Each cover reuses the
+/// [_Art] cell (neutral surface when the url is null or errors), split by a thin
+/// seam in the card surface color. The `games_perfect` count stays the hero.
+class _Shelf extends StatelessWidget {
+  const _Shelf({
+    required this.widgetId,
+    required this.size,
+    required this.entries,
+  });
+
+  final String widgetId;
+  final ProfileWidgetSize size;
+  final List<PerfectShowcaseEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
+    final cap = completionistShelfCap(size);
+    final shown = entries.length < cap ? entries.length : cap;
+
+    final cells = <Widget>[];
+    for (var i = 0; i < shown; i++) {
+      if (i > 0) {
+        cells.add(SizedBox(width: 2, child: ColoredBox(color: surface)));
+      }
+      cells.add(
+        Expanded(
+          child: _Art(
+            key: Key('completionistShelfCover_${widgetId}_$i'),
+            heroImage: entries[i].heroImage,
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      key: Key('completionistShelf_$widgetId'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: cells,
     );
   }
 }
