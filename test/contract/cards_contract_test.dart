@@ -52,6 +52,18 @@ void main() {
       expect(dota.hasAchievements, isFalse);
     });
 
+    test('steam_v1 → perfect_showcase parses into '
+        'SteamCardData.perfectShowcase', () {
+      final card = _cardFrom(loadRecordedFixture('$_dir/steam_v1.json'));
+      final steam = card.data! as SteamCardData;
+
+      expect(steam.perfectShowcase, isNotEmpty);
+      final first = steam.perfectShowcase.first;
+      expect(first.appId, isA<int>());
+      expect(first.title, isNotEmpty);
+      expect(first.heroImage, isNotNull);
+    });
+
     test('wow_retail_v1 → WowRetailCardData; best-run completedTimestamp '
         'derives from epoch ms', () {
       final card = _cardFrom(loadRecordedFixture('$_dir/wow_retail_v1.json'));

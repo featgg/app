@@ -4,13 +4,15 @@ import '../../connections/domain/game_card.dart';
 
 /// A resolved completionist ready to render: the perfect-games count (the hero),
 /// the games-owned count (the meta denominator, null when the card omits the
-/// stat), and the top-game cover art. The presentation layer formats the numbers
-/// and renders [heroImage] behind the fixed `COMPLETIONIST` label.
+/// stat), the perfect-games [shelf], and the top-game cover art. The presentation
+/// layer formats the numbers and renders the [shelf] (or [heroImage] as the
+/// single-cover fallback) behind the fixed `COMPLETIONIST` label.
 final class ResolvedCompletionist extends Equatable {
   const ResolvedCompletionist({
     required this.gamesPerfect,
     required this.gamesOwned,
     required this.heroImage,
+    this.shelf = const [],
   });
 
   /// Perfect-games count — the hero number.
@@ -20,11 +22,16 @@ final class ResolvedCompletionist extends Equatable {
   final num? gamesOwned;
 
   /// Top-game cover art url, or null (feed image rules — the view renders a
-  /// neutral surface, never a broken glyph).
+  /// neutral surface, never a broken glyph). The single-cover fallback when the
+  /// [shelf] is empty.
   final String? heroImage;
 
+  /// The published perfect-games list (≤10), size-agnostic; empty when the card
+  /// carries none. The view caps how many covers it draws.
+  final List<PerfectShowcaseEntry> shelf;
+
   @override
-  List<Object?> get props => [gamesPerfect, gamesOwned, heroImage];
+  List<Object?> get props => [gamesPerfect, gamesOwned, heroImage, shelf];
 }
 
 /// Resolves the completionist card's render-ready values, or null (soft-omit)
@@ -45,6 +52,7 @@ ResolvedCompletionist? resolveCompletionist(GameCard? card) {
     gamesPerfect: gamesPerfect,
     gamesOwned: _statValue(card, 'games_owned'),
     heroImage: _topCover(steam),
+    shelf: steam?.perfectShowcase ?? const [],
   );
 }
 

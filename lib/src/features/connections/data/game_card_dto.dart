@@ -118,7 +118,34 @@ final Map<Platform, CardData? Function(Map<String, dynamic>)> cardDataParsers =
 SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
   final showcaseRaw = data['library_showcase'] as List<dynamic>? ?? [];
   final recentRaw = data['recent_games'] as List<dynamic>? ?? [];
+
+  // `perfect_showcase` is an additive best-effort array: a wrong-typed value or
+  // a malformed entry is dropped rather than throwing, so it can never take
+  // down the whole Steam block.
+  final perfectRaw = data['perfect_showcase'];
+  final perfectList = perfectRaw is List ? perfectRaw : const [];
+  final perfectShowcase = <PerfectShowcaseEntry>[];
+  for (final e in perfectList.whereType<Map<String, dynamic>>()) {
+    final id = e['app_id'];
+    final title = e['title'];
+    if (id is! num || title is! String) continue;
+    // Images are optional: a wrong-typed value degrades to null rather than
+    // throwing, so an otherwise-valid entry is kept instead of taking down
+    // the whole Steam block.
+    final iconImage = e['icon_image'];
+    final heroImage = e['hero_image'];
+    perfectShowcase.add(
+      PerfectShowcaseEntry(
+        appId: id.toInt(),
+        title: title,
+        iconImage: iconImage is String ? iconImage : null,
+        heroImage: heroImage is String ? heroImage : null,
+      ),
+    );
+  }
+
   return SteamCardData(
+    perfectShowcase: perfectShowcase,
     libraryShowcase: showcaseRaw.whereType<Map<String, dynamic>>().map((e) {
       // The achievement pair is present-together-or-absent: keep it only
       // when both fields are present, so a half-pair degrades to unavailable.

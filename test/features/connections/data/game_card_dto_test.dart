@@ -233,6 +233,94 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — Steam perfect_showcase', () {
+    SteamCardData parseWithPerfect(Object? perfect) {
+      final raw = Map<String, dynamic>.from(_steamWidgetData);
+      raw['data'] = <String, dynamic>{
+        'library_showcase': [
+          <String, dynamic>{'app_id': 730, 'title': 'CS2', 'hours': 540},
+        ],
+        'recent_games': <dynamic>[],
+        'perfect_showcase': ?perfect,
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+      return card.data! as SteamCardData;
+    }
+
+    test('present array parses into perfectShowcase', () {
+      final data = parseWithPerfect([
+        <String, dynamic>{
+          'app_id': 730,
+          'title': 'CS2',
+          'icon_image': 'https://cdn.example/730_capsule.jpg',
+          'hero_image': 'https://cdn.example/730_library.jpg',
+        },
+      ]);
+      expect(data.perfectShowcase, hasLength(1));
+      final entry = data.perfectShowcase.first;
+      expect(entry.appId, 730);
+      expect(entry.title, 'CS2');
+      expect(entry.iconImage, 'https://cdn.example/730_capsule.jpg');
+      expect(entry.heroImage, 'https://cdn.example/730_library.jpg');
+    });
+
+    test('absent perfect_showcase → empty list, library still parses', () {
+      final data = parseWithPerfect(null);
+      expect(data.perfectShowcase, isEmpty);
+      expect(data.libraryShowcase, hasLength(1));
+    });
+
+    test(
+      'wrong-typed perfect_showcase → empty list (never throws the block)',
+      () {
+        final data = parseWithPerfect('not-a-list');
+        expect(data.perfectShowcase, isEmpty);
+        expect(data.libraryShowcase, hasLength(1));
+      },
+    );
+
+    test('malformed perfect entry is skipped, valid siblings survive', () {
+      // A missing-title / missing-id / non-num-id / non-map entry is dropped;
+      // the parse must not throw (which would drop the whole Steam block).
+      final data = parseWithPerfect([
+        <String, dynamic>{'app_id': 730, 'title': 'CS2'},
+        <String, dynamic>{'app_id': 570}, // no title → skip
+        <String, dynamic>{'title': 'No Id'}, // no app_id → skip
+        <String, dynamic>{
+          'app_id': 'nope',
+          'title': 'Bad Id',
+        }, // non-num → skip
+        'not-a-map', // non-map → skip
+        <String, dynamic>{'app_id': 620, 'title': 'Portal 2'},
+      ]);
+      expect(data.perfectShowcase.map((e) => e.appId).toList(), [730, 620]);
+      // The rest of the Steam block is unaffected by the skipped entries.
+      expect(data.libraryShowcase, hasLength(1));
+      expect(data.recentGames, isEmpty);
+    });
+
+    test('non-string image on a valid entry degrades to null, entry kept', () {
+      // Images are optional: a wrong-typed value must degrade to null, not
+      // throw (which would take down the whole Steam block).
+      final data = parseWithPerfect([
+        <String, dynamic>{
+          'app_id': 123,
+          'title': 'CS2',
+          'icon_image': 123,
+          'hero_image': 456,
+        },
+      ]);
+      expect(data.perfectShowcase, hasLength(1));
+      final entry = data.perfectShowcase.first;
+      expect(entry.appId, 123);
+      expect(entry.title, 'CS2');
+      expect(entry.iconImage, isNull);
+      expect(entry.heroImage, isNull);
+      // The rest of the Steam block survives.
+      expect(data.libraryShowcase, hasLength(1));
+    });
+  });
+
   group('gameCardFromDto — unknown platform', () {
     test('throws FormatException for an unknown platform wire value', () {
       final raw = Map<String, dynamic>.from(_steamWidgetData);

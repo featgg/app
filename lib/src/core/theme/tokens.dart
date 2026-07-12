@@ -19,6 +19,9 @@ abstract final class AppSpacing {
   static const double md = 16;
   static const double lg = 24;
   static const double xl = 32;
+
+  /// Seam width between adjacent art cells — a hairline off the four-point scale.
+  static const double hairline = 2;
 }
 
 /// Border-radius scale in logical pixels.

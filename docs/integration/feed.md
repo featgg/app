@@ -185,6 +185,11 @@ widget-tier avatar and the hero art):
     ],
     "recent_games": [
       { "app_id": 730, "title": "CS2", "hours_2weeks": 12 }
+    ],
+    "perfect_showcase": [
+      { "app_id": 730, "title": "CS2",
+        "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+        "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg" }
     ]
   }
 }
@@ -206,6 +211,15 @@ unlocked. It is **widget-tier only**: it appears in `widget_data.stats[]`,
 never in `feed_preview`. For very large libraries it is a converging
 best-effort lower bound. Additive under `schema_version: 1`; `0` is a real
 value (no perfect games), distinct from absence.
+
+`data.perfect_showcase[]` is the companion cover list for that count: a
+**widget-tier only** array of perfect games, most-played first, each entry
+`{ app_id (integer), title (string), icon_image (url | absent), hero_image
+(url | absent) }`. It is a bounded best-effort subset (≤ 10 entries) — the
+authoritative total remains the `games_perfect` stat, never the array length.
+Absent means "no shelf available", never an error; treat a missing or
+empty array as empty. Its image urls follow the envelope image rules.
+Additive under `schema_version: 1`.
 
 The `data` block's field inventory is platform-specific and ships with
 each platform's own contract; only its image URLs follow the envelope
