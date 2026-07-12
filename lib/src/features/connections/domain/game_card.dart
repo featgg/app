@@ -78,6 +78,30 @@ final class RecentGameEntry extends Equatable {
   List<Object?> get props => [appId, title, hours2Weeks];
 }
 
+/// A perfect-game entry in Steam `widget_data.data.perfect_showcase` — a
+/// game the user has 100%'d, most-played first. A bounded best-effort subset;
+/// [SteamCardData.perfectShowcase] never carries the authoritative count.
+final class PerfectShowcaseEntry extends Equatable {
+  const PerfectShowcaseEntry({
+    required this.appId,
+    required this.title,
+    this.iconImage,
+    this.heroImage,
+  });
+
+  final int appId;
+  final String title;
+
+  /// Capsule crop url, or null (envelope image rules).
+  final String? iconImage;
+
+  /// Portrait cover url used by the shelf, or null (envelope image rules).
+  final String? heroImage;
+
+  @override
+  List<Object?> get props => [appId, title, iconImage, heroImage];
+}
+
 /// Bedwars block in Minecraft `widget_data.data.game_stats`. `star` is optional.
 final class MinecraftBedwarsStats extends Equatable {
   const MinecraftBedwarsStats({
@@ -148,13 +172,19 @@ final class SteamCardData extends Equatable implements CardData {
   const SteamCardData({
     required this.libraryShowcase,
     required this.recentGames,
+    this.perfectShowcase = const [],
   });
 
   final List<LibraryShowcaseEntry> libraryShowcase;
   final List<RecentGameEntry> recentGames;
 
+  /// The perfect-games shelf (≤10, most-played first); empty when the card
+  /// predates the field or has no perfect games. A best-effort subset — the
+  /// authoritative total lives in the `games_perfect` envelope stat.
+  final List<PerfectShowcaseEntry> perfectShowcase;
+
   @override
-  List<Object?> get props => [libraryShowcase, recentGames];
+  List<Object?> get props => [libraryShowcase, recentGames, perfectShowcase];
 }
 
 /// Profile block in RetroAchievements `widget_data.data`. `memberSince` and
