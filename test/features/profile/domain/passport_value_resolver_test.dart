@@ -7,13 +7,15 @@ GameCard _card(
   Platform platform, {
   List<CardStat> stats = const [],
   CardData? data,
+  String? heroImage,
+  String? iconImage,
 }) => GameCard(
   schemaVersion: 1,
   platform: platform,
   title: '${platform.name}-card',
   subtitle: null,
-  iconImage: null,
-  heroImage: null,
+  iconImage: iconImage,
+  heroImage: heroImage,
   profileUrl: null,
   stats: stats,
   lastUpdated: DateTime.utc(2026, 6, 1),
@@ -308,6 +310,59 @@ void main() {
       );
       expect(e.statLabelKey, isNull);
       expect(e.value, isNull);
+    });
+  });
+
+  group('collage art (heroImage ?? iconImage)', () {
+    test('prefers hero art over icon art', () {
+      final e = _only(
+        resolvePassport({
+          Platform.chess: _card(
+            Platform.chess,
+            heroImage: 'https://img/hero.png',
+            iconImage: 'https://img/icon.png',
+          ),
+        }),
+      );
+      expect(e.artImage, 'https://img/hero.png');
+    });
+
+    test('falls back to icon art when hero is absent', () {
+      final e = _only(
+        resolvePassport({
+          Platform.chess: _card(
+            Platform.chess,
+            iconImage: 'https://img/icon.png',
+          ),
+        }),
+      );
+      expect(e.artImage, 'https://img/icon.png');
+    });
+
+    test('null when the card publishes neither hero nor icon art', () {
+      final e = _only(resolvePassport({Platform.chess: _card(Platform.chess)}));
+      expect(e.artImage, isNull);
+    });
+
+    test('art is orthogonal to the headline (falsifiable): a ranked LoL card '
+        'with hero art still resolves rank_lp AND carries the art', () {
+      final e = _only(
+        resolvePassport({
+          Platform.leagueOfLegends: _card(
+            Platform.leagueOfLegends,
+            data: _rankedData,
+            heroImage: 'https://img/lol.png',
+            stats: const [
+              CardStat(key: 'rank_lp', value: 47, unit: 'lp'),
+              CardStat(key: 'winrate', value: 54.2, unit: 'percent'),
+            ],
+          ),
+        }),
+      );
+      // The art field must not regress the rank gate.
+      expect(e.statLabelKey, 'connectionsStatRankLp');
+      expect(e.value, 47);
+      expect(e.artImage, 'https://img/lol.png');
     });
   });
 

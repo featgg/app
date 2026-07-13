@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,15 +11,35 @@ import '../domain/profile_widget.dart';
 import '../domain/showcase_value_resolver.dart';
 import 'profile_owner_cards_provider.dart';
 
+/// Per-size aspect ratios, shared with the sibling art cards so the passport
+/// sits in the same visual family and the grid's size→shape mapping is
+/// unchanged.
+const double _smallRatio = 1 / 1;
+const double _wideRatio = 2 / 1;
+const double _largeRatio = 3 / 4;
+
 /// Uppercase tag tracking (+0.5) for the label. Mirrors the sibling art cards.
 const double _labelTracking = 0.5;
 
-/// Renders the owner's linked platforms as a single typographic identity card:
-/// the fixed `PASSPORT` label, the linked-platform count as the hero, and a
-/// chip per linked platform carrying that platform's headline stat. It is NOT
-/// an art card — no third-party logos, no brand colors — just a neutral
-/// design-system surface, so a Steam-less user's mix reads the same as any
-/// other.
+/// Passport text sits on the dark art scrim in BOTH themes, so its neutral color
+/// must always be light — dark theme's `onSurface` already is, light theme needs
+/// the inverse role. Mirrors the completionist/collector card views.
+Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
+    ? scheme.onSurface
+    : scheme.onInverseSurface;
+
+Color _onArtSecondaryColor(ColorScheme scheme) =>
+    scheme.brightness == Brightness.dark
+    ? scheme.onSurfaceVariant
+    : scheme.onInverseSurface.withValues(alpha: 0.8);
+
+/// Renders the owner's linked platforms as a frozen-grammar art card: a
+/// full-bleed collage of the owner's own per-platform card art behind a scrim,
+/// with the fixed `PASSPORT` label, the linked-platform count as the hero, the
+/// `worlds` meta line, and a chip per linked platform carrying that platform's
+/// headline stat. The art is the user's own already-published card art (no
+/// third-party logos or brand colors); a platform that publishes no art degrades
+/// to a neutral band, so the surface always fills its fixed-ratio box.
 ///
 /// It watches every [Platform.values] card through the injected [cardSource]
 /// (owner default is [ownerCardProvider]; the visitor render injects a public
@@ -76,7 +97,7 @@ class PassportCardView extends ConsumerWidget {
 
     if (resolved == null) {
       if (!showEmptyPlaceholder) return const SizedBox.shrink();
-      return _Placeholder(widgetId: widget.id);
+      return _Placeholder(widgetId: widget.id, size: widget.size);
     }
 
     return _Passport(
@@ -89,21 +110,175 @@ class PassportCardView extends ConsumerWidget {
 }
 
 /// How many platform chips the card draws at each size; entries beyond the cap
-/// collapse into a `+N` pill. Tunable design values. Public so tests key off it
-/// rather than a literal.
-int passportChipCap(ProfileWidgetSize size) => switch (size) {
+/// collapse into a `+N` pill. `null` means no cap — the `large` card shows every
+/// linked platform. Tunable design values. Public so tests key off it rather
+/// than a literal.
+int? passportChipCap(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.small => 3,
   ProfileWidgetSize.wide => 4,
-  ProfileWidgetSize.large => 6,
+  ProfileWidgetSize.large => null,
 };
 
-/// The resolved passport: the `PASSPORT` label, the linked-platform hero count,
-/// the `worlds` meta line, and a chip cluster (capped, with a `+N` pill for the
-/// overflow). Content-height on a neutral surface — no art, so it never claims a
-/// fixed aspect ratio.
+/// How many art bands the collage draws at each size. Tunable design values;
+/// entries beyond the cap are not drawn. Mirrors [completionistShelfCap] — the
+/// linked-platform hero count stays authoritative regardless of band count.
+int passportCollageCap(ProfileWidgetSize size) => switch (size) {
+  ProfileWidgetSize.small => 3,
+  ProfileWidgetSize.wide => 4,
+  ProfileWidgetSize.large => 4,
+};
+
+double _ratioFor(ProfileWidgetSize size) => switch (size) {
+  ProfileWidgetSize.small => _smallRatio,
+  ProfileWidgetSize.wide => _wideRatio,
+  ProfileWidgetSize.large => _largeRatio,
+};
+
+/// The resolved passport: a full-bleed art collage of the owner's per-platform
+/// card art behind a scrim, with the bottom-anchored text block (chips, the
+/// `PASSPORT` label, the linked-platform hero count, the `worlds` meta line).
+/// Claims its size's fixed aspect ratio so it fills the tile like the sibling
+/// art cards.
 class _Passport extends StatelessWidget {
   const _Passport({
     super.key,
+    required this.widgetId,
+    required this.size,
+    required this.resolved,
+  });
+
+  final String widgetId;
+  final ProfileWidgetSize size;
+  final ResolvedPassport resolved;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: AspectRatio(
+        aspectRatio: _ratioFor(size),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _Collage(widgetId: widgetId, size: size, entries: resolved.entries),
+            const _Fade(),
+            Positioned(
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              bottom: AppSpacing.md,
+              child: _TextBlock(
+                widgetId: widgetId,
+                size: size,
+                resolved: resolved,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The art collage: a row of equal-width bands behind the scrim, one per linked
+/// platform, capped at [passportCollageCap] per size. Each band reuses the
+/// [_Art] cell (neutral surface when the platform publishes no art or the image
+/// errors), split by a thin seam in the card surface color. Mirrors the
+/// completionist shelf.
+class _Collage extends StatelessWidget {
+  const _Collage({
+    required this.widgetId,
+    required this.size,
+    required this.entries,
+  });
+
+  final String widgetId;
+  final ProfileWidgetSize size;
+  final List<PassportEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
+    final cap = passportCollageCap(size);
+    final shown = entries.length < cap ? entries.length : cap;
+
+    final cells = <Widget>[];
+    for (var i = 0; i < shown; i++) {
+      if (i > 0) {
+        cells.add(
+          SizedBox(
+            width: AppSpacing.hairline,
+            child: ColoredBox(color: surface),
+          ),
+        );
+      }
+      cells.add(
+        Expanded(
+          child: _Art(
+            key: Key('passportArt_${widgetId}_${entries[i].platform.name}'),
+            artImage: entries[i].artImage,
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      key: Key('passportCollage_$widgetId'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: cells,
+    );
+  }
+}
+
+/// Full-bleed platform art, or a neutral surface when the art url is null or the
+/// image errors (feed image rules — never a broken-image glyph). Mirrors the
+/// completionist card's art cell.
+class _Art extends StatelessWidget {
+  const _Art({super.key, required this.artImage});
+
+  final String? artImage;
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final url = artImage;
+    if (url == null) return ColoredBox(color: surface);
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (_, _) => ColoredBox(color: surface),
+      errorWidget: (_, _, _) => ColoredBox(color: surface),
+    );
+  }
+}
+
+/// Bottom-anchored scrim (`rgba(0,0,0,.55)` → `0`) over the art for legibility.
+/// Mirrors the completionist card's fade.
+class _Fade extends StatelessWidget {
+  const _Fade();
+
+  @override
+  Widget build(BuildContext context) {
+    final scrim = Theme.of(context).colorScheme.scrim;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [scrim.withValues(alpha: 0.55), scrim.withValues(alpha: 0)],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom-left identity text over the scrim: the self-legible chip cluster
+/// (capped per size, with a `+N` pill for the overflow — no cap at large), the
+/// `PASSPORT` label, the linked-platform hero count, and the `worlds` meta line.
+/// Chips sit at the top of the block and the label/hero/worlds at the bottom in
+/// the strongest scrim, so a growing chip count pushes upward and never displaces
+/// the hero. Adding/removing lines never resizes the art.
+class _TextBlock extends StatelessWidget {
+  const _TextBlock({
     required this.widgetId,
     required this.size,
     required this.resolved,
@@ -119,69 +294,58 @@ class _Passport extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    final entries = resolved.entries;
     final cap = passportChipCap(size);
-    final shown = resolved.entries.length < cap ? resolved.entries.length : cap;
-    final overflow = resolved.entries.length - shown;
+    final shown = cap == null
+        ? entries.length
+        : (entries.length < cap ? entries.length : cap);
+    final overflow = entries.length - shown;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadii.lg),
-      child: ColoredBox(
-        color: colorScheme.surfaceContainerHighest,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.passportLabel.toUpperCase(),
-                key: Key('passportLabel_$widgetId'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: AppTypography.semiBold,
-                  letterSpacing: _labelTracking,
-                ),
-              ),
-              Text(
-                formatShowcaseHeroValue(resolved.linkedCount),
-                key: Key('passportHero_$widgetId'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.headlineMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: AppTypography.bold,
-                ),
-              ),
-              Text(
-                l10n.passportWorlds(resolved.linkedCount),
-                key: Key('passportWorlds_$widgetId'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.smMd),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  for (var i = 0; i < shown; i++)
-                    _Chip(
-                      widgetId: widgetId,
-                      entry: resolved.entries[i],
-                      size: size,
-                    ),
-                  if (overflow > 0)
-                    _MorePill(widgetId: widgetId, overflow: overflow),
-                ],
-              ),
-            ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (var i = 0; i < shown; i++)
+              _Chip(widgetId: widgetId, entry: entries[i], size: size),
+            if (overflow > 0) _MorePill(widgetId: widgetId, overflow: overflow),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.smMd),
+        Text(
+          l10n.passportLabel.toUpperCase(),
+          key: Key('passportLabel_$widgetId'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.titleMedium?.copyWith(
+            color: _onArtColor(colorScheme),
+            fontWeight: AppTypography.semiBold,
+            letterSpacing: _labelTracking,
           ),
         ),
-      ),
+        Text(
+          formatShowcaseHeroValue(resolved.linkedCount),
+          key: Key('passportHero_$widgetId'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.headlineMedium?.copyWith(
+            color: _onArtColor(colorScheme),
+            fontWeight: AppTypography.bold,
+          ),
+        ),
+        Text(
+          l10n.passportWorlds(resolved.linkedCount),
+          key: Key('passportWorlds_$widgetId'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.bodySmall?.copyWith(
+            color: _onArtSecondaryColor(colorScheme),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -305,20 +469,10 @@ class _MorePill extends StatelessWidget {
   }
 }
 
-/// The owner loading tile's footprint at each size. Mirrors the resolved card's
-/// per-size growth (taller as the chip cap grows) so the neutral loader reserves
-/// roughly the card's height and the tile does not resize when the count
-/// settles. Reads named metrics rather than a raw dimension.
-double _loadingHeightFor(ProfileWidgetSize size) => switch (size) {
-  ProfileWidgetSize.small => AppPassportMetrics.loadingHeightSmall,
-  ProfileWidgetSize.wide => AppPassportMetrics.loadingHeightWide,
-  ProfileWidgetSize.large => AppPassportMetrics.loadingHeightLarge,
-};
-
 /// Owner-only loading tile shown while any card is fetching for the first time:
-/// a clean neutral surface at the size's footprint, never the empty motif, so a
-/// still-loading passport never reads as absent. No animation (no shimmer
-/// dependency).
+/// a clean neutral surface at the card's fixed-ratio footprint, never the empty
+/// motif, so a still-loading passport never reads as absent. No animation (no
+/// shimmer dependency); mirrors the completionist skeleton.
 class _LoadingTile extends StatelessWidget {
   const _LoadingTile({required this.widgetId, required this.size});
 
@@ -331,24 +485,22 @@ class _LoadingTile extends StatelessWidget {
     return ClipRRect(
       key: Key('passportLoading_$widgetId'),
       borderRadius: BorderRadius.circular(AppRadii.lg),
-      child: ColoredBox(
-        color: colorScheme.surfaceContainerHighest,
-        child: SizedBox(
-          height: _loadingHeightFor(size),
-          width: double.infinity,
-        ),
+      child: AspectRatio(
+        aspectRatio: _ratioFor(size),
+        child: ColoredBox(color: colorScheme.surfaceContainerHighest),
       ),
     );
   }
 }
 
 /// Owner-only motif shown when no platform resolves, so the tile stays
-/// intentional and its options menu reachable: a neutral surface with a glyph
-/// and the localized unavailable line.
+/// intentional and its options menu reachable: a neutral surface at the card's
+/// fixed-ratio footprint with a glyph and the localized unavailable line.
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.widgetId});
+  const _Placeholder({required this.widgetId, required this.size});
 
   final String widgetId;
+  final ProfileWidgetSize size;
 
   @override
   Widget build(BuildContext context) {
@@ -359,27 +511,30 @@ class _Placeholder extends StatelessWidget {
     return ClipRRect(
       key: Key('passportEmpty_$widgetId'),
       borderRadius: BorderRadius.circular(AppRadii.lg),
-      child: ColoredBox(
-        color: colorScheme.surfaceContainerHighest,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.public_outlined,
-                key: Key('passportEmptyMotif_$widgetId'),
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                l10n.passportUnavailable,
-                style: textTheme.bodySmall?.copyWith(
+      child: AspectRatio(
+        aspectRatio: _ratioFor(size),
+        child: ColoredBox(
+          color: colorScheme.surfaceContainerHighest,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.public_outlined,
+                  key: Key('passportEmptyMotif_$widgetId'),
                   color: colorScheme.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.passportUnavailable,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
