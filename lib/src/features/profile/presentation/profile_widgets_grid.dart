@@ -12,6 +12,7 @@ import 'composed_card_view.dart';
 import 'composed_picker.dart';
 import 'data_menu_screen.dart';
 import 'game_collector_card_view.dart';
+import 'passport_card_view.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_controller.dart';
@@ -231,6 +232,27 @@ class _WidgetTile extends ConsumerWidget {
       );
     }
 
+    // A passport widget aggregates every linked platform into its own identity
+    // card and is never resolved through the injected platform cardBuilder.
+    if (widget.kind == ProfileWidgetKind.passport) {
+      return Stack(
+        children: [
+          ClipRect(child: PassportCardView(widget: widget)),
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: _WidgetOptionsMenu(
+              widget: widget,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
+          ),
+        ],
+      );
+    }
+
     final platform = widget.platform;
     // A kind with no platform has nothing to resolve; treat it as a missing
     // card so it still renders the placeholder-with-menu and stays removable.
@@ -352,7 +374,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
           widget.collectionSelection,
         );
       } else if (widget.kind == ProfileWidgetKind.gameCollector ||
-          widget.kind == ProfileWidgetKind.completionist) {
+          widget.kind == ProfileWidgetKind.completionist ||
+          widget.kind == ProfileWidgetKind.passport) {
         controller.resize(widget.id, size);
       } else {
         controller.resizeShowcase(widget.id, size, widget.showcaseSelection);
@@ -456,7 +479,8 @@ class _WidgetOptionsMenu extends ConsumerWidget {
         if (widget.kind == ProfileWidgetKind.showcase ||
             widget.kind == ProfileWidgetKind.collection ||
             widget.kind == ProfileWidgetKind.gameCollector ||
-            widget.kind == ProfileWidgetKind.completionist) {
+            widget.kind == ProfileWidgetKind.completionist ||
+            widget.kind == ProfileWidgetKind.passport) {
           sections.add([
             selectable(
               _WidgetMenuAction.resizeSmall,

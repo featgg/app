@@ -175,6 +175,12 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     );
   });
 
+  /// Adds a passport widget at [position] with [size].
+  Future<void> addPassport({
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run((repo) => repo.addPassportWidget(position: position, size: size));
+
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 
