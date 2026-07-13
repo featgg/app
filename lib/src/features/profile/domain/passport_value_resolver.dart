@@ -14,6 +14,7 @@ final class PassportEntry extends Equatable {
     this.statLabelKey,
     this.value,
     this.unit,
+    this.artImage,
   });
 
   final Platform platform;
@@ -28,8 +29,13 @@ final class PassportEntry extends Equatable {
   /// null; presentation appends the display suffix.
   final String? unit;
 
+  /// Absolute https URL to the platform card's hero (preferred) or icon art, or
+  /// null when it publishes neither. Orthogonal to the headline stat; the
+  /// presentation collage draws it as a background band.
+  final String? artImage;
+
   @override
-  List<Object?> get props => [platform, statLabelKey, value, unit];
+  List<Object?> get props => [platform, statLabelKey, value, unit, artImage];
 }
 
 /// The resolved passport ready to render: one [PassportEntry] per linked
@@ -70,7 +76,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
   switch (platform) {
     case Platform.chess:
       return _fromStat(platform, card, 'rating', 'connectionsStatRating') ??
-          _identity(platform);
+          _identity(platform, card);
     case Platform.steam:
       return _fromStat(
             platform,
@@ -84,7 +90,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
             'hours_played',
             'connectionsStatHoursPlayed',
           ) ??
-          _identity(platform);
+          _identity(platform, card);
     case Platform.minecraftHypixel:
       return _fromStat(
             platform,
@@ -92,7 +98,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
             'network_level',
             'connectionsStatNetworkLevel',
           ) ??
-          _identity(platform);
+          _identity(platform, card);
     case Platform.retroachievements:
       return _fromStat(
             platform,
@@ -101,7 +107,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
             'connectionsStatTotalAchievementPoints',
           ) ??
           _fromStat(platform, card, 'retro_rank', 'connectionsStatRetroRank') ??
-          _identity(platform);
+          _identity(platform, card);
     case Platform.wowRetail:
       return _fromStat(
             platform,
@@ -109,7 +115,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
             'item_level',
             'connectionsStatItemLevel',
           ) ??
-          _identity(platform);
+          _identity(platform, card);
     case Platform.leagueOfLegends:
       // `data.rank` is the authoritative unranked signal: only a ranked summoner
       // shows `rank_lp` as the headline, so an unranked `rank_lp: 0` never
@@ -125,7 +131,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
         if (lp != null) return lp;
       }
       return _fromStat(platform, card, 'winrate', 'connectionsStatWinrate') ??
-          _identity(platform);
+          _identity(platform, card);
     case Platform.gw2:
       // Scope-gated stats arrive absent (never 0), so a missing key falls
       // through to the next candidate, ending at veterancy_years / identity.
@@ -142,7 +148,7 @@ PassportEntry _entryFor(Platform platform, GameCard card) {
             'veterancy_years',
             'connectionsStatVeterancyYears',
           ) ??
-          _identity(platform);
+          _identity(platform, card);
   }
 }
 
@@ -162,6 +168,7 @@ PassportEntry? _fromStat(
         statLabelKey: labelKey,
         value: stat.value as num,
         unit: stat.unit,
+        artImage: _artOf(card),
       );
     }
   }
@@ -169,5 +176,11 @@ PassportEntry? _fromStat(
 }
 
 /// An identity-only chip: the platform is linked but publishes no headline
-/// number. Still counts toward [ResolvedPassport.linkedCount].
-PassportEntry _identity(Platform platform) => PassportEntry(platform: platform);
+/// number. Still counts toward [ResolvedPassport.linkedCount] and still carries
+/// the card's art for the collage.
+PassportEntry _identity(Platform platform, GameCard card) =>
+    PassportEntry(platform: platform, artImage: _artOf(card));
+
+/// The card's collage art: the hero/cover when present, else the icon/avatar,
+/// else null. Orthogonal to the headline stat.
+String? _artOf(GameCard card) => card.heroImage ?? card.iconImage;
