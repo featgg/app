@@ -62,7 +62,7 @@ class PassportCardView extends ConsumerWidget {
     final isFirstLoad = states.values.any((s) => s.isLoading && !s.hasValue);
     if (isFirstLoad) {
       return showEmptyPlaceholder
-          ? _LoadingTile(widgetId: widget.id)
+          ? _LoadingTile(widgetId: widget.id, size: widget.size)
           : const SizedBox.shrink();
     }
 
@@ -305,13 +305,25 @@ class _MorePill extends StatelessWidget {
   }
 }
 
+/// The owner loading tile's footprint at each size. Mirrors the resolved card's
+/// per-size growth (taller as the chip cap grows) so the neutral loader reserves
+/// roughly the card's height and the tile does not resize when the count
+/// settles. Reads named metrics rather than a raw dimension.
+double _loadingHeightFor(ProfileWidgetSize size) => switch (size) {
+  ProfileWidgetSize.small => AppPassportMetrics.loadingHeightSmall,
+  ProfileWidgetSize.wide => AppPassportMetrics.loadingHeightWide,
+  ProfileWidgetSize.large => AppPassportMetrics.loadingHeightLarge,
+};
+
 /// Owner-only loading tile shown while any card is fetching for the first time:
-/// a clean neutral surface, never the empty motif, so a still-loading passport
-/// never reads as absent. No animation (no shimmer dependency).
+/// a clean neutral surface at the size's footprint, never the empty motif, so a
+/// still-loading passport never reads as absent. No animation (no shimmer
+/// dependency).
 class _LoadingTile extends StatelessWidget {
-  const _LoadingTile({required this.widgetId});
+  const _LoadingTile({required this.widgetId, required this.size});
 
   final String widgetId;
+  final ProfileWidgetSize size;
 
   @override
   Widget build(BuildContext context) {
@@ -321,7 +333,10 @@ class _LoadingTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadii.lg),
       child: ColoredBox(
         color: colorScheme.surfaceContainerHighest,
-        child: const SizedBox(height: 96, width: double.infinity),
+        child: SizedBox(
+          height: _loadingHeightFor(size),
+          width: double.infinity,
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
+import 'package:featgg/src/core/theme/tokens.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
@@ -321,6 +322,37 @@ void main() {
     expect(find.byKey(const Key('passportLoading_pp-1')), findsOneWidget);
     expect(find.byKey(const Key('passportEmpty_pp-1')), findsNothing);
     expect(find.byKey(const Key('passportCard_pp-1')), findsNothing);
+  });
+
+  testWidgets('the loading tile reserves the per-size footprint from tokens, '
+      'never a size-blind literal', (tester) async {
+    Future<double> loadingHeight(ProfileWidgetSize size) async {
+      // Reset to a trivial tree first: re-pumping a fresh MaterialApp/provider
+      // scope over another trips a focus-scope reparent assertion.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        _harness(
+          widget: _passportWidget(size: size),
+          cardsRepo: _PendingCardsRepository(),
+        ),
+      );
+      await tester.pump();
+      return tester
+          .getSize(find.byKey(const Key('passportLoading_pp-1')))
+          .height;
+    }
+
+    // The loader mirrors the card's per-size footprint from named metrics; the
+    // prior raw 96 literal — size-blind and mismatched from the card — would
+    // fail both assertions at once.
+    expect(
+      await loadingHeight(ProfileWidgetSize.small),
+      AppPassportMetrics.loadingHeightSmall,
+    );
+    expect(
+      await loadingHeight(ProfileWidgetSize.large),
+      AppPassportMetrics.loadingHeightLarge,
+    );
   });
 
   testWidgets('wait-for-all: a ready platform still shows the loader while '
