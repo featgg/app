@@ -123,6 +123,12 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setComposedFill(
     String id,
     ProfileWidgetSize size,
@@ -173,6 +179,7 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   ShowcaseSelection? lastShowcaseSelection;
   ProfileWidgetSize? lastCollectionSetSize;
   CollectionSelection? lastCollectionSelection;
+  ProfileWidgetSize? lastBaseSetSize;
 
   @override
   Future<Either<Failure, Unit>> setShowcaseSize(
@@ -218,10 +225,19 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setSize(
     String id,
     ProfileWidgetSize size,
-  ) async => throw UnimplementedError();
+  ) async {
+    lastBaseSetSize = size;
+    return right(unit);
+  }
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
@@ -422,6 +438,34 @@ GameCard _steamCompletionistCard() => GameCard(
     ],
     recentGames: [],
   ),
+);
+
+ProfileWidget _passportWidget({
+  required String id,
+  required int position,
+  ProfileWidgetSize size = ProfileWidgetSize.wide,
+}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.passport,
+  platform: null,
+  position: position,
+  isEnabled: true,
+  size: size,
+);
+
+/// A Steam card carrying a passport headline stat (games_owned) so the passport
+/// view resolves a Steam chip against it.
+GameCard _steamPassportCard() => GameCard(
+  schemaVersion: 1,
+  platform: Platform.steam,
+  title: 'steam-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [CardStat(key: 'games_owned', value: 312, unit: 'count')],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+  data: null,
 );
 
 /// The Container that fills a selectable menu row (its `color` marks the active
@@ -724,6 +768,57 @@ void main() {
         expect(
           spanFor(
             _completionistWidget(
+              id: 'sm',
+              position: 0,
+              size: ProfileWidgetSize.small,
+            ),
+            columns: columns,
+          ),
+          lessThan(columns),
+          reason: 'not content-full @ $columns cols',
+        );
+      }
+    });
+
+    test('passport art cards span small=1, wide=2, large=2 at both '
+        'multi-column regimes (size-driven, not content-full)', () {
+      for (final columns in const [2, 3]) {
+        expect(
+          spanFor(
+            _passportWidget(
+              id: 's',
+              position: 0,
+              size: ProfileWidgetSize.small,
+            ),
+            columns: columns,
+          ),
+          1,
+          reason: 'small @ $columns cols',
+        );
+        expect(
+          spanFor(
+            _passportWidget(id: 'w', position: 0, size: ProfileWidgetSize.wide),
+            columns: columns,
+          ),
+          2,
+          reason: 'wide @ $columns cols',
+        );
+        expect(
+          spanFor(
+            _passportWidget(
+              id: 'l',
+              position: 0,
+              size: ProfileWidgetSize.large,
+            ),
+            columns: columns,
+          ),
+          2,
+          reason: 'large @ $columns cols',
+        );
+        // Size-driven, never the full-column content-card span.
+        expect(
+          spanFor(
+            _passportWidget(
               id: 'sm',
               position: 0,
               size: ProfileWidgetSize.small,
@@ -2154,5 +2249,59 @@ void main() {
     expect(find.text(l10n.showcaseHeroAchievements), findsNothing);
     expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
     expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+  });
+
+  testWidgets('a passport tile routes to PassportCardView and offers size '
+      'options, no hero-stat rows', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_passportWidget(id: 'pp', position: 0)],
+        cards: {Platform.steam: _steamPassportCard()},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // The passport tile renders via PassportCardView (its keyed card) with a
+    // reachable options menu.
+    expect(find.byKey(const Key('profileWidgetTile_pp')), findsOneWidget);
+    expect(find.byKey(const Key('passportCard_pp')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetMenu_pp')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_pp')));
+    await tester.pumpAndSettle();
+    // The size section is present; no hero-stat or customize entries for a
+    // passport (it is size-only).
+    expect(find.text(l10n.profileWidgetSizeSmall), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeWide), findsOneWidget);
+    expect(find.text(l10n.profileWidgetSizeLarge), findsOneWidget);
+    expect(find.text(l10n.showcaseHeroHours), findsNothing);
+    expect(find.text(l10n.showcaseHeroAchievements), findsNothing);
+    expect(find.text(l10n.profileWidgetCustomizeData), findsNothing);
+    expect(find.text(l10n.profileWidgetRemove), findsOneWidget);
+  });
+
+  testWidgets('passport options menu resizes the card via the controller', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        widgets: [_passportWidget(id: 'pp', position: 0)],
+        cards: {Platform.steam: _steamPassportCard()},
+        widgetsRepo: widgetsRepo,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // A passport is size-only, so a resize rides the base setSize path — the
+    // recording fake captures the chosen size.
+    await tester.tap(find.byKey(const Key('profileWidgetMenu_pp')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.profileWidgetSizeLarge));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastBaseSetSize, ProfileWidgetSize.large);
   });
 }

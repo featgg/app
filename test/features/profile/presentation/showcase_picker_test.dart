@@ -37,6 +37,29 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Platform? lastCompletionistPlatform;
   int? lastCompletionistPosition;
   ProfileWidgetSize? lastCompletionistSize;
+  int? lastPassportPosition;
+  ProfileWidgetSize? lastPassportSize;
+  bool passportAdded = false;
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    passportAdded = true;
+    lastPassportPosition = position;
+    lastPassportSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.passport,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
@@ -293,6 +316,15 @@ ProfileWidget _completionistWidget({required int position}) => ProfileWidget(
   position: position,
   isEnabled: true,
   size: ProfileWidgetSize.small,
+);
+
+ProfileWidget _passportWidget({required int position}) => ProfileWidget(
+  id: 'pp-$position',
+  kind: ProfileWidgetKind.passport,
+  platform: null,
+  position: position,
+  isEnabled: true,
+  size: ProfileWidgetSize.wide,
 );
 
 Widget _harness({
@@ -748,5 +780,106 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.byKey(const Key('completionistPickerEmpty')), findsNothing);
+  });
+
+  testWidgets('Passport banner: tapping Add records max+1 + wide and closes', (
+    tester,
+  ) async {
+    // A platform widget at position 2 (not a passport, so it does not trip the
+    // already-added guard) proves the insert position is max+1 = 3.
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: widgetsRepo,
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('passportPickerAddButton')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.passportAdded, isTrue);
+    expect(widgetsRepo.lastPassportPosition, 3);
+    expect(widgetsRepo.lastPassportSize, ProfileWidgetSize.wide);
+
+    // The sheet closed on Add.
+    expect(find.byKey(const Key('passportPickerAddButton')), findsNothing);
+  });
+
+  testWidgets('Passport banner: an existing passport shows the already-added '
+      'state (no Add)', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: [_passportWidget(position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('passportPickerAllAdded')), findsOneWidget);
+    expect(find.byKey(const Key('passportPickerAddButton')), findsNothing);
+  });
+
+  testWidgets('Passport banner is reachable with no Steam card (outside the '
+      'gate)', (tester) async {
+    // The Steam card stays pending, so the mode-toggle body shows its loader —
+    // but the passport banner sits outside that gate and must still offer Add.
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _PendingCardsRepository(),
+        widgetsRepo: widgetsRepo,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // The Steam-gated body is still loading, yet the banner Add is available.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('passportPickerAddButton')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('passportPickerAddButton')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.passportAdded, isTrue);
+    expect(widgetsRepo.lastPassportPosition, 0);
+    expect(widgetsRepo.lastPassportSize, ProfileWidgetSize.wide);
+  });
+
+  testWidgets('the add-card mode toggle still has exactly four segments', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Adding the passport banner did not touch the four existing modes.
+    expect(find.byKey(const Key('addCardModeToggle')), findsOneWidget);
+    expect(find.text(l10n.addCardModeShowcase), findsOneWidget);
+    expect(find.text(l10n.addCardModeCollection), findsOneWidget);
+    expect(find.text(l10n.addCardModeCollector), findsOneWidget);
+    expect(find.text(l10n.addCardModeCompletionist), findsOneWidget);
   });
 }

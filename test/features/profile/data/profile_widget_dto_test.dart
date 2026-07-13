@@ -164,6 +164,7 @@ void main() {
         profileWidgetKindToWire(ProfileWidgetKind.completionist),
         'completionist',
       );
+      expect(profileWidgetKindToWire(ProfileWidgetKind.passport), 'passport');
     });
   });
 
@@ -970,6 +971,47 @@ void main() {
       );
 
       // A completionist has no per-widget choice; the empty defaults hold.
+      expect(widget!.showcaseSelection, ShowcaseSelection.empty);
+      expect(widget.collectionSelection, CollectionSelection.empty);
+    });
+  });
+
+  group('passport binding (platform-NULL, size-only envelope)', () {
+    test('a null-platform passport row round-trips to the kind with its '
+        'size', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'passport', platform: null, size: 'wide'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.passport);
+      // A passport aggregates every linked platform — the binding rule keeps
+      // platform null.
+      expect(widget.platform, isNull);
+      expect(widget.size, ProfileWidgetSize.wide);
+    });
+
+    test('a passport row with a stray platform still maps with null '
+        '(lenient)', () {
+      // Passport is not in the platform-required block, so a stray platform
+      // token does not drop the row; the entity platform stays null.
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'passport', platform: 'steam')),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.passport);
+      expect(widget.platform, isNull);
+    });
+
+    test('the row carries no selection sub-object (size-only envelope)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'passport', platform: null)),
+      );
+
+      // A passport has no per-widget choice; the empty defaults hold.
       expect(widget!.showcaseSelection, ShowcaseSelection.empty);
       expect(widget.collectionSelection, CollectionSelection.empty);
     });
