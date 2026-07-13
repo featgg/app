@@ -10,6 +10,7 @@ import '../domain/game_collector_value_resolver.dart';
 import '../domain/profile_widget.dart';
 import '../domain/showcase_selection.dart';
 import 'collection_picker.dart';
+import 'passport_picker.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_widgets_controller.dart';
 
@@ -100,6 +101,11 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // The passport add-entry sits above the mode toggle and OUTSIDE the
+            // Steam-card gate below, so a Steam-less user can still add it (it
+            // aggregates every linked platform, not just Steam).
+            PassportAddBanner(existing: existing),
+            const SizedBox(height: AppSpacing.md),
             _ModeToggle(
               mode: _mode,
               onChanged: (mode) => setState(() => _mode = mode),

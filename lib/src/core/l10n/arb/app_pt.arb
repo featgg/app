@@ -330,5 +330,13 @@
   "completionistPickerHint": "Um cartão com toda a sua biblioteca da Steam: quantos jogos você completou a 100%.",
   "completionistPickerAdd": "Adicionar completista",
   "completionistPickerAlreadyAdded": "Você já tem um cartão de completista.",
-  "completionistPickerEmpty": "Você ainda não tem jogos 100% concluídos."
+  "completionistPickerEmpty": "Você ainda não tem jogos 100% concluídos.",
+  "passportLabel": "Passaporte",
+  "passportWorlds": "{count, plural, =1{1 mundo} other{{count} mundos}}",
+  "passportMore": "+{count}",
+  "passportUnavailable": "Passaporte indisponível",
+  "passportPickerTitle": "Adicione seu passaporte",
+  "passportPickerHint": "Um cartão que reúne todas as plataformas que você vinculou: sua identidade entre jogos num relance.",
+  "passportPickerAdd": "Adicionar passaporte",
+  "passportPickerAlreadyAdded": "Você já tem um cartão de passaporte."
 }

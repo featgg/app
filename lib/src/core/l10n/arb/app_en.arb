@@ -1393,5 +1393,47 @@
   "completionistPickerEmpty": "You don't have any 100%-completed games yet.",
   "@completionistPickerEmpty": {
     "description": "Shown in the completionist picker when the Steam library resolves as absent or with 0 perfect (100% completed) games, so the Add action is disabled — the card would read as empty."
+  },
+  "passportLabel": "Passport",
+  "@passportLabel": {
+    "description": "Fixed label rendered (uppercased) on the passport card, naming the card type; the hero number below it is the count of linked platforms."
+  },
+  "passportWorlds": "{count, plural, =1{1 world} other{{count} worlds}}",
+  "@passportWorlds": {
+    "description": "Meta line under the passport hero, naming the unit of the linked-platform count; uses ICU plural for 1 vs many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passportMore": "+{count}",
+  "@passportMore": {
+    "description": "Overflow pill on the passport card when there are more linked platforms than the card's chip cap; count is how many are not shown.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passportUnavailable": "Passport unavailable",
+  "@passportUnavailable": {
+    "description": "Placeholder shown in place of a passport card when no linked platform resolves — none linked yet, or every card is still loading."
+  },
+  "passportPickerTitle": "Add your Passport",
+  "@passportPickerTitle": {
+    "description": "Title of the add-card sheet's passport banner, where the owner adds one card aggregating every linked platform."
+  },
+  "passportPickerHint": "One card that gathers every platform you've linked — your cross-game identity at a glance.",
+  "@passportPickerHint": {
+    "description": "Hint under the passport banner title describing what the passport card shows."
+  },
+  "passportPickerAdd": "Add Passport",
+  "@passportPickerAdd": {
+    "description": "Confirm button that adds the passport card to the profile."
+  },
+  "passportPickerAlreadyAdded": "You already have a Passport card.",
+  "@passportPickerAlreadyAdded": {
+    "description": "Shown in the passport banner when a passport card is already on the profile, so the Add action is hidden."
   }
 }

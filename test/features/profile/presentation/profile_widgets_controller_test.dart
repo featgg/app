@@ -202,6 +202,24 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addPassport');
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.passport,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSize(
     String id,
     ProfileWidgetSize size,
@@ -422,6 +440,26 @@ void main() {
 
       expect(repo.mutations, ['addCompletionist']);
       expect(repo.lastCompletionistPlatform, Platform.steam);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addPassport delegates to addPassportWidget', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addPassport(position: 3, size: ProfileWidgetSize.wide);
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addPassport']);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,

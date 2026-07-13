@@ -81,6 +81,14 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a passport widget at [position] with [size], enabled and with a
+  /// null platform (it aggregates every linked platform). The settings envelope
+  /// carries only the size (no per-widget selection sub-object).
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 

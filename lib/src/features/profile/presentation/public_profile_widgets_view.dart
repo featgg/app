@@ -8,6 +8,7 @@ import 'collection_card_view.dart';
 import 'completionist_card_view.dart';
 import 'composed_card_view.dart';
 import 'game_collector_card_view.dart';
+import 'passport_card_view.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_screen.dart';
 import 'profile_widgets_layout.dart';
@@ -146,6 +147,15 @@ class _VisitorTile extends ConsumerWidget {
     if (widget.kind == ProfileWidgetKind.completionist) {
       return ClipRect(
         child: CompletionistCardView(
+          widget: widget,
+          cardSource: publicSource(),
+          showEmptyPlaceholder: false,
+        ),
+      );
+    }
+    if (widget.kind == ProfileWidgetKind.passport) {
+      return ClipRect(
+        child: PassportCardView(
           widget: widget,
           cardSource: publicSource(),
           showEmptyPlaceholder: false,

@@ -50,10 +50,14 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `completionist` — a platform-bound card whose hero is the whole-library
   perfect-games count (how many games are 100% completed). Client rendering is
   Steam-first.
+- `passport` — a profile-level identity card aggregating the owner's linked
+  platforms: one headline stat per linked platform plus a linked-platform count.
+  It reads only already-published card data (no new fields) and mixes every
+  linked platform, so it is not platform-bound.
 
 `platform`, `template`, `composed_card`, `showcase`, `collection`,
-`game_collector`, and `completionist` are the kinds the client writes today;
-`data_menu` is reserved for a later phase.
+`game_collector`, `completionist`, and `passport` are the kinds the client
+writes today; `data_menu` is reserved for a later phase.
 (Data-menu curation already ships, but as the `data_menu_items` setting on a
 `platform` widget — see below — not as a `data_menu`-typed row.)
 
@@ -77,6 +81,8 @@ Whether `platform` is required or must be null depends on `type`:
   list above (the platform whose library it aggregates).
 - `type = completionist` → `platform` **must be a non-null** value from the
   list above (the platform whose library it counts).
+- `type = passport` → `platform` **must be null** (it aggregates every linked
+  platform, not a single source).
 
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
@@ -113,7 +119,9 @@ from the invalid-`type` rejection above.
     a future art-source selector may be added additively under the same
     `schema_version: 1`. A `completionist` widget likewise carries no additional
     settings sub-object beyond `size` — it has no per-widget choice (it counts
-    the whole library's perfect games).
+    the whole library's perfect games). A `passport` widget likewise carries no
+    additional settings sub-object beyond `size` — it has no per-widget choice
+    (it aggregates every linked platform).
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.

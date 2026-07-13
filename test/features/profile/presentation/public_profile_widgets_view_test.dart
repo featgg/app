@@ -96,6 +96,12 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSize(
     String id,
     ProfileWidgetSize size,
@@ -587,6 +593,66 @@ void main() {
       expect(find.byKey(const Key('gameCollectorCard_gc')), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'a passport widget renders via PassportCardView using the public source',
+    (tester) async {
+      // fetchPublicCard returns a Steam card carrying games_owned; fetchMyCard is
+      // null. The passport resolves only if the visitor tile bound the public
+      // source with showEmptyPlaceholder:false.
+      await tester.pumpWidget(
+        _harness(
+          widgets: const [
+            ProfileWidget(
+              id: 'pp',
+              kind: ProfileWidgetKind.passport,
+              platform: null,
+              position: 0,
+              isEnabled: true,
+              size: ProfileWidgetSize.wide,
+            ),
+          ],
+          publicCards: {
+            Platform.steam: _card(
+              Platform.steam,
+              stats: const [
+                CardStat(key: 'games_owned', value: 312, unit: 'count'),
+              ],
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('publicWidgetTile_pp')), findsOneWidget);
+      expect(find.byKey(const Key('passportCard_pp')), findsOneWidget);
+    },
+  );
+
+  testWidgets('a passport widget is hidden from the visitor when no platform '
+      'resolves', (tester) async {
+    // No public cards → the passport resolves to nothing; a visitor sees neither
+    // the card nor the owner-only placeholder.
+    await tester.pumpWidget(
+      _harness(
+        widgets: const [
+          ProfileWidget(
+            id: 'pp',
+            kind: ProfileWidgetKind.passport,
+            platform: null,
+            position: 0,
+            isEnabled: true,
+            size: ProfileWidgetSize.wide,
+          ),
+        ],
+        publicCards: const {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('passportCard_pp')), findsNothing);
+    expect(find.byKey(const Key('passportEmpty_pp')), findsNothing);
+  });
 
   testWidgets('a game_collector widget is hidden from the visitor when '
       'unresolved', (tester) async {

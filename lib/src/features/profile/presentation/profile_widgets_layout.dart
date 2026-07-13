@@ -30,7 +30,8 @@ int spanFor(ProfileWidget w, {required int columns}) {
       w.kind == ProfileWidgetKind.showcase ||
       w.kind == ProfileWidgetKind.collection ||
       w.kind == ProfileWidgetKind.gameCollector ||
-      w.kind == ProfileWidgetKind.completionist;
+      w.kind == ProfileWidgetKind.completionist ||
+      w.kind == ProfileWidgetKind.passport;
   if (!sized) return columns;
   final cells = switch (w.size) {
     ProfileWidgetSize.small => 1,

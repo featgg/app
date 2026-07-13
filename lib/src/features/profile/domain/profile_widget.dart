@@ -20,6 +20,7 @@ enum ProfileWidgetKind {
   collection,
   gameCollector,
   completionist,
+  passport,
 }
 
 /// Grid footprint a widget occupies. Maps to row-layout spans in

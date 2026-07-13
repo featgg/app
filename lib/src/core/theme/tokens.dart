@@ -24,6 +24,21 @@ abstract final class AppSpacing {
   static const double hairline = 2;
 }
 
+/// Footprint of the passport's owner loading tile, in logical pixels, one floor
+/// per card size.
+///
+/// The passport is a content-height typographic card — no art, so unlike the art
+/// cards it claims no fixed aspect ratio and its loader has no intrinsic size.
+/// These per-size floors let the neutral loader reserve roughly the resolved
+/// card's height (which grows with the size's chip cap), so the tile does not
+/// resize when the count settles. Tunable design values, named so the loader
+/// never carries a raw dimension literal.
+abstract final class AppPassportMetrics {
+  static const double loadingHeightSmall = 140;
+  static const double loadingHeightWide = 168;
+  static const double loadingHeightLarge = 200;
+}
+
 /// Border-radius scale in logical pixels.
 ///
 /// Six-step strictly-increasing scale. Monotonicity asserted in `tokens_test`
