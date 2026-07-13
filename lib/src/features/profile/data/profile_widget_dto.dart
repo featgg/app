@@ -337,6 +337,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.collection => 'collection',
   ProfileWidgetKind.gameCollector => 'game_collector',
   ProfileWidgetKind.completionist => 'completionist',
+  ProfileWidgetKind.passport => 'passport',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
@@ -347,6 +348,7 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'collection' => ProfileWidgetKind.collection,
   'game_collector' => ProfileWidgetKind.gameCollector,
   'completionist' => ProfileWidgetKind.completionist,
+  'passport' => ProfileWidgetKind.passport,
   _ => null,
 };
 
