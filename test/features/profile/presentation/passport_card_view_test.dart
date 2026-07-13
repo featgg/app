@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
-import 'package:featgg/src/core/theme/tokens.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
@@ -146,6 +145,39 @@ Map<Platform, GameCard?> _fourCards() => {
   ),
 };
 
+/// All seven linked platforms, each with a distinct headline stat, so the
+/// large-size "every platform is a chip, no +N" rule can be proven against the
+/// full roster. Distinct values keep the hero '7' clear of any chip value.
+Map<Platform, GameCard?> _sevenCards() => {
+  Platform.steam: _stat(Platform.steam, 'games_owned', 312, unit: 'count'),
+  Platform.leagueOfLegends: _stat(
+    Platform.leagueOfLegends,
+    'winrate',
+    54,
+    unit: 'percent',
+  ),
+  Platform.wowRetail: _stat(
+    Platform.wowRetail,
+    'item_level',
+    639,
+    unit: 'count',
+  ),
+  Platform.minecraftHypixel: _stat(
+    Platform.minecraftHypixel,
+    'network_level',
+    142,
+    unit: 'count',
+  ),
+  Platform.chess: _stat(Platform.chess, 'rating', 1842, unit: 'rating'),
+  Platform.retroachievements: _stat(
+    Platform.retroachievements,
+    'total_achievement_points',
+    48320,
+    unit: 'points',
+  ),
+  Platform.gw2: _stat(Platform.gw2, 'wvw_rank', 216, unit: 'count'),
+};
+
 ProfileWidget _passportWidget({
   ProfileWidgetSize size = ProfileWidgetSize.large,
 }) => ProfileWidget(
@@ -196,6 +228,46 @@ Widget _harness({
   );
 }
 
+/// Replicates the grid tile's loose-width geometry: the card is a non-positioned
+/// child of a [Stack] (default `StackFit.loose`) inside a fixed-width box, so a
+/// card that shrinks to its content width (the pre-redesign Column) would leave
+/// the tile's right edge showing — the AspectRatio surface must fill the 300.
+Widget _looseHarness({
+  required ProfileWidget widget,
+  Map<Platform, GameCard?> cards = const {},
+  CardsRepository? cardsRepo,
+}) {
+  final container = ProviderContainer(
+    retry: (count, error) => null,
+    overrides: [
+      cardsRepositoryProvider.overrideWithValue(
+        cardsRepo ?? _FakeCardsRepository(cards),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: 300,
+            child: Stack(children: [PassportCardView(widget: widget)]),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 Finder _chips() => find.byWidgetPredicate(
   (w) =>
       w.key is ValueKey<String> &&
@@ -203,10 +275,11 @@ Finder _chips() => find.byWidgetPredicate(
 );
 
 void main() {
-  test('passportChipCap grows with size', () {
+  test('passportChipCap caps small/wide and shows all at large', () {
     expect(passportChipCap(ProfileWidgetSize.small), 3);
     expect(passportChipCap(ProfileWidgetSize.wide), 4);
-    expect(passportChipCap(ProfileWidgetSize.large), 6);
+    // large has no cap — every linked platform gets a chip (no +N).
+    expect(passportChipCap(ProfileWidgetSize.large), isNull);
   });
 
   testWidgets('renders the hero count and a chip per linked platform', (
@@ -262,10 +335,28 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(_chips(), findsNWidgets(passportChipCap(ProfileWidgetSize.small)));
+    expect(_chips(), findsNWidgets(passportChipCap(ProfileWidgetSize.small)!));
     expect(find.byKey(const Key('passportMore_pp-1')), findsOneWidget);
     // The hero is the full linked count (4), never the capped chip count (3).
     expect(find.text('4'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large shows every linked platform as a chip with no +N pill '
+      '(7 platforms)', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        widget: _passportWidget(size: ProfileWidgetSize.large),
+        cards: _sevenCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // large has no cap (bug 1): all seven platforms are chips, no overflow pill.
+    expect(_chips(), findsNWidgets(7));
+    expect(find.byKey(const Key('passportMore_pp-1')), findsNothing);
+    // The hero is the true linked count with no cap applied.
+    expect(find.text('7'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -324,35 +415,68 @@ void main() {
     expect(find.byKey(const Key('passportCard_pp-1')), findsNothing);
   });
 
-  testWidgets('the loading tile reserves the per-size footprint from tokens, '
-      'never a size-blind literal', (tester) async {
-    Future<double> loadingHeight(ProfileWidgetSize size) async {
-      // Reset to a trivial tree first: re-pumping a fresh MaterialApp/provider
-      // scope over another trips a focus-scope reparent assertion.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpWidget(
-        _harness(
-          widget: _passportWidget(size: size),
-          cardsRepo: _PendingCardsRepository(),
-        ),
-      );
-      await tester.pump();
-      return tester
-          .getSize(find.byKey(const Key('passportLoading_pp-1')))
-          .height;
-    }
+  testWidgets('the resolved card fills the tile width under loose (grid-like) '
+      'constraints', (tester) async {
+    await tester.pumpWidget(
+      _looseHarness(
+        widget: _passportWidget(size: ProfileWidgetSize.large),
+        cards: _fourCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    // The loader mirrors the card's per-size footprint from named metrics; the
-    // prior raw 96 literal — size-blind and mismatched from the card — would
-    // fail both assertions at once.
+    // The AspectRatio surface expands to the full tile width; the pre-redesign
+    // content-height Column shrank to its text and left the tile's right edge
+    // showing the page background (bug 2).
     expect(
-      await loadingHeight(ProfileWidgetSize.small),
-      AppPassportMetrics.loadingHeightSmall,
+      tester.getSize(find.byKey(const Key('passportCard_pp-1'))).width,
+      300,
     );
+  });
+
+  testWidgets('the loading tile is full-bleed and ratio-based under loose '
+      'constraints', (tester) async {
+    await tester.pumpWidget(
+      _looseHarness(
+        widget: _passportWidget(size: ProfileWidgetSize.large),
+        cardsRepo: _PendingCardsRepository(),
+      ),
+    );
+    await tester.pump();
+
+    // The loader tracks the card footprint (fixed ratio), filling the tile width.
     expect(
-      await loadingHeight(ProfileWidgetSize.large),
-      AppPassportMetrics.loadingHeightLarge,
+      tester.getSize(find.byKey(const Key('passportLoading_pp-1'))).width,
+      300,
     );
+  });
+
+  testWidgets('the collage draws a band per linked platform up to the cap; '
+      'artless platforms keep their chips and degrade with no image', (
+    tester,
+  ) async {
+    Finder bands() => find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith('passportArt_pp-1_'),
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        // _fourCards() carries null art — the degenerate zero-art case.
+        widget: _passportWidget(size: ProfileWidgetSize.large),
+        cards: _fourCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('passportCollage_pp-1')), findsOneWidget);
+    expect(bands(), findsNWidgets(passportCollageCap(ProfileWidgetSize.large)));
+    // Every linked platform keeps its chip regardless of art.
+    expect(_chips(), findsNWidgets(4));
+    // Null art degrades to a neutral surface — no Image, no broken glyph.
+    expect(find.byType(Image), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('wait-for-all: a ready platform still shows the loader while '
