@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="crimson">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>feat.gg/nico — profile view &amp; themes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0D;
+  --surface:rgba(21,21,27,.92);
+  --surface2:#1C1C24;
+  --line:#26262F;
+  --text:#EFEFF2;
+  --muted:#96969F;
+  --accent:#BC3B4E;
+  --accent-soft:rgba(188,59,78,.16);
+  --art-a:#BC3B4E; --art-b:#5A1D2A; --art-c:#2A1016;
+  --radius:14px;
+}
+[data-theme="chak"]{
+  --accent:#3BBC8E; --accent-soft:rgba(59,188,142,.15);
+  --art-a:#3BBC8E; --art-b:#1D5A46; --art-c:#0F2A21;
+}
+[data-theme="arcane"]{
+  --accent:#8E5CE8; --accent-soft:rgba(142,92,232,.16);
+  --art-a:#8E5CE8; --art-b:#3E2775; --art-c:#221540;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+h1,h2,h3,.num,.hero-word{font-family:'Space Grotesk','Inter',sans-serif}
+
+/* ============ SIDE BACKGROUND ============ */
+.bg-art{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(90% 70% at 8% 12%, var(--art-b) 0%, transparent 55%),
+    radial-gradient(80% 60% at 94% 85%, var(--art-b) 0%, transparent 55%),
+    var(--bg);
+}
+.bg-art::after{
+  content:"";position:absolute;inset:0;opacity:.35;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============ FIXED CENTER COLUMN ============ */
+.column{
+  position:relative;z-index:1;
+  width:min(600px, 100%);
+  margin:0 auto;
+  padding:0 14px 130px;
+  display:flex;flex-direction:column;gap:14px;
+}
+
+/* ============ HEADER ============ */
+.profile-head{
+  margin-top:22px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  display:flex;gap:14px;align-items:center;
+  backdrop-filter:blur(8px);
+}
+.avatar{
+  width:68px;height:68px;border-radius:16px;flex-shrink:0;
+  background:radial-gradient(circle at 30% 25%, var(--art-a), var(--art-c));
+  border:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Grotesk';font-weight:700;font-size:1.6rem;
+}
+.identity h1{font-size:1.25rem;letter-spacing:-.01em}
+.identity .handle{color:var(--accent);font-size:.78rem;font-weight:600}
+.identity .bio{color:var(--muted);font-size:.74rem;margin-top:4px}
+.platforms{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.pchip{
+  font-size:.56rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid var(--line);color:var(--muted);
+  padding:3px 7px;border-radius:99px;
+}
+
+/* ============ CARD BASE ============ */
+.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  overflow:hidden;
+  backdrop-filter:blur(8px);
+}
+.card-head{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 12px;border-bottom:1px solid var(--line);
+}
+.card-head h2{font-size:.74rem;font-weight:500;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-head .platform{
+  font-size:.58rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);flex-shrink:0;
+}
+.card-body{padding:12px}
+.stats{
+  display:flex;gap:clamp(12px,4vw,24px);
+  border-top:1px solid var(--line);
+  padding:9px 12px;
+}
+.stat .num{font-size:clamp(.95rem,3.4vw,1.2rem);font-weight:700;line-height:1}
+.stat label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-top:3px}
+
+/* ============ PAIR ROWS: never stack, only global scale changes ============ */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ============ HERO: conditional fit ============ */
+.hero-canvas{position:relative;padding:0}
+/* natural 4:5 height at column width unless it exceeds the viewport budget;
+   then the frame shortens, the art stays fully contained, blur fills the sides */
+.hero-frame{position:relative;overflow:hidden;height:min(78svh, calc((min(600px, 100vw) - 28px) * 1.25))}
+
+/* 4:5 art — solid mid-tone base: can never fall to black */
+.hero-art,.hero-blur{
+  background:
+    radial-gradient(90% 55% at 22% 12%, var(--art-a) 0%, transparent 62%),
+    radial-gradient(75% 50% at 88% 38%, var(--art-a) 0%, transparent 72%),
+    radial-gradient(95% 55% at 55% 95%, var(--art-a) 0%, transparent 74%),
+    linear-gradient(160deg, var(--art-b), var(--art-c)),
+    var(--art-b);
+}
+.hero-blur{
+  position:absolute;inset:-30px;
+  filter:blur(34px) brightness(.65) saturate(1.2);
+}
+.hero-art{
+  position:relative;height:100%;aspect-ratio:4/5;
+  margin:0 auto;border-radius:10px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);
+}
+.hero-overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  justify-content:flex-end;align-items:center;padding:20px;
+  background:linear-gradient(to top, rgba(0,0,0,.45) 0%, transparent 30%);
+  pointer-events:none;
+}
+.hero-word{
+  font-size:clamp(2rem,9vw,3rem);font-weight:700;letter-spacing:.38em;
+  text-transform:uppercase;color:rgba(255,255,255,.92);
+  text-shadow:0 2px 30px rgba(0,0,0,.6);
+  margin-right:-.38em;
+}
+.hero-hint{font-size:.6rem;color:rgba(255,255,255,.7);letter-spacing:.1em;text-transform:uppercase;margin-top:7px;text-align:center}
+
+/* ============ CARD CONTENT ============ */
+.center-col{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.crystal{width:clamp(44px,12vw,58px);filter:drop-shadow(0 0 18px var(--accent-soft))}
+.crystal svg{width:100%;height:auto;display:block}
+.rank-name{font-size:clamp(.85rem,3vw,1rem);font-weight:700;font-family:'Space Grotesk'}
+.rank-sub{font-size:.64rem;color:var(--muted)}
+.knight{font-size:clamp(2.2rem,9vw,3rem);line-height:1;color:var(--accent);filter:drop-shadow(0 0 14px var(--accent-soft))}
+
+.main-card .card-body{display:flex;gap:14px;align-items:center}
+.emblem{
+  width:64px;height:64px;flex-shrink:0;border-radius:12px;
+  background:linear-gradient(150deg,var(--art-a),var(--art-c));
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);
+}
+.emblem svg{width:36px;height:36px}
+.main-info h3{font-size:1rem;font-weight:700}
+.main-info p{font-size:.7rem;color:var(--muted);margin-top:3px}
+
+.collection{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.leg{display:flex;flex-direction:column;align-items:center;gap:6px}
+.leg .orb{
+  width:50px;height:50px;border-radius:50%;
+  border:2px solid var(--accent);
+  background:radial-gradient(circle at 30% 30%, var(--art-a), var(--art-c));
+  box-shadow:0 0 16px var(--accent-soft);
+}
+.leg span{font-size:.6rem;color:var(--muted)}
+.leg.wip .orb{border-style:dashed;opacity:.75}
+
+.capsule{
+  border-radius:8px;position:relative;overflow:hidden;
+  aspect-ratio:16/7;
+  background:linear-gradient(120deg,#1a1a1f 0%,var(--art-c) 100%);
+  border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+}
+.capsule .title{font-family:'Space Grotesk';letter-spacing:.2em;font-weight:500;font-size:clamp(.62rem,2.4vw,.82rem);color:#d8d8dd}
+.progress{
+  position:absolute;bottom:0;left:0;right:0;height:19px;
+  background:var(--accent);display:flex;align-items:center;
+  justify-content:space-between;padding:0 8px;
+  font-size:.58rem;font-weight:600;color:#fff;
+}
+.bed{display:grid;grid-template-columns:repeat(8,8px);grid-auto-rows:8px;gap:1px;margin:4px auto}
+.bed i{background:var(--surface2);border-radius:1px}
+.bed i.r{background:var(--accent)}
+.bed i.w{background:#d8d8dd}
+.retro-box{
+  aspect-ratio:16/7;border-radius:8px;border:1px solid var(--line);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.25) 3px 4px),
+    linear-gradient(135deg,var(--art-b),var(--art-c));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Grotesk';letter-spacing:.14em;font-size:clamp(.55rem,2vw,.72rem);color:#d8d8dd;
+}
+
+.letters{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+.letter{
+  width:42px;height:42px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--line);
+  font-family:'Space Grotesk';font-weight:700;font-size:1.15rem;color:var(--accent);
+}
+.letter.misc{color:var(--muted);font-size:.85rem}
+
+.free-text p{font-size:.82rem;line-height:1.5}
+.free-text .note{font-size:.62rem;color:var(--muted);margin-top:6px}
+.id-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.id-chips span{
+  border:1px solid var(--accent);color:var(--text);
+  font-size:.66rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 12px;border-radius:99px;background:var(--accent-soft);
+}
+
+/* ============ THEME PANEL ============ */
+.lab{
+  position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:5;
+  width:min(560px, calc(100% - 20px));
+  background:rgba(12,12,16,.92);border:1px solid var(--line);
+  padding:10px 12px;border-radius:16px;backdrop-filter:blur(12px);
+}
+.lab-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lab-row .lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;width:44px;flex-shrink:0}
+.seg{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+.seg button{
+  border:1px solid var(--line);background:transparent;color:var(--text);
+  padding:5px 11px;border-radius:99px;font-size:.68rem;font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.crimson{background:#BC3B4E}.dot.chak{background:#3BBC8E}.dot.arcane{background:#8E5CE8}
+</style>
+</head>
+<body>
+
+<div class="bg-art" aria-hidden="true"></div>
+
+<main class="column">
+
+  <header class="profile-head">
+    <div class="avatar">N</div>
+    <div class="identity">
+      <h1>Nico</h1>
+      <div class="handle">feat.gg/nico · 🇨🇱 Chile</div>
+      <div class="bio">Fractal healer, legendary collector.</div>
+      <div class="platforms">
+        <span class="pchip">GW2</span><span class="pchip">LoL</span><span class="pchip">Steam</span>
+        <span class="pchip">Chess</span><span class="pchip">Hypixel</span><span class="pchip">WoW</span><span class="pchip">Retro</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="card hero-canvas">
+    <div class="hero-frame">
+      <div class="hero-blur" aria-hidden="true"></div>
+      <div class="hero-art"></div>
+      <div class="hero-overlay">
+        <div class="hero-word">Nico</div>
+        <div class="hero-hint">4:5 art · always shown complete · shrink the window height to see blur-extend</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANKS -->
+  <div class="row">
+    <section class="card">
+      <div class="card-head"><h2>Rank</h2><span class="platform">LoL</span></div>
+      <div class="card-body center-col">
+        <div class="crystal">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <polygon points="32,4 58,26 32,60 6,26" fill="none" stroke="var(--accent)" stroke-width="3"/>
+            <polygon points="32,16 47,28 32,48 17,28" fill="var(--accent)" opacity=".45"/>
+          </svg>
+        </div>
+        <div class="rank-name">Diamond IV</div>
+        <div class="rank-sub">Solo/Duo</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="num">D4</span><label>Rank</label></div>
+        <div class="stat"><span class="num">62%</span><label>WR</label></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Rank</h2><span class="platform">Chess</span></div>
+      <div class="card-body center-col">
+        <div class="knight">♞</div>
+        <div class="rank-sub">Rapid</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="num">1240</span><label>Rating</label></div>
+        <div class="stat"><span class="num">890</span><label>Puzzles</label></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- MAIN GW2 -->
+  <section class="card main-card">
+    <div class="card-head"><h2>Main</h2><span class="platform">Guild Wars 2</span></div>
+    <div class="card-body">
+      <div class="emblem" aria-hidden="true">
+        <svg viewBox="0 0 42 42"><path d="M21 3 L36 10 V22 C36 31 29 37 21 40 C13 37 6 31 6 22 V10 Z" fill="none" stroke="#fff" stroke-width="2.4" opacity=".9"/><circle cx="21" cy="20" r="6" fill="#fff" opacity=".85"/></svg>
+      </div>
+      <div class="main-info">
+        <h3>Heal Alacrity Luminary</h3>
+        <p>Fractals &amp; raids main · Wings 1–7</p>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="num">28.4k</span><label>AP</label></div>
+      <div class="stat"><span class="num">312</span><label>Masteries</label></div>
+      <div class="stat"><span class="num">T4</span><label>Fractal</label></div>
+    </div>
+  </section>
+
+  <!-- COLLECTION -->
+  <section class="card">
+    <div class="card-head"><h2>Legendary collection</h2><span class="platform">Guild Wars 2</span></div>
+    <div class="card-body">
+      <div class="collection">
+        <div class="leg"><div class="orb"></div><span>Leg. Armor</span></div>
+        <div class="leg wip"><div class="orb"></div><span>Bifrost 74%</span></div>
+        <div class="leg wip"><div class="orb"></div><span>Sunrise 41%</span></div>
+        <div class="leg wip"><div class="orb"></div><span>Bolt 22%</span></div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="num">1</span><label>Legendaries</label></div>
+      <div class="stat"><span class="num">3</span><label>In progress</label></div>
+      <div class="stat"><span class="num">Chak</span><label>Infusion</label></div>
+    </div>
+  </section>
+
+  <!-- MILESTONES -->
+  <div class="row">
+    <section class="card">
+      <div class="card-head"><h2>Milestone</h2><span class="platform">Steam</span></div>
+      <div class="card-body">
+        <div class="capsule">
+          <span class="title">DARK SOULS</span>
+          <div class="progress"><span>41/41</span><span>🏅 100%</span></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="num">134</span><label>Hours</label></div>
+        <div class="stat"><span class="num">100%</span><label>Full</label></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Milestone</h2><span class="platform">Hypixel</span></div>
+      <div class="card-body center-col">
+        <div class="bed" aria-hidden="true">
+          <i></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="w"></i><i class="w"></i><i></i>
+          <i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="w"></i><i class="w"></i><i class="w"></i>
+          <i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="w"></i><i class="w"></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="rank-sub">Bedwars</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="num">1,847</span><label>Beds</label></div>
+        <div class="stat"><span class="num">✪120</span><label>Level</label></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ACHIEVEMENTS -->
+  <section class="card">
+    <div class="card-head"><h2>Achievement showcase</h2><span class="platform">Steam</span></div>
+    <div class="card-body">
+      <div class="letters">
+        <div class="letter misc">◆</div>
+        <div class="letter">N</div>
+        <div class="letter">I</div>
+        <div class="letter">C</div>
+        <div class="letter">O</div>
+        <div class="letter misc">◆</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="num">1,289</span><label>Achievements</label></div>
+      <div class="stat"><span class="num">3</span><label>Perfect</label></div>
+      <div class="stat"><span class="num">28%</span><label>Avg</label></div>
+    </div>
+  </section>
+
+  <!-- WOW + RETRO -->
+  <div class="row">
+    <section class="card main-card">
+      <div class="card-head"><h2>Main</h2><span class="platform">WoW</span></div>
+      <div class="card-body" style="flex-direction:column;align-items:center;text-align:center;gap:8px">
+        <div class="emblem" aria-hidden="true">
+          <svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15" fill="none" stroke="#fff" stroke-width="2.4" opacity=".9"/><path d="M21 8 V34 M8 21 H34" stroke="#fff" stroke-width="2.4" opacity=".85"/></svg>
+        </div>
+        <div class="main-info">
+          <h3 style="font-size:.9rem">Main character</h3>
+          <p>Spec · Realm</p>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="num">480</span><label>ilvl</label></div>
+        <div class="stat"><span class="num">250</span><label>Mounts</label></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Mastered</h2><span class="platform">Retro</span></div>
+      <div class="card-body">
+        <div class="retro-box">RETRO BOX ART</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="num">4.2k</span><label>Points</label></div>
+        <div class="stat"><span class="num">6</span><label>Masters</label></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- IDENTITY (Passport) -->
+  <section class="card">
+    <div class="card-head"><h2>Passport</h2><span class="platform">Feat.gg</span></div>
+    <div class="card-body">
+      <div class="id-chips">
+        <span>Steam</span><span>GW2</span><span>LoL</span><span>Chess</span>
+        <span>Hypixel</span><span>WoW</span><span>Retro</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="num">7</span><label>Platforms</label></div>
+      <div class="stat"><span class="num">2025</span><label>Member since</label></div>
+    </div>
+  </section>
+
+  <!-- TEXT NOTE -->
+  <section class="card free-text">
+    <div class="card-head"><h2>Note</h2><span class="platform">Profile</span></div>
+    <div class="card-body">
+      <p>"LF static for Wings 5–7, CmC. Whisper in-game."</p>
+      <p class="note">Max 140 chars · never dominant</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- THEME PANEL -->
+<div class="lab" role="group" aria-label="Theme picker">
+  <div class="lab-row">
+    <span class="lbl">Theme</span>
+    <div class="seg" data-attr="data-theme">
+      <button data-v="crimson" aria-pressed="true"><i class="dot crimson"></i>Crimson</button>
+      <button data-v="chak" aria-pressed="false"><i class="dot chak"></i>Chak</button>
+      <button data-v="arcane" aria-pressed="false"><i class="dot arcane"></i>Arcane</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.seg').forEach(seg=>{
+  const attr=seg.dataset.attr;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.documentElement.setAttribute(attr,btn.dataset.v);
+      seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===btn?'true':'false'));
+    });
+  });
+});
+</script>
+</body>
+</html>
