@@ -108,14 +108,17 @@ Platform? _platformFromWireOrNull(String? wire) {
 }
 
 ProfileTheme _themeFromWire(String value) => switch (value) {
-  'classic' => ProfileTheme.classic,
-  'immersive' => ProfileTheme.immersive,
-  'retro' => ProfileTheme.retro,
-  'analyst' => ProfileTheme.analyst,
-  // The accepted theme token set can change ahead of this client
-  // (docs/personalization/spec.md §8); an unknown token must not take down
-  // the whole profile read, so it falls back to the default theme.
-  _ => ProfileTheme.classic,
+  'crimson' => ProfileTheme.crimson,
+  'ember' => ProfileTheme.ember,
+  'solar' => ProfileTheme.solar,
+  'chak' => ProfileTheme.chak,
+  'frost' => ProfileTheme.frost,
+  'abyss' => ProfileTheme.abyss,
+  'arcane' => ProfileTheme.arcane,
+  'rose' => ProfileTheme.rose,
+  // Both a superseded token and any unknown one resolve to the default theme:
+  // a stale or ahead-of-client value must never take down the profile read.
+  _ => ProfileTheme.crimson,
 };
 
 ProfilePrivacy _privacyFromWire(String value) => switch (value) {

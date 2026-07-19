@@ -124,8 +124,33 @@ Exact variant naming is planner latitude **within the registry**; the registry m
 ```
 
 - Mandatory inheritance: card accents, tags, stat highlights, progress bars, background art, placeholder art all read theme tokens; switching re-tints the whole profile live.
-- Ship at minimum Crimson (default/brand `#BC3B4E`), Chak `#3BBC8E`, Arcane `#8E5CE8` + 3–5 more to the same recipe (bright accent / mid / deep; WCAG AA per pairing).
-- **Migration note:** the existing profile theme field carries a different closed list (`classic|immersive|retro|analyst`, stored but visually inert). Migrate to the new list; existing rows remap to `crimson`; unknown values fall back to `crimson` on read.
+- **The closed set (8 themes).** `theme_id` is one of these lowercase-ascii tokens, rendered in this order (default/brand first, then warm→cool). Each is built to the same recipe: `--art-a` = the bright accent, `--art-b` = a mid tone, `--art-c` = a deep tone, `--accent-soft` = the accent at ~16% alpha.
+
+  | id | accent | art-b | art-c |
+  |---|---|---|---|
+  | crimson (default) | `#BC3B4E` | `#5A1D2A` | `#2A1016` |
+  | ember | `#E8763B` | `#6F391C` | `#351B0E` |
+  | solar | `#E0A82E` | `#6C5116` | `#34270B` |
+  | chak | `#3BBC8E` | `#1D5A46` | `#0F2A21` |
+  | frost | `#3BC7E8` | `#1C606F` | `#0E2E35` |
+  | abyss | `#4C82EA` | `#243E70` | `#111E36` |
+  | arcane | `#8E5CE8` | `#3E2775` | `#221540` |
+  | rose | `#E85C9E` | `#6F2C4C` | `#351524` |
+
+- **Contrast.** The theme-independent tokens carry body copy and stats, so those ratios hold for every theme: body text (`--text` on `--surface` over `--bg`) ≈ 16:1 and muted text (`--muted`) ≈ 6.4:1 both clear AA-normal (≥4.5); stat numbers (bold `--text`) ≈ 16:1 clear AA-large (≥3.0). The accent is an emphasis/UI and large-text color (tags, chip outlines) rather than body copy, so it is held to the ≥3.0 bar — the level the default accent meets:
+
+  | id | accent : surface | ≥3.0 (UI/large) | ≥4.5 (normal) |
+  |---|---|---|---|
+  | crimson | ≈ 3.4:1 | pass | brand baseline |
+  | ember | ≈ 6.3:1 | pass | pass |
+  | solar | ≈ 8.7:1 | pass | pass |
+  | chak | ≈ 7.8:1 | pass | pass |
+  | frost | ≈ 9.1:1 | pass | pass |
+  | abyss | ≈ 5.1:1 | pass | pass |
+  | arcane | ≈ 4.3:1 | pass | brand baseline |
+  | rose | ≈ 5.7:1 | pass | pass |
+
+- **Migration note:** an earlier profile theme field carried a different closed list (`classic|immersive|retro|analyst`, stored but visually inert). Migrate to this list; those rows remap to `crimson`; unknown values fall back to `crimson` on read.
 - Typography: Space Grotesk (display/numbers) + Inter (body/labels). Dark-first only in v1.
 - Placeholder-art rule: bottom paint layer is a **solid mid-tone** (`--art-b`), never a gradient that can fall to black.
 

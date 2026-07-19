@@ -182,21 +182,37 @@
   "@profileThemeLabel": {
     "description": "Section label above the theme selector on the profile-edit screen."
   },
-  "profileThemeClassic": "Classic",
-  "@profileThemeClassic": {
-    "description": "Label for the Classic theme option."
+  "profileThemeCrimson": "Crimson",
+  "@profileThemeCrimson": {
+    "description": "Name of the Crimson profile theme."
   },
-  "profileThemeImmersive": "Immersive",
-  "@profileThemeImmersive": {
-    "description": "Label for the Immersive theme option."
+  "profileThemeEmber": "Ember",
+  "@profileThemeEmber": {
+    "description": "Name of the Ember profile theme."
   },
-  "profileThemeRetro": "Retro",
-  "@profileThemeRetro": {
-    "description": "Label for the Retro theme option."
+  "profileThemeSolar": "Solar",
+  "@profileThemeSolar": {
+    "description": "Name of the Solar profile theme."
   },
-  "profileThemeAnalyst": "Analyst",
-  "@profileThemeAnalyst": {
-    "description": "Label for the Analyst theme option."
+  "profileThemeChak": "Chak",
+  "@profileThemeChak": {
+    "description": "Name of the Chak profile theme."
+  },
+  "profileThemeFrost": "Frost",
+  "@profileThemeFrost": {
+    "description": "Name of the Frost profile theme."
+  },
+  "profileThemeAbyss": "Abyss",
+  "@profileThemeAbyss": {
+    "description": "Name of the Abyss profile theme."
+  },
+  "profileThemeArcane": "Arcane",
+  "@profileThemeArcane": {
+    "description": "Name of the Arcane profile theme."
+  },
+  "profileThemeRose": "Rose",
+  "@profileThemeRose": {
+    "description": "Name of the Rose profile theme."
   },
   "profilePrivacyLabel": "Privacy",
   "@profilePrivacyLabel": {

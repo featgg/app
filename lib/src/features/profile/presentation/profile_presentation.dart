@@ -9,6 +9,7 @@ export 'data_menu_labels.dart';
 export 'data_menu_screen.dart';
 export 'featured_platform_provider.dart';
 export 'personalization_profile_view.dart';
+export 'personalization_theme_palette.dart';
 export 'profile_edit_controller.dart';
 export 'profile_edit_screen.dart';
 export 'profile_owner_cards_provider.dart';

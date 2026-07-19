@@ -11,7 +11,7 @@ const _profile = Profile(
   displayName: 'Test User',
   avatarUrl: null,
   bio: 'My bio',
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );
@@ -19,7 +19,7 @@ const _profile = Profile(
 const _validEdit = ProfileEdit(
   displayName: 'Updated Name',
   bio: 'Updated bio',
-  theme: ProfileTheme.retro,
+  theme: ProfileTheme.frost,
   privacy: ProfilePrivacy.private,
   featuredPlatform: null,
 );
@@ -28,7 +28,7 @@ const _validEdit = ProfileEdit(
 const _invalidEdit = ProfileEdit(
   displayName: '',
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );

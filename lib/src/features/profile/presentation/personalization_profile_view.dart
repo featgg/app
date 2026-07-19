@@ -10,15 +10,16 @@ import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
 import 'personalization_archetype_cards.dart';
 import 'personalization_hero_canvas.dart';
+import 'personalization_theme_palette.dart';
 import 'profile_owner_cards_provider.dart';
 import 'public_profile_widgets_provider.dart';
 
 /// The read-only personalization profile renderer (`docs/personalization/spec.md` §3/§9):
 /// a fixed 600px center column over theme-derived background art, painting a
 /// header, a conditional-fit hero, and the `profile.layout` rows in order
-/// through a hardcoded-Crimson token layer. Every color routes through
-/// [PersonalizationTheme], so selecting a different palette here re-tints everything without touching a
-/// card.
+/// through the profile's theme palette. Every color routes through
+/// [PersonalizationTheme], so the palette chosen for this profile re-tints
+/// everything without touching a card.
 class PersonalizationProfileView extends ConsumerWidget {
   const PersonalizationProfileView({
     super.key,
@@ -27,7 +28,7 @@ class PersonalizationProfileView extends ConsumerWidget {
     this.cardSource,
   });
 
-  /// Carries the layout (and theme, which this view does not read yet).
+  /// Carries the layout and the theme that selects this view's palette.
   final Profile profile;
 
   /// Resolves this profile's public widgets and cards.
@@ -40,7 +41,7 @@ class PersonalizationProfileView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PersonalizationTheme(
-      palette: PersonalizationPalette.crimson,
+      palette: paletteForTheme(profile.theme),
       // Builder so descendants can read the palette we just installed.
       child: Builder(
         builder: (context) {

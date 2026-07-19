@@ -39,9 +39,9 @@ it — a user can update only their own profile.
   - `username` — unique, lowercase, 3–30 chars.
   - `display_name` — 1–50 chars.
   - `bio` — up to 150 chars.
-  - `theme_id` — closed list: `crimson` (default), `chak`, `arcane` (see
-    `docs/personalization/spec.md` §8). Clients treat any unknown token as
-    the default theme on read.
+  - `theme_id` — closed list: `crimson` (default), `ember`, `solar`, `chak`,
+    `frost`, `abyss`, `arcane`, `rose` (see `docs/personalization/spec.md` §8).
+    Clients treat any unknown token as the default theme on read.
   - `privacy_level` — one of `public`, `private`. Setting it to `private`
     hides the profile and the user's game cards from everyone but the owner.
   - `featured_platform` — one of the platform values (see `connections.md`),

@@ -20,7 +20,7 @@ const _publicProfile = Profile(
   displayName: 'Public User',
   avatarUrl: null,
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );
@@ -31,7 +31,7 @@ final _pendingProfile = Profile(
   displayName: 'Public User',
   avatarUrl: null,
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
   deletionRequestedAt: DateTime.now().toUtc(),
