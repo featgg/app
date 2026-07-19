@@ -8,7 +8,7 @@ hooks:
     - matcher: "Write|Edit|MultiEdit|NotebookEdit"
       hooks:
         - type: command
-          command: "node .claude/hooks/validate-plan-write.mjs"
+          command: "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-plan-write.mjs\" app"
 ---
 
 # app-planner — Stage 1
