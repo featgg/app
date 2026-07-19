@@ -338,5 +338,11 @@
   "passportPickerTitle": "Agrega tu pasaporte",
   "passportPickerHint": "Una tarjeta que reúne todas las plataformas que vinculaste: tu identidad entre juegos de un vistazo.",
   "passportPickerAdd": "Agregar pasaporte",
-  "passportPickerAlreadyAdded": "Ya tienes una tarjeta de pasaporte."
+  "passportPickerAlreadyAdded": "Ya tienes una tarjeta de pasaporte.",
+  "personalizationIdentityTag": "Feat.gg",
+  "personalizationStatPlatforms": "Plataformas",
+  "personalizationPlatformTitle": "Destacados",
+  "personalizationMilestoneTitle": "Hito",
+  "personalizationFallbackTitle": "Tarjeta",
+  "personalizationProfileTag": "Perfil"
 }

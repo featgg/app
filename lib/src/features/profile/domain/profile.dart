@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'profile_layout.dart';
 
 /// Maximum line breaks allowed in a bio. Keeps a creative bio from pushing the
 /// profile's cards far down the screen. Enforced both as input prevention on the
@@ -25,6 +26,7 @@ final class Profile extends Equatable {
     required this.privacy,
     required this.featuredPlatform,
     this.deletionRequestedAt,
+    this.layout = const [],
   });
 
   final String id;
@@ -47,6 +49,12 @@ final class Profile extends Equatable {
   /// Server-managed read-only marker set when a deletion is pending, or null
   /// when none is. The client reads but never writes it.
   final DateTime? deletionRequestedAt;
+
+  /// The composed profile layout: an ordered list of rows referencing this
+  /// profile's own widget ids (see `docs/personalization/spec.md` §9).
+  /// Server-managed and read-only to the client; empty for every profile that
+  /// has no composed layout, in which case the legacy render path is used.
+  final List<ProfileLayoutRow> layout;
 
   /// Grace window the backend applies after a confirmed deletion request.
   static const Duration deletionGracePeriod = Duration(days: 7);
@@ -94,6 +102,7 @@ final class Profile extends Equatable {
     privacy,
     featuredPlatform,
     deletionRequestedAt,
+    layout,
   ];
 }
 

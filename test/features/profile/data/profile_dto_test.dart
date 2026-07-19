@@ -1,6 +1,7 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_dto.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _fullRow({
@@ -8,6 +9,7 @@ Map<String, dynamic> _fullRow({
   String themeId = 'classic',
   Object? featuredPlatform,
   Object? deletionRequestedAt,
+  List<dynamic>? layout,
 }) => {
   'id': 'user-123',
   'username': 'testuser',
@@ -18,6 +20,7 @@ Map<String, dynamic> _fullRow({
   'privacy_level': privacyLevel,
   'featured_platform': featuredPlatform,
   'deletion_requested_at': deletionRequestedAt,
+  'layout': ?layout,
 };
 
 void main() {
@@ -192,6 +195,83 @@ void main() {
         );
         final columns = profileEditToColumns(edit);
         expect(columns['featured_platform'], isNull);
+      });
+    });
+
+    group('layout wire mapping', () {
+      test('parses full and pair rows in order with their ids', () {
+        final profile = profileFromDto(
+          ProfileDto.fromJson(
+            _fullRow(
+              layout: [
+                {
+                  't': 'full',
+                  'c': ['id-a'],
+                },
+                {
+                  't': 'pair',
+                  'c': ['id-b', 'id-c'],
+                },
+                {
+                  't': 'pair',
+                  'c': ['id-d', null],
+                },
+              ],
+            ),
+          ),
+        );
+
+        expect(profile.layout, [
+          const FullRow('id-a'),
+          const PairRow(left: 'id-b', right: 'id-c'),
+          const PairRow(left: 'id-d'),
+        ]);
+      });
+
+      test('an absent or empty layout maps to const []', () {
+        expect(profileFromDto(ProfileDto.fromJson(_fullRow())).layout, isEmpty);
+        expect(
+          profileFromDto(ProfileDto.fromJson(_fullRow(layout: []))).layout,
+          isEmpty,
+        );
+      });
+
+      test('drops malformed rows and slots without throwing', () {
+        // Every entry but the last is malformed in a distinct way; the parser
+        // must drop each rather than throw or keep garbage.
+        final profile = profileFromDto(
+          ProfileDto.fromJson(
+            _fullRow(
+              layout: [
+                'not-a-map',
+                {'t': 'full'}, // missing c
+                {'t': 'full', 'c': <dynamic>[]}, // empty c
+                {
+                  't': 'full',
+                  'c': [42], // non-string id
+                },
+                {
+                  't': 'full',
+                  'c': [''], // empty-string id
+                },
+                {
+                  't': 'pair',
+                  'c': [null, null], // both-null pair
+                },
+                {
+                  't': 'wat',
+                  'c': ['x'], // unknown row type
+                },
+                {
+                  't': 'full',
+                  'c': ['keep-me'],
+                },
+              ],
+            ),
+          ),
+        );
+
+        expect(profile.layout, [const FullRow('keep-me')]);
       });
     });
   });

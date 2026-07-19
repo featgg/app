@@ -338,5 +338,11 @@
   "passportPickerTitle": "Adicione seu passaporte",
   "passportPickerHint": "Um cartão que reúne todas as plataformas que você vinculou: sua identidade entre jogos num relance.",
   "passportPickerAdd": "Adicionar passaporte",
-  "passportPickerAlreadyAdded": "Você já tem um cartão de passaporte."
+  "passportPickerAlreadyAdded": "Você já tem um cartão de passaporte.",
+  "personalizationIdentityTag": "Feat.gg",
+  "personalizationStatPlatforms": "Plataformas",
+  "personalizationPlatformTitle": "Destaques",
+  "personalizationMilestoneTitle": "Marco",
+  "personalizationFallbackTitle": "Cartão",
+  "personalizationProfileTag": "Perfil"
 }

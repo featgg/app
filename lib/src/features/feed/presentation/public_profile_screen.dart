@@ -12,6 +12,12 @@ import 'public_profile_provider.dart';
 /// view and the card renderer.
 typedef PublicWidgetsBuilder = Widget Function(String userId);
 
+/// Builds the personalization render for a profile that has a composed
+/// layout. Injected at the composition root like [PublicWidgetsBuilder]; null
+/// keeps the legacy widgets render for every profile.
+typedef PersonalizationBuilder =
+    Widget Function(Profile profile, String userId);
+
 /// Displays any user's public profile in read-only visitor mode.
 /// No edit affordance and no privacy indicator — the data is public by
 /// definition (RLS returns no row to a non-owner for private profiles).
@@ -20,10 +26,15 @@ class PublicProfileScreen extends ConsumerWidget {
     super.key,
     required this.userId,
     required this.widgetsBuilder,
+    this.personalizationBuilder,
   });
 
   final String userId;
   final PublicWidgetsBuilder widgetsBuilder;
+
+  /// Renders the personalization profile when the profile carries a composed layout; null (or
+  /// an empty layout) keeps the legacy widgets render below.
+  final PersonalizationBuilder? personalizationBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,13 +48,18 @@ class PublicProfileScreen extends ConsumerWidget {
           value: state,
           onRetry: () => ref.invalidate(publicProfileProvider(userId)),
           loading: const ProfileSkeleton(),
-          data: (profile) => profile == null
-              ? const _UnavailableState()
-              : _PublicProfileContent(
-                  userId: userId,
-                  profile: profile,
-                  widgetsBuilder: widgetsBuilder,
-                ),
+          data: (profile) {
+            if (profile == null) return const _UnavailableState();
+            final builder = personalizationBuilder;
+            if (builder != null && profile.layout.isNotEmpty) {
+              return builder(profile, userId);
+            }
+            return _PublicProfileContent(
+              userId: userId,
+              profile: profile,
+              widgetsBuilder: widgetsBuilder,
+            );
+          },
         ),
       ),
     );

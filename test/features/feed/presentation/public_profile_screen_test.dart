@@ -47,11 +47,29 @@ const _publicProfile = Profile(
   featuredPlatform: null,
 );
 
+/// The same profile with a composed layout, which must route to the injected
+/// personalization builder instead of the legacy widgets render.
+const _layoutProfile = Profile(
+  id: _userId,
+  username: 'gamer42',
+  displayName: 'Gamer 42',
+  avatarUrl: null,
+  bio: 'I play games.',
+  theme: ProfileTheme.classic,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  layout: [FullRow('w')],
+);
+
 // ---------------------------------------------------------------------------
 // Pump helper
 // ---------------------------------------------------------------------------
 
-Widget _screen(ProfileRepository profileRepo, {String userId = _userId}) {
+Widget _screen(
+  ProfileRepository profileRepo, {
+  String userId = _userId,
+  PersonalizationBuilder? personalizationBuilder,
+}) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [profileRepositoryProvider.overrideWithValue(profileRepo)],
@@ -68,10 +86,15 @@ Widget _screen(ProfileRepository profileRepo, {String userId = _userId}) {
         // view; the screen only delegates the body to it.
         widgetsBuilder: (id) =>
             SizedBox(key: Key('widgetsSentinel_$id'), height: 80),
+        personalizationBuilder: personalizationBuilder,
       ),
     ),
   );
 }
+
+/// A keyed sentinel standing in for the composition-root-injected personalization view.
+Widget _personalizationSentinel(Profile profile, String userId) =>
+    SizedBox(key: Key('personalizationSentinel_$userId'), height: 80);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -143,5 +166,42 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('asyncRetryButton')), findsOneWidget);
+  });
+
+  testWidgets('a composed layout routes to the personalization builder', (
+    tester,
+  ) async {
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(_layoutProfile),
+    );
+    await tester.pumpWidget(
+      _screen(profileRepo, personalizationBuilder: _personalizationSentinel),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('personalizationSentinel_$_userId')),
+      findsOneWidget,
+    );
+    // The legacy widgets render is bypassed for a composed layout.
+    expect(find.byKey(const Key('widgetsSentinel_$_userId')), findsNothing);
+  });
+
+  testWidgets('an empty layout keeps the legacy widgets render', (
+    tester,
+  ) async {
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(_publicProfile),
+    );
+    await tester.pumpWidget(
+      _screen(profileRepo, personalizationBuilder: _personalizationSentinel),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('widgetsSentinel_$_userId')), findsOneWidget);
+    expect(
+      find.byKey(const Key('personalizationSentinel_$_userId')),
+      findsNothing,
+    );
   });
 }

@@ -66,13 +66,23 @@ GoRouter router(Ref ref) {
         // the composition root that may import every presentation, so it
         // assembles the widgets view (with the connections card builder) and
         // injects it to keep the features decoupled.
-        builder: (_, state) => PublicProfileScreen(
-          userId: state.pathParameters['id']!,
-          widgetsBuilder: (userId) => PublicProfileWidgetsView(
+        builder: (_, state) {
+          final userId = state.pathParameters['id']!;
+          return PublicProfileScreen(
             userId: userId,
-            cardBuilder: (card) => GameCardView(card: card),
-          ),
-        ),
+            widgetsBuilder: (id) => PublicProfileWidgetsView(
+              userId: id,
+              cardBuilder: (card) => GameCardView(card: card),
+            ),
+            // A composed layout routes to the personalization render, reading each platform's
+            // public card through the visitor source.
+            personalizationBuilder: (profile, id) => PersonalizationProfileView(
+              profile: profile,
+              userId: id,
+              cardSource: (platform) => publicOwnerCardProvider(id, platform),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/connections',
