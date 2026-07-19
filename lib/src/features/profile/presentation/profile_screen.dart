@@ -9,6 +9,7 @@ import '../../connections/domain/game_card.dart';
 import '../domain/profile.dart';
 import '../domain/profile_widget.dart';
 import 'owner_profile_personalization.dart';
+import 'profile_composition_controller.dart';
 import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
 import 'profile_widgets_grid.dart';
@@ -30,6 +31,17 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(profileProvider);
+    // The composition-side inputs to the mount gate. Selecting the three fields
+    // (not the whole state) keeps the screen from rebuilding on every drag.
+    final gate = ref.watch(
+      profileCompositionProvider.select(
+        (s) => (
+          editing: s.editing,
+          hasPersisted: s.hasPersisted,
+          savedIsNotEmpty: s.saved.isNotEmpty,
+        ),
+      ),
+    );
     // Observe the widget-mutation controller here: the screen outlives every
     // grid tile and the add button, so this listener keeps the autoDispose
     // controller alive across an in-flight mutation (its post-await invalidate
@@ -89,11 +101,20 @@ class ProfileScreen extends ConsumerWidget {
           value: state,
           onRetry: () => ref.invalidate(profileProvider),
           loading: const ProfileSkeleton(),
-          // A composed layout routes to the personalization render + editor; an
-          // empty layout keeps the legacy owner grid.
-          data: (profile) => profile.layout.isEmpty
-              ? _ProfileContent(profile: profile, cardBuilder: cardBuilder)
-              : OwnerProfilePersonalization(profile: profile),
+          // An in-progress / just-saved composition, or a persisted layout,
+          // routes to the personalization render + editor; otherwise the legacy
+          // owner grid. `showsCompositionSurface` prefers the controller's own
+          // persisted knowledge so a just-cleared composition returns to the grid
+          // immediately, without a stale-layout window that keeps Edit live.
+          data: (profile) =>
+              showsCompositionSurface(
+                editing: gate.editing,
+                hasPersisted: gate.hasPersisted,
+                savedIsNotEmpty: gate.savedIsNotEmpty,
+                profileHasLayout: profile.layout.isNotEmpty,
+              )
+              ? OwnerProfilePersonalization(profile: profile)
+              : _ProfileContent(profile: profile, cardBuilder: cardBuilder),
         ),
       ),
     );
@@ -153,6 +174,14 @@ class _ProfileContent extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 _PrivacyIndicator(privacy: profile.privacy, l10n: l10n),
                 const SizedBox(height: AppSpacing.lg),
+                // First-composition entry: shown only when there is something to
+                // arrange (at least one enabled widget). Opens the editor seeded
+                // from those widgets; nothing is persisted until Save.
+                if (widgetsState.hasValue &&
+                    widgetsState.value!.any((w) => w.isEnabled)) ...[
+                  _PersonalizeButton(widgets: widgetsState.value!),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 // One add entry point, shown once the widgets read has a value:
                 // the read supplies the position math (no collision on the
                 // unique column). While it is loading or errored, Add is absent.
@@ -216,6 +245,28 @@ class _AddCardButton extends StatelessWidget {
           Text(l10n.profileAddCard),
         ],
       ),
+    );
+  }
+}
+
+/// Opens the composition editor for a profile that has no saved layout yet,
+/// seeding a bootstrap arrangement from the owner's enabled widgets. Nothing is
+/// persisted until the owner saves; cancelling leaves the legacy grid untouched.
+class _PersonalizeButton extends ConsumerWidget {
+  const _PersonalizeButton({required this.widgets});
+
+  final List<ProfileWidget> widgets;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
+    return FilledButton.icon(
+      key: const Key('profilePersonalizeButton'),
+      onPressed: () =>
+          ref.read(profileCompositionProvider.notifier).startComposing(widgets),
+      icon: const Icon(Icons.dashboard_customize_outlined),
+      label: Text(l10n.profilePersonalize),
     );
   }
 }

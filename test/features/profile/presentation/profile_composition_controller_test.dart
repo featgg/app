@@ -28,14 +28,17 @@ const _profile = Profile(
 );
 
 // Template widgets map to the fallback archetype, which supports both sizes.
-ProfileWidget _widget(String id) => ProfileWidget(
-  id: id,
-  kind: ProfileWidgetKind.template,
-  platform: null,
-  position: 0,
-  isEnabled: true,
-  size: ProfileWidgetSize.small,
-);
+ProfileWidget _widget(String id) => _widgetAt(id, 0);
+
+ProfileWidget _widgetAt(String id, int position, {bool enabled = true}) =>
+    ProfileWidget(
+      id: id,
+      kind: ProfileWidgetKind.template,
+      platform: null,
+      position: position,
+      isEnabled: enabled,
+      size: ProfileWidgetSize.small,
+    );
 
 final _widgets = [_widget('a'), _widget('b'), _widget('c')];
 const _layout = [FullRow('a'), PairRow(left: 'b', right: 'c')];
@@ -94,6 +97,171 @@ void main() {
     expect(state.working, _layout);
     expect(state.saved, _layout);
     expect(state.isDirty, isFalse);
+  });
+
+  test('startComposing bootstraps enabled widgets as full rows in position '
+      'order, excluding disabled, with an empty saved base', () {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
+
+    // Deliberately unordered input with one disabled widget.
+    final widgets = [
+      _widgetAt('c', 2),
+      _widgetAt('a', 0),
+      _widgetAt('b', 1, enabled: false),
+      _widgetAt('d', 3),
+    ];
+    notifier.startComposing(widgets);
+    final state = container.read(profileCompositionProvider);
+
+    expect(state.editing, isTrue);
+    // Enabled widgets only, sorted by position, each a full row.
+    expect(state.working, const [FullRow('a'), FullRow('c'), FullRow('d')]);
+    // Nothing is persisted yet, so a plain Save is dirty (persists the bootstrap).
+    expect(state.saved, isEmpty);
+    expect(state.isDirty, isTrue);
+  });
+
+  test(
+    'cancelling a bootstrap composition keeps nothing (saved stays empty)',
+    () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      notifier.startComposing([_widget('a'), _widget('b')]);
+      notifier.cancelEditing();
+      final state = container.read(profileCompositionProvider);
+
+      expect(state.editing, isFalse);
+      expect(state.working, isEmpty);
+      expect(state.saved, isEmpty);
+    },
+  );
+
+  test('re-entering edit during a post-save refetch seeds from the saved '
+      'composition, not a stale passed layout', () async {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
+
+    // Compose and persist a first layout. Success commits it to `saved`.
+    notifier.startComposing(_widgets);
+    final composed = container.read(profileCompositionProvider).working;
+    await notifier.save();
+    expect(container.read(profileCompositionProvider).saved, composed);
+
+    // The profile read is still stale while the refetch is in flight, so the Edit
+    // button passes an empty layout — startEditing must keep the saved
+    // composition rather than wipe the editor blank.
+    notifier.startEditing(const [], _widgets);
+    final state = container.read(profileCompositionProvider);
+    expect(state.working, composed);
+    expect(state.saved, composed);
+  });
+
+  test('a fresh-mount edit seeds from the passed layout (saved is empty)', () {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
+
+    // No prior composition in the controller → the passed layout is authoritative.
+    notifier.startEditing(_layout, _widgets);
+    final state = container.read(profileCompositionProvider);
+    expect(state.working, _layout);
+    expect(state.saved, _layout);
+  });
+
+  test(
+    'a successful save records hasPersisted; before that it is unset',
+    () async {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      // Fresh, and an un-saved bootstrap, both report no persisted knowledge.
+      expect(container.read(profileCompositionProvider).hasPersisted, isFalse);
+      notifier.startComposing(_widgets);
+      expect(container.read(profileCompositionProvider).hasPersisted, isFalse);
+
+      // A committed save flips it — the authoritative "controller knows the
+      // persisted layout" signal the gate/seed rely on.
+      await notifier.save();
+      expect(container.read(profileCompositionProvider).hasPersisted, isTrue);
+    },
+  );
+
+  group('showsCompositionSurface (mount gate)', () {
+    test('editing always shows the surface, whatever the profile layout', () {
+      expect(
+        showsCompositionSurface(
+          editing: true,
+          hasPersisted: false,
+          savedIsNotEmpty: false,
+          profileHasLayout: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('a fresh controller (nothing persisted) defers to the profile', () {
+      expect(
+        showsCompositionSurface(
+          editing: false,
+          hasPersisted: false,
+          savedIsNotEmpty: false,
+          profileHasLayout: true,
+        ),
+        isTrue,
+      );
+      expect(
+        showsCompositionSurface(
+          editing: false,
+          hasPersisted: false,
+          savedIsNotEmpty: false,
+          profileHasLayout: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('a just-saved composition holds through a stale-empty refetch', () {
+      expect(
+        showsCompositionSurface(
+          editing: false,
+          hasPersisted: true,
+          savedIsNotEmpty: true,
+          profileHasLayout: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('a just-cleared composition routes to the grid despite a stale '
+        'non-empty layout', () {
+      // The precondition for the revive-then-pin defect: persisted, saved empty,
+      // profile.layout still stale non-empty. Must be the grid, not the surface —
+      // this is where the old `saved.isNotEmpty || layout.isNotEmpty` gate leaked.
+      expect(
+        showsCompositionSurface(
+          editing: false,
+          hasPersisted: true,
+          savedIsNotEmpty: false,
+          profileHasLayout: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('a cleared composition stays on the grid across the whole refetch '
+        '(cannot pin the owner on an empty surface)', () {
+      bool gate(bool profileHasLayout) => showsCompositionSurface(
+        editing: false,
+        hasPersisted: true,
+        savedIsNotEmpty: false,
+        profileHasLayout: profileHasLayout,
+      );
+      // Stale non-empty during the refetch, and settled empty after it — grid on
+      // both, so there is never an Edit surface to revive the cleared layout.
+      expect(gate(true), isFalse);
+      expect(gate(false), isFalse);
+    });
   });
 
   test('a mutation marks the state dirty without touching saved', () {
