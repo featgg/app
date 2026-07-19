@@ -59,7 +59,7 @@ final _validDto = ProfileDto.fromJson(const {
   'display_name': 'Test User',
   'avatar_url': 'https://example.com/avatar.png',
   'bio': 'Hello world',
-  'theme_id': 'classic',
+  'theme_id': 'crimson',
   'privacy_level': 'public',
   'featured_platform': null,
 });
@@ -294,7 +294,7 @@ void main() {
       const edit = ProfileEdit(
         displayName: 'Updated Name',
         bio: 'New bio',
-        theme: ProfileTheme.retro,
+        theme: ProfileTheme.frost,
         privacy: ProfilePrivacy.private,
         featuredPlatform: null,
       );
@@ -305,7 +305,7 @@ void main() {
     const edit = ProfileEdit(
       displayName: 'Updated Name',
       bio: 'New bio',
-      theme: ProfileTheme.retro,
+      theme: ProfileTheme.frost,
       privacy: ProfilePrivacy.private,
       featuredPlatform: null,
     );
@@ -316,7 +316,7 @@ void main() {
       'display_name': 'Updated Name',
       'avatar_url': null,
       'bio': 'New bio',
-      'theme_id': 'retro',
+      'theme_id': 'frost',
       'privacy_level': 'private',
       'featured_platform': null,
     });
@@ -331,7 +331,7 @@ void main() {
       expect(result.isRight(), isTrue);
       result.fold((_) => fail('expected Right'), (profile) {
         expect(profile.displayName, 'Updated Name');
-        expect(profile.theme, ProfileTheme.retro);
+        expect(profile.theme, ProfileTheme.frost);
         expect(profile.privacy, ProfilePrivacy.private);
       });
     });

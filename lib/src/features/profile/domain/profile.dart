@@ -11,8 +11,9 @@ const int kMaxBioLineBreaks = 8;
 /// Whether the signed-in user's profile is publicly discoverable.
 enum ProfilePrivacy { public, private }
 
-/// Visual theme the user has chosen for their profile.
-enum ProfileTheme { classic, immersive, retro, analyst }
+/// Visual theme the user has chosen for their profile. The enum name is the
+/// `theme_id` wire token (see `docs/integration/profile.md` § Shape 2).
+enum ProfileTheme { crimson, ember, solar, chak, frost, abyss, arcane, rose }
 
 /// The signed-in user's own identity as read from the profiles table.
 final class Profile extends Equatable {

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _fullRow({
   String privacyLevel = 'public',
-  String themeId = 'classic',
+  String themeId = 'crimson',
   Object? featuredPlatform,
   Object? deletionRequestedAt,
   List<dynamic>? layout,
@@ -37,7 +37,7 @@ void main() {
       expect(profile.avatarUrl, 'https://example.com/avatar.png');
       expect(profile.bio, 'Hello world');
       expect(profile.privacy, ProfilePrivacy.public);
-      expect(profile.theme, ProfileTheme.classic);
+      expect(profile.theme, ProfileTheme.crimson);
     });
 
     test('privacy_level "private" maps to ProfilePrivacy.private', () {
@@ -54,7 +54,7 @@ void main() {
         'display_name': 'No Avatar',
         'avatar_url': null,
         'bio': null,
-        'theme_id': 'classic',
+        'theme_id': 'crimson',
         'privacy_level': 'public',
         'featured_platform': null,
       };
@@ -93,14 +93,16 @@ void main() {
       );
     });
 
-    // New tests for theme_id mapping.
-
     test('maps each theme_id wire token to the matching ProfileTheme', () {
       for (final entry in {
-        'classic': ProfileTheme.classic,
-        'immersive': ProfileTheme.immersive,
-        'retro': ProfileTheme.retro,
-        'analyst': ProfileTheme.analyst,
+        'crimson': ProfileTheme.crimson,
+        'ember': ProfileTheme.ember,
+        'solar': ProfileTheme.solar,
+        'chak': ProfileTheme.chak,
+        'frost': ProfileTheme.frost,
+        'abyss': ProfileTheme.abyss,
+        'arcane': ProfileTheme.arcane,
+        'rose': ProfileTheme.rose,
       }.entries) {
         final dto = ProfileDto.fromJson(_fullRow(themeId: entry.key));
         final profile = profileFromDto(dto);
@@ -108,6 +110,17 @@ void main() {
           profile.theme,
           entry.value,
           reason: 'theme_id "${entry.key}" should map to ${entry.value}',
+        );
+      }
+    });
+
+    test('a superseded theme_id token maps to the default theme', () {
+      for (final token in ['classic', 'immersive', 'retro', 'analyst']) {
+        final dto = ProfileDto.fromJson(_fullRow(themeId: token));
+        expect(
+          profileFromDto(dto).theme,
+          ProfileTheme.crimson,
+          reason: 'superseded theme_id "$token" should remap to the default',
         );
       }
     });
@@ -125,16 +138,16 @@ void main() {
     });
 
     test('an unknown theme_id falls back to the default theme', () {
-      final dto = ProfileDto.fromJson(_fullRow(themeId: 'crimson'));
+      final dto = ProfileDto.fromJson(_fullRow(themeId: 'banana'));
 
-      expect(profileFromDto(dto).theme, ProfileTheme.classic);
+      expect(profileFromDto(dto).theme, ProfileTheme.crimson);
     });
 
     test('profileEditToColumns builds the writable columns', () {
       const edit = ProfileEdit(
         displayName: 'Alice',
         bio: 'Hello',
-        theme: ProfileTheme.retro,
+        theme: ProfileTheme.frost,
         privacy: ProfilePrivacy.private,
         featuredPlatform: null,
       );
@@ -152,7 +165,7 @@ void main() {
       );
       expect(columns['display_name'], 'Alice');
       expect(columns['bio'], 'Hello');
-      expect(columns['theme_id'], 'retro');
+      expect(columns['theme_id'], 'frost');
       expect(columns['privacy_level'], 'private');
 
       // avatar_url is server-managed (set by the avatar-upload endpoint), so an
@@ -190,7 +203,7 @@ void main() {
           const edit = ProfileEdit(
             displayName: 'Bob',
             bio: null,
-            theme: ProfileTheme.classic,
+            theme: ProfileTheme.crimson,
             privacy: ProfilePrivacy.public,
             featuredPlatform: Platform.steam,
           );
@@ -203,7 +216,7 @@ void main() {
         const edit = ProfileEdit(
           displayName: 'Bob',
           bio: null,
-          theme: ProfileTheme.classic,
+          theme: ProfileTheme.crimson,
           privacy: ProfilePrivacy.public,
           featuredPlatform: null,
         );

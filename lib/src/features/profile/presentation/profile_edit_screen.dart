@@ -11,6 +11,7 @@ import '../domain/profile.dart';
 import 'avatar_picker.dart';
 import 'avatar_upload_controller.dart';
 import 'featured_platform_provider.dart';
+import 'personalization_theme_palette.dart';
 import 'profile_edit_controller.dart';
 
 /// Edit form for the signed-in user's own profile.
@@ -248,7 +249,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         style: Theme.of(context).textTheme.labelMedium,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      _ThemeSelector(
+                      _ThemeSwatchRow(
+                        key: const Key('profileThemeSwatchRow'),
                         selected: _selectedTheme,
                         enabled: !editState.submitting,
                         onChanged: (t) => setState(() => _selectedTheme = t),
@@ -481,8 +483,12 @@ class _FeaturedCardSelector extends StatelessWidget {
   );
 }
 
-class _ThemeSelector extends StatelessWidget {
-  const _ThemeSelector({
+/// The theme picker: one accent-filled swatch per curated theme (spec §8). The
+/// selected swatch carries a Material ring; tapping another selects it. Swatch
+/// fill is the theme's accent token, never a literal.
+class _ThemeSwatchRow extends StatelessWidget {
+  const _ThemeSwatchRow({
+    super.key,
     required this.selected,
     required this.enabled,
     required this.onChanged,
@@ -494,21 +500,61 @@ class _ThemeSelector extends StatelessWidget {
   final ValueChanged<ProfileTheme> onChanged;
   final AppLocalizations l10n;
 
+  /// Swatch diameter and the ring gap reserved around every swatch so selecting
+  /// one does not shift the row.
+  static const double _swatchSize = AppSpacing.xl;
+  static const double _ringGap = AppSpacing.xs;
+
   String _label(ProfileTheme t) => switch (t) {
-    ProfileTheme.classic => l10n.profileThemeClassic,
-    ProfileTheme.immersive => l10n.profileThemeImmersive,
-    ProfileTheme.retro => l10n.profileThemeRetro,
-    ProfileTheme.analyst => l10n.profileThemeAnalyst,
+    ProfileTheme.crimson => l10n.profileThemeCrimson,
+    ProfileTheme.ember => l10n.profileThemeEmber,
+    ProfileTheme.solar => l10n.profileThemeSolar,
+    ProfileTheme.chak => l10n.profileThemeChak,
+    ProfileTheme.frost => l10n.profileThemeFrost,
+    ProfileTheme.abyss => l10n.profileThemeAbyss,
+    ProfileTheme.arcane => l10n.profileThemeArcane,
+    ProfileTheme.rose => l10n.profileThemeRose,
   };
 
   @override
-  Widget build(BuildContext context) => DropdownButtonFormField<ProfileTheme>(
-    initialValue: selected,
-    onChanged: enabled ? (v) => onChanged(v!) : null,
-    items: ProfileTheme.values
-        .map((t) => DropdownMenuItem(value: t, child: Text(_label(t))))
-        .toList(),
-  );
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: ProfileTheme.values.map((t) {
+        final isSelected = t == selected;
+        return Semantics(
+          key: Key('profileThemeSwatch_${t.name}'),
+          button: true,
+          selected: isSelected,
+          label: _label(t),
+          child: InkWell(
+            onTap: enabled ? () => onChanged(t) : null,
+            customBorder: const CircleBorder(),
+            child: Container(
+              padding: const EdgeInsets.all(_ringGap),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: isSelected
+                    ? Border.all(color: colorScheme.primary, width: 2)
+                    : null,
+              ),
+              child: Container(
+                width: _swatchSize,
+                height: _swatchSize,
+                decoration: BoxDecoration(
+                  color: paletteForTheme(t).accent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
 /// Rejects edits that would push the bio past [max] line breaks, so the user

@@ -64,7 +64,7 @@ const _profile = Profile(
   displayName: 'Test User',
   avatarUrl: null,
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );

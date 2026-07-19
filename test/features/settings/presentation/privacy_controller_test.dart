@@ -13,7 +13,7 @@ const _seedProfile = Profile(
   displayName: 'Seed Name',
   avatarUrl: null,
   bio: 'Seed bio',
-  theme: ProfileTheme.retro,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );

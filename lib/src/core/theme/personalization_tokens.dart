@@ -3,6 +3,17 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 
+/// Theme-independent base tokens shared by every curated palette (spec §8):
+/// only the accent and art tones vary between themes, so the base lives here
+/// once and no palette can drift from it.
+const Color _baseBg = Color(0xFF0A0A0D);
+const Color _baseSurface = Color(0xEB15151B); // rgba(21,21,27,.92)
+const Color _baseSurface2 = Color(0xFF1C1C24);
+const Color _baseLine = Color(0xFF26262F);
+const Color _baseText = Color(0xFFEFEFF2);
+const Color _baseMuted = Color(0xFF96969F);
+const double _baseRadius = 14;
+
 /// The personalization palette (`docs/personalization/spec.md` §8). Every
 /// personalization color derives from a palette so switching themes is a
 /// one-line palette swap, not a card rewrite. This is the single home of the personalization
@@ -23,22 +34,99 @@ final class PersonalizationPalette extends Equatable {
     required this.radius,
   });
 
-  /// Theme-independent base + Crimson accent/art tokens (spec §8). Crimson is
-  /// the default/brand theme; an
-  /// unknown `theme_id` falls back to it.
-  static const crimson = PersonalizationPalette(
-    bg: Color(0xFF0A0A0D),
-    surface: Color(0xEB15151B), // rgba(21,21,27,.92)
-    surface2: Color(0xFF1C1C24),
-    line: Color(0xFF26262F),
-    text: Color(0xFFEFEFF2),
-    muted: Color(0xFF96969F),
+  /// A curated theme: the shared theme-independent base with only the accent and
+  /// art tones supplied (spec §8). Keeps the base identical across the closed set.
+  const PersonalizationPalette.themed({
+    required Color accent,
+    required Color accentSoft,
+    required Color artA,
+    required Color artB,
+    required Color artC,
+  }) : this(
+         bg: _baseBg,
+         surface: _baseSurface,
+         surface2: _baseSurface2,
+         line: _baseLine,
+         text: _baseText,
+         muted: _baseMuted,
+         accent: accent,
+         accentSoft: accentSoft,
+         artA: artA,
+         artB: artB,
+         artC: artC,
+         radius: _baseRadius,
+       );
+
+  /// Default/brand theme; an unknown `theme_id` falls back to it.
+  static const crimson = PersonalizationPalette.themed(
     accent: Color(0xFFBC3B4E),
     accentSoft: Color(0x29BC3B4E), // rgba(188,59,78,.16)
     artA: Color(0xFFBC3B4E),
     artB: Color(0xFF5A1D2A),
     artC: Color(0xFF2A1016),
-    radius: 14,
+  );
+
+  /// Warm orange theme.
+  static const ember = PersonalizationPalette.themed(
+    accent: Color(0xFFE8763B),
+    accentSoft: Color(0x29E8763B),
+    artA: Color(0xFFE8763B),
+    artB: Color(0xFF6F391C),
+    artC: Color(0xFF351B0E),
+  );
+
+  /// Gold theme.
+  static const solar = PersonalizationPalette.themed(
+    accent: Color(0xFFE0A82E),
+    accentSoft: Color(0x29E0A82E),
+    artA: Color(0xFFE0A82E),
+    artB: Color(0xFF6C5116),
+    artC: Color(0xFF34270B),
+  );
+
+  /// Green theme.
+  static const chak = PersonalizationPalette.themed(
+    accent: Color(0xFF3BBC8E),
+    accentSoft: Color(0x263BBC8E),
+    artA: Color(0xFF3BBC8E),
+    artB: Color(0xFF1D5A46),
+    artC: Color(0xFF0F2A21),
+  );
+
+  /// Cyan theme.
+  static const frost = PersonalizationPalette.themed(
+    accent: Color(0xFF3BC7E8),
+    accentSoft: Color(0x293BC7E8),
+    artA: Color(0xFF3BC7E8),
+    artB: Color(0xFF1C606F),
+    artC: Color(0xFF0E2E35),
+  );
+
+  /// Azure theme.
+  static const abyss = PersonalizationPalette.themed(
+    accent: Color(0xFF4C82EA),
+    accentSoft: Color(0x294C82EA),
+    artA: Color(0xFF4C82EA),
+    artB: Color(0xFF243E70),
+    artC: Color(0xFF111E36),
+  );
+
+  /// Violet theme.
+  static const arcane = PersonalizationPalette.themed(
+    accent: Color(0xFF8E5CE8),
+    accentSoft: Color(0x298E5CE8),
+    artA: Color(0xFF8E5CE8),
+    artB: Color(0xFF3E2775),
+    artC: Color(0xFF221540),
+  );
+
+  /// Rose theme.
+  static const rose = PersonalizationPalette.themed(
+    accent: Color(0xFFE85C9E),
+    accentSoft: Color(0x29E85C9E),
+    artA: Color(0xFFE85C9E),
+    artB: Color(0xFF6F2C4C),
+    artC: Color(0xFF351524),
   );
 
   /// Profile background base.

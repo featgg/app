@@ -27,6 +27,26 @@
   --accent:#8E5CE8; --accent-soft:rgba(142,92,232,.16);
   --art-a:#8E5CE8; --art-b:#3E2775; --art-c:#221540;
 }
+[data-theme="ember"]{
+  --accent:#E8763B; --accent-soft:rgba(232,118,59,.16);
+  --art-a:#E8763B; --art-b:#6F391C; --art-c:#351B0E;
+}
+[data-theme="solar"]{
+  --accent:#E0A82E; --accent-soft:rgba(224,168,46,.16);
+  --art-a:#E0A82E; --art-b:#6C5116; --art-c:#34270B;
+}
+[data-theme="frost"]{
+  --accent:#3BC7E8; --accent-soft:rgba(59,199,232,.16);
+  --art-a:#3BC7E8; --art-b:#1C606F; --art-c:#0E2E35;
+}
+[data-theme="abyss"]{
+  --accent:#4C82EA; --accent-soft:rgba(76,130,234,.16);
+  --art-a:#4C82EA; --art-b:#243E70; --art-c:#111E36;
+}
+[data-theme="rose"]{
+  --accent:#E85C9E; --accent-soft:rgba(232,92,158,.16);
+  --art-a:#E85C9E; --art-b:#6F2C4C; --art-c:#351524;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--bg)}
 body{color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
@@ -244,6 +264,7 @@ h1,h2,h3,.num,.hero-word{font-family:'Space Grotesk','Inter',sans-serif}
 .seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .dot{width:8px;height:8px;border-radius:50%}
 .dot.crimson{background:#BC3B4E}.dot.chak{background:#3BBC8E}.dot.arcane{background:#8E5CE8}
+.dot.ember{background:#E8763B}.dot.solar{background:#E0A82E}.dot.frost{background:#3BC7E8}.dot.abyss{background:#4C82EA}.dot.rose{background:#E85C9E}
 </style>
 </head>
 <body>
@@ -464,8 +485,13 @@ h1,h2,h3,.num,.hero-word{font-family:'Space Grotesk','Inter',sans-serif}
     <span class="lbl">Theme</span>
     <div class="seg" data-attr="data-theme">
       <button data-v="crimson" aria-pressed="true"><i class="dot crimson"></i>Crimson</button>
+      <button data-v="ember" aria-pressed="false"><i class="dot ember"></i>Ember</button>
+      <button data-v="solar" aria-pressed="false"><i class="dot solar"></i>Solar</button>
       <button data-v="chak" aria-pressed="false"><i class="dot chak"></i>Chak</button>
+      <button data-v="frost" aria-pressed="false"><i class="dot frost"></i>Frost</button>
+      <button data-v="abyss" aria-pressed="false"><i class="dot abyss"></i>Abyss</button>
       <button data-v="arcane" aria-pressed="false"><i class="dot arcane"></i>Arcane</button>
+      <button data-v="rose" aria-pressed="false"><i class="dot rose"></i>Rose</button>
     </div>
   </div>
 </div>

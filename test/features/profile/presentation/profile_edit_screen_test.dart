@@ -20,7 +20,7 @@ const _profile = Profile(
   displayName: 'Test User',
   avatarUrl: null,
   bio: 'My bio',
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );
@@ -683,6 +683,105 @@ void main() {
 
       expect(capturedEdit, isNotNull);
       expect(capturedEdit!.featuredPlatform, Platform.steam);
+    },
+  );
+
+  // ── Theme swatch tests ────────────────────────────────────────────────────
+
+  bool? swatchSelected(WidgetTester tester, ProfileTheme t) => tester
+      .widget<Semantics>(find.byKey(Key('profileThemeSwatch_${t.name}')))
+      .properties
+      .selected;
+
+  testWidgets('renders the swatch row with one swatch per theme', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _screen(_FakeRepository(updateResult: () => right(_profile))),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('profileThemeSwatchRow')), findsOneWidget);
+    for (final t in ProfileTheme.values) {
+      expect(
+        find.byKey(Key('profileThemeSwatch_${t.name}')),
+        findsOneWidget,
+        reason: 'a swatch should render for ${t.name}',
+      );
+    }
+  });
+
+  testWidgets('the seeded theme swatch is marked selected', (tester) async {
+    await tester.pumpWidget(
+      _screen(_FakeRepository(updateResult: () => right(_profile))),
+    );
+    await tester.pump();
+
+    // _profile seeds crimson; only that swatch reads selected.
+    expect(swatchSelected(tester, ProfileTheme.crimson), isTrue);
+    expect(swatchSelected(tester, ProfileTheme.frost), isFalse);
+  });
+
+  testWidgets(
+    'tapping a different swatch enables Save and submit carries that theme',
+    (tester) async {
+      ProfileEdit? capturedEdit;
+      final recordingRepo = _RecordingFeaturedRepo(
+        onUpdate: (edit) {
+          capturedEdit = edit;
+          return right(_profile);
+        },
+      );
+
+      await tester.pumpWidget(_screen(recordingRepo));
+      await tester.pump();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('profileThemeSwatch_frost')),
+      );
+      await tester.tap(find.byKey(const Key('profileThemeSwatch_frost')));
+      await tester.pump();
+
+      // The picked swatch is now selected and the form is dirty.
+      expect(swatchSelected(tester, ProfileTheme.frost), isTrue);
+      final saveButton = tester.widget<TextButton>(
+        find.descendant(
+          of: find.byKey(const Key('profileSaveButton')),
+          matching: find.byType(TextButton),
+        ),
+      );
+      expect(saveButton.onPressed, isNotNull);
+
+      await tester.tap(find.byKey(const Key('profileSaveButton')));
+      await tester.pumpAndSettle();
+
+      expect(capturedEdit, isNotNull);
+      expect(capturedEdit!.theme, ProfileTheme.frost);
+    },
+  );
+
+  testWidgets(
+    'a rejected save surfaces the error and keeps the picked swatch',
+    (tester) async {
+      await tester.pumpWidget(
+        _screen(
+          _FakeRepository(updateResult: () => left(const InputFailure())),
+        ),
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('profileThemeSwatch_frost')),
+      );
+      await tester.tap(find.byKey(const Key('profileThemeSwatch_frost')));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('profileSaveButton')));
+      await tester.pumpAndSettle();
+
+      // The rejection surfaces (keyed, not by copy) and the selection survives.
+      expect(find.byKey(const Key('profileEditErrorText')), findsOneWidget);
+      expect(swatchSelected(tester, ProfileTheme.frost), isTrue);
     },
   );
 }

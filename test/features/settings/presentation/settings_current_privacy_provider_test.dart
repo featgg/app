@@ -11,7 +11,7 @@ const _publicProfile = Profile(
   displayName: 'Public User',
   avatarUrl: null,
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );
@@ -22,7 +22,7 @@ const _privateProfile = Profile(
   displayName: 'Private User',
   avatarUrl: null,
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.private,
   featuredPlatform: null,
 );

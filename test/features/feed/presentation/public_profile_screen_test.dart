@@ -42,7 +42,7 @@ const _publicProfile = Profile(
   displayName: 'Gamer 42',
   avatarUrl: null,
   bio: 'I play games.',
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
 );
@@ -55,7 +55,7 @@ const _layoutProfile = Profile(
   displayName: 'Gamer 42',
   avatarUrl: null,
   bio: 'I play games.',
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
   layout: [FullRow('w')],

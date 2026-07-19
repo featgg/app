@@ -1,5 +1,6 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
+import 'package:featgg/src/core/theme/personalization_tokens.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -7,6 +8,7 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dar
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_profile_view.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,7 +40,7 @@ const _profile = Profile(
   displayName: 'Nico',
   avatarUrl: null,
   bio: null,
-  theme: ProfileTheme.classic,
+  theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
   layout: [
@@ -66,7 +68,7 @@ final _widgets = [
   _widget('d', ProfileWidgetKind.template),
 ];
 
-Widget _harness() {
+Widget _harness({Profile profile = _profile}) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
@@ -86,8 +88,8 @@ Widget _harness() {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en')],
-      home: const Scaffold(
-        body: PersonalizationProfileView(profile: _profile, userId: _userId),
+      home: Scaffold(
+        body: PersonalizationProfileView(profile: profile, userId: _userId),
       ),
     ),
   );
@@ -97,12 +99,13 @@ Future<void> _pumpAt(
   WidgetTester tester,
   double width, {
   double height = 2400,
+  Profile profile = _profile,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(_harness());
+  await tester.pumpWidget(_harness(profile: profile));
   await tester.pumpAndSettle();
 }
 
@@ -172,5 +175,40 @@ void main() {
     // The pair halves stay side by side, not stacked.
     expect(_dy(tester, 'b'), moreOrLessEquals(_dy(tester, 'c'), epsilon: 0.5));
     expect(_dx(tester, 'b'), lessThan(_dx(tester, 'c')));
+  });
+
+  // The render tints from profile.theme, not a hardcoded default: a non-crimson
+  // theme installs its own palette, and two themes install two palettes (spec §8
+  // inheritance). Each scenario pumps once — the InheritedWidget carries the
+  // palette a single card would read.
+  PersonalizationPalette installedPalette(WidgetTester tester) => tester
+      .widget<PersonalizationTheme>(find.byType(PersonalizationTheme).first)
+      .palette;
+
+  testWidgets('installs a non-default theme palette (not hardcoded crimson)', (
+    tester,
+  ) async {
+    await _pumpAt(
+      tester,
+      600,
+      profile: _profile.copyWith(theme: ProfileTheme.arcane),
+    );
+
+    expect(installedPalette(tester), paletteForTheme(ProfileTheme.arcane));
+    expect(installedPalette(tester), isNot(PersonalizationPalette.crimson));
+  });
+
+  testWidgets('a different theme installs a different palette', (tester) async {
+    await _pumpAt(
+      tester,
+      600,
+      profile: _profile.copyWith(theme: ProfileTheme.chak),
+    );
+
+    expect(installedPalette(tester), paletteForTheme(ProfileTheme.chak));
+    expect(
+      paletteForTheme(ProfileTheme.chak),
+      isNot(paletteForTheme(ProfileTheme.arcane)),
+    );
   });
 }
