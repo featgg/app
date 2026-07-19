@@ -31,8 +31,9 @@ it — a user can update only their own profile.
 - **Server-managed (read-only to the client).** `id`, `created_at`,
   `last_updated_at`, `deletion_requested_at`, `layout`, and `avatar_url`. Never
   client-writable directly; `avatar_url` is updated by the upload endpoint
-  (see `avatar.md`). `layout` is written through a separate validated write
-  path, not this update surface (a later editor feature).
+  (see `avatar.md`). `layout` is written through the owner-scoped layout write
+  operation, not this update surface (see `personalization.md` § Layout write
+  (composition editor)).
 - **Access rule.** Read: public profiles by anyone, private profiles by the
   owner only. Update: owner only, restricted to the writable columns above.
 - **Constraints (surface as the SDK error on violation).**
@@ -52,10 +53,12 @@ it — a user can update only their own profile.
     client never needs to clean it up.
   - `layout` — a JSON array of ordered rows composing the personalization profile, each row
     `{ "t": "full"|"pair", "c": [ cardId | null, … ] }` referencing the
-    profile's own widget ids (see `personalization.md`). `[]` means no composed
+    profile's own widget ids. `[]` means no composed
     layout (render the default arrangement). Read-only through this surface and
     resolved softly on the client: a malformed row or slot is ignored rather
-    than failing the read. See `docs/personalization/spec.md` §9.
+    than failing the read. Written through the owner-scoped layout write
+    operation (see `personalization.md` § Layout write (composition editor)).
+    See `docs/personalization/spec.md` §9.
 - **Ordering / pagination.** Reads are single-row: the signed-in user's own
   profile, or one public profile looked up by `username`. No pagination.
 

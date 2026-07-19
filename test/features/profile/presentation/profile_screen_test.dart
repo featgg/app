@@ -39,6 +39,11 @@ final class _FakeRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 /// Holds the future open indefinitely so the loading state is observable.
@@ -55,6 +60,11 @@ final class _PendingRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 /// Injects a fixed widgets-read outcome per test. When [mutationFailure] is set,
@@ -506,6 +516,20 @@ const _privateProfile = Profile(
   featuredPlatform: null,
 );
 
+// A profile with a composed layout routes to the personalization editor rather
+// than the legacy grid.
+const _composedProfile = Profile(
+  id: 'user-1',
+  username: 'testuser',
+  displayName: 'Test User',
+  avatarUrl: null,
+  bio: 'My bio',
+  theme: ProfileTheme.crimson,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  layout: [FullRow('w-1')],
+);
+
 Widget _screen(
   ProfileRepository repo, {
   ProfileWidgetsRepository? widgetsRepo,
@@ -734,6 +758,42 @@ void main() {
 
     expect(find.byKey(const Key('profileWidgetsEmpty')), findsOneWidget);
     expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('a composed-layout profile mounts the personalization editor', (
+    tester,
+  ) async {
+    // A non-empty layout routes to the personalization render with the compose
+    // control bar instead of the legacy grid.
+    final repo = _FakeRepository(result: () async => right(_composedProfile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('an empty-layout profile keeps the legacy grid', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
+    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
   });
 
   testWidgets('all-hidden widgets show the grid, not the empty-add hint', (

@@ -349,5 +349,12 @@
   "personalizationPlatformTitle": "Destacados",
   "personalizationMilestoneTitle": "Hito",
   "personalizationFallbackTitle": "Tarjeta",
-  "personalizationProfileTag": "Perfil"
+  "personalizationProfileTag": "Perfil",
+  "profileComposeEdit": "Editar diseño",
+  "profileComposeDone": "Listo",
+  "profileComposeCancel": "Cancelar",
+  "profileComposeSaveFailed": "No se pudo guardar tu diseño. Inténtalo de nuevo.",
+  "profileComposeHint": "Arrastra una tarjeta entre filas para el ancho completo, o junto a otra para emparejarlas.",
+  "profileComposeDragHandleLabel": "Arrastra para mover la tarjeta",
+  "profileComposeSizeToggleLabel": "Cambiar el tamaño de la tarjeta"
 }

@@ -8,6 +8,7 @@ import '../../../core/error/failure.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/profile.dart';
 import '../domain/profile_widget.dart';
+import 'owner_profile_personalization.dart';
 import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
 import 'profile_widgets_grid.dart';
@@ -88,8 +89,11 @@ class ProfileScreen extends ConsumerWidget {
           value: state,
           onRetry: () => ref.invalidate(profileProvider),
           loading: const ProfileSkeleton(),
-          data: (profile) =>
-              _ProfileContent(profile: profile, cardBuilder: cardBuilder),
+          // A composed layout routes to the personalization render + editor; an
+          // empty layout keeps the legacy owner grid.
+          data: (profile) => profile.layout.isEmpty
+              ? _ProfileContent(profile: profile, cardBuilder: cardBuilder)
+              : OwnerProfilePersonalization(profile: profile),
         ),
       ),
     );

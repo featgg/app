@@ -1479,5 +1479,33 @@
   "personalizationProfileTag": "Profile",
   "@personalizationProfileTag": {
     "description": "Generic accent tag on a personalization card that has no source platform."
+  },
+  "profileComposeEdit": "Edit layout",
+  "@profileComposeEdit": {
+    "description": "Control-bar action that enters the composition editor on the owner's own composed profile."
+  },
+  "profileComposeDone": "Done",
+  "@profileComposeDone": {
+    "description": "Control-bar action that saves the edited layout and leaves edit mode."
+  },
+  "profileComposeCancel": "Cancel",
+  "@profileComposeCancel": {
+    "description": "Control-bar action that discards edits and leaves the composition editor."
+  },
+  "profileComposeSaveFailed": "Couldn't save your layout. Please try again.",
+  "@profileComposeSaveFailed": {
+    "description": "Snackbar shown when persisting the edited layout fails; the edit is rolled back and the owner can retry."
+  },
+  "profileComposeHint": "Drag a card between rows for full width, or next to another to pair them.",
+  "@profileComposeHint": {
+    "description": "One-line hint in the control bar while editing the composition."
+  },
+  "profileComposeDragHandleLabel": "Drag to move card",
+  "@profileComposeDragHandleLabel": {
+    "description": "Accessibility label on a card's drag handle in the composition editor."
+  },
+  "profileComposeSizeToggleLabel": "Toggle card size",
+  "@profileComposeSizeToggleLabel": {
+    "description": "Accessibility label on a card's full/half size toggle in the composition editor."
   }
 }

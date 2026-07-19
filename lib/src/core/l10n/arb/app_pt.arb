@@ -349,5 +349,12 @@
   "personalizationPlatformTitle": "Destaques",
   "personalizationMilestoneTitle": "Marco",
   "personalizationFallbackTitle": "Cartão",
-  "personalizationProfileTag": "Perfil"
+  "personalizationProfileTag": "Perfil",
+  "profileComposeEdit": "Editar layout",
+  "profileComposeDone": "Concluir",
+  "profileComposeCancel": "Cancelar",
+  "profileComposeSaveFailed": "Não foi possível salvar seu layout. Tente novamente.",
+  "profileComposeHint": "Arraste um cartão entre as linhas para largura total, ou ao lado de outro para emparelhá-los.",
+  "profileComposeDragHandleLabel": "Arraste para mover o cartão",
+  "profileComposeSizeToggleLabel": "Alternar o tamanho do cartão"
 }

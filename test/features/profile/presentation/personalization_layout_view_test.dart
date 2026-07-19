@@ -9,16 +9,18 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_repository.da
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_profile_view.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
+import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 const _userId = 'owner-1';
 
-/// Returns a fixed set of public widgets; every mutation is out of scope for the
-/// read-only render.
+/// Returns a fixed set of widgets for both the public and owner reads; every
+/// mutation is out of scope for the read-only render.
 final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   _FakeWidgetsRepository(this.widgets);
 
@@ -28,6 +30,10 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
     String userId,
   ) async => right(widgets);
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
+      right(widgets);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
@@ -52,12 +58,16 @@ const _profile = Profile(
 
 // Platform-less kinds → the Fallback archetype, so the composition renders
 // without any card-source dependency.
-ProfileWidget _widget(String id, ProfileWidgetKind kind) => ProfileWidget(
+ProfileWidget _widget(
+  String id,
+  ProfileWidgetKind kind, {
+  bool isEnabled = true,
+}) => ProfileWidget(
   id: id,
   kind: kind,
   platform: null,
   position: 0,
-  isEnabled: true,
+  isEnabled: isEnabled,
   size: ProfileWidgetSize.small,
 );
 
@@ -68,12 +78,16 @@ final _widgets = [
   _widget('d', ProfileWidgetKind.template),
 ];
 
-Widget _harness({Profile profile = _profile}) {
+Widget _harness({
+  Profile profile = _profile,
+  List<ProfileWidget>? widgets,
+  ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider,
+}) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
       profileWidgetsRepositoryProvider.overrideWithValue(
-        _FakeWidgetsRepository(_widgets),
+        _FakeWidgetsRepository(widgets ?? _widgets),
       ),
     ],
   );
@@ -89,7 +103,11 @@ Widget _harness({Profile profile = _profile}) {
       ],
       supportedLocales: const [Locale('en')],
       home: Scaffold(
-        body: PersonalizationProfileView(profile: profile, userId: _userId),
+        body: PersonalizationProfileView(
+          profile: profile,
+          userId: _userId,
+          widgetsProvider: widgetsProvider,
+        ),
       ),
     ),
   );
@@ -100,12 +118,20 @@ Future<void> _pumpAt(
   double width, {
   double height = 2400,
   Profile profile = _profile,
+  List<ProfileWidget>? widgets,
+  ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(_harness(profile: profile));
+  await tester.pumpWidget(
+    _harness(
+      profile: profile,
+      widgets: widgets,
+      widgetsProvider: widgetsProvider,
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -210,5 +236,62 @@ void main() {
       paletteForTheme(ProfileTheme.chak),
       isNot(paletteForTheme(ProfileTheme.arcane)),
     );
+  });
+
+  testWidgets('a disabled card is hidden: its full row is omitted and a pair '
+      'centers the other card', (tester) async {
+    // 'b' is disabled → its full row disappears and the (a, b) pair collapses to
+    // a centered 'a'.
+    final widgets = [
+      _widget('a', ProfileWidgetKind.template),
+      _widget('b', ProfileWidgetKind.composed, isEnabled: false),
+      _widget('c', ProfileWidgetKind.dataMenu),
+    ];
+    const profile = Profile(
+      id: _userId,
+      username: 'nico',
+      displayName: 'Nico',
+      avatarUrl: null,
+      bio: null,
+      theme: ProfileTheme.crimson,
+      privacy: ProfilePrivacy.public,
+      featuredPlatform: null,
+      layout: [
+        FullRow('b'),
+        PairRow(left: 'a', right: 'b'),
+        FullRow('c'),
+      ],
+    );
+
+    await _pumpAt(tester, 600, profile: profile, widgets: widgets);
+
+    // The disabled card never renders.
+    expect(find.byKey(personalizationCardKey('b')), findsNothing);
+    expect(find.byKey(personalizationCardKey('a')), findsOneWidget);
+    expect(find.byKey(personalizationCardKey('c')), findsOneWidget);
+
+    // The (a, b) pair collapsed to a centered orphan → 'a' is narrower than a
+    // full-width row.
+    final aWidth = tester
+        .getSize(find.byKey(personalizationCardKey('a')))
+        .width;
+    final cWidth = tester
+        .getSize(find.byKey(personalizationCardKey('c')))
+        .width;
+    expect(aWidth, lessThan(cWidth));
+  });
+
+  testWidgets('an injected owner widgetsProvider resolves the cards', (
+    tester,
+  ) async {
+    await _pumpAt(tester, 600, widgetsProvider: ownerProfileWidgetsProvider);
+
+    for (final id in ['a', 'b', 'c', 'd']) {
+      expect(
+        find.byKey(personalizationCardKey(id)),
+        findsOneWidget,
+        reason: 'card $id resolves through the owner widgets read',
+      );
+    }
   });
 }

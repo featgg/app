@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/core.dart';
 import '../domain/profile.dart';
@@ -26,6 +27,8 @@ class PersonalizationProfileView extends ConsumerWidget {
     required this.profile,
     required this.userId,
     this.cardSource,
+    this.widgetsProvider,
+    this.rowsBuilder,
   });
 
   /// Carries the layout and the theme that selects this view's palette.
@@ -37,6 +40,14 @@ class PersonalizationProfileView extends ConsumerWidget {
   /// Where each platform's card resolves from. Null → the owner's own card; the
   /// router injects the public source for the visitor render.
   final CardSource? cardSource;
+
+  /// Which widgets read backs the rows. Null → the visitor's public read; the
+  /// owner passes their own widgets read.
+  final ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider;
+
+  /// Builds the rows region given the resolved column width. Null → the
+  /// read-only rows; the owner injects the editor rows while editing.
+  final Widget Function(BuildContext context, double columnWidth)? rowsBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,12 +100,15 @@ class PersonalizationProfileView extends ConsumerWidget {
                                   const SizedBox(
                                     height: PersonalizationLayout.rowGap,
                                   ),
-                                  _LayoutRows(
-                                    layout: profile.layout,
-                                    userId: userId,
-                                    cardSource: cardSource,
-                                    memberSince: profile.createdAt,
-                                  ),
+                                  rowsBuilder != null
+                                      ? rowsBuilder!(context, columnWidth)
+                                      : _LayoutRows(
+                                          layout: profile.layout,
+                                          userId: userId,
+                                          cardSource: cardSource,
+                                          memberSince: profile.createdAt,
+                                          widgetsProvider: widgetsProvider,
+                                        ),
                                 ],
                               ),
                             ),
@@ -266,6 +280,7 @@ class _LayoutRows extends ConsumerWidget {
     required this.userId,
     required this.cardSource,
     this.memberSince,
+    this.widgetsProvider,
   });
 
   final List<ProfileLayoutRow> layout;
@@ -275,15 +290,31 @@ class _LayoutRows extends ConsumerWidget {
   /// Profile creation date, forwarded to the Identity card's footer.
   final DateTime? memberSince;
 
+  /// Which widgets read backs the rows; null → the visitor's public read.
+  final ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final widgetsAsync = ref.watch(publicProfileWidgetsProvider(userId));
+    final provider = widgetsProvider ?? publicProfileWidgetsProvider(userId);
+    final widgetsAsync = ref.watch(provider);
 
     return AsyncValueWidget<List<ProfileWidget>>(
       value: widgetsAsync,
-      onRetry: () => ref.invalidate(publicProfileWidgetsProvider(userId)),
+      // Both the default and injected reads are refreshable providers; guard the
+      // generic listenable type and invalidate the concrete one on retry.
+      onRetry: () {
+        if (provider is ProviderOrFamily) {
+          ref.invalidate(provider as ProviderOrFamily);
+        }
+      },
       data: (widgets) {
-        final byId = {for (final w in widgets) w.id: w};
+        // A disabled card is dropped from the read render: a full row with a
+        // disabled card is omitted; a pair with one disabled side centers the
+        // other.
+        final byId = {
+          for (final w in widgets)
+            if (w.isEnabled) w.id: w,
+        };
         final rows = <Widget>[];
         for (final row in layout) {
           final built = _buildRow(row, byId);
@@ -310,57 +341,18 @@ class _LayoutRows extends ConsumerWidget {
         final leftCard = _card(byId[left], ProfileCardSize.half);
         final rightCard = _card(byId[right], ProfileCardSize.half);
         if (leftCard == null && rightCard == null) return null;
-        if (leftCard == null || rightCard == null) {
-          // Orphan pair → a single centered half (spec §9), never an empty slot.
-          return Align(
-            alignment: Alignment.center,
-            child: FractionallySizedBox(
-              widthFactor: PersonalizationLayout.orphanWidthFactor,
-              child: leftCard ?? rightCard,
-            ),
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: leftCard),
-            const SizedBox(width: PersonalizationLayout.rowGap),
-            Expanded(child: rightCard),
-          ],
-        );
+        return personalizationPairFrame(left: leftCard, right: rightCard);
     }
   }
 
   /// Builds the archetype card for [w] at [size], or null when the widget id did
-  /// not resolve to a placed widget (deleted/hidden). A full-only archetype in a
-  /// half slot renders full within that column (spec §5).
-  Widget? _card(ProfileWidget? w, ProfileCardSize size) {
-    if (w == null) return null;
-    final archetype = archetypeForWidget(w);
-    final effectiveSize = supportedSizes(archetype).contains(size)
-        ? size
-        : ProfileCardSize.full;
-    return switch (archetype) {
-      ProfileArchetype.identity => IdentityCard(
-        widget: w,
-        cardSource: cardSource,
-        memberSince: memberSince,
-      ),
-      ProfileArchetype.platform => PlatformCard(
-        widget: w,
-        size: effectiveSize,
-        cardSource: cardSource,
-      ),
-      ProfileArchetype.milestone => MilestoneCard(
-        widget: w,
-        size: effectiveSize,
-        cardSource: cardSource,
-      ),
-      ProfileArchetype.fallback => FallbackCard(
-        widget: w,
-        size: effectiveSize,
-        cardSource: cardSource,
-      ),
-    };
-  }
+  /// not resolve to a placed, enabled widget (deleted/hidden).
+  Widget? _card(ProfileWidget? w, ProfileCardSize size) => w == null
+      ? null
+      : personalizationCardFor(
+          w,
+          size: size,
+          cardSource: cardSource,
+          memberSince: memberSince,
+        );
 }

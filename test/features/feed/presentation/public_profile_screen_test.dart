@@ -28,6 +28,11 @@ final class _FakeProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) =>
       publicResult(userId);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 // ---------------------------------------------------------------------------

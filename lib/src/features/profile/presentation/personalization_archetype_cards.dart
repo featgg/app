@@ -24,6 +24,70 @@ Key personalizationCardKey(String widgetId) =>
 Key milestoneCapsuleKey(String widgetId) =>
     Key('personalizationMilestoneCapsule_$widgetId');
 
+/// Builds the archetype card for [widget] at [size]. A full-only archetype in a
+/// half slot renders full within its column. Shared by the read view and the
+/// editor so both build identical cards from one place.
+Widget personalizationCardFor(
+  ProfileWidget widget, {
+  required ProfileCardSize size,
+  CardSource? cardSource,
+  DateTime? memberSince,
+}) {
+  final archetype = archetypeForWidget(widget);
+  final effectiveSize = supportedSizes(archetype).contains(size)
+      ? size
+      : ProfileCardSize.full;
+  return switch (archetype) {
+    ProfileArchetype.identity => IdentityCard(
+      widget: widget,
+      cardSource: cardSource,
+      memberSince: memberSince,
+    ),
+    ProfileArchetype.platform => PlatformCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.milestone => MilestoneCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.fallback => FallbackCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
+  };
+}
+
+/// Arranges a pair row's two slot widgets: both present → a two-up Row; exactly
+/// one → a centered half; none → nothing. Shared by the read view and the editor
+/// so pair/orphan geometry is identical.
+Widget personalizationPairFrame({
+  required Widget? left,
+  required Widget? right,
+}) {
+  if (left == null && right == null) return const SizedBox.shrink();
+  if (left == null || right == null) {
+    return Align(
+      alignment: Alignment.center,
+      child: FractionallySizedBox(
+        widthFactor: PersonalizationLayout.orphanWidthFactor,
+        child: left ?? right,
+      ),
+    );
+  }
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(child: left),
+      const SizedBox(width: PersonalizationLayout.rowGap),
+      Expanded(child: right),
+    ],
+  );
+}
+
 /// Identity archetype (spec §7, evolves the Passport card): cross-platform
 /// *membership* — a chip per linked platform plus the linked-platform count.
 /// Full only. Folds every platform's card through the pure [resolvePassport];

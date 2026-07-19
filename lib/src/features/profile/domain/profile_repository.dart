@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../core/error/failure.dart';
 import 'profile.dart';
+import 'profile_layout.dart';
 
 abstract interface class ProfileRepository {
   /// Reads the signed-in user's own profile.
@@ -16,6 +17,13 @@ abstract interface class ProfileRepository {
   /// values as a constraint violation; Left(NetworkFailure) on transport error;
   /// Left(UnexpectedFailure) on a parse failure or any unclassified fault.
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit);
+
+  /// Replaces the signed-in user's saved composition with [rows] (send the whole
+  /// layout; `[]` clears it). Right(unit) on success. Left(AuthFailure) when
+  /// there is no session / a 401; Left(InputFailure) with code 'LAYOUT_INVALID'
+  /// when the backend rejects the layout; Left(NetworkFailure) on transport
+  /// error; Left(UnexpectedFailure) otherwise.
+  Future<Either<Failure, Unit>> setMyLayout(List<ProfileLayoutRow> rows);
 
   /// Reads any user's public profile by [userId].
   /// Right(Profile) when a public row is returned.
