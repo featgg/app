@@ -483,7 +483,7 @@ class _FeaturedCardSelector extends StatelessWidget {
   );
 }
 
-/// The theme picker: one accent-filled swatch per curated theme (spec §8). The
+/// The theme picker: one accent-filled swatch per curated theme. The
 /// selected swatch carries a Material ring; tapping another selects it. Swatch
 /// fill is the theme's accent token, never a literal.
 class _ThemeSwatchRow extends StatelessWidget {

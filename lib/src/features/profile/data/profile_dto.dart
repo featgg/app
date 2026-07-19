@@ -117,8 +117,7 @@ ProfileTheme _themeFromWire(String value) => switch (value) {
   'arcane' => ProfileTheme.arcane,
   'rose' => ProfileTheme.rose,
   // Both a superseded token and any unknown one resolve to the default theme:
-  // a stale or ahead-of-client value must never take down the profile read
-  // (docs/personalization/spec.md §8).
+  // a stale or ahead-of-client value must never take down the profile read.
   _ => ProfileTheme.crimson,
 };
 

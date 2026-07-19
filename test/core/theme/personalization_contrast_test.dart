@@ -16,7 +16,7 @@ double _contrastRatio(Color a, Color b) {
 
 void main() {
   // Cards paint on --surface, so the legibility backdrop is --surface composited
-  // over --bg (spec §8). Body/muted use theme-independent tokens; only the
+  // over --bg. Body/muted use theme-independent tokens; only the
   // accent varies per theme. A future palette that dips below a floor goes red.
   group('per-theme WCAG contrast floor', () {
     for (final theme in ProfileTheme.values) {

@@ -12,7 +12,7 @@ const int kMaxBioLineBreaks = 8;
 enum ProfilePrivacy { public, private }
 
 /// Visual theme the user has chosen for their profile. The enum name is the
-/// `theme_id` wire token (see `docs/integration/profile.md` § Shape 2).
+/// `theme_id` wire token from the profile API's closed theme list.
 enum ProfileTheme { crimson, ember, solar, chak, frost, abyss, arcane, rose }
 
 /// The signed-in user's own identity as read from the profiles table.

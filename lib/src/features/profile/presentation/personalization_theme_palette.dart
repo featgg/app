@@ -3,7 +3,7 @@ import '../domain/profile.dart';
 
 /// Bridges the domain [ProfileTheme] to its core [PersonalizationPalette]. Lives
 /// in the feature so the core palette layer never imports the domain enum. Total
-/// over the closed theme set (`docs/personalization/spec.md` §8).
+/// over the closed theme set: a theme without a palette fails to compile.
 PersonalizationPalette paletteForTheme(ProfileTheme theme) => switch (theme) {
   ProfileTheme.crimson => PersonalizationPalette.crimson,
   ProfileTheme.ember => PersonalizationPalette.ember,

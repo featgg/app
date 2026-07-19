@@ -178,9 +178,9 @@ void main() {
   });
 
   // The render tints from profile.theme, not a hardcoded default: a non-crimson
-  // theme installs its own palette, and two themes install two palettes (spec §8
-  // inheritance). Each scenario pumps once — the InheritedWidget carries the
-  // palette a single card would read.
+  // theme installs its own palette, and two themes install two palettes.
+  // Each scenario pumps once — the InheritedWidget carries the palette a
+  // single card would read.
   PersonalizationPalette installedPalette(WidgetTester tester) => tester
       .widget<PersonalizationTheme>(find.byType(PersonalizationTheme).first)
       .palette;

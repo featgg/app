@@ -1,25 +1,30 @@
 import 'package:featgg/src/core/theme/personalization_tokens.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  // The accent each theme must resolve to (spec §8 closed set).
-  const expectedAccent = {
-    ProfileTheme.crimson: Color(0xFFBC3B4E),
-    ProfileTheme.ember: Color(0xFFE8763B),
-    ProfileTheme.solar: Color(0xFFE0A82E),
-    ProfileTheme.chak: Color(0xFF3BBC8E),
-    ProfileTheme.frost: Color(0xFF3BC7E8),
-    ProfileTheme.abyss: Color(0xFF4C82EA),
-    ProfileTheme.arcane: Color(0xFF8E5CE8),
-    ProfileTheme.rose: Color(0xFFE85C9E),
+  // Raw color values live only in the token layer, so the expectation is the
+  // named palette itself: this pins the theme→palette wiring (a crossed pair
+  // of switch arms goes red) without duplicating hex values here.
+  const expectedPalette = {
+    ProfileTheme.crimson: PersonalizationPalette.crimson,
+    ProfileTheme.ember: PersonalizationPalette.ember,
+    ProfileTheme.solar: PersonalizationPalette.solar,
+    ProfileTheme.chak: PersonalizationPalette.chak,
+    ProfileTheme.frost: PersonalizationPalette.frost,
+    ProfileTheme.abyss: PersonalizationPalette.abyss,
+    ProfileTheme.arcane: PersonalizationPalette.arcane,
+    ProfileTheme.rose: PersonalizationPalette.rose,
   };
 
-  test('paletteForTheme maps every theme to its accent', () {
+  test('paletteForTheme maps every theme to its named palette', () {
     for (final t in ProfileTheme.values) {
-      expect(paletteForTheme(t).accent, expectedAccent[t], reason: t.name);
+      expect(
+        identical(paletteForTheme(t), expectedPalette[t]),
+        isTrue,
+        reason: t.name,
+      );
     }
   });
 

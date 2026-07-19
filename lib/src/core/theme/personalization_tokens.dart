@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 
-/// Theme-independent base tokens shared by every curated palette (spec §8):
+/// Theme-independent base tokens shared by every curated palette:
 /// only the accent and art tones vary between themes, so the base lives here
 /// once and no palette can drift from it.
 const Color _baseBg = Color(0xFF0A0A0D);
@@ -35,7 +35,7 @@ final class PersonalizationPalette extends Equatable {
   });
 
   /// A curated theme: the shared theme-independent base with only the accent and
-  /// art tones supplied (spec §8). Keeps the base identical across the closed set.
+  /// art tones supplied. Keeps the base identical across the closed set.
   const PersonalizationPalette.themed({
     required Color accent,
     required Color accentSoft,
