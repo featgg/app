@@ -63,6 +63,8 @@ h1,h2,h3,.num,.hero-word{font-family:'Space Grotesk','Inter',sans-serif}
   padding:16px;
   display:flex;gap:14px;align-items:center;
   backdrop-filter:blur(8px);
+  /* first-paint budget: header + full hero must fit together (spec §4) */
+  max-height:140px;overflow:hidden;
 }
 .avatar{
   width:68px;height:68px;border-radius:16px;flex-shrink:0;
