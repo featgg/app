@@ -69,9 +69,10 @@ ProfileTheme _themeFromWire(String value) => switch (value) {
   'immersive' => ProfileTheme.immersive,
   'retro' => ProfileTheme.retro,
   'analyst' => ProfileTheme.analyst,
-  // An unknown wire value cannot be interpreted safely; treat as a fault so
-  // the repo's single try/catch maps it to UnexpectedFailure.
-  _ => throw FormatException('unknown theme_id: $value'),
+  // The wire token set is migrating to the v3 themes
+  // (docs/personalization/spec.md §8); an unknown token must not take down
+  // the whole profile read, so it falls back to the default theme.
+  _ => ProfileTheme.classic,
 };
 
 ProfilePrivacy _privacyFromWire(String value) => switch (value) {
