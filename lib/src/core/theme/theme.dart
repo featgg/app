@@ -2,4 +2,5 @@
 library;
 
 export 'app_theme.dart';
+export 'personalization_tokens.dart';
 export 'tokens.dart';

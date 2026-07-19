@@ -10,7 +10,7 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
 
   static const _table = 'profiles';
   static const _columns =
-      'id, username, display_name, avatar_url, bio, theme_id, privacy_level, featured_platform';
+      'id, username, display_name, avatar_url, bio, theme_id, privacy_level, featured_platform, layout, created_at';
 
   // deletion_requested_at is an owner-only, server-managed column. It must never
   // be requested on a public read of another user's row, so it is appended only

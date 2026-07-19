@@ -7,6 +7,8 @@ export 'composed_card.dart';
 export 'data_menu_catalog.dart';
 export 'data_menu_selection.dart';
 export 'profile.dart';
+export 'profile_archetype.dart';
+export 'profile_layout.dart';
 export 'profile_providers.dart';
 export 'profile_repository.dart';
 export 'profile_widget.dart';

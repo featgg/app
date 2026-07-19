@@ -1435,5 +1435,33 @@
   "passportPickerAlreadyAdded": "You already have a Passport card.",
   "@passportPickerAlreadyAdded": {
     "description": "Shown in the passport banner when a passport card is already on the profile, so the Add action is hidden."
+  },
+  "personalizationIdentityTag": "Feat.gg",
+  "@personalizationIdentityTag": {
+    "description": "Accent platform tag on the Identity card. Brand proper noun; intentionally not translated."
+  },
+  "personalizationStatPlatforms": "Platforms",
+  "@personalizationStatPlatforms": {
+    "description": "Stat-footer label on the Identity card; the value is the count of linked platforms."
+  },
+  "personalizationStatMemberSince": "Member since",
+  "@personalizationStatMemberSince": {
+    "description": "Stat-footer label on the Identity card; the value is the year the profile was created."
+  },
+  "personalizationPlatformTitle": "Highlights",
+  "@personalizationPlatformTitle": {
+    "description": "Title of the generic single-platform card in the personalization profile; the platform name shows as the accent tag."
+  },
+  "personalizationMilestoneTitle": "Milestone",
+  "@personalizationMilestoneTitle": {
+    "description": "Title of the Milestone card, showing a game capsule with progress."
+  },
+  "personalizationFallbackTitle": "Card",
+  "@personalizationFallbackTitle": {
+    "description": "Neutral title of a personalization card whose archetype has no built variant."
+  },
+  "personalizationProfileTag": "Profile",
+  "@personalizationProfileTag": {
+    "description": "Generic accent tag on a personalization card that has no source platform."
   }
 }
