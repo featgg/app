@@ -107,10 +107,10 @@ void main() {
       }
     });
 
-    test('an unknown theme_id throws FormatException', () {
-      final dto = ProfileDto.fromJson(_fullRow(themeId: 'neon'));
+    test('an unknown theme_id falls back to the default theme', () {
+      final dto = ProfileDto.fromJson(_fullRow(themeId: 'crimson'));
 
-      expect(() => profileFromDto(dto), throwsA(isA<FormatException>()));
+      expect(profileFromDto(dto).theme, ProfileTheme.classic);
     });
 
     test('profileEditToColumns builds the writable columns', () {
