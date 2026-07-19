@@ -20,6 +20,7 @@ final class ProfileDto {
     required this.featuredPlatform,
     this.deletionRequestedAt,
     required this.layout,
+    this.createdAt,
   });
 
   final String id;
@@ -43,6 +44,9 @@ final class ProfileDto {
   @JsonKey(defaultValue: [])
   final List<dynamic> layout;
 
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
   factory ProfileDto.fromJson(Map<String, dynamic> json) =>
       _$ProfileDtoFromJson(json);
 }
@@ -58,6 +62,7 @@ Profile profileFromDto(ProfileDto dto) => Profile(
   featuredPlatform: _platformFromWireOrNull(dto.featuredPlatform),
   deletionRequestedAt: dto.deletionRequestedAt,
   layout: _layoutFromWire(dto.layout),
+  createdAt: dto.createdAt,
 );
 
 /// Parses the wire layout array into ordered rows. Defensive by contract

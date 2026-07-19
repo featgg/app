@@ -27,6 +27,7 @@ final class Profile extends Equatable {
     required this.featuredPlatform,
     this.deletionRequestedAt,
     this.layout = const [],
+    this.createdAt,
   });
 
   final String id;
@@ -55,6 +56,10 @@ final class Profile extends Equatable {
   /// Server-managed and read-only to the client; empty for every profile that
   /// has no composed layout, in which case the legacy render path is used.
   final List<ProfileLayoutRow> layout;
+
+  /// When the profile was created (server-managed). Feeds member-since
+  /// displays; null when the read surface did not include it.
+  final DateTime? createdAt;
 
   /// Grace window the backend applies after a confirmed deletion request.
   static const Duration deletionGracePeriod = Duration(days: 7);
@@ -103,6 +108,7 @@ final class Profile extends Equatable {
     featuredPlatform,
     deletionRequestedAt,
     layout,
+    createdAt,
   ];
 }
 

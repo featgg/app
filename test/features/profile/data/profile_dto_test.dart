@@ -10,6 +10,7 @@ Map<String, dynamic> _fullRow({
   Object? featuredPlatform,
   Object? deletionRequestedAt,
   List<dynamic>? layout,
+  Object? createdAt,
 }) => {
   'id': 'user-123',
   'username': 'testuser',
@@ -21,6 +22,7 @@ Map<String, dynamic> _fullRow({
   'featured_platform': featuredPlatform,
   'deletion_requested_at': deletionRequestedAt,
   'layout': ?layout,
+  'created_at': ?createdAt,
 };
 
 void main() {
@@ -108,6 +110,18 @@ void main() {
           reason: 'theme_id "${entry.key}" should map to ${entry.value}',
         );
       }
+    });
+
+    test('maps an ISO-8601 created_at to the matching DateTime', () {
+      final dto = ProfileDto.fromJson(
+        _fullRow(createdAt: '2025-03-01T12:00:00Z'),
+      );
+
+      expect(profileFromDto(dto).createdAt, DateTime.utc(2025, 3, 1, 12));
+    });
+
+    test('an absent created_at maps to null', () {
+      expect(profileFromDto(ProfileDto.fromJson(_fullRow())).createdAt, isNull);
     });
 
     test('an unknown theme_id falls back to the default theme', () {

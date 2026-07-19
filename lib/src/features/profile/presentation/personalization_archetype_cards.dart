@@ -30,10 +30,19 @@ Key milestoneCapsuleKey(String widgetId) =>
 /// an errored or still-loading platform reads as absent and never errors the
 /// card (spec: unresolved content → neutral, never an error tile).
 class IdentityCard extends ConsumerWidget {
-  const IdentityCard({super.key, required this.widget, this.cardSource});
+  const IdentityCard({
+    super.key,
+    required this.widget,
+    this.cardSource,
+    this.memberSince,
+  });
 
   final ProfileWidget widget;
   final CardSource? cardSource;
+
+  /// Profile creation date backing the member-since stat; omitted from the
+  /// footer when null (never fabricated).
+  final DateTime? memberSince;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,6 +76,11 @@ class IdentityCard extends ConsumerWidget {
           value: formatShowcaseHeroValue(entries.length),
           label: l10n.personalizationStatPlatforms,
         ),
+        if (memberSince case final since?)
+          PersonalizationStat(
+            value: since.year.toString(),
+            label: l10n.personalizationStatMemberSince,
+          ),
       ],
     );
   }

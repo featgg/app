@@ -254,4 +254,53 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('IdentityCard renders the member-since year in the footer', (
+    tester,
+  ) async {
+    final widget = _widget(id: 'pass', kind: ProfileWidgetKind.passport);
+
+    await tester.pumpWidget(
+      _harness(
+        card: IdentityCard(
+          widget: widget,
+          cardSource: _publicSource(),
+          memberSince: DateTime.utc(2025, 3, 1),
+        ),
+        cards: {Platform.steam: _card(Platform.steam)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.ancestor(
+        of: find.text('2025'),
+        matching: find.byType(PersonalizationStatFooter),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('IdentityCard omits the member-since stat when the date is '
+      'unavailable', (tester) async {
+    final widget = _widget(id: 'pass', kind: ProfileWidgetKind.passport);
+
+    await tester.pumpWidget(
+      _harness(
+        card: IdentityCard(widget: widget, cardSource: _publicSource()),
+        cards: {Platform.steam: _card(Platform.steam)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Only the platform-count stat renders (one value + one label text);
+    // a member-since value is never fabricated.
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationStatFooter),
+        matching: find.byType(Text),
+      ),
+      findsNWidgets(2),
+    );
+  });
 }

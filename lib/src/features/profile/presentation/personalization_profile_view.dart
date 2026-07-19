@@ -92,6 +92,7 @@ class PersonalizationProfileView extends ConsumerWidget {
                                     layout: profile.layout,
                                     userId: userId,
                                     cardSource: cardSource,
+                                    memberSince: profile.createdAt,
                                   ),
                                 ],
                               ),
@@ -263,11 +264,15 @@ class _LayoutRows extends ConsumerWidget {
     required this.layout,
     required this.userId,
     required this.cardSource,
+    this.memberSince,
   });
 
   final List<ProfileLayoutRow> layout;
   final String userId;
   final CardSource? cardSource;
+
+  /// Profile creation date, forwarded to the Identity card's footer.
+  final DateTime? memberSince;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -338,6 +343,7 @@ class _LayoutRows extends ConsumerWidget {
       ProfileArchetype.identity => IdentityCard(
         widget: w,
         cardSource: cardSource,
+        memberSince: memberSince,
       ),
       ProfileArchetype.platform => PlatformCard(
         widget: w,

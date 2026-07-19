@@ -1444,6 +1444,10 @@
   "@personalizationStatPlatforms": {
     "description": "Stat-footer label on the Identity card; the value is the count of linked platforms."
   },
+  "personalizationStatMemberSince": "Member since",
+  "@personalizationStatMemberSince": {
+    "description": "Stat-footer label on the Identity card; the value is the year the profile was created."
+  },
   "personalizationPlatformTitle": "Highlights",
   "@personalizationPlatformTitle": {
     "description": "Title of the generic single-platform card in the personalization profile; the platform name shows as the accent tag."
