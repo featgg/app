@@ -4,7 +4,7 @@ import 'profile_widget.dart';
 /// (`docs/personalization/spec.md` §7). Kept as a small enum + switch so adding
 /// an archetype is one enum value plus two switch arms — extensibility is a
 /// stated priority and this is the cheapest seam for four entries.
-enum ProfileArchetype { identity, platform, milestone, fallback }
+enum ProfileArchetype { identity, platform, milestone, rank, main, fallback }
 
 /// The two rendered card sizes (spec §5). Size is a consequence of placement,
 /// not a stored field: a card in a full row is [full], a card in a pair row is
@@ -18,6 +18,8 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.passport => ProfileArchetype.identity,
   ProfileWidgetKind.showcase => ProfileArchetype.milestone,
   ProfileWidgetKind.platform => ProfileArchetype.platform,
+  ProfileWidgetKind.rank => ProfileArchetype.rank,
+  ProfileWidgetKind.main => ProfileArchetype.main,
   _ => ProfileArchetype.fallback,
 };
 
@@ -34,6 +36,9 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
     ProfileCardSize.full,
     ProfileCardSize.half,
   },
+  // Rank is half-only (spec §7): "how good am I" reads as a compact crest.
+  ProfileArchetype.rank => const {ProfileCardSize.half},
+  ProfileArchetype.main => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.fallback => const {
     ProfileCardSize.full,
     ProfileCardSize.half,

@@ -54,10 +54,17 @@ snake_case). Any other value is rejected as an invalid value for the field.
   platforms: one headline stat per linked platform plus a linked-platform count.
   It reads only already-published card data (no new fields) and mixes every
   linked platform, so it is not platform-bound.
+- `rank` — a platform-bound card showing the owner's competitive rank/rating on
+  one connected platform (League tier, Mythic+ rating, Chess mode rating,
+  RetroAchievements rank). Reads only already-published card data. Rendered at a
+  single (half) size.
+- `main` — a platform-bound card showing the owner's primary game / character /
+  mode on one connected platform (Steam top game, WoW character, GW2 main, League
+  top mastery, Chess primary mode). Reads only already-published card data.
 
 `platform`, `template`, `composed_card`, `showcase`, `collection`,
-`game_collector`, `completionist`, and `passport` are the kinds the client
-writes today; `data_menu` is reserved for a later phase.
+`game_collector`, `completionist`, `passport`, `rank`, and `main` are the kinds
+the client writes today; `data_menu` is reserved for a later phase.
 (Data-menu curation already ships, but as the `data_menu_items` setting on a
 `platform` widget — see below — not as a `data_menu`-typed row.)
 
@@ -83,9 +90,16 @@ Whether `platform` is required or must be null depends on `type`:
   list above (the platform whose library it counts).
 - `type = passport` → `platform` **must be null** (it aggregates every linked
   platform, not a single source).
+- `type = rank` → `platform` **must be a non-null** value from the list above
+  (the platform whose competitive standing it renders).
+- `type = main` → `platform` **must be a non-null** value from the list above
+  (the platform whose primary game/character/mode it renders).
 
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
+
+Per-kind rendered size (Rank is half-only; Main is full or half) is
+client-enforced, not server-validated — the client offers only legal sizes.
 
 - **Constraints (surface as the SDK error on violation).**
   - At most 50 widgets per user — an insert that would exceed the cap is

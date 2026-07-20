@@ -102,6 +102,20 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSize(
     String id,
     ProfileWidgetSize size,

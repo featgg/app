@@ -73,7 +73,9 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
   if (kind == ProfileWidgetKind.platform ||
       kind == ProfileWidgetKind.showcase ||
       kind == ProfileWidgetKind.gameCollector ||
-      kind == ProfileWidgetKind.completionist) {
+      kind == ProfileWidgetKind.completionist ||
+      kind == ProfileWidgetKind.rank ||
+      kind == ProfileWidgetKind.main) {
     platform = dto.platform == null ? null : _platformFromWire(dto.platform!);
     if (platform == null) return null;
   }
@@ -338,6 +340,8 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.gameCollector => 'game_collector',
   ProfileWidgetKind.completionist => 'completionist',
   ProfileWidgetKind.passport => 'passport',
+  ProfileWidgetKind.rank => 'rank',
+  ProfileWidgetKind.main => 'main',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
@@ -349,6 +353,8 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'game_collector' => ProfileWidgetKind.gameCollector,
   'completionist' => ProfileWidgetKind.completionist,
   'passport' => ProfileWidgetKind.passport,
+  'rank' => ProfileWidgetKind.rank,
+  'main' => ProfileWidgetKind.main,
   _ => null,
 };
 

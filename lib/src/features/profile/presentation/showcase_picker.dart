@@ -13,6 +13,7 @@ import 'collection_picker.dart';
 import 'passport_picker.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_widgets_controller.dart';
+import 'rank_main_add_section.dart';
 
 /// Opens the visual add-card picker as a modal bottom sheet: the connected
 /// Steam account's library-showcase games as art tiles. Tapping a tile adds a
@@ -105,6 +106,10 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
             // Steam-card gate below, so a Steam-less user can still add it (it
             // aggregates every linked platform, not just Steam).
             PassportAddBanner(existing: existing),
+            // Platform-bound Rank/Main acquisition, also outside the Steam gate;
+            // it collapses to nothing unless a supported, connected platform
+            // carries the data.
+            RankMainAddSection(existing: existing),
             const SizedBox(height: AppSpacing.md),
             _ModeToggle(
               mode: _mode,

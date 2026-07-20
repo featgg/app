@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:featgg/src/features/profile/domain/profile_providers.dart';
@@ -120,6 +121,37 @@ void main() {
     // Nothing is persisted yet, so a plain Save is dirty (persists the bootstrap).
     expect(state.saved, isEmpty);
     expect(state.isDirty, isTrue);
+  });
+
+  test('startComposing seeds a half-only widget as a PairRow orphan and a '
+      'dual-size widget as a FullRow', () {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
+
+    // Rank is half-only (its archetype supports only half); Main supports full.
+    const rank = ProfileWidget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+      position: 0,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+    );
+    const main = ProfileWidget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.steam,
+      position: 1,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+    );
+
+    notifier.startComposing(const [rank, main]);
+    final state = container.read(profileCompositionProvider);
+
+    // The half-only card can't be a full row, so it bootstraps as a single-slot
+    // centered orphan; the dual-size card bootstraps as a full row.
+    expect(state.working, const [PairRow(left: 'r'), FullRow('m')]);
   });
 
   test(

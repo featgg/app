@@ -181,6 +181,26 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     required ProfileWidgetSize size,
   }) => _run((repo) => repo.addPassportWidget(position: position, size: size));
 
+  /// Adds a rank widget bound to [platform] at [position] with [size].
+  Future<void> addRank({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) =>
+        repo.addRankWidget(platform: platform, position: position, size: size),
+  );
+
+  /// Adds a main widget bound to [platform] at [position] with [size].
+  Future<void> addMain({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) =>
+        repo.addMainWidget(platform: platform, position: position, size: size),
+  );
+
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 

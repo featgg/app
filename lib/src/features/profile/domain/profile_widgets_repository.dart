@@ -89,6 +89,24 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts a rank widget bound to [platform] at [position] with [size],
+  /// enabled. Platform-bound (the competitive rank/rating it surfaces); the
+  /// settings envelope carries only the size (no per-widget selection sub-object).
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
+  /// Inserts a main widget bound to [platform] at [position] with [size],
+  /// enabled. Platform-bound (the primary game/character/mode it surfaces); the
+  /// settings envelope carries only the size (no per-widget selection sub-object).
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 

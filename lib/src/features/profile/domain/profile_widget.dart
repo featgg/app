@@ -21,6 +21,8 @@ enum ProfileWidgetKind {
   gameCollector,
   completionist,
   passport,
+  rank,
+  main,
 }
 
 /// Grid footprint a widget occupies. Maps to row-layout spans in
@@ -56,9 +58,9 @@ final class ProfileWidget extends Equatable {
   final ProfileWidgetKind kind;
 
   /// Non-null for [ProfileWidgetKind.platform], [ProfileWidgetKind.showcase],
-  /// [ProfileWidgetKind.gameCollector], and [ProfileWidgetKind.completionist]
-  /// (the single source platform whose library the card draws from); null
-  /// otherwise.
+  /// [ProfileWidgetKind.gameCollector], [ProfileWidgetKind.completionist],
+  /// [ProfileWidgetKind.rank], and [ProfileWidgetKind.main] (the single source
+  /// platform the card draws from); null otherwise.
   final Platform? platform;
   final int position;
   final bool isEnabled;

@@ -35,6 +35,10 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   CollectionSelection? lastCollectionSelection;
   Platform? lastCollectorPlatform;
   Platform? lastCompletionistPlatform;
+  Platform? lastRankPlatform;
+  int? lastRankPosition;
+  Platform? lastMainPlatform;
+  int? lastMainPosition;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -212,6 +216,48 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         id: 'new',
         kind: ProfileWidgetKind.passport,
         platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addRank');
+    lastRankPlatform = platform;
+    lastRankPosition = position;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.rank,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    mutations.add('addMain');
+    lastMainPlatform = platform;
+    lastMainPosition = position;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.main,
+        platform: platform,
         position: position,
         isEnabled: true,
         size: size,
@@ -460,6 +506,58 @@ void main() {
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addPassport']);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addRank delegates to addRankWidget with the platform', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addRank(
+            platform: Platform.leagueOfLegends,
+            position: 2,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addRank']);
+      expect(repo.lastRankPlatform, Platform.leagueOfLegends);
+      expect(repo.lastRankPosition, 2);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addMain delegates to addMainWidget with the platform', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addMain(
+            platform: Platform.steam,
+            position: 3,
+            size: ProfileWidgetSize.small,
+          );
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addMain']);
+      expect(repo.lastMainPlatform, Platform.steam);
+      expect(repo.lastMainPosition, 3);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,

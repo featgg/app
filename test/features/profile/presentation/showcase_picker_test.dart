@@ -150,6 +150,20 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSize(
     String id,
     ProfileWidgetSize size,
@@ -417,6 +431,14 @@ void main() {
   testWidgets('tapping a tile adds a showcase for that game and closes', (
     tester,
   ) async {
+    // A tall viewport: the sheet now also carries the Rank/Main add section above
+    // the tall art tiles, so the default 800×600 view would push the tile out of
+    // the games viewport.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     // An existing platform widget at position 2 (not a showcase, so it does not
     // shrink the addable set) proves the insert position is max+1 = 3.
     final widgetsRepo = _RecordingWidgetsRepository();

@@ -125,7 +125,13 @@ class ProfileComposition extends _$ProfileComposition {
     ]..sort((a, b) => a.position.compareTo(b.position));
     state = state.copyWith(
       editing: true,
-      working: [for (final w in enabled) FullRow(w.id)],
+      // A half-only archetype (e.g. Rank) can't seed as a full row; it bootstraps
+      // as a single-slot pair (centered orphan) so its slot is legal from the
+      // start, matching the moveToGap rule.
+      working: [
+        for (final w in enabled)
+          _supportsFull(w.id) ? FullRow(w.id) : PairRow(left: w.id),
+      ],
       saved: const [],
       saveFailed: false,
     );
