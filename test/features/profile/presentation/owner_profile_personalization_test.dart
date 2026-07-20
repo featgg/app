@@ -230,4 +230,79 @@ void main() {
     final working = harness.container.read(profileCompositionProvider).working;
     expect(working.first, const FullRow('card'));
   });
+
+  testWidgets(
+    'the last card clears the floating control bar at maximum scroll',
+    (tester) async {
+      // Phone-sized viewport with enough full-row cards to scroll past the fold.
+      tester.view.physicalSize = const Size(390, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final widgets = [
+        for (var i = 0; i < 6; i++) _widget('w$i', ProfileWidgetKind.template),
+      ];
+      const profile = Profile(
+        id: 'owner-1',
+        username: 'nico',
+        displayName: 'Nico',
+        avatarUrl: null,
+        bio: null,
+        theme: ProfileTheme.crimson,
+        privacy: ProfilePrivacy.public,
+        featuredPlatform: null,
+        layout: [
+          FullRow('w0'),
+          FullRow('w1'),
+          FullRow('w2'),
+          FullRow('w3'),
+          FullRow('w4'),
+          FullRow('w5'),
+        ],
+      );
+
+      final container = ProviderContainer(
+        retry: (count, error) => null,
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(_FakeProfileRepo()),
+          profileWidgetsRepositoryProvider.overrideWithValue(
+            _FakeWidgetsRepo(widgets),
+          ),
+          cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: OwnerProfilePersonalization(profile: profile),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Jump to the very bottom of the scroll content.
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      // The last card's bottom edge sits above the control bar's top edge — the
+      // reserved bottom inset keeps it from hiding behind the bar.
+      final lastCardBottom = tester
+          .getRect(find.byKey(personalizationCardKey('w5')))
+          .bottom;
+      final barTop = tester
+          .getRect(find.byKey(const Key('profileComposeControlBar')))
+          .top;
+      expect(lastCardBottom, lessThanOrEqualTo(barTop));
+    },
+  );
 }

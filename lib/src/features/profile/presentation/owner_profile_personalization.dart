@@ -55,6 +55,8 @@ class OwnerProfilePersonalization extends ConsumerWidget {
                 ? (context, columnWidth) =>
                       CompositionEditorRows(columnWidth: columnWidth)
                 : null,
+            // Reserve room so the floating control bar never hides the last card.
+            bottomInset: PersonalizationLayout.editorControlBarInset,
           ),
           Positioned(
             left: AppSpacing.md,
@@ -112,6 +114,7 @@ class _ControlBar extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
+      key: const Key('profileComposeControlBar'),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.smMd,
         vertical: AppSpacing.sm,

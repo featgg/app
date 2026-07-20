@@ -280,6 +280,11 @@ abstract final class PersonalizationLayout {
   /// Opacity of a disabled control-bar action — dimmer than enabled without a
   /// second color token.
   static const double controlDisabledOpacity = 0.5;
+
+  /// Bottom inset the scroll content reserves when the composition control bar
+  /// floats over it (the bar's occupied height plus the offset it sits above the
+  /// bottom), so the last card clears the bar at maximum scroll.
+  static const double editorControlBarInset = 80;
 }
 
 /// The hero conditional-fit budget (spec §4): the frame is the natural 4:5

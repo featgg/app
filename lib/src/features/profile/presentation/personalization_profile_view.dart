@@ -29,6 +29,7 @@ class PersonalizationProfileView extends ConsumerWidget {
     this.cardSource,
     this.widgetsProvider,
     this.rowsBuilder,
+    this.bottomInset = 0,
   });
 
   /// Carries the layout and the theme that selects this view's palette.
@@ -48,6 +49,11 @@ class PersonalizationProfileView extends ConsumerWidget {
   /// Builds the rows region given the resolved column width. Null → the
   /// read-only rows; the owner injects the editor rows while editing.
   final Widget Function(BuildContext context, double columnWidth)? rowsBuilder;
+
+  /// Extra bottom padding reserved inside the scroll content so a floating
+  /// overlay (the owner's composition control bar) never hides the last card at
+  /// maximum scroll. Zero for the visitor render, which has no overlay.
+  final double bottomInset;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,10 +87,13 @@ class PersonalizationProfileView extends ConsumerWidget {
                               maxWidth: PersonalizationLayout.columnMaxWidth,
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal:
-                                    PersonalizationLayout.columnSidePadding,
-                                vertical: AppSpacing.lg,
+                              // Reserve extra bottom room for a floating overlay
+                              // (the owner control bar); zero for the visitor.
+                              padding: EdgeInsets.fromLTRB(
+                                PersonalizationLayout.columnSidePadding,
+                                AppSpacing.lg,
+                                PersonalizationLayout.columnSidePadding,
+                                AppSpacing.lg + bottomInset,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
