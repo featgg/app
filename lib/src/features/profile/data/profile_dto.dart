@@ -95,6 +95,24 @@ List<ProfileLayoutRow> _layoutFromWire(List<dynamic> raw) {
   return rows;
 }
 
+/// Serializes rows to the wire array the layout write path accepts — the inverse
+/// of [_layoutFromWire]. A [FullRow] becomes `{'t':'full','c':[id]}`; a [PairRow]
+/// becomes `{'t':'pair','c':[left,right]}` with nulls preserved so an orphan
+/// keeps its slot position.
+List<Map<String, dynamic>> layoutToWire(List<ProfileLayoutRow> rows) => [
+  for (final row in rows)
+    switch (row) {
+      FullRow(:final cardId) => {
+        't': 'full',
+        'c': [cardId],
+      },
+      PairRow(:final left, :final right) => {
+        't': 'pair',
+        'c': [left, right],
+      },
+    },
+];
+
 /// Maps a wire token to a [Platform], returning null for null or unknown tokens.
 /// Resolution is intentionally soft — the server resolves an unknown/stale
 /// token to the default card, so the client reads it back as "default" rather

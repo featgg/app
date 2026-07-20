@@ -37,6 +37,11 @@ final class _FakeProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 ProviderContainer _container(ProfileRepository repo) {

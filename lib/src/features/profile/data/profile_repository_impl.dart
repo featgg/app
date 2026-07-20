@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/observability/observability.dart';
 import '../domain/profile.dart';
+import '../domain/profile_layout.dart';
 import '../domain/profile_repository.dart';
 import 'profile_data_source.dart';
 import 'profile_dto.dart';
@@ -53,6 +54,18 @@ final class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
+  Future<Either<Failure, Unit>> setMyLayout(List<ProfileLayoutRow> rows) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _dataSource.saveLayout(layoutToWire(rows));
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async {
     try {
       final dto = await _dataSource.fetchProfileRow(userId);
@@ -80,6 +93,12 @@ final class ProfileRepositoryImpl implements ProfileRepository {
       // PostgREST surfaces access denials / auth-token problems as 401/403.
       if (code == '401' || code == '403' || code == 'PGRST301') {
         return const AuthFailure();
+      }
+      // The layout write path rejects an invalid array with this token. It is
+      // expected control flow (the editor only offers legal placements), so it
+      // surfaces as an InputFailure, not a crash.
+      if (code == 'LAYOUT_INVALID') {
+        return InputFailure(message: error.message, code: code);
       }
       // Postgres integrity-violation class (23xxx): check, unique, not-null
       // violations are expected control flow — the backend constraint is

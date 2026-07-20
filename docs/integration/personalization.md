@@ -127,8 +127,45 @@ from the invalid-`type` rejection above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.
   The set is small (≤ 50); no pagination required.
 
+## Layout write (composition editor)
+
+The composed arrangement itself — the ordered rows a profile renders — is written
+through a dedicated owner-scoped server operation, not the direct `profiles`
+update surface. The backend is treated as an opaque HTTPS service.
+
+### Shape 1 (server operation)
+
+- **Operation.** `POST /rest/v1/rpc/set_profile_layout`
+- **Headers.** `Authorization: Bearer <jwt>`, `Content-Type: application/json`.
+- **Auth.** Requires a valid session; always acts on the caller's own profile
+  (there is no target field).
+- **Request body.** `{ "p_layout": Row[] }` — replace semantics: send the whole
+  layout. `Row` is one of:
+  - `{ "t": "full", "c": [CardId] }` — one full-width card.
+  - `{ "t": "pair", "c": [CardId | null, CardId | null] }` — up to two side-by-side
+    halves; a single non-null slot renders as a centered orphan.
+  - `CardId` is a non-empty id of one of the caller's own widgets. `[]` clears the
+    layout (the profile falls back to the default arrangement).
+- **Server-enforced (all-or-nothing).** Known `t`; the correct cell count per row
+  type; every id is one of the caller's own widget ids; each card appears at most
+  once; at most 50 rows; at most ~8 KB serialized. Per-archetype size support
+  (which cards may be half) is **not** server-validated — the client offers only
+  legal placements.
+- **Disabled-card semantics.** A save that references a disabled card succeeds; the
+  client hides that card at render and re-enabling it restores its slot with no
+  re-save.
+- **Success.** `204` with an empty body.
+- **Errors.** JSON `{ code, message, ... }`. Branch on `code`/status, never on
+  `message`:
+  - `422` `LAYOUT_INVALID` — the layout was rejected. Roll back the edit and show
+    a "couldn't save" message.
+  - `401` — the session is invalid/expired; re-authenticate.
+  - `5xx` / other — transient; roll back and allow a retry.
+
 ## Cross-references
 
-- `profile.md` — widgets are readable when the parent profile is public.
+- `profile.md` — widgets are readable when the parent profile is public; the
+  `layout` column referencing these widget ids is read there and written via the
+  operation above.
 - `connections.md` — a `platform` widget surfaces data from a connected
   platform; the platform tokens above match the connections surface.

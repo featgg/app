@@ -70,6 +70,11 @@ final class _PendingProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 /// Connections repository stub that satisfies the cold-start refresh-all

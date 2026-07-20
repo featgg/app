@@ -25,6 +25,8 @@ final class _FakeRepository implements ProfileRepository {
 
   final Future<Either<Failure, Profile>> Function() result;
   int calls = 0;
+  int setLayoutCalls = 0;
+  List<ProfileLayoutRow>? lastLayout;
 
   @override
   Future<Either<Failure, Profile>> fetchMyProfile() {
@@ -39,6 +41,13 @@ final class _FakeRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(List<ProfileLayoutRow> rows) async {
+    setLayoutCalls++;
+    lastLayout = rows;
+    return right(unit);
+  }
 }
 
 /// Holds the future open indefinitely so the loading state is observable.
@@ -55,7 +64,59 @@ final class _PendingRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
+
+/// A repository that reflects a completed layout write: after [setMyLayout], the
+/// next [fetchMyProfile] returns the profile carrying that layout — the static
+/// fake can only ever report the pre-save empty layout. When [gateRefetch] is
+/// set the post-save refetch stays pending on [refetchGate] so the mid-refetch
+/// frame is observable.
+final class _ComposingRepository implements ProfileRepository {
+  _ComposingRepository({this.gateRefetch = false});
+
+  final bool gateRefetch;
+  final refetchGate = Completer<void>();
+  int setLayoutCalls = 0;
+  List<ProfileLayoutRow> layout = const [];
+
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() async {
+    if (gateRefetch && setLayoutCalls > 0) await refetchGate.future;
+    return right(_profileWith(layout));
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(List<ProfileLayoutRow> rows) async {
+    setLayoutCalls++;
+    layout = rows;
+    return right(unit);
+  }
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
+      right(_profileWith(layout));
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
+}
+
+Profile _profileWith(List<ProfileLayoutRow> layout) => Profile(
+  id: 'user-1',
+  username: 'testuser',
+  displayName: 'Test User',
+  avatarUrl: null,
+  bio: 'My bio',
+  theme: ProfileTheme.crimson,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  layout: layout,
+);
 
 /// Injects a fixed widgets-read outcome per test. When [mutationFailure] is set,
 /// a mutation (the add path) returns that Left so the screen's error surface is
@@ -506,6 +567,20 @@ const _privateProfile = Profile(
   featuredPlatform: null,
 );
 
+// A profile with a composed layout routes to the personalization editor rather
+// than the legacy grid.
+const _composedProfile = Profile(
+  id: 'user-1',
+  username: 'testuser',
+  displayName: 'Test User',
+  avatarUrl: null,
+  bio: 'My bio',
+  theme: ProfileTheme.crimson,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  layout: [FullRow('w-1')],
+);
+
 Widget _screen(
   ProfileRepository repo, {
   ProfileWidgetsRepository? widgetsRepo,
@@ -734,6 +809,225 @@ void main() {
 
     expect(find.byKey(const Key('profileWidgetsEmpty')), findsOneWidget);
     expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('a composed-layout profile mounts the personalization editor', (
+    tester,
+  ) async {
+    // A non-empty layout routes to the personalization render with the compose
+    // control bar instead of the legacy grid.
+    final repo = _FakeRepository(result: () async => right(_composedProfile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('an empty-layout profile keeps the legacy grid', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
+    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
+  });
+
+  testWidgets('the personalize entry appears with an enabled widget and an '
+      'empty layout', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profilePersonalizeButton')), findsOneWidget);
+  });
+
+  testWidgets('the personalize entry is absent when no widget is enabled', (
+    tester,
+  ) async {
+    // A single disabled widget → nothing to compose → no entry, legacy grid
+    // still renders (the widget shown dimmed).
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_hiddenSteamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profilePersonalizeButton')), findsNothing);
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
+  });
+
+  testWidgets(
+    'personalize then cancel returns to the grid without persisting',
+    (tester) async {
+      final repo = _FakeRepository(result: () async => right(_profile));
+      final widgetsRepo = _FakeWidgetsRepository(
+        fetchResult: right([_steamWidget()]),
+      );
+      final cardsRepo = _FakeCardsRepository(_steamCard());
+
+      await tester.pumpWidget(
+        _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+      await tester.pumpAndSettle();
+      // The composition editor is now mounted.
+      expect(
+        find.byKey(const Key('profileComposeCancelButton')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('profileComposeCancelButton')));
+      await tester.pumpAndSettle();
+
+      // Back on the legacy grid; nothing was persisted.
+      expect(find.byKey(const Key('profilePersonalizeButton')), findsOneWidget);
+      expect(repo.setLayoutCalls, equals(0));
+    },
+  );
+
+  testWidgets('personalize then done persists the bootstrap layout', (
+    tester,
+  ) async {
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
+    await tester.pumpAndSettle();
+
+    // The bootstrap (the one enabled widget as a full row) was sent once.
+    expect(repo.setLayoutCalls, equals(1));
+    expect(repo.lastLayout, const [FullRow('w-1')]);
+  });
+
+  testWidgets('after a successful first-composition save the composed render '
+      'stays (never reverts to the legacy grid)', (tester) async {
+    // The repository now reports the saved layout on the next read, so the
+    // settled end state is the composed surface.
+    final repo = _ComposingRepository();
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
+    expect(find.byKey(const Key('profilePersonalizeButton')), findsNothing);
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('a first-composition save does not blink back to the legacy grid '
+      'while the profile refetch is in flight', (tester) async {
+    // The post-save refetch is held pending; the personalization surface must
+    // hold through the window (saved is non-empty before the fresh layout lands).
+    final repo = _ComposingRepository(gateRefetch: true);
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
+    // Process the save (editing→false + invalidate) with the refetch held open.
+    await tester.pump();
+    await tester.pump();
+
+    // Mid-refetch: still on the personalization surface, not the legacy grid.
+    expect(find.byKey(const Key('profilePersonalizeButton')), findsNothing);
+    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+
+    // Let the refetch land; the composed render settles.
+    repo.refetchGate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
+  });
+
+  testWidgets('re-entering edit during the post-save refetch keeps the '
+      'just-saved composition (does not wipe the editor)', (tester) async {
+    final repo = _ComposingRepository(gateRefetch: true);
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    // First composition: Personalize → Done, with the refetch held pending.
+    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
+    await tester.pump();
+    await tester.pump();
+
+    // In view mode over the still-stale (empty) profile, re-enter edit. The seed
+    // must come from the saved composition, not the stale empty layout.
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pump();
+    await tester.pump();
+
+    // The just-saved card is present and draggable in the editor (a stale-[] seed
+    // would leave a blank editor with no handle).
+    expect(find.byKey(const Key('compositionDragHandle_w-1')), findsOneWidget);
+
+    repo.refetchGate.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('all-hidden widgets show the grid, not the empty-add hint', (

@@ -54,4 +54,12 @@ final class SupabaseProfileDataSource implements ProfileDataSource {
         .single();
     return ProfileDto.fromJson(row);
   }
+
+  @override
+  Future<void> saveLayout(List<Map<String, dynamic>> rows) async {
+    // The layout column is not directly writable; the owner-scoped RPC validates
+    // the whole array and replaces it atomically. It keys off the session, so no
+    // target id is sent.
+    await _client.rpc('set_profile_layout', params: {'p_layout': rows});
+  }
 }

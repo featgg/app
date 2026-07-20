@@ -55,6 +55,11 @@ final class _ClearableProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 /// Profile fake that starts non-pending and flips to pending once [scheduled]
@@ -74,6 +79,11 @@ final class _SchedulingProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 /// Recording deletion-repo fake: counts cancel calls and, on cancel, clears the
@@ -126,6 +136,11 @@ final class _RecordingProfileRepository implements ProfileRepository {
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
       right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 /// Recording auth fake: counts sign-out calls; the outcome is injected.

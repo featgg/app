@@ -271,6 +271,20 @@ abstract final class PersonalizationLayout {
   /// Hero word fluid size bounds (mockup `clamp(2rem, 9vw, 3rem)`).
   static const double heroWordMinSize = 28;
   static const double heroWordMaxSize = 44;
+
+  /// Composition-editor drag ghost: capped width so a lifted card reads as a
+  /// compact preview, and a slight transparency so it reads as a ghost.
+  static const double editorGhostMaxWidth = 240;
+  static const double editorGhostOpacity = 0.85;
+
+  /// Opacity of a disabled control-bar action — dimmer than enabled without a
+  /// second color token.
+  static const double controlDisabledOpacity = 0.5;
+
+  /// Bottom inset the scroll content reserves when the composition control bar
+  /// floats over it (the bar's occupied height plus the offset it sits above the
+  /// bottom), so the last card clears the bar at maximum scroll.
+  static const double editorControlBarInset = 80;
 }
 
 /// The hero conditional-fit budget (spec §4): the frame is the natural 4:5

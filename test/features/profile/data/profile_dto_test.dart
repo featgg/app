@@ -263,6 +263,28 @@ void main() {
         );
       });
 
+      test('layoutToWire round-trips full, pair, and orphan rows through the '
+          'read parser', () {
+        // Serializing rows then parsing the wire array back must reproduce the
+        // rows exactly (inverse of the read parser), nulls preserved.
+        const rows = [
+          FullRow('id-a'),
+          PairRow(left: 'id-b', right: 'id-c'),
+          PairRow(left: 'id-d'),
+          PairRow(right: 'id-e'),
+        ];
+        final wire = layoutToWire(rows);
+        final parsed = profileFromDto(
+          ProfileDto.fromJson(_fullRow(layout: wire)),
+        ).layout;
+
+        expect(parsed, rows);
+      });
+
+      test('layoutToWire of an empty layout is the empty array', () {
+        expect(layoutToWire(const []), isEmpty);
+      });
+
       test('drops malformed rows and slots without throwing', () {
         // Every entry but the last is malformed in a distinct way; the parser
         // must drop each rather than throw or keep garbage.

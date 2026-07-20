@@ -6,7 +6,9 @@ import 'package:featgg/src/features/profile/data/profile_data_source.dart';
 import 'package:featgg/src/features/profile/data/profile_dto.dart';
 import 'package:featgg/src/features/profile/data/profile_repository_impl.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Hand-rolled recording reporter — mirrors _RecordingReporter in auth tests.
@@ -21,14 +23,17 @@ final class _RecordingReporter implements CrashReporter {
 
 /// Callback-driven fake for the ProfileDataSource seam.
 final class _FakeDataSource implements ProfileDataSource {
-  _FakeDataSource({this.onFetch, this.onUpdate});
+  _FakeDataSource({this.onFetch, this.onUpdate, this.onSaveLayout});
 
   final Future<ProfileDto?> Function(String userId)? onFetch;
   final Future<ProfileDto> Function(String userId, Map<String, dynamic> values)?
   onUpdate;
+  final Future<void> Function(List<Map<String, dynamic>> rows)? onSaveLayout;
   int fetchCalls = 0;
   int myFetchCalls = 0;
   int updateCalls = 0;
+  int saveLayoutCalls = 0;
+  List<Map<String, dynamic>>? lastSavedRows;
 
   @override
   Future<ProfileDto?> fetchProfileRow(String userId) {
@@ -50,6 +55,13 @@ final class _FakeDataSource implements ProfileDataSource {
     updateCalls++;
     if (onUpdate != null) return onUpdate!(userId, values);
     throw UnimplementedError('onUpdate not set');
+  }
+
+  @override
+  Future<void> saveLayout(List<Map<String, dynamic>> rows) {
+    saveLayoutCalls++;
+    lastSavedRows = rows;
+    return onSaveLayout?.call(rows) ?? Future.value();
   }
 }
 
@@ -392,6 +404,115 @@ void main() {
           (_) => fail('expected Left'),
         );
         expect(reporter.reported, hasLength(1));
+      },
+    );
+  });
+
+  group('ProfileRepositoryImpl.setMyLayout', () {
+    const layout = [
+      FullRow('id-a'),
+      PairRow(left: 'id-b', right: 'id-c'),
+      PairRow(left: 'id-d'),
+    ];
+
+    test('returns Right(unit) and sends the wire rows on success', () async {
+      final dataSource = _FakeDataSource(onSaveLayout: (_) async {});
+      final result = await _repo(
+        dataSource,
+        _RecordingReporter(),
+      ).setMyLayout(layout);
+
+      expect(result, right<Failure, Unit>(unit));
+      expect(dataSource.saveLayoutCalls, equals(1));
+      expect(dataSource.lastSavedRows, [
+        {
+          't': 'full',
+          'c': ['id-a'],
+        },
+        {
+          't': 'pair',
+          'c': ['id-b', 'id-c'],
+        },
+        {
+          't': 'pair',
+          'c': ['id-d', null],
+        },
+      ]);
+    });
+
+    test('an empty layout sends the empty array (clears the composition)', () {
+      final dataSource = _FakeDataSource(onSaveLayout: (_) async {});
+      _repo(dataSource, _RecordingReporter()).setMyLayout(const []);
+      expect(dataSource.lastSavedRows, isEmpty);
+    });
+
+    test(
+      'a LAYOUT_INVALID PostgrestException maps to Left(InputFailure) and is '
+      'not reported',
+      () async {
+        final reporter = _RecordingReporter();
+        final dataSource = _FakeDataSource(
+          onSaveLayout: (_) async => throw PostgrestException(
+            message: 'rejected',
+            code: 'LAYOUT_INVALID',
+          ),
+        );
+        final result = await _repo(dataSource, reporter).setMyLayout(layout);
+
+        result.fold((f) {
+          expect(f, isA<InputFailure>());
+          expect(f.code, 'LAYOUT_INVALID');
+        }, (_) => fail('expected Left'));
+        // Expected control flow — must not be crash-reported.
+        expect(reporter.reported, isEmpty);
+      },
+    );
+
+    test('a 401 PostgrestException maps to Left(AuthFailure)', () async {
+      final reporter = _RecordingReporter();
+      final dataSource = _FakeDataSource(
+        onSaveLayout: (_) async =>
+            throw PostgrestException(message: 'no session', code: '401'),
+      );
+      final result = await _repo(dataSource, reporter).setMyLayout(layout);
+
+      result.fold(
+        (f) => expect(f, isA<AuthFailure>()),
+        (_) => fail('expected Left'),
+      );
+      expect(reporter.reported, isEmpty);
+    });
+
+    test('a SocketException maps to Left(NetworkFailure)', () async {
+      final reporter = _RecordingReporter();
+      final dataSource = _FakeDataSource(
+        onSaveLayout: (_) async =>
+            throw const SocketException('no route to host'),
+      );
+      final result = await _repo(dataSource, reporter).setMyLayout(layout);
+
+      result.fold(
+        (f) => expect(f, isA<NetworkFailure>()),
+        (_) => fail('expected Left'),
+      );
+      expect(reporter.reported, isEmpty);
+    });
+
+    test(
+      'no session returns Left(AuthFailure) without calling the seam',
+      () async {
+        final dataSource = _FakeDataSource(onSaveLayout: (_) async {});
+        final result = await _repo(
+          dataSource,
+          _RecordingReporter(),
+          userId: null,
+        ).setMyLayout(layout);
+
+        result.fold(
+          (f) => expect(f, isA<AuthFailure>()),
+          (_) => fail('expected Left'),
+        );
+        expect(dataSource.saveLayoutCalls, equals(0));
       },
     );
   });

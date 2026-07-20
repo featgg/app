@@ -26,4 +26,9 @@ abstract interface class ProfileDataSource {
     String userId,
     Map<String, dynamic> values,
   );
+
+  /// Persists the caller's own composition via the owner-scoped write path,
+  /// replacing the whole layout with [rows] (an empty list clears it). Throws on
+  /// a transport or validation fault for the caller's single try/catch to map.
+  Future<void> saveLayout(List<Map<String, dynamic>> rows);
 }
