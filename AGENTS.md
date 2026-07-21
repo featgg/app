@@ -205,7 +205,7 @@ final action** — agents never fix, dismiss, file, or defer without that sign-o
    logic defect keeps the severity it merits regardless of the P0/P1 lists.
 3. **Decision.** Exactly one per finding:
    - **Fix now** — valid and inside the change's scope: fix it in this same
-     branch/PR and re-verify.
+     branch/PR under the fix discipline below.
    - **Dismiss** — did not apply (step 1): the one-line reason is the
      dismissal (and the reply, on a PR comment).
    - **File an issue + re-scope** — valid but off the change's scope: per
@@ -213,6 +213,22 @@ final action** — agents never fix, dismiss, file, or defer without that sign-o
      off-scope work ad-hoc.
    - **Defer** — valid but already owned by a planned later sub-issue (the AI
      reviewer did not know the roadmap): note where it lands; no new issue.
+
+**Fix discipline.** A triage fix is the highest-risk edit in the cycle: it
+lands after Stage 3, so no reviewer re-traces it unless one is re-run. Every
+"fix now":
+
+- is a point fix — the minimal patch for the confirmed finding, nothing else
+  riding along;
+- starts from the failure: pin down the exact input or state that makes the
+  finding real; when that path is testable and was not asserted, add the
+  regression test that fails before the fix and passes after;
+- must not regress the surface it touches — re-trace the adjacent paths the
+  patch modifies (failure, cancel, retry, repeated action, lifecycle), not
+  just the reported one, exactly as the Stage-3 regression guard does for any
+  diff;
+- re-runs the full verification sequence before pushing, not just the new
+  test.
 
 Record the triage as a short table — finding (file:line) | applies? | severity
 | decision — so the rotation is auditable. The flow is identical for a local
