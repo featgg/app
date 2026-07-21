@@ -13,9 +13,9 @@ import 'package:featgg/src/features/profile/domain/profile_repository.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
-import 'package:featgg/src/features/profile/presentation/owner_profile_personalization.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
 import 'package:featgg/src/features/profile/presentation/profile_composition_controller.dart';
+import 'package:featgg/src/features/profile/presentation/profile_screen.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,9 +50,10 @@ final _widgets = [
 ];
 
 final class _FakeProfileRepo implements ProfileRepository {
-  _FakeProfileRepo({this.setResult});
+  _FakeProfileRepo({this.setResult, this.profile = _profile});
 
   final Either<Failure, Unit> Function()? setResult;
+  final Profile profile;
 
   @override
   Future<Either<Failure, Unit>> setMyLayout(
@@ -60,7 +61,7 @@ final class _FakeProfileRepo implements ProfileRepository {
   ) async => setResult?.call() ?? right(unit);
 
   @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async => right(_profile);
+  Future<Either<Failure, Profile>> fetchMyProfile() async => right(profile);
 
   @override
   Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
@@ -84,6 +85,35 @@ final class _FakeWidgetsRepo implements ProfileWidgetsRepository {
   Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
     String userId,
   ) async => right(widgets);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// A widgets repository whose `removeWidget` genuinely prunes its backing list,
+/// so a re-fetch after a delete returns the reduced set — the exact behavior the
+/// no-bounce-back delete relies on. Records the ids it was asked to remove.
+final class _DeletableWidgetsRepo implements ProfileWidgetsRepository {
+  _DeletableWidgetsRepo(this._widgets);
+
+  final List<ProfileWidget> _widgets;
+  final removed = <String>[];
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
+      right(List.of(_widgets));
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(List.of(_widgets));
+
+  @override
+  Future<Either<Failure, Unit>> removeWidget(String id) async {
+    removed.add(id);
+    _widgets.removeWhere((w) => w.id == id);
+    return right(unit);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
@@ -218,9 +248,9 @@ GameCard _chessCard() => GameCard(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(
-        body: OwnerProfilePersonalization(profile: _profile),
-      ),
+      // The compose controls now live in ProfileScreen's app bar, so the harness
+      // mounts the real screen; the composed `_profile` routes to the surface.
+      home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
     ),
   );
   return (widget: widget, container: container);
@@ -265,15 +295,15 @@ void main() {
     await _enterEdit(tester);
 
     // No edit yet → Done is disabled.
-    InkWell done() => tester.widget<InkWell>(
+    IconButton done() => tester.widget<IconButton>(
       find.byKey(const Key('profileComposeDoneButton')),
     );
-    expect(done().onTap, isNull);
+    expect(done().onPressed, isNull);
 
     // A size toggle mutates the working layout → Done enables.
     await tester.tap(find.byKey(const Key('compositionSizeToggle_card')));
     await tester.pumpAndSettle();
-    expect(done().onTap, isNotNull);
+    expect(done().onPressed, isNotNull);
   });
 
   testWidgets('a save failure surfaces the failure snackbar', (tester) async {
@@ -329,17 +359,19 @@ void main() {
     final container = ProviderContainer(
       retry: (count, error) => null,
       overrides: [
-        profileRepositoryProvider.overrideWithValue(_FakeProfileRepo()),
+        // A single-card profile so `startEditing` seeds [FullRow('card')] and the
+        // acquire assertions (card, then the acquired Main) hold.
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: cardOnlyProfile),
+        ),
         profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
         cardsRepositoryProvider.overrideWithValue(_ChessCardsRepo()),
       ],
     );
     addTearDown(container.dispose);
-    // Mirror ProfileScreen, which owns this surface in production and keeps the
-    // autoDispose mutation controller alive across an in-flight write so its
-    // success-path invalidation of the widgets read reliably fires (and its error
-    // state is observable).
-    container.listen(profileWidgetsControllerProvider, (_, _) {});
+    // ProfileScreen keeps the autoDispose mutation controller alive across an
+    // in-flight write (its success-path invalidation fires and its error state
+    // stays observable), so the harness no longer hand-rolls that listener.
     return (
       container: container,
       widget: UncontrolledProviderScope(
@@ -348,9 +380,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: observers,
-          home: const Scaffold(
-            body: OwnerProfilePersonalization(profile: cardOnlyProfile),
-          ),
+          home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
         ),
       ),
     );
@@ -558,78 +588,147 @@ void main() {
     expect(working.first, const FullRow('card'));
   });
 
-  testWidgets(
-    'the last card clears the floating control bar at maximum scroll',
-    (tester) async {
-      // Phone-sized viewport with enough full-row cards to scroll past the fold.
-      tester.view.physicalSize = const Size(390, 700);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      final widgets = [
-        for (var i = 0; i < 6; i++) _widget('w$i', ProfileWidgetKind.template),
-      ];
-      const profile = Profile(
-        id: 'owner-1',
-        username: 'nico',
-        displayName: 'Nico',
-        avatarUrl: null,
-        bio: null,
-        theme: ProfileTheme.crimson,
-        privacy: ProfilePrivacy.public,
-        featuredPlatform: null,
-        layout: [
-          FullRow('w0'),
-          FullRow('w1'),
-          FullRow('w2'),
-          FullRow('w3'),
-          FullRow('w4'),
-          FullRow('w5'),
-        ],
-      );
-
-      final container = ProviderContainer(
-        retry: (count, error) => null,
-        overrides: [
-          profileRepositoryProvider.overrideWithValue(_FakeProfileRepo()),
-          profileWidgetsRepositoryProvider.overrideWithValue(
-            _FakeWidgetsRepo(widgets),
-          ),
-          cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
-        ],
-      );
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(
-              body: OwnerProfilePersonalization(profile: profile),
-            ),
-          ),
+  testWidgets('deleting a card removes its widget and does not bounce back after '
+      'the widgets read settles (A2)', (tester) async {
+    // Two placed cards; the delete affordance dispatches to both controllers, so
+    // the widget is deleted AND dropped from the working layout. The reactive
+    // unplaced-fold then sees the reduced read and never re-adds it.
+    final widgetsRepo = _DeletableWidgetsRepo([
+      _widget('card', ProfileWidgetKind.template),
+      _widget('extra', ProfileWidgetKind.template),
+    ]);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: _twoCardProfile),
         ),
-      );
-      await tester.pumpAndSettle();
+        profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+        cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final widget = UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      ),
+    );
 
-      // Jump to the very bottom of the scroll content.
-      final scrollable = tester.state<ScrollableState>(
-        find.byType(Scrollable).first,
-      );
-      scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
-      await tester.pumpAndSettle();
+    await _pump(tester, widget);
+    await _enterEdit(tester);
 
-      // The last card's bottom edge sits above the control bar's top edge — the
-      // reserved bottom inset keeps it from hiding behind the bar.
-      final lastCardBottom = tester
-          .getRect(find.byKey(personalizationCardKey('w5')))
-          .bottom;
-      final barTop = tester
-          .getRect(find.byKey(const Key('profileComposeControlBar')))
-          .top;
-      expect(lastCardBottom, lessThanOrEqualTo(barTop));
-    },
-  );
+    await tester.tap(find.byKey(const Key('compositionDelete_extra')));
+    await tester.pumpAndSettle();
+
+    final working = container.read(profileCompositionProvider).working;
+    // Gone from the layout, and never re-appended by the reactive fold.
+    expect(working, const [FullRow('card')]);
+    // Falsifiable: a layout-only removal (no widget delete) leaves the widget in
+    // the read; a repo that does not prune re-appends 'extra' on the refetch.
+    expect(widgetsRepo.removed, contains('extra'));
+  });
+
+  testWidgets('a double-tap on a card delete affordance dispatches the removal '
+      'exactly once (A5)', (tester) async {
+    final widgetsRepo = _DeletableWidgetsRepo([
+      _widget('card', ProfileWidgetKind.template),
+      _widget('extra', ProfileWidgetKind.template),
+    ]);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: _twoCardProfile),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+        cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final widget = UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      ),
+    );
+
+    await _pump(tester, widget);
+    await _enterEdit(tester);
+
+    // Two taps with NO pump between them: both land while the button is still
+    // mounted (the working-layout rebuild that disposes it has not run yet). The
+    // per-instance single-fire guard must collapse them into one removal.
+    final delete = find.byKey(const Key('compositionDelete_extra'));
+    await tester.tap(delete);
+    await tester.tap(delete, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    // Falsifiable: the unguarded button dispatches both taps → two remove calls.
+    expect(widgetsRepo.removed, ['extra']);
+  });
+
+  testWidgets('deleting the first card leaves the successor delete live on its '
+      'first tap (A6)', (tester) async {
+    final widgetsRepo = _DeletableWidgetsRepo([
+      _widget('card', ProfileWidgetKind.template),
+      _widget('extra', ProfileWidgetKind.template),
+    ]);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: _twoCardProfile),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+        cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final widget = UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      ),
+    );
+
+    await _pump(tester, widget);
+    await _enterEdit(tester);
+
+    // Delete the first card; its successor slides into row 0's tree slot.
+    await tester.tap(find.byKey(const Key('compositionDelete_card')));
+    await tester.pumpAndSettle();
+    expect(container.read(profileCompositionProvider).working, const [
+      FullRow('extra'),
+    ]);
+
+    // The successor's delete must fire on its FIRST tap. Falsifiable: without a
+    // per-card key on _DeleteButton, 'extra' adopts 'card's recycled _busy == true
+    // via positional reuse and swallows this tap.
+    await tester.tap(find.byKey(const Key('compositionDelete_extra')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.removed, contains('extra'));
+    expect(container.read(profileCompositionProvider).working, isEmpty);
+  });
 }
+
+// Two placed cards so the delete affordance and the no-bounce-back reactive fold
+// are exercised: startEditing seeds [FullRow('card'), FullRow('extra')].
+const _twoCardProfile = Profile(
+  id: 'owner-1',
+  username: 'nico',
+  displayName: 'Nico',
+  avatarUrl: null,
+  bio: null,
+  theme: ProfileTheme.crimson,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  layout: [FullRow('card'), FullRow('extra')],
+);

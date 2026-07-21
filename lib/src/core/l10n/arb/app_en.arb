@@ -1531,5 +1531,9 @@
   "profileComposeSizeToggleLabel": "Toggle card size",
   "@profileComposeSizeToggleLabel": {
     "description": "Accessibility label on a card's full/half size toggle in the composition editor."
+  },
+  "profileComposeDeleteLabel": "Delete card",
+  "@profileComposeDeleteLabel": {
+    "description": "Accessibility label on a card's delete affordance in the composition editor; removes the card and deletes its widget."
   }
 }

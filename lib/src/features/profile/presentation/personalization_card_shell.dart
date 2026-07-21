@@ -116,14 +116,19 @@ class _TitleBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            platformTag.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.labelSmall?.copyWith(
-              color: palette.accent,
-              fontWeight: AppTypography.semiBold,
-              letterSpacing: PersonalizationLayout.tagTracking,
+          // Bounded and right-aligned: a short tag still hugs the right edge, a
+          // long one ellipsizes within its half instead of overflowing the Row.
+          Expanded(
+            child: Text(
+              platformTag.toUpperCase(),
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(
+                color: palette.accent,
+                fontWeight: AppTypography.semiBold,
+                letterSpacing: PersonalizationLayout.tagTracking,
+              ),
             ),
           ),
         ],
@@ -165,31 +170,36 @@ class PersonalizationStatFooter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final stat in stats)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    stat.value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: palette.text,
-                      fontWeight: AppTypography.bold,
+            // Loose so an entry sizes to content when it fits, but stays
+            // width-bounded on a narrow half card so its label ellipsizes
+            // instead of forcing the footer Row past the card edge.
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stat.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: palette.text,
+                        fontWeight: AppTypography.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    stat.label.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.labelSmall?.copyWith(
-                      color: palette.muted,
-                      letterSpacing: PersonalizationLayout.labelTracking,
+                    Text(
+                      stat.label.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: palette.muted,
+                        letterSpacing: PersonalizationLayout.labelTracking,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
         ],

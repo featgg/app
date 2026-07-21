@@ -299,6 +299,40 @@ void main() {
     });
   });
 
+  group('removeCard', () {
+    test('removes a full row', () {
+      const rows = [FullRow('a'), FullRow('b')];
+      expect(removeCard(rows, 'a'), const [FullRow('b')]);
+    });
+
+    test('nulls a pair slot and centers the surviving card', () {
+      const rows = [PairRow(left: 'a', right: 'b')];
+      expect(removeCard(rows, 'a'), const [PairRow(right: 'b')]);
+    });
+
+    test('drops a pair that the removal empties', () {
+      const rows = [PairRow(left: 'a'), FullRow('b')];
+      expect(removeCard(rows, 'a'), const [FullRow('b')]);
+    });
+
+    test('preserves order', () {
+      const rows = [FullRow('a'), FullRow('b'), FullRow('c')];
+      expect(removeCard(rows, 'b'), const [FullRow('a'), FullRow('c')]);
+    });
+
+    test('is a no-op on an absent id', () {
+      const rows = [FullRow('a'), PairRow(left: 'b', right: 'c')];
+      expect(removeCard(rows, 'zzz'), rows);
+    });
+
+    test('does not mutate the input list', () {
+      const rows = [FullRow('a'), FullRow('b')];
+      final before = [...rows];
+      removeCard(rows, 'a');
+      expect(rows, before);
+    });
+  });
+
   test('mutations return new lists and never mutate the input', () {
     const rows = [FullRow('ms'), FullRow('main')];
     final before = [...rows];

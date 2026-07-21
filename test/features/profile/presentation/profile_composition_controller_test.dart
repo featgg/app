@@ -123,12 +123,12 @@ void main() {
     expect(state.isDirty, isTrue);
   });
 
-  test('startComposing seeds a half-only widget as a PairRow orphan and a '
-      'dual-size widget as a FullRow', () {
+  test('startComposing seeds a Rank and a Main both as full rows (both are '
+      'dual-size)', () {
     final container = _container(_FakeRepository());
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    // Rank is half-only (its archetype supports only half); Main supports full.
+    // Rank and Main both support a full row, so each bootstraps as a FullRow.
     const rank = ProfileWidget(
       id: 'r',
       kind: ProfileWidgetKind.rank,
@@ -149,9 +149,7 @@ void main() {
     notifier.startComposing(const [rank, main]);
     final state = container.read(profileCompositionProvider);
 
-    // The half-only card can't be a full row, so it bootstraps as a single-slot
-    // centered orphan; the dual-size card bootstraps as a full row.
-    expect(state.working, const [PairRow(left: 'r'), FullRow('m')]);
+    expect(state.working, const [FullRow('r'), FullRow('m')]);
   });
 
   test(
@@ -307,6 +305,43 @@ void main() {
     expect(state.isDirty, isTrue);
     expect(state.saved, _layout);
     expect(state.working, isNot(_layout));
+  });
+
+  group('removeCardFromLayout', () {
+    test('drops the id from working and marks dirty (saved untouched)', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      notifier.startEditing(_layout, _widgets);
+      notifier.removeCardFromLayout('a'); // the full 'a' row
+
+      final state = container.read(profileCompositionProvider);
+      expect(state.working, const [PairRow(left: 'b', right: 'c')]);
+      expect(state.isDirty, isTrue);
+      expect(state.saved, _layout);
+    });
+
+    test('is a no-op while saving (mid-save snapshot intact)', () async {
+      final completer = Completer<Either<Failure, Unit>>();
+      final repo = _FakeRepository(setFuture: () => completer.future);
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      notifier.startEditing(_layout, _widgets);
+      notifier.onToggleSize('a'); // make dirty so save persists
+      final sent = container.read(profileCompositionProvider).working;
+      final saveFuture = notifier.save(); // saving := true, then awaits
+
+      // A delete between Done and the network resolving must be ignored.
+      notifier.removeCardFromLayout('a');
+      expect(container.read(profileCompositionProvider).working, sent);
+
+      completer.complete(right(unit));
+      await saveFuture;
+
+      // saved is exactly the snapshot that was sent, never a post-Done mutation.
+      expect(container.read(profileCompositionProvider).saved, sent);
+    });
   });
 
   test('save success commits working, exits edit mode, and re-reads the '
@@ -467,13 +502,12 @@ void main() {
       },
     );
 
-    test('appends a half-only widget as a single-slot PairRow orphan', () {
+    test('appends a Rank (now dual-size) as a full row', () {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
       notifier.startEditing(_layout, _widgets);
 
-      // Rank is half-only: even though it was not in the widget set captured at
-      // startEditing, the append recaptures support so it seeds as an orphan.
+      // Rank supports a full row, so an acquired Rank folds in as a FullRow.
       const rank = ProfileWidget(
         id: 'r',
         kind: ProfileWidgetKind.rank,
@@ -486,7 +520,7 @@ void main() {
 
       expect(
         container.read(profileCompositionProvider).working.last,
-        const PairRow(left: 'r'),
+        const FullRow('r'),
       );
     });
 

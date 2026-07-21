@@ -76,23 +76,30 @@ void main() {
       expect(supportedSizes(ProfileArchetype.identity), {ProfileCardSize.full});
     });
 
-    test('platform, milestone, main, and fallback support both sizes', () {
-      for (final archetype in const [
-        ProfileArchetype.platform,
-        ProfileArchetype.milestone,
-        ProfileArchetype.main,
-        ProfileArchetype.fallback,
-      ]) {
-        expect(
-          supportedSizes(archetype),
-          {ProfileCardSize.full, ProfileCardSize.half},
-          reason: '$archetype should support full and half',
-        );
-      }
-    });
+    test(
+      'platform, milestone, rank, main, and fallback support both sizes',
+      () {
+        for (final archetype in const [
+          ProfileArchetype.platform,
+          ProfileArchetype.milestone,
+          ProfileArchetype.rank,
+          ProfileArchetype.main,
+          ProfileArchetype.fallback,
+        ]) {
+          expect(
+            supportedSizes(archetype),
+            {ProfileCardSize.full, ProfileCardSize.half},
+            reason: '$archetype should support full and half',
+          );
+        }
+      },
+    );
 
-    test('rank is half-only', () {
-      expect(supportedSizes(ProfileArchetype.rank), {ProfileCardSize.half});
+    test('rank supports both full and half (not half-only)', () {
+      expect(supportedSizes(ProfileArchetype.rank), {
+        ProfileCardSize.full,
+        ProfileCardSize.half,
+      });
     });
   });
 }

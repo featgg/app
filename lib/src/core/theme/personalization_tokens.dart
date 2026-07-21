@@ -192,9 +192,6 @@ abstract final class PersonalizationArtColors {
   /// Hero word / on-art light text (`rgba(255,255,255,.92)`).
   static const Color onArt = Color(0xEBFFFFFF);
 
-  /// Solid on-accent text (progress/labels drawn over the accent fill).
-  static const Color onAccent = Color(0xFFFFFFFF);
-
   /// Dark veil laid over the blur-extend fill so the contained hero art reads as
   /// the foreground (mockup `brightness(.65)`).
   static const Color heroBlurVeil = Color(0x59000000); // ~35% black
@@ -252,8 +249,10 @@ abstract final class PersonalizationLayout {
   static const double capsuleFullAspect = 16 / 7;
   static const double capsuleHalfAspect = 16 / 11;
 
-  /// Rank crest square edge (mockup `.crystal` top of its clamp).
-  static const double rankBadgeSize = 58;
+  /// Rank crest square edges per size (mockup `.crystal`). Full > half so the two
+  /// Rank variants read as visibly different (spec §5), mirroring the Main emblem.
+  static const double rankBadgeSizeHalf = 58;
+  static const double rankBadgeSizeFull = 78;
 
   /// Main emblem square edges (mockup `.emblem` 64px). Full > half so the two
   /// Main variants read as visibly different (spec §5).
@@ -284,15 +283,6 @@ abstract final class PersonalizationLayout {
   /// compact preview, and a slight transparency so it reads as a ghost.
   static const double editorGhostMaxWidth = 240;
   static const double editorGhostOpacity = 0.85;
-
-  /// Opacity of a disabled control-bar action — dimmer than enabled without a
-  /// second color token.
-  static const double controlDisabledOpacity = 0.5;
-
-  /// Bottom inset the scroll content reserves when the composition control bar
-  /// floats over it (the bar's occupied height plus the offset it sits above the
-  /// bottom), so the last card clears the bar at maximum scroll.
-  static const double editorControlBarInset = 80;
 }
 
 /// The hero conditional-fit budget (spec §4): the frame is the natural 4:5
