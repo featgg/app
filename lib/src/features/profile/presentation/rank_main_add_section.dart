@@ -38,37 +38,21 @@ class RankMainAddSection extends ConsumerWidget {
         if (_offers(ref, ProfileWidgetKind.rank, platform, resolveRank))
           _AddRow(
             rowKey: Key('rankAddRow_${platform.name}'),
+            kind: ProfileWidgetKind.rank,
+            platform: platform,
+            position: nextPosition,
             label: _brand(platform),
             kindLabel: l10n.personalizationRankTitle,
-            textTheme: textTheme,
-            onTap: () {
-              ref
-                  .read(profileWidgetsControllerProvider.notifier)
-                  .addRank(
-                    platform: platform,
-                    position: nextPosition,
-                    size: ProfileWidgetSize.small,
-                  );
-              Navigator.of(context).pop();
-            },
           ),
       for (final platform in kMainPlatforms)
         if (_offers(ref, ProfileWidgetKind.main, platform, resolveMain))
           _AddRow(
             rowKey: Key('mainAddRow_${platform.name}'),
+            kind: ProfileWidgetKind.main,
+            platform: platform,
+            position: nextPosition,
             label: _brand(platform),
             kindLabel: l10n.personalizationMainTitle,
-            textTheme: textTheme,
-            onTap: () {
-              ref
-                  .read(profileWidgetsControllerProvider.notifier)
-                  .addMain(
-                    platform: platform,
-                    position: nextPosition,
-                    size: ProfileWidgetSize.small,
-                  );
-              Navigator.of(context).pop();
-            },
           ),
     ];
 
@@ -121,28 +105,74 @@ class RankMainAddSection extends ConsumerWidget {
       platformDescriptors[platform]?.displayName ?? platform.name;
 }
 
-/// One tappable acquisition row: the brand name with the card-kind tag.
-class _AddRow extends StatelessWidget {
+/// One tappable acquisition row: the brand name with the card-kind tag. Tapping
+/// awaits the repository write and shows a spinner while it is in flight; a local
+/// busy flag ignores a repeat tap on this row so the write fires exactly once.
+/// Landing the acquired card in the working layout is reactive — the owner
+/// wrapper folds each refetch of the widgets read in — so this row deliberately
+/// does not couple placement to the pop.
+class _AddRow extends ConsumerStatefulWidget {
   const _AddRow({
     required this.rowKey,
+    required this.kind,
+    required this.platform,
+    required this.position,
     required this.label,
     required this.kindLabel,
-    required this.textTheme,
-    required this.onTap,
   });
 
   final Key rowKey;
+  final ProfileWidgetKind kind;
+  final Platform platform;
+  final int position;
   final String label;
   final String kindLabel;
-  final TextTheme textTheme;
-  final VoidCallback onTap;
+
+  @override
+  ConsumerState<_AddRow> createState() => _AddRowState();
+}
+
+class _AddRowState extends ConsumerState<_AddRow> {
+  bool _busy = false;
+
+  Future<void> _acquire() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final controller = ref.read(profileWidgetsControllerProvider.notifier);
+    // Await the write only to bound this row's busy/spinner lifetime and keep the
+    // single-tap guard meaningful; the controller routes any failure through its
+    // own error state (it never throws), so this completes on success and failure
+    // alike. Placement is handled reactively by the owner wrapper's listener.
+    if (widget.kind == ProfileWidgetKind.rank) {
+      await controller.addRank(
+        platform: widget.platform,
+        position: widget.position,
+        size: ProfileWidgetSize.small,
+      );
+    } else {
+      await controller.addMain(
+        platform: widget.platform,
+        position: widget.position,
+        size: ProfileWidgetSize.small,
+      );
+    }
+    if (!mounted) return;
+    // Close only if this row's own sheet is still the active route. It may have
+    // already been dismissed through another channel while the write was in
+    // flight; its route is then no longer current, and an unconditional pop would
+    // land on the screen beneath the sheet instead.
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
-      key: rowKey,
-      onTap: onTap,
+      key: widget.rowKey,
+      onTap: _busy ? null : _acquire,
       borderRadius: BorderRadius.circular(AppRadii.md),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -151,11 +181,23 @@ class _AddRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: textTheme.bodyMedium)),
-            Text(
-              kindLabel,
-              style: textTheme.labelSmall?.copyWith(color: colorScheme.primary),
-            ),
+            Expanded(child: Text(widget.label, style: textTheme.bodyMedium)),
+            if (_busy)
+              SizedBox(
+                width: AppSpacing.md,
+                height: AppSpacing.md,
+                child: CircularProgressIndicator(
+                  strokeWidth: AppSpacing.hairline,
+                  color: colorScheme.primary,
+                ),
+              )
+            else
+              Text(
+                widget.kindLabel,
+                style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                ),
+              ),
           ],
         ),
       ),

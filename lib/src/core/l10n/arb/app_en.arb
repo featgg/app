@@ -1504,6 +1504,10 @@
   "@profileComposeEdit": {
     "description": "Control-bar action that enters the composition editor on the owner's own composed profile."
   },
+  "profileComposeAdd": "Add card",
+  "@profileComposeAdd": {
+    "description": "Edit-mode control-bar action that opens the add-card sheet to acquire a new card; the new card is appended to the layout for placement."
+  },
   "profileComposeDone": "Done",
   "@profileComposeDone": {
     "description": "Control-bar action that saves the edited layout and leaves edit mode."
