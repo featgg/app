@@ -192,6 +192,20 @@ void main() {
     expect(find.byKey(const Key('widgetsSentinel_$_userId')), findsNothing);
   });
 
+  testWidgets('visitor composed render has no compose chrome', (tester) async {
+    // The owner's compose entry lives on ProfileScreen; the visitor screen must
+    // never surface it, in the composed path or anywhere else.
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(_layoutProfile),
+    );
+    await tester.pumpWidget(
+      _screen(profileRepo, personalizationBuilder: _personalizationSentinel),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
+  });
+
   testWidgets('an empty layout keeps the legacy widgets render', (
     tester,
   ) async {

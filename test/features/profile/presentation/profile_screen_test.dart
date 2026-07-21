@@ -842,8 +842,8 @@ void main() {
   testWidgets('a composed-layout profile mounts the personalization editor', (
     tester,
   ) async {
-    // A non-empty layout routes to the personalization render with the compose
-    // control bar instead of the legacy grid.
+    // A non-empty layout routes to the personalization render (its edit entry in
+    // the app bar) instead of the legacy grid.
     final repo = _FakeRepository(result: () async => right(_composedProfile));
     final widgetsRepo = _FakeWidgetsRepository(
       fetchResult: right([_steamWidget()]),
@@ -857,6 +857,92 @@ void main() {
 
     expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
     expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('composed surface app bar is themed to the palette', (
+    tester,
+  ) async {
+    final repo = _FakeRepository(result: () async => right(_composedProfile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    // Falsifiable: a default (unthemed) app bar carries no such backgroundColor.
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.backgroundColor, PersonalizationPalette.crimson.bg);
+  });
+
+  testWidgets('compose controls live in the app bar', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_composedProfile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    // View-mode edit entry is an app-bar action, and no floating bar remains.
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('profileComposeEditButton')),
+        matching: find.byType(AppBar),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('profileComposeControlBar')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+
+    // Entering edit rehomes Add/Cancel/Done into the app bar (not over content).
+    for (final key in const [
+      'profileComposeAddButton',
+      'profileComposeCancelButton',
+      'profileComposeDoneButton',
+    ]) {
+      expect(
+        find.ancestor(of: find.byKey(Key(key)), matching: find.byType(AppBar)),
+        findsOneWidget,
+        reason: key,
+      );
+    }
+  });
+
+  testWidgets('composed surface has no overflow at 340dp', (tester) async {
+    // The reporting device width from the real-device smoke. The compose chrome
+    // must not collapse or overflow here, in view or edit mode. The viewport is
+    // the device geometry under test and is never enlarged to pass.
+    tester.view.physicalSize = const Size(340, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repo = _FakeRepository(result: () async => right(_composedProfile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull, reason: 'view mode');
+
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull, reason: 'edit mode');
   });
 
   testWidgets('an empty-layout profile keeps the legacy grid', (tester) async {

@@ -67,6 +67,8 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     // Edit mode builds from every owner widget, including disabled ones.
     final byId = {for (final w in widgets) w.id: w};
     final palette = PersonalizationTheme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     bool supportsHalf(String id) =>
         _sizesOf(id, byId).contains(ProfileCardSize.half);
@@ -78,7 +80,19 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         ? const <int>{}
         : pairableRowIndices(working, _draggingId!, supportsHalf: supportsHalf);
 
-    final children = <Widget>[_gap(0, palette)];
+    final children = <Widget>[
+      // The drag hint lives here now that no floating bar hosts it: a bounded
+      // caption that soft-wraps within the fixed column instead of pushing a
+      // control row past a narrow screen.
+      Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: Text(
+          l10n.profileComposeHint,
+          style: textTheme.labelSmall?.copyWith(color: palette.muted),
+        ),
+      ),
+      _gap(0, palette),
+    ];
     for (var i = 0; i < working.length; i++) {
       children.add(
         _row(

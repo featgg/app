@@ -9,6 +9,7 @@ import '../../connections/domain/game_card.dart';
 import '../domain/profile.dart';
 import '../domain/profile_widget.dart';
 import 'owner_profile_personalization.dart';
+import 'personalization_theme_palette.dart';
 import 'profile_composition_controller.dart';
 import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
@@ -31,17 +32,23 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(profileProvider);
-    // The composition-side inputs to the mount gate. Selecting the three fields
-    // (not the whole state) keeps the screen from rebuilding on every drag.
-    final gate = ref.watch(
+    // The composition-side inputs to the mount gate and the compose app bar.
+    // Selecting the fields (not the whole state) keeps the screen from rebuilding
+    // on every drag; saving/isDirty gate the edit-mode Done action.
+    final compose = ref.watch(
       profileCompositionProvider.select(
         (s) => (
           editing: s.editing,
           hasPersisted: s.hasPersisted,
           savedIsNotEmpty: s.saved.isNotEmpty,
+          saving: s.saving,
+          isDirty: s.isDirty,
         ),
       ),
     );
+    // Backs the edit-layout gate (canEdit) and supplies the add sheet's widget
+    // list; the compose app bar lives on this Scaffold, so the read is here.
+    final widgetsState = ref.watch(ownerProfileWidgetsProvider);
     // Observe the widget-mutation controller here: the screen outlives every
     // grid tile and the add button, so this listener keeps the autoDispose
     // controller alive across an in-flight mutation (its post-await invalidate
@@ -64,38 +71,134 @@ class ProfileScreen extends ConsumerWidget {
           ),
         );
     });
-    return Scaffold(
-      appBar: AppBar(
+    // Settings entry: refresh the profile read on any return (app-bar back,
+    // system back, or swipe), since only the app-bar button delivers a typed pop
+    // result — relying on it left the privacy indicator stale after a
+    // system/gesture back. The refresh is cheap and shows no loading flash (the
+    // profile read keeps its previous value on reload).
+    IconButton settingsAction() => IconButton(
+      key: const Key('settingsEntryButton'),
+      icon: const Icon(Icons.settings_outlined),
+      tooltip: l10n.settingsTitle,
+      onPressed: () async {
+        await context.push('/settings');
+        if (!context.mounted) return;
+        ref.invalidate(profileProvider);
+      },
+    );
+
+    IconButton editProfileAction(Profile p) => IconButton(
+      key: const Key('profileEditButton'),
+      icon: const Icon(Icons.edit_outlined),
+      tooltip: l10n.profileEdit,
+      onPressed: () => context.push('/profile/edit', extra: p),
+    );
+
+    // The composed surface hosts its compose controls in the app bar so nothing
+    // floats over the render. `showsCompositionSurface` prefers the controller's
+    // own persisted knowledge so a just-cleared composition returns to the grid
+    // immediately, without a stale-layout window that keeps Edit live.
+    final profile = state.hasValue ? state.value : null;
+    final showsSurface =
+        profile != null &&
+        showsCompositionSurface(
+          editing: compose.editing,
+          hasPersisted: compose.hasPersisted,
+          savedIsNotEmpty: compose.savedIsNotEmpty,
+          profileHasLayout: profile.layout.isNotEmpty,
+        );
+
+    final PreferredSizeWidget appBar;
+    if (!showsSurface) {
+      // Legacy grid / loading / error: the standard app bar, unchanged.
+      appBar = AppBar(
         title: Text(l10n.profileTitle),
         actions: [
-          IconButton(
-            key: const Key('settingsEntryButton'),
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: l10n.settingsTitle,
-            onPressed: () async {
-              // Refresh on return regardless of how settings was dismissed
-              // (app-bar back, system back, or swipe). A typed pop result is
-              // only delivered by the app-bar button, so relying on it left the
-              // privacy indicator stale after a system/gesture back. The
-              // refresh is cheap and shows no loading flash (the profile read
-              // keeps its previous value on reload).
-              await context.push('/settings');
-              if (!context.mounted) return;
-              ref.invalidate(profileProvider);
-            },
-          ), // Only show Edit when the profile has loaded; the action is defined
-          // here so the AppBar is always present, but it is conditionally
-          // populated from the data state below.
-          if (state.hasValue)
-            IconButton(
-              key: const Key('profileEditButton'),
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: l10n.profileEdit,
-              onPressed: () =>
-                  context.push('/profile/edit', extra: state.value!),
-            ),
+          settingsAction(),
+          if (profile != null) editProfileAction(profile),
         ],
-      ),
+      );
+    } else {
+      // Themed to the profile palette so the chrome never clashes with the
+      // render; controls are icon actions (immune to translation length, which
+      // is what collapsed the old floating bar on a narrow screen).
+      final palette = paletteForTheme(profile.theme);
+      final notifier = ref.read(profileCompositionProvider.notifier);
+      if (!compose.editing) {
+        appBar = AppBar(
+          backgroundColor: palette.bg,
+          foregroundColor: palette.text,
+          title: Text(l10n.profileTitle),
+          actions: [
+            settingsAction(),
+            editProfileAction(profile),
+            IconButton(
+              key: const Key('profileComposeEditButton'),
+              icon: const Icon(Icons.dashboard_customize_outlined),
+              tooltip: l10n.profileComposeEdit,
+              // Disabled until the owner widgets read settles (the seed needs it).
+              onPressed: widgetsState.hasValue
+                  ? () => notifier.startEditing(
+                      profile.layout,
+                      widgetsState.value!,
+                    )
+                  : null,
+            ),
+          ],
+        );
+      } else {
+        appBar = AppBar(
+          backgroundColor: palette.bg,
+          foregroundColor: palette.text,
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            key: const Key('profileComposeCancelButton'),
+            icon: const Icon(Icons.close),
+            tooltip: l10n.profileComposeCancel,
+            onPressed: compose.saving ? null : notifier.cancelEditing,
+          ),
+          actions: [
+            IconButton(
+              key: const Key('profileComposeAddButton'),
+              icon: const Icon(Icons.add),
+              tooltip: l10n.profileComposeAdd,
+              onPressed: compose.saving || !widgetsState.hasValue
+                  ? null
+                  : () => showShowcasePicker(
+                      context,
+                      existing: widgetsState.value!,
+                    ),
+            ),
+            // While saving, the Done action becomes a themed spinner; Add and
+            // Cancel are disabled so the sent snapshot can never change.
+            if (compose.saving)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Center(
+                  child: SizedBox(
+                    width: AppSpacing.lg,
+                    height: AppSpacing.lg,
+                    child: CircularProgressIndicator(
+                      strokeWidth: AppSpacing.hairline,
+                      color: palette.text,
+                    ),
+                  ),
+                ),
+              )
+            else
+              IconButton(
+                key: const Key('profileComposeDoneButton'),
+                icon: const Icon(Icons.check),
+                tooltip: l10n.profileComposeDone,
+                onPressed: compose.isDirty ? notifier.save : null,
+              ),
+          ],
+        );
+      }
+    }
+
+    return Scaffold(
+      appBar: appBar,
       body: SafeArea(
         child: AsyncValueWidget<Profile>(
           value: state,
@@ -103,14 +206,12 @@ class ProfileScreen extends ConsumerWidget {
           loading: const ProfileSkeleton(),
           // An in-progress / just-saved composition, or a persisted layout,
           // routes to the personalization render + editor; otherwise the legacy
-          // owner grid. `showsCompositionSurface` prefers the controller's own
-          // persisted knowledge so a just-cleared composition returns to the grid
-          // immediately, without a stale-layout window that keeps Edit live.
+          // owner grid.
           data: (profile) =>
               showsCompositionSurface(
-                editing: gate.editing,
-                hasPersisted: gate.hasPersisted,
-                savedIsNotEmpty: gate.savedIsNotEmpty,
+                editing: compose.editing,
+                hasPersisted: compose.hasPersisted,
+                savedIsNotEmpty: compose.savedIsNotEmpty,
                 profileHasLayout: profile.layout.isNotEmpty,
               )
               ? OwnerProfilePersonalization(profile: profile)
