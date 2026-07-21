@@ -95,68 +95,78 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
 
     final cardState = ref.watch(ownerCardProvider(Platform.steam));
 
+    // One scroll surface for the whole sheet: the fixed banner, the Rank/Main
+    // acquisition rows, and the mode toggle would otherwise crush the mode body
+    // on a phone and strand its tap targets. Capped so short content still hugs
+    // its own height and only tall content scrolls.
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // The passport add-entry sits above the mode toggle and OUTSIDE the
-            // Steam-card gate below, so a Steam-less user can still add it (it
-            // aggregates every linked platform, not just Steam).
-            PassportAddBanner(existing: existing),
-            // Platform-bound Rank/Main acquisition, also outside the Steam gate;
-            // it collapses to nothing unless a supported, connected platform
-            // carries the data.
-            RankMainAddSection(existing: existing),
-            const SizedBox(height: AppSpacing.md),
-            _ModeToggle(
-              mode: _mode,
-              onChanged: (mode) => setState(() => _mode = mode),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight:
+              MediaQuery.sizeOf(context).height * AppSheet.maxHeightFraction,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // The passport add-entry sits above the mode toggle and OUTSIDE
+                // the Steam-card gate below, so a Steam-less user can still add it
+                // (it aggregates every linked platform, not just Steam).
+                PassportAddBanner(existing: existing),
+                // Platform-bound Rank/Main acquisition, also outside the Steam
+                // gate; it collapses to nothing unless a supported, connected
+                // platform carries the data.
+                RankMainAddSection(existing: existing),
+                const SizedBox(height: AppSpacing.md),
+                _ModeToggle(
+                  mode: _mode,
+                  onChanged: (mode) => setState(() => _mode = mode),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AsyncValueWidget<GameCard?>(
+                  value: cardState,
+                  onRetry: () =>
+                      ref.invalidate(ownerCardProvider(Platform.steam)),
+                  data: (card) {
+                    final data = card?.data;
+                    final games = data is SteamCardData
+                        ? data.libraryShowcase
+                        : const <LibraryShowcaseEntry>[];
+                    return switch (_mode) {
+                      _AddCardMode.showcase => _showcaseBody(
+                        l10n,
+                        textTheme,
+                        games,
+                        nextPosition,
+                        alreadyShowcased,
+                      ),
+                      _AddCardMode.collection => CollectionPickerBody(
+                        games: games,
+                        nextPosition: nextPosition,
+                      ),
+                      _AddCardMode.collector => _collectorBody(
+                        l10n,
+                        textTheme,
+                        nextPosition,
+                        alreadyHasCollector,
+                        card,
+                      ),
+                      _AddCardMode.completionist => _completionistBody(
+                        l10n,
+                        textTheme,
+                        nextPosition,
+                        alreadyHasCompletionist,
+                        card,
+                      ),
+                    };
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            Flexible(
-              child: AsyncValueWidget<GameCard?>(
-                value: cardState,
-                onRetry: () =>
-                    ref.invalidate(ownerCardProvider(Platform.steam)),
-                data: (card) {
-                  final data = card?.data;
-                  final games = data is SteamCardData
-                      ? data.libraryShowcase
-                      : const <LibraryShowcaseEntry>[];
-                  return switch (_mode) {
-                    _AddCardMode.showcase => _showcaseBody(
-                      l10n,
-                      textTheme,
-                      games,
-                      nextPosition,
-                      alreadyShowcased,
-                    ),
-                    _AddCardMode.collection => CollectionPickerBody(
-                      games: games,
-                      nextPosition: nextPosition,
-                    ),
-                    _AddCardMode.collector => _collectorBody(
-                      l10n,
-                      textTheme,
-                      nextPosition,
-                      alreadyHasCollector,
-                      card,
-                    ),
-                    _AddCardMode.completionist => _completionistBody(
-                      l10n,
-                      textTheme,
-                      nextPosition,
-                      alreadyHasCompletionist,
-                      card,
-                    ),
-                  };
-                },
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -349,25 +359,22 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
 
     // Two columns, mobile-first: derive the tile width from the sheet's own
     // constraints rather than querying the screen, so the layout stays local.
-    return Flexible(
-      child: SingleChildScrollView(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
-            return Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final game in addable)
-                  SizedBox(
-                    width: tileWidth,
-                    child: _GameTile(entry: game, nextPosition: nextPosition),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
+    // The tiles scroll with the shared sheet surface, not a nested scroll view.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
+        return Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final game in addable)
+              SizedBox(
+                width: tileWidth,
+                child: _GameTile(entry: game, nextPosition: nextPosition),
+              ),
+          ],
+        );
+      },
     );
   }
 }

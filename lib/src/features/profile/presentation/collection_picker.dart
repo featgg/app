@@ -135,31 +135,29 @@ class _CollectionPickerBodyState extends ConsumerState<CollectionPickerBody> {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        Flexible(
-          child: SingleChildScrollView(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
-                return Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final game in games)
-                      SizedBox(
-                        width: tileWidth,
-                        child: _CollectionGameTile(
-                          entry: game,
-                          selected: _selected.contains(game.appId.toString()),
-                          onTap: saving
-                              ? null
-                              : () => _toggle(game.appId.toString()),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
+        // The grid and the confirm button scroll with the shared sheet surface,
+        // not a nested scroll view, so neither is stranded on a phone.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
+            return Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final game in games)
+                  SizedBox(
+                    width: tileWidth,
+                    child: _CollectionGameTile(
+                      entry: game,
+                      selected: _selected.contains(game.appId.toString()),
+                      onTap: saving
+                          ? null
+                          : () => _toggle(game.appId.toString()),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: AppSpacing.md),
         FilledButton(

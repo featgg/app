@@ -420,6 +420,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The confirm button scrolls with the shared sheet surface, so bring it into
+    // view before tapping.
+    await tester.ensureVisible(
+      find.byKey(const Key('collectionPickerAddButton')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('collectionPickerAddButton')));
     await tester.pumpAndSettle();
 

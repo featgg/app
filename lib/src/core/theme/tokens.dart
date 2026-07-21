@@ -37,6 +37,14 @@ abstract final class AppRadii {
   static const double full = 999;
 }
 
+/// Modal bottom-sheet sizing.
+abstract final class AppSheet {
+  /// A content-sized modal sheet caps at this fraction of the screen height and
+  /// scrolls past it, so tall content never pushes tap targets off-screen while
+  /// short content still hugs its own height.
+  static const double maxHeightFraction = 0.9;
+}
+
 /// Font-family-agnostic type scale.
 ///
 /// Sizes and weights only — no `fontFamily`. The platform default font is used
