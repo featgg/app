@@ -125,9 +125,10 @@ class ProfileComposition extends _$ProfileComposition {
     ]..sort((a, b) => a.position.compareTo(b.position));
     state = state.copyWith(
       editing: true,
-      // A half-only archetype (e.g. Rank) can't seed as a full row; it bootstraps
-      // as a single-slot pair (centered orphan) so its slot is legal from the
-      // start, matching the moveToGap rule.
+      // A half-only archetype can't seed as a full row; it bootstraps as a
+      // single-slot pair (centered orphan) so its slot is legal from the start,
+      // matching the moveToGap rule. Defensive: no current archetype is half-only,
+      // so today every widget takes the FullRow path.
       working: [
         for (final w in enabled)
           _supportsFull(w.id) ? FullRow(w.id) : PairRow(left: w.id),
@@ -139,7 +140,8 @@ class ProfileComposition extends _$ProfileComposition {
 
   /// Folds any enabled [widgets] not already referenced by the working layout in
   /// at its end, each seeded by the same rule as the bootstrap (full-supporting →
-  /// [FullRow], half-only → single-slot [PairRow] orphan). Driven reactively off
+  /// [FullRow], half-only → single-slot [PairRow] orphan; defensive, as no current
+  /// archetype is half-only). Driven reactively off
   /// each refetch of the owner's widgets while composing, so a card acquired from
   /// any channel becomes placeable; the acquired row makes the composition dirty
   /// and Save persists it. Recaptures the full-size predicate from [widgets] so a
@@ -217,6 +219,16 @@ class ProfileComposition extends _$ProfileComposition {
   void onToggleSize(String id) {
     if (state.saving) return;
     state = state.copyWith(working: toggleSize(state.working, id));
+  }
+
+  /// Drops [id] from the working layout (marks dirty). Saving-gated like the
+  /// other editor mutations, so a delete cannot mutate an in-flight save
+  /// snapshot. The acquired widget itself is deleted by the caller via
+  /// ProfileWidgetsController, mirroring how an acquired card is created there
+  /// and folded in on invalidate.
+  void removeCardFromLayout(String id) {
+    if (state.saving) return;
+    state = state.copyWith(working: removeCard(state.working, id));
   }
 
   /// Persist the working layout. Nothing to save (not dirty) just exits edit

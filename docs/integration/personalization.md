@@ -56,8 +56,8 @@ snake_case). Any other value is rejected as an invalid value for the field.
   linked platform, so it is not platform-bound.
 - `rank` — a platform-bound card showing the owner's competitive rank/rating on
   one connected platform (League tier, Mythic+ rating, Chess mode rating,
-  RetroAchievements rank). Reads only already-published card data. Rendered at a
-  single (half) size.
+  RetroAchievements rank). Reads only already-published card data. Rendered at
+  full or half size (the full variant shows a larger crest and a wider stat cap).
 - `main` — a platform-bound card showing the owner's primary game / character /
   mode on one connected platform (Steam top game, WoW character, GW2 main, League
   top mastery, Chess primary mode). Reads only already-published card data.
@@ -98,7 +98,7 @@ Whether `platform` is required or must be null depends on `type`:
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
 
-Per-kind rendered size (Rank is half-only; Main is full or half) is
+Per-kind rendered size (Rank and Main are both full or half) is
 client-enforced, not server-validated — the client offers only legal sizes.
 
 - **Constraints (surface as the SDK error on violation).**

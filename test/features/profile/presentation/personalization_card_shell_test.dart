@@ -34,6 +34,34 @@ Widget _wrap({
   ),
 );
 
+/// Mounts a whole [CardShell] at a fixed [width] so the title bar's title +
+/// platform-tag Row is exercised at the narrow half-card geometry.
+Widget _wrapCard({required double width, required String platformTag}) =>
+    MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: width,
+            child: PersonalizationTheme(
+              palette: PersonalizationPalette.crimson,
+              child: CardShell(
+                title: 'Rank',
+                platformTag: platformTag,
+                content: const SizedBox(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
 void main() {
   testWidgets('stat footer does not overflow on a narrow half card', (
     tester,
@@ -62,6 +90,29 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('1.2K'), findsOneWidget);
     expect(find.text('4.6K'), findsOneWidget);
+  });
+
+  testWidgets('title bar does not overflow with a long platform tag on a narrow '
+      'half card', (tester) async {
+    tester.view.physicalSize = const Size(340, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // The two device tags that overflowed the unbounded title-bar tag on the
+    // reporting geometry. Each must ellipsize within its half, not blow the Row.
+    for (final tag in const [
+      'World of Warcraft (Retail)',
+      'RetroAchievements',
+    ]) {
+      await tester.pumpWidget(_wrapCard(width: 150, platformTag: tag));
+      await tester.pump();
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'tag "$tag" must be bounded, not overflow the title bar',
+      );
+    }
   });
 
   testWidgets('stat footer renders every stat at full-card width', (

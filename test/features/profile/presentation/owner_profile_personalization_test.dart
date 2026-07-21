@@ -90,6 +90,35 @@ final class _FakeWidgetsRepo implements ProfileWidgetsRepository {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
+/// A widgets repository whose `removeWidget` genuinely prunes its backing list,
+/// so a re-fetch after a delete returns the reduced set — the exact behavior the
+/// no-bounce-back delete relies on. Records the ids it was asked to remove.
+final class _DeletableWidgetsRepo implements ProfileWidgetsRepository {
+  _DeletableWidgetsRepo(this._widgets);
+
+  final List<ProfileWidget> _widgets;
+  final removed = <String>[];
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
+      right(List.of(_widgets));
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
+    String userId,
+  ) async => right(List.of(_widgets));
+
+  @override
+  Future<Either<Failure, Unit>> removeWidget(String id) async {
+    removed.add(id);
+    _widgets.removeWhere((w) => w.id == id);
+    return right(unit);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 /// A widgets repository whose Main write is deliberately asynchronous: it does
 /// not commit (and does not return) until [gate] completes, or after [delay]. It
 /// only grows its set on success, so a fresh read taken BEFORE the write commits
@@ -558,4 +587,102 @@ void main() {
     final working = harness.container.read(profileCompositionProvider).working;
     expect(working.first, const FullRow('card'));
   });
+
+  testWidgets('deleting a card removes its widget and does not bounce back after '
+      'the widgets read settles (A2)', (tester) async {
+    // Two placed cards; the delete affordance dispatches to both controllers, so
+    // the widget is deleted AND dropped from the working layout. The reactive
+    // unplaced-fold then sees the reduced read and never re-adds it.
+    final widgetsRepo = _DeletableWidgetsRepo([
+      _widget('card', ProfileWidgetKind.template),
+      _widget('extra', ProfileWidgetKind.template),
+    ]);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: _twoCardProfile),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+        cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final widget = UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      ),
+    );
+
+    await _pump(tester, widget);
+    await _enterEdit(tester);
+
+    await tester.tap(find.byKey(const Key('compositionDelete_extra')));
+    await tester.pumpAndSettle();
+
+    final working = container.read(profileCompositionProvider).working;
+    // Gone from the layout, and never re-appended by the reactive fold.
+    expect(working, const [FullRow('card')]);
+    // Falsifiable: a layout-only removal (no widget delete) leaves the widget in
+    // the read; a repo that does not prune re-appends 'extra' on the refetch.
+    expect(widgetsRepo.removed, contains('extra'));
+  });
+
+  testWidgets('a double-tap on a card delete affordance dispatches the removal '
+      'exactly once (A5)', (tester) async {
+    final widgetsRepo = _DeletableWidgetsRepo([
+      _widget('card', ProfileWidgetKind.template),
+      _widget('extra', ProfileWidgetKind.template),
+    ]);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: _twoCardProfile),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+        cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final widget = UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      ),
+    );
+
+    await _pump(tester, widget);
+    await _enterEdit(tester);
+
+    // Two taps with NO pump between them: both land while the button is still
+    // mounted (the working-layout rebuild that disposes it has not run yet). The
+    // per-instance single-fire guard must collapse them into one removal.
+    final delete = find.byKey(const Key('compositionDelete_extra'));
+    await tester.tap(delete);
+    await tester.tap(delete, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    // Falsifiable: the unguarded button dispatches both taps → two remove calls.
+    expect(widgetsRepo.removed, ['extra']);
+  });
 }
+
+// Two placed cards so the delete affordance and the no-bounce-back reactive fold
+// are exercised: startEditing seeds [FullRow('card'), FullRow('extra')].
+const _twoCardProfile = Profile(
+  id: 'owner-1',
+  username: 'nico',
+  displayName: 'Nico',
+  avatarUrl: null,
+  bio: null,
+  theme: ProfileTheme.crimson,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+  layout: [FullRow('card'), FullRow('extra')],
+);

@@ -64,7 +64,11 @@ Widget personalizationCardFor(
       size: effectiveSize,
       cardSource: cardSource,
     ),
-    ProfileArchetype.rank => RankCard(widget: widget, cardSource: cardSource),
+    ProfileArchetype.rank => RankCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
     ProfileArchetype.main => MainCard(
       widget: widget,
       size: effectiveSize,
@@ -305,13 +309,20 @@ class MilestoneCard extends ConsumerWidget {
 }
 
 /// Rank archetype (spec §7): "how good am I" — a crest with the tier line and
-/// 2 headline numbers. Half only, size-independent. Folds the bound platform's
-/// card through the pure [resolveRank]; a payload with no rank/rating renders a
-/// neutral no-data crest (art + tag, no heading/scope/stats), never a fallback.
+/// headline numbers. Full and half differ visibly (crest size + stat cap,
+/// spec §5). Folds the bound platform's card through the pure [resolveRank]; a
+/// payload with no rank/rating renders a neutral no-data crest (art + tag, no
+/// heading/scope/stats), never a fallback.
 class RankCard extends ConsumerWidget {
-  const RankCard({super.key, required this.widget, this.cardSource});
+  const RankCard({
+    super.key,
+    required this.widget,
+    required this.size,
+    this.cardSource,
+  });
 
   final ProfileWidget widget;
+  final ProfileCardSize size;
   final CardSource? cardSource;
 
   @override
@@ -324,12 +335,16 @@ class RankCard extends ConsumerWidget {
         : _resolveCard(ref, cardSource, platform);
     final resolved = resolveRank(card);
 
+    final isFull = size == ProfileCardSize.full;
     return CardShell(
       key: personalizationCardKey(widget.id),
       title: l10n.personalizationRankTitle,
       platformTag: _platformTag(l10n, platform),
       content: _RankContent(
         badgeKey: rankBadgeKey(widget.id),
+        badgeSize: isFull
+            ? PersonalizationLayout.rankBadgeSizeFull
+            : PersonalizationLayout.rankBadgeSizeHalf,
         heading: resolved?.heading,
         scope: resolved?.scope,
         palette: palette,
@@ -337,7 +352,9 @@ class RankCard extends ConsumerWidget {
       stats: _statsFromResolved(
         resolved?.stats ?? const [],
         l10n,
-        PersonalizationLayout.statCapHalf,
+        isFull
+            ? PersonalizationLayout.statCapFull
+            : PersonalizationLayout.statCapHalf,
       ),
     );
   }
@@ -530,12 +547,14 @@ class _GradientBadge extends StatelessWidget {
 class _RankContent extends StatelessWidget {
   const _RankContent({
     required this.badgeKey,
+    required this.badgeSize,
     this.heading,
     this.scope,
     required this.palette,
   });
 
   final Key badgeKey;
+  final double badgeSize;
   final String? heading;
   final String? scope;
   final PersonalizationPalette palette;
@@ -550,11 +569,7 @@ class _RankContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _GradientBadge(
-          badgeKey: badgeKey,
-          size: PersonalizationLayout.rankBadgeSize,
-          palette: palette,
-        ),
+        _GradientBadge(badgeKey: badgeKey, size: badgeSize, palette: palette),
         if (headingText != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
