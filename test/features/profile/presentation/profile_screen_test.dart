@@ -272,6 +272,20 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSize(
     String id,
     ProfileWidgetSize size,
@@ -379,6 +393,20 @@ final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
 
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
@@ -1126,6 +1154,14 @@ void main() {
   testWidgets('a mutation failure surfaces an error to the user', (
     tester,
   ) async {
+    // A tall viewport: the add-card sheet also carries the Rank/Main add section
+    // above the tall art tiles, so the default 800×600 view would push the tile
+    // out of the games viewport.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     // The screen listens to the mutation controller; a failing mutation must
     // show the keyed error SnackBar — without the listener the failure is
     // swallowed when the screen does not observe the mutation controller. The
@@ -1158,6 +1194,14 @@ void main() {
   });
 
   testWidgets('after a successful mutation the grid refreshes', (tester) async {
+    // A tall viewport: the add-card sheet also carries the Rank/Main add section
+    // above the tall art tiles, so the default 800×600 view would push the tile
+    // out of the games viewport.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     // With the screen mounted (the production listener present), a successful
     // mutation must invalidate the read, observable as a re-fetch (the
     // screen-level observer keeps the controller alive). The add is driven

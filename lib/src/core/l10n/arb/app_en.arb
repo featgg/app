@@ -1480,6 +1480,22 @@
   "@personalizationProfileTag": {
     "description": "Generic accent tag on a personalization card that has no source platform."
   },
+  "personalizationRankTitle": "Rank",
+  "@personalizationRankTitle": {
+    "description": "Title of the Rank card, showing the owner's competitive standing on one platform."
+  },
+  "personalizationMainTitle": "Main",
+  "@personalizationMainTitle": {
+    "description": "Title of the Main card, showing the owner's primary game, character, or mode on one platform."
+  },
+  "personalizationMainTopChampion": "Top champion",
+  "@personalizationMainTopChampion": {
+    "description": "Generic Main-card title used when the payload carries no main name (e.g. League of Legends, which has no champion-name lookup)."
+  },
+  "rankMainAddTitle": "Rank & Main",
+  "@rankMainAddTitle": {
+    "description": "Heading of the add-card section that offers Rank and Main cards for supported connected platforms."
+  },
   "profilePersonalize": "Personalize",
   "@profilePersonalize": {
     "description": "Entry action on the owner's legacy profile grid that opens the composition editor to arrange a first layout."
@@ -1487,6 +1503,10 @@
   "profileComposeEdit": "Edit layout",
   "@profileComposeEdit": {
     "description": "Control-bar action that enters the composition editor on the owner's own composed profile."
+  },
+  "profileComposeAdd": "Add card",
+  "@profileComposeAdd": {
+    "description": "Edit-mode control-bar action that opens the add-card sheet to acquire a new card; the new card is appended to the layout for placement."
   },
   "profileComposeDone": "Done",
   "@profileComposeDone": {

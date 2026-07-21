@@ -165,6 +165,71 @@ void main() {
         'completionist',
       );
       expect(profileWidgetKindToWire(ProfileWidgetKind.passport), 'passport');
+      expect(profileWidgetKindToWire(ProfileWidgetKind.rank), 'rank');
+      expect(profileWidgetKindToWire(ProfileWidgetKind.main), 'main');
+    });
+  });
+
+  group('rank binding (platform-BOUND, size-only envelope)', () {
+    test('a non-null rank row round-trips to the kind with its platform', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'rank', platform: 'league_of_legends', size: 'small'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.rank);
+      // Platform-bound: the source platform lives in the row's `platform` column.
+      expect(widget.platform, Platform.leagueOfLegends);
+      expect(widget.size, ProfileWidgetSize.small);
+    });
+
+    test('a null-platform rank row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'rank', platform: null)),
+      );
+      expect(widget, isNull);
+    });
+
+    test('an unknown-platform rank row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'rank', platform: 'not_a_platform'),
+        ),
+      );
+      expect(widget, isNull);
+    });
+  });
+
+  group('main binding (platform-BOUND, size-only envelope)', () {
+    test('a non-null main row round-trips to the kind with its platform', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'main', platform: 'steam', size: 'wide'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.main);
+      expect(widget.platform, Platform.steam);
+      expect(widget.size, ProfileWidgetSize.wide);
+    });
+
+    test('a null-platform main row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'main', platform: null)),
+      );
+      expect(widget, isNull);
+    });
+
+    test('an unknown-platform main row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'main', platform: 'not_a_platform'),
+        ),
+      );
+      expect(widget, isNull);
     });
   });
 

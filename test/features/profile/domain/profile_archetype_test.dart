@@ -29,6 +29,30 @@ void main() {
       );
     });
 
+    test('rank → rank, main → main', () {
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.rank)),
+        ProfileArchetype.rank,
+      );
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.main)),
+        ProfileArchetype.main,
+      );
+    });
+
+    test('rank and main are NOT the fallback archetype', () {
+      // A regression guard: were the registry mapping dropped, both would fall
+      // through to fallback and render the generic card instead of their anatomy.
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.rank)),
+        isNot(ProfileArchetype.fallback),
+      );
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.main)),
+        isNot(ProfileArchetype.fallback),
+      );
+    });
+
     test('every other kind falls through to fallback', () {
       for (final kind in const [
         ProfileWidgetKind.collection,
@@ -52,10 +76,11 @@ void main() {
       expect(supportedSizes(ProfileArchetype.identity), {ProfileCardSize.full});
     });
 
-    test('platform, milestone, and fallback support both sizes', () {
+    test('platform, milestone, main, and fallback support both sizes', () {
       for (final archetype in const [
         ProfileArchetype.platform,
         ProfileArchetype.milestone,
+        ProfileArchetype.main,
         ProfileArchetype.fallback,
       ]) {
         expect(
@@ -64,6 +89,10 @@ void main() {
           reason: '$archetype should support full and half',
         );
       }
+    });
+
+    test('rank is half-only', () {
+      expect(supportedSizes(ProfileArchetype.rank), {ProfileCardSize.half});
     });
   });
 }

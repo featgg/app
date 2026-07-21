@@ -125,9 +125,54 @@ class ProfileComposition extends _$ProfileComposition {
     ]..sort((a, b) => a.position.compareTo(b.position));
     state = state.copyWith(
       editing: true,
-      working: [for (final w in enabled) FullRow(w.id)],
+      // A half-only archetype (e.g. Rank) can't seed as a full row; it bootstraps
+      // as a single-slot pair (centered orphan) so its slot is legal from the
+      // start, matching the moveToGap rule.
+      working: [
+        for (final w in enabled)
+          _supportsFull(w.id) ? FullRow(w.id) : PairRow(left: w.id),
+      ],
       saved: const [],
       saveFailed: false,
+    );
+  }
+
+  /// Folds any enabled [widgets] not already referenced by the working layout in
+  /// at its end, each seeded by the same rule as the bootstrap (full-supporting →
+  /// [FullRow], half-only → single-slot [PairRow] orphan). Driven reactively off
+  /// each refetch of the owner's widgets while composing, so a card acquired from
+  /// any channel becomes placeable; the acquired row makes the composition dirty
+  /// and Save persists it. Recaptures the full-size predicate from [widgets] so a
+  /// newly-acquired half-only card seeds correctly. Idempotent: a widget already
+  /// placed is skipped, so repeated emissions never duplicate a row. Only runs
+  /// while editing and never mid-save — a save has snapshotted `working` and must
+  /// persist exactly that, so an emission arriving mid-save is dropped rather than
+  /// mutating the sent snapshot.
+  void appendUnplacedWidgets(List<ProfileWidget> widgets) {
+    if (!state.editing || state.saving) return;
+    final byId = {for (final w in widgets) w.id: w};
+    _captureSupport(byId);
+    final placed = <String>{};
+    for (final row in state.working) {
+      switch (row) {
+        case FullRow(:final cardId):
+          placed.add(cardId);
+        case PairRow(:final left, :final right):
+          if (left != null) placed.add(left);
+          if (right != null) placed.add(right);
+      }
+    }
+    final additions = [
+      for (final w in widgets)
+        if (w.isEnabled && !placed.contains(w.id)) w,
+    ]..sort((a, b) => a.position.compareTo(b.position));
+    if (additions.isEmpty) return;
+    state = state.copyWith(
+      working: [
+        ...state.working,
+        for (final w in additions)
+          _supportsFull(w.id) ? FullRow(w.id) : PairRow(left: w.id),
+      ],
     );
   }
 

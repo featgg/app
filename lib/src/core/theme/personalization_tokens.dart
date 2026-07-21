@@ -252,6 +252,14 @@ abstract final class PersonalizationLayout {
   static const double capsuleFullAspect = 16 / 7;
   static const double capsuleHalfAspect = 16 / 11;
 
+  /// Rank crest square edge (mockup `.crystal` top of its clamp).
+  static const double rankBadgeSize = 58;
+
+  /// Main emblem square edges (mockup `.emblem` 64px). Full > half so the two
+  /// Main variants read as visibly different (spec §5).
+  static const double mainEmblemFull = 64;
+  static const double mainEmblemHalf = 48;
+
   /// How many stat-footer entries each size renders (spec §6: 2–4 numbers).
   /// Full carries one more than half so the variants differ.
   static const int statCapFull = 3;

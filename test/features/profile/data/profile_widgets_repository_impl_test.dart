@@ -817,6 +817,132 @@ void main() {
     });
   });
 
+  group('addRankWidget', () {
+    test('writes type rank, a non-null platform, and a size-only '
+        'envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'rk',
+          'platform': 'league_of_legends',
+          'type': 'rank',
+          'position': 4,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'small',
+          },
+        }),
+      );
+      final result = await _repo(source, _RecordingReporter()).addRankWidget(
+        platform: Platform.leagueOfLegends,
+        position: 4,
+        size: ProfileWidgetSize.small,
+      );
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'rk');
+        expect(widget.kind, ProfileWidgetKind.rank);
+        expect(widget.platform, Platform.leagueOfLegends);
+      });
+
+      // The captured write is the personalization.md rank contract: a non-null
+      // platform and a size-only envelope (no selection sub-object).
+      expect(source.lastInsert!['type'], 'rank');
+      expect(source.lastInsert!['platform'], 'league_of_legends');
+      expect(source.lastInsert!['position'], 4);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'small');
+      // Size-only: no selection sub-object is written.
+      expect(settings.containsKey('showcase'), isFalse);
+      expect(settings.containsKey('collection'), isFalse);
+      expect(settings.containsKey('rank'), isFalse);
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'cap exceeded', code: '23514'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).addRankWidget(
+        platform: Platform.leagueOfLegends,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      );
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
+  group('addMainWidget', () {
+    test('writes type main, a non-null platform, and a size-only '
+        'envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'mn',
+          'platform': 'steam',
+          'type': 'main',
+          'position': 4,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'wide',
+          },
+        }),
+      );
+      final result = await _repo(source, _RecordingReporter()).addMainWidget(
+        platform: Platform.steam,
+        position: 4,
+        size: ProfileWidgetSize.wide,
+      );
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'mn');
+        expect(widget.kind, ProfileWidgetKind.main);
+        expect(widget.platform, Platform.steam);
+      });
+
+      // The captured write is the personalization.md main contract: a non-null
+      // platform and a size-only envelope (no selection sub-object).
+      expect(source.lastInsert!['type'], 'main');
+      expect(source.lastInsert!['platform'], 'steam');
+      expect(source.lastInsert!['position'], 4);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'wide');
+      // Size-only: no selection sub-object is written.
+      expect(settings.containsKey('showcase'), isFalse);
+      expect(settings.containsKey('collection'), isFalse);
+      expect(settings.containsKey('main'), isFalse);
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'cap exceeded', code: '23514'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).addMainWidget(
+        platform: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.small,
+      );
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
   group('mutations write the expected values', () {
     test('setSize writes the v1 envelope', () async {
       final source = _FakeDataSource();

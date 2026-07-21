@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:featgg/src/features/profile/domain/profile_providers.dart';
@@ -120,6 +121,37 @@ void main() {
     // Nothing is persisted yet, so a plain Save is dirty (persists the bootstrap).
     expect(state.saved, isEmpty);
     expect(state.isDirty, isTrue);
+  });
+
+  test('startComposing seeds a half-only widget as a PairRow orphan and a '
+      'dual-size widget as a FullRow', () {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
+
+    // Rank is half-only (its archetype supports only half); Main supports full.
+    const rank = ProfileWidget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+      position: 0,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+    );
+    const main = ProfileWidget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.steam,
+      position: 1,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+    );
+
+    notifier.startComposing(const [rank, main]);
+    final state = container.read(profileCompositionProvider);
+
+    // The half-only card can't be a full row, so it bootstraps as a single-slot
+    // centered orphan; the dual-size card bootstraps as a full row.
+    expect(state.working, const [PairRow(left: 'r'), FullRow('m')]);
   });
 
   test(
@@ -413,4 +445,132 @@ void main() {
       expect(container.read(profileCompositionProvider).saved, sent);
     },
   );
+
+  group('appendUnplacedWidgets', () {
+    test(
+      'appends an unplaced enabled widget as a full row and marks dirty',
+      () {
+        final container = _container(_FakeRepository());
+        final notifier = container.read(profileCompositionProvider.notifier);
+        notifier.startEditing(_layout, _widgets);
+
+        // The owner acquired 'd' mid-edit; the refreshed list is the superset.
+        notifier.appendUnplacedWidgets([..._widgets, _widgetAt('d', 3)]);
+
+        final state = container.read(profileCompositionProvider);
+        expect(state.working, const [
+          FullRow('a'),
+          PairRow(left: 'b', right: 'c'),
+          FullRow('d'),
+        ]);
+        expect(state.isDirty, isTrue);
+      },
+    );
+
+    test('appends a half-only widget as a single-slot PairRow orphan', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_layout, _widgets);
+
+      // Rank is half-only: even though it was not in the widget set captured at
+      // startEditing, the append recaptures support so it seeds as an orphan.
+      const rank = ProfileWidget(
+        id: 'r',
+        kind: ProfileWidgetKind.rank,
+        platform: Platform.leagueOfLegends,
+        position: 3,
+        isEnabled: true,
+        size: ProfileWidgetSize.small,
+      );
+      notifier.appendUnplacedWidgets([..._widgets, rank]);
+
+      expect(
+        container.read(profileCompositionProvider).working.last,
+        const PairRow(left: 'r'),
+      );
+    });
+
+    test('does not append a disabled widget', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_layout, _widgets);
+
+      notifier.appendUnplacedWidgets([
+        ..._widgets,
+        _widgetAt('d', 3, enabled: false),
+      ]);
+
+      final state = container.read(profileCompositionProvider);
+      expect(state.working, _layout);
+      expect(state.isDirty, isFalse);
+    });
+
+    test('does not append an already-placed widget (no-op, stays clean)', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_layout, _widgets);
+
+      notifier.appendUnplacedWidgets(_widgets);
+
+      final state = container.read(profileCompositionProvider);
+      expect(state.working, _layout);
+      expect(state.isDirty, isFalse);
+    });
+
+    test(
+      'an emission arriving mid-save cannot corrupt the sent snapshot',
+      () async {
+        final completer = Completer<Either<Failure, Unit>>();
+        final repo = _FakeRepository(setFuture: () => completer.future);
+        final container = _container(repo);
+        final notifier = container.read(profileCompositionProvider.notifier);
+
+        notifier.startEditing(_layout, _widgets);
+        notifier.onToggleSize('a'); // make it dirty so save actually persists
+        final sent = container.read(profileCompositionProvider).working;
+        final saveFuture = notifier.save(); // saving := true, then awaits
+
+        // A widgets refetch landing mid-save (via the reactive append) must be
+        // dropped, never folded into the layout being persisted.
+        notifier.appendUnplacedWidgets([..._widgets, _widgetAt('d', 3)]);
+        expect(container.read(profileCompositionProvider).working, sent);
+
+        completer.complete(right(unit));
+        await saveFuture;
+
+        // saved is exactly the snapshot that was sent, uncorrupted by the emission.
+        expect(container.read(profileCompositionProvider).saved, sent);
+      },
+    );
+
+    test('repeated emissions of the same list append each widget at most once '
+        '(idempotent)', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_layout, _widgets);
+
+      final refreshed = [..._widgets, _widgetAt('d', 3)];
+      notifier.appendUnplacedWidgets(refreshed);
+      notifier.appendUnplacedWidgets(refreshed); // a second, redundant emission
+
+      // 'd' is added exactly once; the second emission is a no-op.
+      expect(container.read(profileCompositionProvider).working, const [
+        FullRow('a'),
+        PairRow(left: 'b', right: 'c'),
+        FullRow('d'),
+      ]);
+    });
+
+    test('is a no-op when not editing (guards the working layout)', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      // No edit session started → the surface is not composing.
+      notifier.appendUnplacedWidgets(_widgets);
+
+      final state = container.read(profileCompositionProvider);
+      expect(state.editing, isFalse);
+      expect(state.working, isEmpty);
+    });
+  });
 }

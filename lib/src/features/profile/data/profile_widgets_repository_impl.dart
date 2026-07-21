@@ -311,6 +311,74 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final wireValue =
+          platformDescriptors[platform]?.wireValue ?? platform.name;
+      final dto = await _source.insertWidget({
+        'platform': wireValue,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.rank),
+        'position': position,
+        'is_enabled': true,
+        // Size-only envelope: the rank card renders the platform's competitive
+        // standing, so it carries no per-widget selection sub-object beyond size.
+        'settings': {
+          'schema_version': kProfileWidgetSettingsVersion,
+          'size': profileWidgetSizeToWire(size),
+        },
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final wireValue =
+          platformDescriptors[platform]?.wireValue ?? platform.name;
+      final dto = await _source.insertWidget({
+        'platform': wireValue,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.main),
+        'position': position,
+        'is_enabled': true,
+        // Size-only envelope: the main card renders the platform's primary
+        // game/character/mode, so it carries no selection sub-object beyond size.
+        'settings': {
+          'schema_version': kProfileWidgetSettingsVersion,
+          'size': profileWidgetSizeToWire(size),
+        },
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     try {
       final userId = _currentUserId();

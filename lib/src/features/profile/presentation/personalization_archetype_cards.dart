@@ -5,9 +5,11 @@ import '../../../core/core.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/main_value_resolver.dart';
 import '../domain/passport_value_resolver.dart';
 import '../domain/profile_archetype.dart';
 import '../domain/profile_widget.dart';
+import '../domain/rank_value_resolver.dart';
 import '../domain/showcase_selection.dart';
 import '../domain/showcase_value_resolver.dart';
 import 'personalization_card_shell.dart';
@@ -23,6 +25,15 @@ Key personalizationCardKey(String widgetId) =>
 /// difference (spec §7) is assertable.
 Key milestoneCapsuleKey(String widgetId) =>
     Key('personalizationMilestoneCapsule_$widgetId');
+
+/// Stable key for the Rank crest, so the token-gradient art (theme inheritance)
+/// is assertable.
+Key rankBadgeKey(String widgetId) => Key('personalizationRankBadge_$widgetId');
+
+/// Stable key for the Main emblem, so the full vs half emblem-size difference
+/// (spec §5) and the token-gradient art are assertable.
+Key mainEmblemKey(String widgetId) =>
+    Key('personalizationMainEmblem_$widgetId');
 
 /// Builds the archetype card for [widget] at [size]. A full-only archetype in a
 /// half slot renders full within its column. Shared by the read view and the
@@ -49,6 +60,12 @@ Widget personalizationCardFor(
       cardSource: cardSource,
     ),
     ProfileArchetype.milestone => MilestoneCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.rank => RankCard(widget: widget, cardSource: cardSource),
+    ProfileArchetype.main => MainCard(
       widget: widget,
       size: effectiveSize,
       cardSource: cardSource,
@@ -287,6 +304,97 @@ class MilestoneCard extends ConsumerWidget {
   }
 }
 
+/// Rank archetype (spec §7): "how good am I" — a crest with the tier line and
+/// 2 headline numbers. Half only, size-independent. Folds the bound platform's
+/// card through the pure [resolveRank]; a payload with no rank/rating renders a
+/// neutral no-data crest (art + tag, no heading/scope/stats), never a fallback.
+class RankCard extends ConsumerWidget {
+  const RankCard({super.key, required this.widget, this.cardSource});
+
+  final ProfileWidget widget;
+  final CardSource? cardSource;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final palette = PersonalizationTheme.of(context);
+    final platform = widget.platform;
+    final card = platform == null
+        ? null
+        : _resolveCard(ref, cardSource, platform);
+    final resolved = resolveRank(card);
+
+    return CardShell(
+      key: personalizationCardKey(widget.id),
+      title: l10n.personalizationRankTitle,
+      platformTag: _platformTag(l10n, platform),
+      content: _RankContent(
+        badgeKey: rankBadgeKey(widget.id),
+        heading: resolved?.heading,
+        scope: resolved?.scope,
+        palette: palette,
+      ),
+      stats: _statsFromResolved(
+        resolved?.stats ?? const [],
+        l10n,
+        PersonalizationLayout.statCapHalf,
+      ),
+    );
+  }
+}
+
+/// Main archetype (spec §7): "what defines me" — an emblem with the primary
+/// game/character/mode and 2–3 headline numbers. Full and half differ visibly
+/// (emblem size + stat cap, spec §5). Folds the bound platform's card through the
+/// pure [resolveMain]; a payload with no main renders a neutral no-data card
+/// (emblem + tag + generic title, no stats), never a fallback.
+class MainCard extends ConsumerWidget {
+  const MainCard({
+    super.key,
+    required this.widget,
+    required this.size,
+    this.cardSource,
+  });
+
+  final ProfileWidget widget;
+  final ProfileCardSize size;
+  final CardSource? cardSource;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final palette = PersonalizationTheme.of(context);
+    final platform = widget.platform;
+    final card = platform == null
+        ? null
+        : _resolveCard(ref, cardSource, platform);
+    final resolved = resolveMain(card);
+
+    final isFull = size == ProfileCardSize.full;
+    return CardShell(
+      key: personalizationCardKey(widget.id),
+      title: l10n.personalizationMainTitle,
+      platformTag: _platformTag(l10n, platform),
+      content: _MainContent(
+        emblemKey: mainEmblemKey(widget.id),
+        emblemSize: isFull
+            ? PersonalizationLayout.mainEmblemFull
+            : PersonalizationLayout.mainEmblemHalf,
+        title: resolved?.title ?? l10n.personalizationMainTopChampion,
+        subtitle: resolved?.subtitle,
+        palette: palette,
+      ),
+      stats: _statsFromResolved(
+        resolved?.stats ?? const [],
+        l10n,
+        isFull
+            ? PersonalizationLayout.statCapFull
+            : PersonalizationLayout.statCapHalf,
+      ),
+    );
+  }
+}
+
 /// Fallback archetype for any kind without a built card:
 /// a safe, never-blank card — platform tag, neutral art, and any resolvable
 /// stats. Keeps an unrecognized layout slot from crashing or reading as empty.
@@ -380,6 +488,158 @@ class _Capsule extends StatelessWidget {
   }
 }
 
+/// A token-gradient placeholder square for the Rank crest / Main emblem. The
+/// personalization art is a theme gradient, never a bundled asset, so the public
+/// repo stays binary-free; the bottom paint is the solid mid-tone
+/// [PersonalizationPalette.artB] (spec §8: never a gradient that can fall to
+/// black), so a theme swap re-tints it live.
+class _GradientBadge extends StatelessWidget {
+  const _GradientBadge({
+    required this.badgeKey,
+    required this.size,
+    required this.palette,
+  });
+
+  final Key badgeKey;
+  final double size;
+  final PersonalizationPalette palette;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: badgeKey,
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      border: Border.all(
+        color: palette.line,
+        width: PersonalizationLayout.borderWidth,
+      ),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [palette.artC, palette.artA, palette.artB],
+      ),
+    ),
+  );
+}
+
+/// The Rank card's centered content column (mockup `.center-col`): the crest,
+/// the tier line ([heading]) when the platform names one, and a data-derived
+/// sub-label ([scope]) when present. A no-data render shows just the crest.
+class _RankContent extends StatelessWidget {
+  const _RankContent({
+    required this.badgeKey,
+    this.heading,
+    this.scope,
+    required this.palette,
+  });
+
+  final Key badgeKey;
+  final String? heading;
+  final String? scope;
+  final PersonalizationPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final headingText = heading;
+    final scopeText = scope;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _GradientBadge(
+          badgeKey: badgeKey,
+          size: PersonalizationLayout.rankBadgeSize,
+          palette: palette,
+        ),
+        if (headingText != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            headingText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.titleMedium?.copyWith(
+              color: palette.text,
+              fontWeight: AppTypography.bold,
+            ),
+          ),
+        ],
+        if (scopeText != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            scopeText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelSmall?.copyWith(color: palette.muted),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The Main card's content row (mockup `.main-card .card-body`): the emblem beside
+/// an info column of [title] (the primary name, or the generic) and [subtitle]
+/// when present.
+class _MainContent extends StatelessWidget {
+  const _MainContent({
+    required this.emblemKey,
+    required this.emblemSize,
+    required this.title,
+    this.subtitle,
+    required this.palette,
+  });
+
+  final Key emblemKey;
+  final double emblemSize;
+  final String title;
+  final String? subtitle;
+  final PersonalizationPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final subtitleText = subtitle;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _GradientBadge(badgeKey: emblemKey, size: emblemSize, palette: palette),
+        const SizedBox(width: AppSpacing.smMd),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleMedium?.copyWith(
+                  color: palette.text,
+                  fontWeight: AppTypography.bold,
+                ),
+              ),
+              if (subtitleText != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  subtitleText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(color: palette.muted),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// The current card for [platform] from the injected [source] (owner default is
 /// [ownerCardProvider]; the visitor render injects a public source). An errored
 /// read resolves as absent so a single failing platform never errors the card.
@@ -397,17 +657,24 @@ String _platformTag(AppLocalizations l10n, Platform? platform) =>
     ? l10n.personalizationProfileTag
     : platformDescriptors[platform]?.displayName ?? platform.name;
 
-/// The first [cap] headline stats whose key resolves to a label, formatted for
-/// the stat footer. A stat with an unrecognized key or non-numeric value is
-/// skipped rather than rendered raw.
+/// The first [cap] of the card's envelope stats whose key resolves to a label.
 List<PersonalizationStat> _cardStats(
   GameCard? card,
   AppLocalizations l10n,
   int cap,
+) => _statsFromResolved(card?.stats ?? const [], l10n, cap);
+
+/// The first [cap] [stats] whose key resolves to a label, formatted for the stat
+/// footer. A stat with an unrecognized key or non-numeric value is skipped rather
+/// than rendered raw. Shared by the envelope-stat cards (Platform / Fallback) and
+/// the resolver-driven cards (Rank / Main) so all footers format identically.
+List<PersonalizationStat> _statsFromResolved(
+  List<CardStat> stats,
+  AppLocalizations l10n,
+  int cap,
 ) {
-  if (card == null) return const [];
   final out = <PersonalizationStat>[];
-  for (final stat in card.stats) {
+  for (final stat in stats) {
     final label = connectionsStatLabel(l10n, stat.key);
     if (label == null) continue;
     out.add(PersonalizationStat(value: _formatStatValue(stat), label: label));

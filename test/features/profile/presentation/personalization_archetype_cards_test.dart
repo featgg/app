@@ -50,6 +50,20 @@ GameCard _card(Platform platform, {List<CardStat> stats = const []}) =>
       lastUpdated: DateTime.utc(2026, 6, 1),
     );
 
+GameCard _cardData(Platform platform, CardData data, {String title = 'card'}) =>
+    GameCard(
+      schemaVersion: 1,
+      platform: platform,
+      title: title,
+      subtitle: null,
+      iconImage: null,
+      heroImage: null,
+      profileUrl: null,
+      stats: const [],
+      lastUpdated: DateTime.utc(2026, 6, 1),
+      data: data,
+    );
+
 ProfileWidget _widget({
   required String id,
   required ProfileWidgetKind kind,
@@ -69,6 +83,7 @@ CardSource _publicSource() =>
 Widget _harness({
   required Widget card,
   Map<Platform, GameCard?> cards = const {},
+  PersonalizationPalette palette = PersonalizationPalette.crimson,
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
@@ -89,7 +104,7 @@ Widget _harness({
       supportedLocales: const [Locale('en')],
       home: Scaffold(
         body: PersonalizationTheme(
-          palette: PersonalizationPalette.crimson,
+          palette: palette,
           child: SingleChildScrollView(child: card),
         ),
       ),
@@ -301,6 +316,344 @@ void main() {
         matching: find.byType(Text),
       ),
       findsNWidgets(2),
+    );
+  });
+
+  testWidgets('RankCard renders the League tier heading and its stats, not '
+      'Fallback', (tester) async {
+    final widget = _widget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: RankCard(widget: widget, cardSource: _publicSource()),
+        cards: {
+          Platform.leagueOfLegends: _cardData(
+            Platform.leagueOfLegends,
+            const LeagueOfLegendsCardData(
+              rank: LolRank(
+                tier: 'GOLD',
+                division: 'IV',
+                lp: 42,
+                wins: 60,
+                losses: 40,
+              ),
+              topMastery: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The designed anatomy renders, never the generic Fallback card.
+    expect(find.byType(RankCard), findsOneWidget);
+    expect(find.byType(FallbackCard), findsNothing);
+    expect(find.text('GOLD IV'), findsOneWidget);
+    // The LP stat renders inside the footer zone with its unit suffix.
+    expect(
+      find.ancestor(
+        of: find.text('42 LP'),
+        matching: find.byType(PersonalizationStatFooter),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('RankCard renders the Chess mode scope and rating stat', (
+    tester,
+  ) async {
+    final widget = _widget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.chess,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: RankCard(widget: widget, cardSource: _publicSource()),
+        cards: {
+          Platform.chess: _cardData(
+            Platform.chess,
+            const ChessCardData(
+              primaryMode: 'RAPID',
+              ratings: {'rapid': ChessModeRating(current: 1500, best: 1600)},
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FallbackCard), findsNothing);
+    expect(find.text('RAPID'), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.text('1500'),
+        matching: find.byType(PersonalizationStatFooter),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('RankCard with a no-data payload renders the neutral crest '
+      '(no footer), not Fallback', (tester) async {
+    final widget = _widget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: RankCard(widget: widget, cardSource: _publicSource()),
+        cards: {
+          // Unranked: no rank block, so the resolver omits and the card shows
+          // its neutral no-data state rather than falling back.
+          Platform.leagueOfLegends: _cardData(
+            Platform.leagueOfLegends,
+            const LeagueOfLegendsCardData(rank: null, topMastery: []),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RankCard), findsOneWidget);
+    expect(find.byType(FallbackCard), findsNothing);
+    // The crest is still painted; the stat footer is omitted (no stats).
+    expect(find.byKey(rankBadgeKey('r')), findsOneWidget);
+    expect(find.byType(PersonalizationStatFooter), findsNothing);
+  });
+
+  Map<Platform, GameCard?> steamMainCards() => {
+    Platform.steam: _cardData(
+      Platform.steam,
+      const SteamCardData(
+        libraryShowcase: [
+          LibraryShowcaseEntry(appId: 1, title: 'Game 1', hours: 100),
+        ],
+        recentGames: [],
+      ),
+    ),
+  };
+
+  testWidgets('MainCard full uses the full emblem size', (tester) async {
+    final widget = _widget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.steam,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: widget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamMainCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Container>(find.byKey(mainEmblemKey('m'))).constraints,
+      BoxConstraints.tightFor(
+        width: PersonalizationLayout.mainEmblemFull,
+        height: PersonalizationLayout.mainEmblemFull,
+      ),
+    );
+  });
+
+  testWidgets('MainCard half uses the (smaller) half emblem size', (
+    tester,
+  ) async {
+    final widget = _widget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.steam,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: widget,
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
+        cards: steamMainCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Container>(find.byKey(mainEmblemKey('m'))).constraints,
+      BoxConstraints.tightFor(
+        width: PersonalizationLayout.mainEmblemHalf,
+        height: PersonalizationLayout.mainEmblemHalf,
+      ),
+    );
+  });
+
+  test('main full and half emblem sizes differ (spec §5)', () {
+    expect(
+      PersonalizationLayout.mainEmblemFull,
+      isNot(PersonalizationLayout.mainEmblemHalf),
+    );
+  });
+
+  testWidgets('MainCard uses the generic title when the payload carries no '
+      'main name, not Fallback', (tester) async {
+    final widget = _widget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.leagueOfLegends,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: widget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          // League has no champion-name map in v1, so the resolver leaves the
+          // title null and the card shows the generic key.
+          Platform.leagueOfLegends: _cardData(
+            Platform.leagueOfLegends,
+            const LeagueOfLegendsCardData(
+              topMastery: [
+                LolMasteryEntry(championId: 64, level: 7, points: 250000),
+              ],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    expect(find.byType(FallbackCard), findsNothing);
+    expect(find.text(l10n.personalizationMainTopChampion), findsOneWidget);
+  });
+
+  Map<Platform, GameCard?> lolRankCards() => {
+    Platform.leagueOfLegends: _cardData(
+      Platform.leagueOfLegends,
+      const LeagueOfLegendsCardData(
+        rank: LolRank(
+          tier: 'GOLD',
+          division: 'IV',
+          lp: 42,
+          wins: 60,
+          losses: 40,
+        ),
+        topMastery: [],
+      ),
+    ),
+  };
+
+  LinearGradient badgeGradient(WidgetTester tester, Key key) =>
+      (tester.widget<Container>(find.byKey(key)).decoration as BoxDecoration)
+              .gradient!
+          as LinearGradient;
+
+  testWidgets('RankCard crest gradient bottom paint reads the palette artB '
+      '(crimson)', (tester) async {
+    final widget = _widget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: RankCard(widget: widget, cardSource: _publicSource()),
+        cards: lolRankCards(),
+        palette: PersonalizationPalette.crimson,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The bottom paint is the solid mid-tone artB (spec §8), so it re-tints with
+    // the theme rather than falling to a fixed black.
+    expect(
+      badgeGradient(tester, rankBadgeKey('r')).colors.last,
+      PersonalizationPalette.crimson.artB,
+    );
+  });
+
+  testWidgets('RankCard crest gradient re-tints under a different palette '
+      '(chak)', (tester) async {
+    final widget = _widget(
+      id: 'r',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: RankCard(widget: widget, cardSource: _publicSource()),
+        cards: lolRankCards(),
+        palette: PersonalizationPalette.chak,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      badgeGradient(tester, rankBadgeKey('r')).colors.last,
+      PersonalizationPalette.chak.artB,
+    );
+  });
+
+  test('the two theme artB tones differ, so the crest assertions are '
+      'falsifiable', () {
+    expect(
+      PersonalizationPalette.crimson.artB,
+      isNot(PersonalizationPalette.chak.artB),
+    );
+  });
+
+  testWidgets('MainCard emblem gradient reads the palette artB', (
+    tester,
+  ) async {
+    final widget = _widget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.steam,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: widget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(appId: 1, title: 'Game 1', hours: 100),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+        palette: PersonalizationPalette.arcane,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      badgeGradient(tester, mainEmblemKey('m')).colors.last,
+      PersonalizationPalette.arcane.artB,
     );
   });
 }
