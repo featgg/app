@@ -116,14 +116,19 @@ class _TitleBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            platformTag.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.labelSmall?.copyWith(
-              color: palette.accent,
-              fontWeight: AppTypography.semiBold,
-              letterSpacing: PersonalizationLayout.tagTracking,
+          // Bounded and right-aligned: a short tag still hugs the right edge, a
+          // long one ellipsizes within its half instead of overflowing the Row.
+          Expanded(
+            child: Text(
+              platformTag.toUpperCase(),
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(
+                color: palette.accent,
+                fontWeight: AppTypography.semiBold,
+                letterSpacing: PersonalizationLayout.tagTracking,
+              ),
             ),
           ),
         ],

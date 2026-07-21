@@ -197,25 +197,37 @@ class ProfileScreen extends ConsumerWidget {
       }
     }
 
-    return Scaffold(
-      appBar: appBar,
-      body: SafeArea(
-        child: AsyncValueWidget<Profile>(
-          value: state,
-          onRetry: () => ref.invalidate(profileProvider),
-          loading: const ProfileSkeleton(),
-          // An in-progress / just-saved composition, or a persisted layout,
-          // routes to the personalization render + editor; otherwise the legacy
-          // owner grid.
-          data: (profile) =>
-              showsCompositionSurface(
-                editing: compose.editing,
-                hasPersisted: compose.hasPersisted,
-                savedIsNotEmpty: compose.savedIsNotEmpty,
-                profileHasLayout: profile.layout.isNotEmpty,
-              )
-              ? OwnerProfilePersonalization(profile: profile)
-              : _ProfileContent(profile: profile, cardBuilder: cardBuilder),
+    // In edit mode a system/predictive back cancels the composition (discard
+    // edits) instead of leaving the profile — Cancel semantics. While saving the
+    // sent snapshot is frozen, so back is inert; in view mode the pop proceeds.
+    return PopScope(
+      canPop: !compose.editing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (compose.editing && !compose.saving) {
+          ref.read(profileCompositionProvider.notifier).cancelEditing();
+        }
+      },
+      child: Scaffold(
+        appBar: appBar,
+        body: SafeArea(
+          child: AsyncValueWidget<Profile>(
+            value: state,
+            onRetry: () => ref.invalidate(profileProvider),
+            loading: const ProfileSkeleton(),
+            // An in-progress / just-saved composition, or a persisted layout,
+            // routes to the personalization render + editor; otherwise the legacy
+            // owner grid.
+            data: (profile) =>
+                showsCompositionSurface(
+                  editing: compose.editing,
+                  hasPersisted: compose.hasPersisted,
+                  savedIsNotEmpty: compose.savedIsNotEmpty,
+                  profileHasLayout: profile.layout.isNotEmpty,
+                )
+                ? OwnerProfilePersonalization(profile: profile)
+                : _ProfileContent(profile: profile, cardBuilder: cardBuilder),
+          ),
         ),
       ),
     );

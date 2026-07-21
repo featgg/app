@@ -85,8 +85,8 @@ Widget _harness(ProviderContainer container) => UncontrolledProviderScope(
 );
 
 void main() {
-  testWidgets('a seeded Rank has no size toggle; a seeded Main does; Rank seeds '
-      'as a single-slot PairRow orphan', (tester) async {
+  testWidgets('a seeded Rank (now dual-size) shows a size toggle and bootstraps '
+      'as a full row, like Main', (tester) async {
     final container = ProviderContainer(
       retry: (count, error) => null,
       overrides: [
@@ -108,14 +108,13 @@ void main() {
     await tester.pumpWidget(_harness(container));
     await tester.pumpAndSettle();
 
-    // Rank is half-only → no ⇆ toggle; Main is dual-size → toggle present.
-    expect(find.byKey(const Key('compositionSizeToggle_r')), findsNothing);
+    // Rank now supports both sizes → ⇆ toggle present, like Main.
+    expect(find.byKey(const Key('compositionSizeToggle_r')), findsOneWidget);
     expect(find.byKey(const Key('compositionSizeToggle_m')), findsOneWidget);
 
-    // The bootstrap seeds the half-only Rank as a single-slot pair (orphan),
-    // never a full row.
+    // The dual-size Rank bootstraps as a full row.
     expect(container.read(profileCompositionProvider).working, const [
-      PairRow(left: 'r'),
+      FullRow('r'),
       FullRow('m'),
     ]);
   });

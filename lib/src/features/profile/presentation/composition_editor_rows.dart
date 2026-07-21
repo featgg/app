@@ -10,6 +10,7 @@ import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
 import 'personalization_archetype_cards.dart';
 import 'profile_composition_controller.dart';
+import 'profile_widgets_controller.dart';
 import 'profile_widgets_provider.dart';
 
 /// The draggable rows region shown while the owner is editing their composition.
@@ -63,6 +64,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     final working = ref.watch(
       profileCompositionProvider.select((s) => s.working),
     );
+    // The delete affordance is disabled while a save is in flight, parity with
+    // the disabled Cancel/Add in the app bar.
+    final saving = ref.watch(
+      profileCompositionProvider.select((s) => s.saving),
+    );
     final widgets = ref.watch(ownerProfileWidgetsProvider).value ?? const [];
     // Edit mode builds from every owner widget, including disabled ones.
     final byId = {for (final w in widgets) w.id: w};
@@ -100,6 +106,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           i,
           byId,
           palette,
+          saving: saving,
           supportsHalf: supportsHalf,
           supportsBoth: supportsBoth,
           glowing: glowRows.contains(i),
@@ -148,6 +155,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     int rowIndex,
     Map<String, ProfileWidget> byId,
     PersonalizationPalette palette, {
+    required bool saving,
     required bool Function(String) supportsHalf,
     required bool Function(String) supportsBoth,
     required bool glowing,
@@ -159,6 +167,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         ProfileCardSize.full,
         byId,
         palette,
+        saving: saving,
         supportsHalf: supportsHalf,
         supportsBoth: supportsBoth,
       ),
@@ -171,6 +180,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
                 ProfileCardSize.half,
                 byId,
                 palette,
+                saving: saving,
                 supportsHalf: supportsHalf,
                 supportsBoth: supportsBoth,
               ),
@@ -182,6 +192,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
                 ProfileCardSize.half,
                 byId,
                 palette,
+                saving: saving,
                 supportsHalf: supportsHalf,
                 supportsBoth: supportsBoth,
               ),
@@ -208,6 +219,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     ProfileCardSize size,
     Map<String, ProfileWidget> byId,
     PersonalizationPalette palette, {
+    required bool saving,
     required bool Function(String) supportsHalf,
     required bool Function(String) supportsBoth,
   }) {
@@ -247,6 +259,33 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           top: AppSpacing.xs,
           left: AppSpacing.xs,
           child: _handle(cardId, palette, l10n),
+        ),
+        Positioned(
+          top: AppSpacing.xs,
+          right: AppSpacing.xs,
+          child: _DeleteButton(
+            // Identity key scopes the button's single-fire State to this card, so
+            // positional row reuse never re-homes a deleted card's `_busy == true`
+            // onto the successor that slides into its slot (would deaden its
+            // delete). A local ValueKey — not a GlobalKey — disambiguates siblings.
+            key: ValueKey('deleteFor_$cardId'),
+            cardId: cardId,
+            saving: saving,
+            palette: palette,
+            label: l10n.profileComposeDeleteLabel,
+            // Mirror of the Add flow: drop the card from the working layout AND
+            // delete the acquired widget. The widget delete invalidates the read;
+            // the settled refetch no longer contains it, so the reactive add-only
+            // fold never re-appends it (no bounce-back).
+            onDelete: () {
+              ref
+                  .read(profileCompositionProvider.notifier)
+                  .removeCardFromLayout(cardId);
+              ref
+                  .read(profileWidgetsControllerProvider.notifier)
+                  .remove(cardId);
+            },
+          ),
         ),
         if (supportsBoth(cardId))
           Positioned(
@@ -397,6 +436,78 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           button: true,
           child: Icon(
             Icons.swap_horiz,
+            size: AppSpacing.md,
+            color: palette.text,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The per-card delete affordance. Stateful with a per-instance single-fire
+/// [_DeleteButtonState._busy] flag so a same-frame double-tap dispatches the
+/// removal at most once (mirrors the add row's busy-guard). The first tap
+/// synchronously drops the card from the working layout, so this button is
+/// disposed on the next rebuild — the flag needs no reset and no async write, and
+/// a re-appeared card (a failed delete folded back) gets a fresh, deletable
+/// instance.
+class _DeleteButton extends StatefulWidget {
+  const _DeleteButton({
+    super.key,
+    required this.cardId,
+    required this.saving,
+    required this.onDelete,
+    required this.palette,
+    required this.label,
+  });
+
+  final String cardId;
+  final bool saving;
+  final VoidCallback onDelete;
+  final PersonalizationPalette palette;
+  final String label;
+
+  @override
+  State<_DeleteButton> createState() => _DeleteButtonState();
+}
+
+class _DeleteButtonState extends State<_DeleteButton> {
+  // Single-fire; never reset, never written in an async callback. The button
+  // self-disposes on the post-delete rebuild, so it only blocks a same-frame
+  // second tap before the element is torn down.
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = widget.palette;
+    return Semantics(
+      label: widget.label,
+      button: true,
+      child: InkWell(
+        key: Key('compositionDelete_${widget.cardId}'),
+        onTap: widget.saving
+            ? null
+            : () {
+                if (_busy) return; // blocks a same-frame second tap
+                _busy = true; // no setState: the button self-disposes
+                widget.onDelete();
+              },
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: Container(
+          width: AppSpacing.xl,
+          height: AppSpacing.xl,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: palette.bg,
+            border: Border.all(
+              color: palette.accent,
+              width: PersonalizationLayout.borderWidth,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.sm),
+          ),
+          child: Icon(
+            Icons.delete_outline,
             size: AppSpacing.md,
             color: palette.text,
           ),

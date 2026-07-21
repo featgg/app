@@ -33,7 +33,11 @@ class OwnerProfilePersonalization extends ConsumerWidget {
     // ProfileScreen (which owns this surface) keeps the mutation controller alive,
     // so a write's success-path invalidation reliably drives an emission here.
     ref.listen(ownerProfileWidgetsProvider, (previous, next) {
-      if (next case AsyncData(:final value)) {
+      // Only fold a SETTLED read. On invalidate Riverpod first re-delivers the
+      // stale value as AsyncData(isRefreshing: true), which for a delete still
+      // lists the just-removed widget — folding that would re-append it (bounce
+      // back). Waiting for the settled read reflects the real acquire/delete.
+      if (next case AsyncData(:final value) when !next.isRefreshing) {
         ref
             .read(profileCompositionProvider.notifier)
             .appendUnplacedWidgets(value);

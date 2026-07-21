@@ -106,6 +106,31 @@ final class _ComposingRepository implements ProfileRepository {
       right(null);
 }
 
+/// A profile repository whose layout write never resolves on its own — the test
+/// completes [setGate] when it wants the save to finish. Keeps the composition
+/// in the `saving` state so a system-back-while-saving assertion is observable.
+final class _GatedLayoutRepository implements ProfileRepository {
+  _GatedLayoutRepository(this.profile);
+
+  final Profile profile;
+  final setGate = Completer<Either<Failure, Unit>>();
+
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() async => right(profile);
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
+      right(profile);
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(List<ProfileLayoutRow> rows) =>
+      setGate.future;
+}
+
 Profile _profileWith(List<ProfileLayoutRow> layout) => Profile(
   id: 'user-1',
   username: 'testuser',
@@ -718,6 +743,59 @@ Widget _profileToSettingsRouter(ProfileRepository repo) {
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+    ),
+  );
+}
+
+/// A two-route stack: a feed stub beneath, with a button that pushes the real
+/// [ProfileScreen] on top. Lets a simulated Android system back be observed as
+/// either a route pop (to the feed) or an in-place edit-mode exit.
+({ProviderContainer container, Widget widget}) _pushHarness(
+  ProfileRepository repo, {
+  ProfileWidgetsRepository? widgetsRepo,
+  CardsRepository? cardsRepo,
+}) {
+  final container = ProviderContainer(
+    retry: (count, error) => null,
+    overrides: [
+      profileRepositoryProvider.overrideWithValue(repo),
+      profileWidgetsRepositoryProvider.overrideWithValue(
+        widgetsRepo ??
+            _FakeWidgetsRepository(fetchResult: right([_steamWidget()])),
+      ),
+      cardsRepositoryProvider.overrideWithValue(
+        cardsRepo ?? _FakeCardsRepository(_steamCard()),
+      ),
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(_connected([Platform.steam])),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return (
+    container: container,
+    widget: UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                key: const Key('goToProfile'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        ProfileScreen(cardBuilder: (card) => Text(card.title)),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
     ),
   );
 }
@@ -1360,5 +1438,89 @@ void main() {
 
     expect(find.byType(ProfileScreen), findsOneWidget);
     expect(repo.calls, greaterThan(fetchesBeforeReturn));
+  });
+
+  testWidgets('D1 an Android system back in edit mode exits edit mode without '
+      'popping the profile route', (tester) async {
+    final repo = _FakeRepository(result: () async => right(_composedProfile));
+    final harness = _pushHarness(repo);
+
+    await tester.pumpWidget(harness.widget);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('goToProfile')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+
+    // Enter edit mode.
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('profileComposeCancelButton')), findsOneWidget);
+
+    // Simulate the system back button.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    // The profile route stays; edit mode is exited (the view-mode edit entry is
+    // back). Without the PopScope the pop removes ProfileScreen and editing stays.
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+  });
+
+  testWidgets(
+    'D2 an Android system back in view mode pops the profile route to '
+    'the feed',
+    (tester) async {
+      final repo = _FakeRepository(result: () async => right(_composedProfile));
+      final harness = _pushHarness(repo);
+
+      await tester.pumpWidget(harness.widget);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('goToProfile')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileScreen), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // In view mode the pop proceeds normally, back to the feed stub.
+      expect(find.byType(ProfileScreen), findsNothing);
+      expect(find.byKey(const Key('goToProfile')), findsOneWidget);
+    },
+  );
+
+  testWidgets('D3 an Android system back while saving is inert (stays in edit '
+      'mode on the profile route)', (tester) async {
+    final repo = _GatedLayoutRepository(_composedProfile);
+    final harness = _pushHarness(repo);
+
+    await tester.pumpWidget(harness.widget);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('goToProfile')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+
+    // Make the layout dirty through the controller (no reliance on an in-card
+    // toggle being scrolled on-screen), then start a save that stays pending so
+    // saving == true when the system back arrives.
+    harness.container
+        .read(profileCompositionProvider.notifier)
+        .onToggleSize('w-1');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
+    await tester.pump();
+
+    // System back during the in-flight save must do nothing.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    // Still editing (the view-mode edit entry is absent while saving).
+    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
+
+    // Resolve the save so no pending future leaks past the test.
+    repo.setGate.complete(right(unit));
+    await tester.pumpAndSettle();
   });
 }

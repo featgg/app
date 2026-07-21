@@ -36,8 +36,9 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
     ProfileCardSize.full,
     ProfileCardSize.half,
   },
-  // Rank is half-only (spec §7): "how good am I" reads as a compact crest.
-  ProfileArchetype.rank => const {ProfileCardSize.half},
+  // Rank supports both sizes (spec §7): a compact crest as a half, or a larger
+  // crest as a full — size follows placement, not the archetype.
+  ProfileArchetype.rank => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.main => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.fallback => const {
     ProfileCardSize.full,

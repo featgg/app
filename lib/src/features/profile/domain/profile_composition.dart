@@ -131,6 +131,12 @@ bool canPairBeside(
   return (rows: out, removedRow: -1);
 }
 
+/// Removes [id] from its row: a full row is deleted; a pair slot is nulled and
+/// the row dropped only if that empties it. Order preserved. Pure; no-op if [id]
+/// is absent.
+List<ProfileLayoutRow> removeCard(List<ProfileLayoutRow> rows, String id) =>
+    _removeCard(rows, id).rows;
+
 /// Move [id] into the gap at [gapIndex] as its own row — full when it supports
 /// full, else a single-slot pair (centered orphan). Removes it from its current
 /// row first and shifts the target index down by one when the removed row sat

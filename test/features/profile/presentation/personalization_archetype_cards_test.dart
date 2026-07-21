@@ -329,7 +329,11 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        card: RankCard(widget: widget, cardSource: _publicSource()),
+        card: RankCard(
+          widget: widget,
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
         cards: {
           Platform.leagueOfLegends: _cardData(
             Platform.leagueOfLegends,
@@ -374,7 +378,11 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        card: RankCard(widget: widget, cardSource: _publicSource()),
+        card: RankCard(
+          widget: widget,
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
         cards: {
           Platform.chess: _cardData(
             Platform.chess,
@@ -409,7 +417,11 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        card: RankCard(widget: widget, cardSource: _publicSource()),
+        card: RankCard(
+          widget: widget,
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
         cards: {
           // Unranked: no rank block, so the resolver omits and the card shows
           // its neutral no-data state rather than falling back.
@@ -558,6 +570,50 @@ void main() {
     ),
   };
 
+  testWidgets('RankCard full renders a visibly larger crest than half '
+      '(spec §5)', (tester) async {
+    final full = _widget(
+      id: 'rf',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+    );
+    final half = _widget(
+      id: 'rh',
+      kind: ProfileWidgetKind.rank,
+      platform: Platform.leagueOfLegends,
+    );
+
+    // Both variants in one tree so their crests are measured side by side.
+    await tester.pumpWidget(
+      _harness(
+        card: Column(
+          children: [
+            RankCard(
+              widget: full,
+              size: ProfileCardSize.full,
+              cardSource: _publicSource(),
+            ),
+            RankCard(
+              widget: half,
+              size: ProfileCardSize.half,
+              cardSource: _publicSource(),
+            ),
+          ],
+        ),
+        cards: lolRankCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fullCrest = tester.getSize(find.byKey(rankBadgeKey('rf')));
+    final halfCrest = tester.getSize(find.byKey(rankBadgeKey('rh')));
+    expect(fullCrest.width, greaterThan(halfCrest.width));
+    expect(
+      PersonalizationLayout.rankBadgeSizeFull,
+      greaterThan(PersonalizationLayout.rankBadgeSizeHalf),
+    );
+  });
+
   LinearGradient badgeGradient(WidgetTester tester, Key key) =>
       (tester.widget<Container>(find.byKey(key)).decoration as BoxDecoration)
               .gradient!
@@ -573,7 +629,11 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        card: RankCard(widget: widget, cardSource: _publicSource()),
+        card: RankCard(
+          widget: widget,
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
         cards: lolRankCards(),
         palette: PersonalizationPalette.crimson,
       ),
@@ -598,7 +658,11 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        card: RankCard(widget: widget, cardSource: _publicSource()),
+        card: RankCard(
+          widget: widget,
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
         cards: lolRankCards(),
         palette: PersonalizationPalette.chak,
       ),

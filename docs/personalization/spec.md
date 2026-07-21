@@ -77,7 +77,7 @@ Three axes classify every card: **Archetype** (which question it answers), **Sco
 |---|---|---|---|---|
 | Hero Canvas | "who am I" | full | curated upload (image/GIF) | 4:5; defines profile vibe; moderation applies |
 | Identity | "where am I" | full | auto (linked platforms) | cross-platform *membership* collage + platform chips; evolves the shipped Passport card into v3 anatomy/theme |
-| Rank | "how good am I" | half | auto | crest/piece visual + rating; per-scope |
+| Rank | "how good am I" | full, half | auto | crest/piece visual + rating; per-scope; full variant = larger crest + wider stat cap, half unchanged |
 | Main / Favorite | "what defines me" | full, half | curated | character/spec/game hero with emblem art |
 | Milestone | "what did I conquer" | full, half | curated pick, auto data | game capsule + progress + medal; full variant = wider capsule; evolves the shipped Showcase card |
 | Collection | "what do I own/chase" | full | curated | item/game panels with progress states; evolves the shipped Collection & Game Collector cards (Collector = variant) |
