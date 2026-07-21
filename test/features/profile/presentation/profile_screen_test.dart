@@ -1154,10 +1154,10 @@ void main() {
   testWidgets('a mutation failure surfaces an error to the user', (
     tester,
   ) async {
-    // A tall viewport: the add-card sheet also carries the Rank/Main add section
-    // above the tall art tiles, so the default 800×600 view would push the tile
-    // out of the games viewport.
-    tester.view.physicalSize = const Size(800, 1400);
+    // A real phone viewport: the add-card sheet is one scroll surface carrying
+    // the Rank/Main add section above the art tiles, so the tile is reached by
+    // scrolling rather than shown outright.
+    tester.view.physicalSize = const Size(392, 850);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -1183,6 +1183,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('profileAddCardButton')));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_730')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('showcasePickerTile_730')));
     await tester.pumpAndSettle();
 
@@ -1194,10 +1196,10 @@ void main() {
   });
 
   testWidgets('after a successful mutation the grid refreshes', (tester) async {
-    // A tall viewport: the add-card sheet also carries the Rank/Main add section
-    // above the tall art tiles, so the default 800×600 view would push the tile
-    // out of the games viewport.
-    tester.view.physicalSize = const Size(800, 1400);
+    // A real phone viewport: the add-card sheet is one scroll surface carrying
+    // the Rank/Main add section above the art tiles, so the tile is reached by
+    // scrolling rather than shown outright.
+    tester.view.physicalSize = const Size(392, 850);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -1220,6 +1222,8 @@ void main() {
     final fetchesBefore = widgetsRepo.fetchCalls;
 
     await tester.tap(find.byKey(const Key('profileAddCardButton')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_730')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('showcasePickerTile_730')));
     await tester.pumpAndSettle();

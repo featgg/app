@@ -259,6 +259,25 @@ final class _FakeCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
+/// Returns a distinct card per platform so every rank/main acquisition row can
+/// resolve independently (the row offer requires the card's own platform to
+/// match the queried one).
+final class _MapCardsRepository implements CardsRepository {
+  _MapCardsRepository(this._cards);
+
+  final Map<Platform, GameCard?> _cards;
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
+      right(_cards[platform]);
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(null);
+}
+
 /// Holds the card future open so the picker's loading branch is observable.
 final class _PendingCardsRepository implements CardsRepository {
   final _completer = Completer<Either<Failure, GameCard?>>();
@@ -293,6 +312,89 @@ GameCard _steamCard(
   stats: stats,
   lastUpdated: DateTime.utc(2026, 6, 1),
   data: SteamCardData(libraryShowcase: library, recentGames: const []),
+);
+
+/// One-line card builders that each carry enough data for the rank/main
+/// resolvers to fire, so the section renders its full row set on a phone.
+GameCard _card(Platform platform, CardData data) => GameCard(
+  schemaVersion: 1,
+  platform: platform,
+  title: platform.name,
+  subtitle: null,
+  iconImage: null,
+  heroImage: null,
+  profileUrl: null,
+  stats: const [],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+  data: data,
+);
+
+GameCard _leagueCard() => _card(
+  Platform.leagueOfLegends,
+  const LeagueOfLegendsCardData(
+    rank: LolRank(tier: 'GOLD', division: 'IV', lp: 42, wins: 30, losses: 20),
+    topMastery: [LolMasteryEntry(championId: 1, level: 7, points: 123456)],
+  ),
+);
+
+GameCard _wowCard() => _card(
+  Platform.wowRetail,
+  const WowRetailCardData(
+    profile: WowProfile(
+      race: 'Orc',
+      faction: 'HORDE',
+      className: 'Warrior',
+      level: 70,
+      ilvlAvg: 480,
+      ilvlEquipped: 478,
+    ),
+    mythicPlus: WowMythicPlus(rating: 2500, bestRuns: []),
+    recentAchievements: [],
+    attribution: 'Blizzard',
+  ),
+);
+
+GameCard _gw2Card() => _card(
+  Platform.gw2,
+  const Gw2CardData(
+    account: Gw2Account(
+      accountAgeHours: 1000,
+      veterancyYears: 2,
+      totalAp: 5000,
+    ),
+    topCharacters: [
+      Gw2Character(
+        name: 'Hero',
+        race: 'Human',
+        profession: 'GUARDIAN',
+        level: 80,
+        deaths: 10,
+        hoursPlayed: 500,
+        isMain: true,
+      ),
+    ],
+  ),
+);
+
+GameCard _chessCard() => _card(
+  Platform.chess,
+  const ChessCardData(
+    primaryMode: 'RAPID',
+    ratings: {'rapid': ChessModeRating(current: 1500, best: 1600)},
+  ),
+);
+
+GameCard _retroCard() => _card(
+  Platform.retroachievements,
+  const RetroAchievementsCardData(
+    profile: RetroAchievementsProfile(
+      totalPoints: 10000,
+      truePoints: 20000,
+      softcorePoints: 500,
+      rank: 1234,
+    ),
+    recentGames: [],
+  ),
 );
 
 ProfileWidget _showcaseFor(int appId, {required int position}) => ProfileWidget(
@@ -428,13 +530,72 @@ void main() {
     expect(find.byKey(const Key('showcasePickerEmpty')), findsNothing);
   });
 
+  testWidgets('phone viewport: rich rank/main data does not overflow and the '
+      'collection body is reachable', (tester) async {
+    // A real phone viewport where the fixed chrome (passport banner + the full
+    // nine-row rank/main section + the mode toggle) provably exceeds the space a
+    // crushed mode body could occupy — the pre-fix layout overflowed here.
+    tester.view.physicalSize = const Size(392, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // A distinct, resolvable card per platform so all nine acquisition rows
+    // render; Steam carries eight library entries for the collection grid.
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([for (var i = 1; i <= 8; i++) _entry(i)]),
+          Platform.leagueOfLegends: _leagueCard(),
+          Platform.wowRetail: _wowCard(),
+          Platform.gw2: _gw2Card(),
+          Platform.chess: _chessCard(),
+          Platform.retroachievements: _retroCard(),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.pumpAndSettle();
+
+    // The tall fixed content is reproduced.
+    expect(find.byKey(const Key('passportBanner')), findsOneWidget);
+    expect(find.byKey(const Key('rankMainAddSection')), findsOneWidget);
+
+    // Collection mode's body would be crushed under the fixed chrome and raise a
+    // RenderFlex overflow on the pre-fix layout; the single scroll surface does
+    // not. The toggle scrolls with the sheet, so bring it into view before
+    // tapping.
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.ensureVisible(find.text(l10n.addCardModeCollection));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.addCardModeCollection));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // A deep tile is reachable by scrolling and tappable.
+    await tester.ensureVisible(find.byKey(const Key('collectionPickerTile_8')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('collectionPickerTile_8')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collectionTileCheck_8')), findsOneWidget);
+
+    // The bottom-most content (the confirm button) is reachable too.
+    await tester.ensureVisible(
+      find.byKey(const Key('collectionPickerAddButton')),
+    );
+  });
+
   testWidgets('tapping a tile adds a showcase for that game and closes', (
     tester,
   ) async {
-    // A tall viewport: the sheet now also carries the Rank/Main add section above
-    // the tall art tiles, so the default 800×600 view would push the tile out of
-    // the games viewport.
-    tester.view.physicalSize = const Size(800, 1400);
+    // A real phone viewport: the sheet is one scroll surface carrying the
+    // Rank/Main add section above the art tiles, so the tile is reached by
+    // scrolling rather than shown outright.
+    tester.view.physicalSize = const Size(392, 850);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -454,6 +615,8 @@ void main() {
     await tester.tap(find.byKey(const Key('openPicker')));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_570')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('showcasePickerTile_570')));
     await tester.pumpAndSettle();
 

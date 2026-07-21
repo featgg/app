@@ -22,6 +22,15 @@ void main() {
     });
   });
 
+  group('AppSheet', () {
+    test('max-height fraction is a sane in-range screen cap', () {
+      // A screen-height fraction: must stay above zero and never exceed the
+      // full screen, or the content-sized sheet cap loses meaning.
+      expect(AppSheet.maxHeightFraction, greaterThan(0));
+      expect(AppSheet.maxHeightFraction, lessThanOrEqualTo(1));
+    });
+  });
+
   group('AppColorTokens', () {
     test('seed is the declared value', () {
       // Guards accidental drift of the single source of truth for the brand seed.
