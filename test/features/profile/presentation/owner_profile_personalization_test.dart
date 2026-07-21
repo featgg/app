@@ -671,6 +671,52 @@ void main() {
     // Falsifiable: the unguarded button dispatches both taps → two remove calls.
     expect(widgetsRepo.removed, ['extra']);
   });
+
+  testWidgets('deleting the first card leaves the successor delete live on its '
+      'first tap (A6)', (tester) async {
+    final widgetsRepo = _DeletableWidgetsRepo([
+      _widget('card', ProfileWidgetKind.template),
+      _widget('extra', ProfileWidgetKind.template),
+    ]);
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        profileRepositoryProvider.overrideWithValue(
+          _FakeProfileRepo(profile: _twoCardProfile),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+        cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final widget = UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      ),
+    );
+
+    await _pump(tester, widget);
+    await _enterEdit(tester);
+
+    // Delete the first card; its successor slides into row 0's tree slot.
+    await tester.tap(find.byKey(const Key('compositionDelete_card')));
+    await tester.pumpAndSettle();
+    expect(container.read(profileCompositionProvider).working, const [
+      FullRow('extra'),
+    ]);
+
+    // The successor's delete must fire on its FIRST tap. Falsifiable: without a
+    // per-card key on _DeleteButton, 'extra' adopts 'card's recycled _busy == true
+    // via positional reuse and swallows this tap.
+    await tester.tap(find.byKey(const Key('compositionDelete_extra')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.removed, contains('extra'));
+    expect(container.read(profileCompositionProvider).working, isEmpty);
+  });
 }
 
 // Two placed cards so the delete affordance and the no-bounce-back reactive fold

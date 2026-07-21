@@ -264,6 +264,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           top: AppSpacing.xs,
           right: AppSpacing.xs,
           child: _DeleteButton(
+            // Identity key scopes the button's single-fire State to this card, so
+            // positional row reuse never re-homes a deleted card's `_busy == true`
+            // onto the successor that slides into its slot (would deaden its
+            // delete). A local ValueKey — not a GlobalKey — disambiguates siblings.
+            key: ValueKey('deleteFor_$cardId'),
             cardId: cardId,
             saving: saving,
             palette: palette,
@@ -449,6 +454,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
 /// instance.
 class _DeleteButton extends StatefulWidget {
   const _DeleteButton({
+    super.key,
     required this.cardId,
     required this.saving,
     required this.onDelete,
