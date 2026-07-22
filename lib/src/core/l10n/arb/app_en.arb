@@ -1492,6 +1492,18 @@
   "@personalizationMainTopChampion": {
     "description": "Generic Main-card title used when the payload carries no main name (e.g. League of Legends, which has no champion-name lookup)."
   },
+  "personalizationCollectionTitle": "Collection",
+  "@personalizationCollectionTitle": {
+    "description": "Title-bar heading for a curated Collection card when the owner picked no catalog title."
+  },
+  "personalizationStatGames": "Games",
+  "@personalizationStatGames": {
+    "description": "Stat-footer label on the curated Collection card; the value is the count of games in the collection."
+  },
+  "personalizationStatPerfect": "Perfect",
+  "@personalizationStatPerfect": {
+    "description": "Stat-footer label on the Achievement Grid card; the value is the count of 100%-completed (perfect) games."
+  },
   "rankMainAddTitle": "Rank & Main",
   "@rankMainAddTitle": {
     "description": "Heading of the add-card section that offers Rank and Main cards for supported connected platforms."

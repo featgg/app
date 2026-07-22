@@ -258,5 +258,38 @@ void main() {
       expect(es.connectionsStatWinrate, isNot(en.connectionsStatWinrate));
       expect(pt.connectionsStatWinrate, isNot(en.connectionsStatWinrate));
     });
+
+    test('new Collection / Achievement Grid keys exist and are non-empty, and '
+        'translate per locale', () async {
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+      final es = await AppLocalizations.delegate.load(const Locale('es'));
+      final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+
+      for (final l10n in [en, es, pt]) {
+        expect(l10n.personalizationCollectionTitle, isNotEmpty);
+        expect(l10n.personalizationStatGames, isNotEmpty);
+        expect(l10n.personalizationStatPerfect, isNotEmpty);
+      }
+
+      // Non-brand copy loads per-locale, not the template fallback.
+      expect(
+        es.personalizationCollectionTitle,
+        isNot(en.personalizationCollectionTitle),
+      );
+      expect(
+        pt.personalizationCollectionTitle,
+        isNot(en.personalizationCollectionTitle),
+      );
+      expect(es.personalizationStatGames, isNot(en.personalizationStatGames));
+      expect(pt.personalizationStatGames, isNot(en.personalizationStatGames));
+      expect(
+        es.personalizationStatPerfect,
+        isNot(en.personalizationStatPerfect),
+      );
+      expect(
+        pt.personalizationStatPerfect,
+        isNot(en.personalizationStatPerfect),
+      );
+    });
   });
 }
