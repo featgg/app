@@ -1300,14 +1300,6 @@
   "@collectionTitleMostPlayed": {
     "description": "Collection card catalog title for the games the owner has played the most."
   },
-  "addCardModeShowcase": "Game",
-  "@addCardModeShowcase": {
-    "description": "Label of the add-card sheet's mode toggle segment that adds a single-game showcase card."
-  },
-  "addCardModeCollection": "Collection",
-  "@addCardModeCollection": {
-    "description": "Label of the add-card sheet's mode toggle segment that creates a multi-game collection card."
-  },
   "collectionPickerTitle": "Create a collection",
   "@collectionPickerTitle": {
     "description": "Title of the add-card sheet's collection mode, where the owner selects several games for one collection card."
@@ -1345,26 +1337,6 @@
   "@gameCollectorUnavailable": {
     "description": "Placeholder shown in place of a game collector card when the platform library is not available — the platform is unlinked or its card is still loading."
   },
-  "addCardModeCollector": "Collector",
-  "@addCardModeCollector": {
-    "description": "Label of the add-card sheet's mode toggle segment that adds a game collector card aggregating the whole library."
-  },
-  "gameCollectorPickerTitle": "Add a Game Collector",
-  "@gameCollectorPickerTitle": {
-    "description": "Title of the add-card sheet's collector mode, where the owner adds one card summarizing their whole library."
-  },
-  "gameCollectorPickerHint": "One card for your whole Steam library: games owned, total hours, and your top game's cover.",
-  "@gameCollectorPickerHint": {
-    "description": "Hint under the collector picker title describing what the game collector card shows."
-  },
-  "gameCollectorPickerAdd": "Add Game Collector",
-  "@gameCollectorPickerAdd": {
-    "description": "Confirm button that adds the game collector card to the profile."
-  },
-  "gameCollectorPickerAlreadyAdded": "You already have a Game Collector card.",
-  "@gameCollectorPickerAlreadyAdded": {
-    "description": "Shown in the collector picker when a game collector card is already on the profile, so the Add action is hidden."
-  },
   "gameCollectorPickerEmpty": "Your game library looks empty right now.",
   "@gameCollectorPickerEmpty": {
     "description": "Shown in the collector picker when the Steam library resolves as absent or with 0 games owned, so the Add action is disabled — the card would read as empty."
@@ -1385,26 +1357,6 @@
         "type": "String"
       }
     }
-  },
-  "addCardModeCompletionist": "Completionist",
-  "@addCardModeCompletionist": {
-    "description": "Label of the add-card sheet's mode toggle segment that adds a completionist card counting the whole library's perfect games."
-  },
-  "completionistPickerTitle": "Add a Completionist",
-  "@completionistPickerTitle": {
-    "description": "Title of the add-card sheet's completionist mode, where the owner adds one card counting their perfect games across the whole library."
-  },
-  "completionistPickerHint": "One card for your whole Steam library: how many games you've 100% completed.",
-  "@completionistPickerHint": {
-    "description": "Hint under the completionist picker title describing what the completionist card shows."
-  },
-  "completionistPickerAdd": "Add Completionist",
-  "@completionistPickerAdd": {
-    "description": "Confirm button that adds the completionist card to the profile."
-  },
-  "completionistPickerAlreadyAdded": "You already have a Completionist card.",
-  "@completionistPickerAlreadyAdded": {
-    "description": "Shown in the completionist picker when a completionist card is already on the profile, so the Add action is hidden."
   },
   "completionistPickerEmpty": "You don't have any 100%-completed games yet.",
   "@completionistPickerEmpty": {
@@ -1435,22 +1387,6 @@
   "passportUnavailable": "Passport unavailable",
   "@passportUnavailable": {
     "description": "Placeholder shown in place of a passport card when no linked platform resolves — none linked yet, or every card is still loading."
-  },
-  "passportPickerTitle": "Add your Passport",
-  "@passportPickerTitle": {
-    "description": "Title of the add-card sheet's passport banner, where the owner adds one card aggregating every linked platform."
-  },
-  "passportPickerHint": "One card that gathers every platform you've linked — your cross-game identity at a glance.",
-  "@passportPickerHint": {
-    "description": "Hint under the passport banner title describing what the passport card shows."
-  },
-  "passportPickerAdd": "Add Passport",
-  "@passportPickerAdd": {
-    "description": "Confirm button that adds the passport card to the profile."
-  },
-  "passportPickerAlreadyAdded": "You already have a Passport card.",
-  "@passportPickerAlreadyAdded": {
-    "description": "Shown in the passport banner when a passport card is already on the profile, so the Add action is hidden."
   },
   "personalizationIdentityTag": "Feat.gg",
   "@personalizationIdentityTag": {
@@ -1504,9 +1440,65 @@
   "@personalizationStatPerfect": {
     "description": "Stat-footer label on the Achievement Grid card; the value is the count of 100%-completed (perfect) games."
   },
-  "rankMainAddTitle": "Rank & Main",
-  "@rankMainAddTitle": {
-    "description": "Heading of the add-card section that offers Rank and Main cards for supported connected platforms."
+  "addCatalogTitle": "Add a card",
+  "@addCatalogTitle": {
+    "description": "Title of the add-card sheet, a flat archetype-grouped catalog of the cards the owner can add."
+  },
+  "addCatalogGroupIdentity": "Identity",
+  "@addCatalogGroupIdentity": {
+    "description": "Header of the add-card catalog's Identity group (the cross-platform Passport card)."
+  },
+  "addCatalogGroupRank": "Rank",
+  "@addCatalogGroupRank": {
+    "description": "Header of the add-card catalog's Rank group (per-platform competitive standing cards)."
+  },
+  "addCatalogGroupMain": "Main",
+  "@addCatalogGroupMain": {
+    "description": "Header of the add-card catalog's Main group (per-platform primary game/character/mode cards)."
+  },
+  "addCatalogGroupMilestone": "Milestone",
+  "@addCatalogGroupMilestone": {
+    "description": "Header of the add-card catalog's Milestone group (a single-game showcase from the Steam library)."
+  },
+  "addCatalogGroupCollection": "Collection",
+  "@addCatalogGroupCollection": {
+    "description": "Header of the add-card catalog's Collection group (a curated set and the whole-library collector variant)."
+  },
+  "addCatalogGroupAchievements": "Achievement Grid",
+  "@addCatalogGroupAchievements": {
+    "description": "Header of the add-card catalog's Achievement Grid group (the whole-library completionist variant)."
+  },
+  "addCatalogActionAdd": "Add",
+  "@addCatalogActionAdd": {
+    "description": "Trailing affordance on an offerable add-card catalog row; tapping adds the card in one step."
+  },
+  "addCatalogAdded": "Added",
+  "@addCatalogAdded": {
+    "description": "Trailing state on an add-card catalog row whose card is already on the profile and cannot be added again."
+  },
+  "addCatalogRowCollectionCurated": "Curated set",
+  "@addCatalogRowCollectionCurated": {
+    "description": "Label of the add-card catalog's Collection row that opens the game picker to assemble a curated collection."
+  },
+  "addCatalogRowCollectionLibrary": "Whole library",
+  "@addCatalogRowCollectionLibrary": {
+    "description": "Label of the add-card catalog's Collection row that adds the whole-library game collector card in one step."
+  },
+  "addCatalogReasonNoPlatforms": "Link an account to add this.",
+  "@addCatalogReasonNoPlatforms": {
+    "description": "Reason on a disabled add-card catalog row (the Identity card) when no platform is linked yet."
+  },
+  "addCatalogReasonRankNoData": "No rank data yet.",
+  "@addCatalogReasonRankNoData": {
+    "description": "Reason on a disabled add-card catalog Rank row when the linked platform's card carries no rank data."
+  },
+  "addCatalogReasonMainNoData": "No main data yet.",
+  "@addCatalogReasonMainNoData": {
+    "description": "Reason on a disabled add-card catalog Main row when the linked platform's card carries no main data."
+  },
+  "addCatalogConnectMore": "Connect more accounts",
+  "@addCatalogConnectMore": {
+    "description": "Footer link in the add-card catalog that navigates to the connections screen to link more platforms."
   },
   "profilePersonalize": "Personalize",
   "@profilePersonalize": {

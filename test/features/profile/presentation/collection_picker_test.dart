@@ -3,6 +3,7 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
@@ -186,6 +187,23 @@ final class _FakeCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
+/// A connections repo reporting Steam linked, so the catalog renders the
+/// Steam-derived Collection group whose curated row opens this picker.
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([
+        Connection(
+          platform: Platform.steam,
+          status: ConnectionStatus.active,
+          createdAt: DateTime.utc(2024),
+        ),
+      ]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 /// A Steam card whose library holds [count] art-less entries (app ids 1..count).
 GameCard _steamCard(int count) => GameCard(
   schemaVersion: 1,
@@ -225,6 +243,9 @@ Widget _harness({
     overrides: [
       cardsRepositoryProvider.overrideWithValue(cardsRepo),
       profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -260,7 +281,10 @@ Future<void> _openCollectionMode(
 ) async {
   await tester.tap(find.byKey(const Key('openPicker')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text(l10n.addCardModeCollection));
+  // Reach the curated-Collection picker through its catalog step row.
+  await tester.ensureVisible(find.byKey(const Key('collectionCuratedRow')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('collectionCuratedRow')));
   await tester.pumpAndSettle();
 }
 
@@ -284,7 +308,6 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     await _openCollectionMode(tester, l10n);
 
-    expect(find.byKey(const Key('addCardModeToggle')), findsOneWidget);
     expect(find.byKey(const Key('collectionPickerTitle')), findsOneWidget);
     // Catalog-only: no free-text entry anywhere in the collection body.
     expect(find.byType(TextField), findsNothing);

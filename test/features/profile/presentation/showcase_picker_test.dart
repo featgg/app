@@ -5,29 +5,27 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
-import 'package:featgg/src/features/profile/domain/composed_card.dart';
-import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
-import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/showcase_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:go_router/go_router.dart';
 
-/// Records the add-showcase call so the tile-tap write contract is provable,
-/// and returns `[]` for the read the controller re-fetches after a successful
-/// add. Every other mutation is unreachable in these tests.
+/// Records each add-card write so the per-row write contract is provable, and
+/// returns `[]` for the read the controller re-fetches after a successful add.
 final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
-  Platform? lastPlatform;
-  ShowcaseSelection? lastSelection;
-  int? lastPosition;
-  ProfileWidgetSize? lastSize;
+  Platform? lastShowcasePlatform;
+  ShowcaseSelection? lastShowcaseSelection;
+  int? lastShowcasePosition;
+  ProfileWidgetSize? lastShowcaseSize;
   CollectionSelection? lastCollectionSelection;
   int? lastCollectionPosition;
   ProfileWidgetSize? lastCollectionSize;
@@ -40,6 +38,12 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   int? lastPassportPosition;
   ProfileWidgetSize? lastPassportSize;
   bool passportAdded = false;
+  Platform? lastRankPlatform;
+  int? lastRankPosition;
+  ProfileWidgetSize? lastRankSize;
+  Platform? lastMainPlatform;
+  int? lastMainPosition;
+  ProfileWidgetSize? lastMainSize;
 
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
@@ -110,10 +114,10 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
     required int position,
     required ProfileWidgetSize size,
   }) async {
-    lastPlatform = platform;
-    lastSelection = selection;
-    lastPosition = position;
-    lastSize = size;
+    lastShowcasePlatform = platform;
+    lastShowcaseSelection = selection;
+    lastShowcasePosition = position;
+    lastShowcaseSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -154,95 +158,52 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
     required Platform platform,
     required int position,
     required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
+  }) async {
+    lastRankPlatform = platform;
+    lastRankPosition = position;
+    lastRankSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.rank,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
     required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setCollectionSize(
-    String id,
-    ProfileWidgetSize size,
-    CollectionSelection selection,
-  ) async => throw UnimplementedError();
+  }) async {
+    lastMainPlatform = platform;
+    lastMainPosition = position;
+    lastMainSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.main,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: size,
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
       right(const []);
 
   @override
-  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
-    String userId,
-  ) async => right(const []);
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addPlatformWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addComposedWidget({
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setTemplateFill(
-    String id,
-    ProfileWidgetSize size,
-    TemplateFill fill,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setComposedFill(
-    String id,
-    ProfileWidgetSize size,
-    ComposedFill fill,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> removeWidget(String id) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setSize(
-    String id,
-    ProfileWidgetSize size,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setShowcaseSize(
-    String id,
-    ProfileWidgetSize size,
-    ShowcaseSelection selection,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setDataMenuSelection(
-    String id,
-    ProfileWidgetSize size,
-    DataMenuSelection selection,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
-      throw UnimplementedError();
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
-/// Returns a fixed card for any platform (the picker only reads Steam).
+/// Returns a fixed card for any platform.
 final class _FakeCardsRepository implements CardsRepository {
   _FakeCardsRepository(this._card);
 
@@ -259,9 +220,8 @@ final class _FakeCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
-/// Returns a distinct card per platform so every rank/main acquisition row can
-/// resolve independently (the row offer requires the card's own platform to
-/// match the queried one).
+/// Returns a distinct card per platform so each catalog row resolves against
+/// its own platform's card (a row's offer requires the card to match).
 final class _MapCardsRepository implements CardsRepository {
   _MapCardsRepository(this._cards);
 
@@ -278,7 +238,7 @@ final class _MapCardsRepository implements CardsRepository {
   ) async => right(null);
 }
 
-/// Holds the card future open so the picker's loading branch is observable.
+/// Holds the card future open so the catalog's loading branch is observable.
 final class _PendingCardsRepository implements CardsRepository {
   final _completer = Completer<Either<Failure, GameCard?>>();
 
@@ -291,6 +251,29 @@ final class _PendingCardsRepository implements CardsRepository {
     String userId,
     Platform platform,
   ) async => right(null);
+}
+
+/// A connections repo whose connected set is the injected [platforms]. The
+/// catalog reads this through `connectedPlatformsProvider` to decide which
+/// rows are linked (offered/added/disabled) versus omitted.
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  _FakeConnectionsRepository(this.platforms);
+
+  final List<Platform> platforms;
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([
+        for (final platform in platforms)
+          Connection(
+            platform: platform,
+            status: ConnectionStatus.active,
+            createdAt: DateTime.utc(2024),
+          ),
+      ]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
 LibraryShowcaseEntry _entry(int appId) =>
@@ -314,8 +297,6 @@ GameCard _steamCard(
   data: SteamCardData(libraryShowcase: library, recentGames: const []),
 );
 
-/// One-line card builders that each carry enough data for the rank/main
-/// resolvers to fire, so the section renders its full row set on a phone.
 GameCard _card(Platform platform, CardData data) => GameCard(
   schemaVersion: 1,
   platform: platform,
@@ -335,6 +316,12 @@ GameCard _leagueCard() => _card(
     rank: LolRank(tier: 'GOLD', division: 'IV', lp: 42, wins: 30, losses: 20),
     topMastery: [LolMasteryEntry(championId: 1, level: 7, points: 123456)],
   ),
+);
+
+/// A League card with neither a rank nor mastery: both resolvers return null.
+GameCard _leagueCardNoData() => _card(
+  Platform.leagueOfLegends,
+  const LeagueOfLegendsCardData(rank: null, topMastery: []),
 );
 
 GameCard _wowCard() => _card(
@@ -443,9 +430,20 @@ ProfileWidget _passportWidget({required int position}) => ProfileWidget(
   size: ProfileWidgetSize.wide,
 );
 
+ProfileWidget _rankWidget(Platform platform, {required int position}) =>
+    ProfileWidget(
+      id: 'rank-${platform.name}',
+      kind: ProfileWidgetKind.rank,
+      platform: platform,
+      position: position,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+    );
+
 Widget _harness({
   required CardsRepository cardsRepo,
   required ProfileWidgetsRepository widgetsRepo,
+  required List<Platform> connected,
   required List<ProfileWidget> existing,
 }) {
   final container = ProviderContainer(
@@ -453,6 +451,9 @@ Widget _harness({
     overrides: [
       cardsRepositoryProvider.overrideWithValue(cardsRepo),
       profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(connected),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -474,188 +475,370 @@ Widget _harness({
   );
 }
 
+/// A router harness so the connections footer link's `/connections` push is
+/// observable end to end.
+Widget _routerHarness({
+  required List<Platform> connected,
+  required List<ProfileWidget> existing,
+}) {
+  final router = GoRouter(
+    initialLocation: '/home',
+    routes: [
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              key: const Key('openPicker'),
+              onPressed: () => showShowcasePicker(context, existing: existing),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/connections',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('connections'))),
+      ),
+    ],
+  );
+  final container = ProviderContainer(
+    retry: (count, error) => null,
+    overrides: [
+      cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository(null)),
+      profileWidgetsRepositoryProvider.overrideWithValue(
+        _RecordingWidgetsRepository(),
+      ),
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(connected),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    ),
+  );
+}
+
+Future<void> _open(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('openPicker')));
+  await tester.pumpAndSettle();
+}
+
+/// The rich all-groups fixture: every catalog-universe platform linked, each
+/// carrying resolvable data, and Steam carrying a library plus the collector
+/// and completionist envelope stats so every group offers at least one row.
+Map<Platform, GameCard?> _richCards() => {
+  Platform.steam: _steamCard(
+    [for (var i = 1; i <= 8; i++) _entry(i)],
+    stats: const [
+      CardStat(key: 'games_owned', value: 312, unit: 'count'),
+      CardStat(key: 'games_perfect', value: 42, unit: 'count'),
+    ],
+  ),
+  Platform.leagueOfLegends: _leagueCard(),
+  Platform.wowRetail: _wowCard(),
+  Platform.gw2: _gw2Card(),
+  Platform.chess: _chessCard(),
+  Platform.retroachievements: _retroCard(),
+};
+
+const _allLinked = [
+  Platform.steam,
+  Platform.leagueOfLegends,
+  Platform.wowRetail,
+  Platform.gw2,
+  Platform.chess,
+  Platform.retroachievements,
+];
+
 void main() {
-  testWidgets('offers a tile per addable Steam library game, excluding '
-      'already-showcased', (tester) async {
-    // Library [730, 570]; 730 is already showcased, so only 570 is addable.
+  testWidgets('catalog: opening shows grouped rows for the linked platforms, '
+      'no mode toggle', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([_entry(730)]),
+          Platform.chess: _chessCard(),
+          Platform.leagueOfLegends: _leagueCard(),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [
+          Platform.steam,
+          Platform.chess,
+          Platform.leagueOfLegends,
+        ],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Every archetype group renders its header (built widgets are found even
+    // when scrolled off-screen), and the dead mode toggle is gone.
+    for (final key in const [
+      'catalogGroupIdentity',
+      'catalogGroupRank',
+      'catalogGroupMain',
+      'catalogGroupMilestone',
+      'catalogGroupCollection',
+      'catalogGroupAchievements',
+    ]) {
+      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+    }
+    expect(find.byKey(const Key('addCardModeToggle')), findsNothing);
+  });
+
+  testWidgets('Identity row: single-tap adds a wide passport at max+1 and '
+      'closes', (tester) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
+        // A platform widget at position 2 proves the insert position is max+1.
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await tester.ensureVisible(find.byKey(const Key('passportAddRow')));
+    await tester.tap(find.byKey(const Key('passportAddRow')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.passportAdded, isTrue);
+    expect(widgetsRepo.lastPassportPosition, 3);
+    expect(widgetsRepo.lastPassportSize, ProfileWidgetSize.wide);
+    expect(find.byKey(const Key('passportAddRow')), findsNothing);
+  });
+
+  testWidgets('Identity row: an existing passport reads as added (no add)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: [_passportWidget(position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('passportAddedRow')), findsOneWidget);
+    expect(find.byKey(const Key('passportAddRow')), findsNothing);
+  });
+
+  testWidgets('Identity row: offered when a non-Steam platform is linked while '
+      'no Steam card exists', (tester) async {
+    // Only Chess is linked, so Steam is never watched; Identity is gated on any
+    // linked platform, not on Steam, and the Steam-derived groups are absent.
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({Platform.chess: _chessCard()}),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.chess],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('passportAddRow')), findsOneWidget);
+    expect(find.byKey(const Key('catalogGroupMilestone')), findsNothing);
+  });
+
+  testWidgets(
+    'Rank/Main rows: offered for a linked platform whose card carries '
+    'the data',
+    (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          cardsRepo: _MapCardsRepository({Platform.chess: _chessCard()}),
+          widgetsRepo: _RecordingWidgetsRepository(),
+          connected: const [Platform.chess],
+          existing: const [],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _open(tester);
+
+      expect(find.byKey(const Key('rankAddRow_chess')), findsOneWidget);
+      expect(find.byKey(const Key('mainAddRow_chess')), findsOneWidget);
+    },
+  );
+
+  testWidgets('Rank row: a linked platform with no rank data is disabled with '
+      'a reason', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.leagueOfLegends: _leagueCardNoData(),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.leagueOfLegends],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Was omitted before; now the row is visible and disabled.
+    expect(
+      find.byKey(const Key('rankDisabledRow_leagueOfLegends')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsNothing);
+  });
+
+  testWidgets('Rank/Main: an unsupported linked platform (minecraftHypixel) '
+      'shows no row', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.minecraftHypixel: _card(
+            Platform.minecraftHypixel,
+            const MinecraftCardData(rank: 'DEFAULT', level: 10, karma: 0),
+          ),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.minecraftHypixel],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('rankAddRow_minecraftHypixel')), findsNothing);
+    expect(find.byKey(const Key('mainAddRow_minecraftHypixel')), findsNothing);
+    expect(
+      find.byKey(const Key('rankDisabledRow_minecraftHypixel')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Rank/Main: an already-placed (kind, platform) reads as added; '
+      'the other kind still offers', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({Platform.chess: _chessCard()}),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.chess],
+        existing: [_rankWidget(Platform.chess, position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('rankAddedRow_chess')), findsOneWidget);
+    expect(find.byKey(const Key('rankAddRow_chess')), findsNothing);
+    expect(find.byKey(const Key('mainAddRow_chess')), findsOneWidget);
+  });
+
+  testWidgets('Milestone row: step-2 reachable; a library tile adds a showcase '
+      '(steam, ref, small, max+1) and closes', (tester) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _FakeCardsRepository(_steamCard([_entry(570)])),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_570')));
+    await tester.tap(find.byKey(const Key('showcasePickerTile_570')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastShowcasePlatform, Platform.steam);
+    expect(
+      widgetsRepo.lastShowcaseSelection,
+      const ShowcaseSelection(gameRef: '570'),
+    );
+    expect(widgetsRepo.lastShowcaseSize, ProfileWidgetSize.small);
+    expect(widgetsRepo.lastShowcasePosition, 3);
+    expect(find.byKey(const Key('showcasePickerTile_570')), findsNothing);
+  });
+
+  testWidgets('Milestone step-2: excludes already-showcased games', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _harness(
         cardsRepo: _FakeCardsRepository(_steamCard([_entry(730), _entry(570)])),
         widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
         existing: [_showcaseFor(730, position: 0)],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('showcasePickerTile_570')), findsOneWidget);
     expect(find.byKey(const Key('showcasePickerTile_730')), findsNothing);
   });
 
-  testWidgets('empty library shows the localized empty state', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('showcasePickerEmpty')), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerAllAdded')), findsNothing);
-  });
-
-  testWidgets('all games already showcased shows the all-added state', (
+  testWidgets('Milestone step-2: shows all-added when every game is placed', (
     tester,
   ) async {
     await tester.pumpWidget(
       _harness(
         cardsRepo: _FakeCardsRepository(_steamCard([_entry(730)])),
         widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
         existing: [_showcaseFor(730, position: 0)],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
+    // A non-empty library keeps the row enabled even when all games are placed.
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('showcasePickerAllAdded')), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerEmpty')), findsNothing);
   });
 
-  testWidgets('phone viewport: rich rank/main data does not overflow and the '
-      'collection body is reachable', (tester) async {
-    // A real phone viewport where the fixed chrome (passport banner + the full
-    // nine-row rank/main section + the mode toggle) provably exceeds the space a
-    // crushed mode body could occupy — the pre-fix layout overflowed here.
-    tester.view.physicalSize = const Size(392, 850);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    // A distinct, resolvable card per platform so all nine acquisition rows
-    // render; Steam carries eight library entries for the collection grid.
+  testWidgets('Milestone row: disabled with a reason when the Steam library is '
+      'empty', (tester) async {
     await tester.pumpWidget(
       _harness(
-        cardsRepo: _MapCardsRepository({
-          Platform.steam: _steamCard([for (var i = 1; i <= 8; i++) _entry(i)]),
-          Platform.leagueOfLegends: _leagueCard(),
-          Platform.wowRetail: _wowCard(),
-          Platform.gw2: _gw2Card(),
-          Platform.chess: _chessCard(),
-          Platform.retroachievements: _retroCard(),
-        }),
+        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
         widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
         existing: const [],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    // The tall fixed content is reproduced.
-    expect(find.byKey(const Key('passportBanner')), findsOneWidget);
-    expect(find.byKey(const Key('rankMainAddSection')), findsOneWidget);
-
-    // Collection mode's body would be crushed under the fixed chrome and raise a
-    // RenderFlex overflow on the pre-fix layout; the single scroll surface does
-    // not. The toggle scrolls with the sheet, so bring it into view before
-    // tapping.
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.ensureVisible(find.text(l10n.addCardModeCollection));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.addCardModeCollection));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-
-    // A deep tile is reachable by scrolling and tappable.
-    await tester.ensureVisible(find.byKey(const Key('collectionPickerTile_8')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('collectionPickerTile_8')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('collectionTileCheck_8')), findsOneWidget);
-
-    // The bottom-most content (the confirm button) is reachable too.
-    await tester.ensureVisible(
-      find.byKey(const Key('collectionPickerAddButton')),
-    );
+    expect(find.byKey(const Key('milestoneDisabledRow')), findsOneWidget);
+    expect(find.byKey(const Key('milestoneStepRow')), findsNothing);
   });
 
-  testWidgets('tapping a tile adds a showcase for that game and closes', (
-    tester,
-  ) async {
-    // A real phone viewport: the sheet is one scroll surface carrying the
-    // Rank/Main add section above the art tiles, so the tile is reached by
-    // scrolling rather than shown outright.
-    tester.view.physicalSize = const Size(392, 850);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    // An existing platform widget at position 2 (not a showcase, so it does not
-    // shrink the addable set) proves the insert position is max+1 = 3.
-    final widgetsRepo = _RecordingWidgetsRepository();
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard([_entry(570)])),
-        widgetsRepo: widgetsRepo,
-        existing: [_platformWidget(position: 2)],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_570')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('showcasePickerTile_570')));
-    await tester.pumpAndSettle();
-
-    // The write carries Steam, the tapped game ref, the small default size, and
-    // the max+1 position.
-    expect(widgetsRepo.lastPlatform, Platform.steam);
-    expect(widgetsRepo.lastSelection, const ShowcaseSelection(gameRef: '570'));
-    expect(widgetsRepo.lastSize, ProfileWidgetSize.small);
-    expect(widgetsRepo.lastPosition, 3);
-
-    // The sheet closed on tap.
-    expect(find.byKey(const Key('showcasePickerTile_570')), findsNothing);
-  });
-
-  testWidgets('Steam card loading shows the loader', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _PendingCardsRepository(),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    // Let the sheet animate in while the card future stays pending; the picker
-    // renders the centralized loader, not tiles.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byKey(const Key('showcasePickerEmpty')), findsNothing);
-  });
-
-  testWidgets('Collector mode: tapping Add records Steam + max+1 + small and '
-      'closes', (tester) async {
-    // A platform widget at position 2 (not a collector, so it does not trip the
-    // already-added guard) proves the insert position is max+1 = 3. The card
-    // carries games_owned > 0 so the gate offers an enabled Add.
+  testWidgets('Collection group: "Whole library" (collector) single-tap adds '
+      '(steam, small, max+1) and closes', (tester) async {
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
@@ -668,90 +851,50 @@ void main() {
           ),
         ),
         widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
         existing: [_platformWidget(position: 2)],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    // Switch to the Collector mode, then confirm.
-    await tester.tap(find.text(l10n.addCardModeCollector));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('gameCollectorPickerAddButton')));
+    await tester.ensureVisible(find.byKey(const Key('collectorAddRow_steam')));
+    await tester.tap(find.byKey(const Key('collectorAddRow_steam')));
     await tester.pumpAndSettle();
 
     expect(widgetsRepo.lastCollectorPlatform, Platform.steam);
     expect(widgetsRepo.lastCollectorSize, ProfileWidgetSize.small);
     expect(widgetsRepo.lastCollectorPosition, 3);
-
-    // The sheet closed on Add.
-    expect(find.byKey(const Key('gameCollectorPickerAddButton')), findsNothing);
+    expect(find.byKey(const Key('collectorAddRow_steam')), findsNothing);
   });
 
-  testWidgets('Collector mode: an existing collector shows the already-added '
-      'state (no Add)', (tester) async {
+  testWidgets('Collection "Whole library": existing collector reads as added', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+        cardsRepo: _FakeCardsRepository(
+          _steamCard(
+            const [],
+            stats: const [
+              CardStat(key: 'games_owned', value: 312, unit: 'count'),
+            ],
+          ),
+        ),
         widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
         existing: [_collectorWidget(position: 0)],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    await tester.tap(find.text(l10n.addCardModeCollector));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const Key('gameCollectorPickerAllAdded')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('gameCollectorPickerAddButton')), findsNothing);
+    expect(find.byKey(const Key('collectorAddedRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('collectorAddRow_steam')), findsNothing);
   });
 
-  testWidgets('Collector mode: an absent library blocks Add with a message', (
-    tester,
-  ) async {
-    final widgetsRepo = _RecordingWidgetsRepository();
-    await tester.pumpWidget(
-      _harness(
-        // No games_owned stat → resolves absent → the gate blocks creation.
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
-        widgetsRepo: widgetsRepo,
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    await tester.tap(find.text(l10n.addCardModeCollector));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('gameCollectorPickerEmpty')), findsOneWidget);
-    final button = tester.widget<FilledButton>(
-      find.byKey(const Key('gameCollectorPickerAddButton')),
-    );
-    expect(button.onPressed, isNull);
-
-    // The disabled Add records nothing.
-    await tester.tap(find.byKey(const Key('gameCollectorPickerAddButton')));
-    await tester.pumpAndSettle();
-    expect(widgetsRepo.lastCollectorPlatform, isNull);
-  });
-
-  testWidgets('Collector mode: games_owned == 0 blocks Add with a message', (
-    tester,
-  ) async {
+  testWidgets('Collection "Whole library": games_owned == 0 is disabled and '
+      'records nothing', (tester) async {
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
@@ -764,57 +907,56 @@ void main() {
           ),
         ),
         widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
         existing: const [],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    await tester.tap(find.text(l10n.addCardModeCollector));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('gameCollectorPickerEmpty')), findsOneWidget);
-    final button = tester.widget<FilledButton>(
-      find.byKey(const Key('gameCollectorPickerAddButton')),
-    );
-    expect(button.onPressed, isNull);
+    expect(find.byKey(const Key('collectorDisabledRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('collectorAddRow_steam')), findsNothing);
     expect(widgetsRepo.lastCollectorPlatform, isNull);
   });
 
-  testWidgets('Collector mode: a loading card shows the loader, not the empty '
-      'message', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _PendingCardsRepository(),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'Achievement Grid "Completionist": single-tap adds (steam, small, '
+    'max+1) and closes',
+    (tester) async {
+      final widgetsRepo = _RecordingWidgetsRepository();
+      await tester.pumpWidget(
+        _harness(
+          cardsRepo: _FakeCardsRepository(
+            _steamCard(
+              const [],
+              stats: const [
+                CardStat(key: 'games_perfect', value: 42, unit: 'count'),
+              ],
+            ),
+          ),
+          widgetsRepo: widgetsRepo,
+          connected: const [Platform.steam],
+          existing: [_platformWidget(position: 2)],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.ensureVisible(
+        find.byKey(const Key('completionistAddRow_steam')),
+      );
+      await tester.tap(find.byKey(const Key('completionistAddRow_steam')));
+      await tester.pumpAndSettle();
 
-    // Even in collector mode, a loading card shows the centralized spinner, never
-    // the empty message — the gate lives inside the data builder.
-    await tester.tap(find.text(l10n.addCardModeCollector));
-    await tester.pump();
+      expect(widgetsRepo.lastCompletionistPlatform, Platform.steam);
+      expect(widgetsRepo.lastCompletionistSize, ProfileWidgetSize.small);
+      expect(widgetsRepo.lastCompletionistPosition, 3);
+      expect(find.byKey(const Key('completionistAddRow_steam')), findsNothing);
+    },
+  );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byKey(const Key('gameCollectorPickerEmpty')), findsNothing);
-  });
-
-  testWidgets('Completionist mode: tapping Add records Steam + max+1 + small '
-      'and closes', (tester) async {
-    // A platform widget at position 2 (not a completionist, so it does not trip
-    // the already-added guard) proves the insert position is max+1 = 3. The card
-    // carries games_perfect > 0 so the gate offers an enabled Add.
-    final widgetsRepo = _RecordingWidgetsRepository();
+  testWidgets('Achievement Grid "Completionist": an existing completionist '
+      'reads as added', (tester) async {
     await tester.pumpWidget(
       _harness(
         cardsRepo: _FakeCardsRepository(
@@ -825,246 +967,216 @@ void main() {
             ],
           ),
         ),
-        widgetsRepo: widgetsRepo,
-        existing: [_platformWidget(position: 2)],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    // Switch to the Completionist mode, then confirm.
-    await tester.tap(find.text(l10n.addCardModeCompletionist));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('completionistPickerAddButton')));
-    await tester.pumpAndSettle();
-
-    expect(widgetsRepo.lastCompletionistPlatform, Platform.steam);
-    expect(widgetsRepo.lastCompletionistSize, ProfileWidgetSize.small);
-    expect(widgetsRepo.lastCompletionistPosition, 3);
-
-    // The sheet closed on Add.
-    expect(find.byKey(const Key('completionistPickerAddButton')), findsNothing);
-  });
-
-  testWidgets('Completionist mode: an existing completionist shows the '
-      'already-added state (no Add)', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
         widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
         existing: [_completionistWidget(position: 0)],
       ),
     );
     await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    await tester.tap(find.text(l10n.addCardModeCompletionist));
-    await tester.pumpAndSettle();
+    await _open(tester);
 
     expect(
-      find.byKey(const Key('completionistPickerAllAdded')),
+      find.byKey(const Key('completionistAddedRow_steam')),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('completionistPickerAddButton')), findsNothing);
+    expect(find.byKey(const Key('completionistAddRow_steam')), findsNothing);
   });
 
   testWidgets(
-    'Completionist mode: an absent library blocks Add with a message',
+    'Achievement Grid "Completionist": games_perfect == 0 is disabled '
+    'and records nothing',
     (tester) async {
       final widgetsRepo = _RecordingWidgetsRepository();
       await tester.pumpWidget(
         _harness(
-          // No games_perfect stat → resolves absent → the gate blocks creation.
-          cardsRepo: _FakeCardsRepository(_steamCard(const [])),
+          cardsRepo: _FakeCardsRepository(
+            _steamCard(
+              const [],
+              stats: const [
+                CardStat(key: 'games_perfect', value: 0, unit: 'count'),
+              ],
+            ),
+          ),
           widgetsRepo: widgetsRepo,
+          connected: const [Platform.steam],
           existing: const [],
         ),
       );
       await tester.pumpAndSettle();
+      await _open(tester);
 
-      await tester.tap(find.byKey(const Key('openPicker')));
-      await tester.pumpAndSettle();
-      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-      await tester.tap(find.text(l10n.addCardModeCompletionist));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('completionistPickerEmpty')), findsOneWidget);
-      final button = tester.widget<FilledButton>(
-        find.byKey(const Key('completionistPickerAddButton')),
+      expect(
+        find.byKey(const Key('completionistDisabledRow_steam')),
+        findsOneWidget,
       );
-      expect(button.onPressed, isNull);
-
-      // The disabled Add records nothing.
-      await tester.tap(find.byKey(const Key('completionistPickerAddButton')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('completionistAddRow_steam')), findsNothing);
       expect(widgetsRepo.lastCompletionistPlatform, isNull);
     },
   );
 
-  testWidgets('Completionist mode: games_perfect == 0 blocks Add with a '
-      'message', (tester) async {
+  testWidgets('catalog: any linked card still loading shows the central '
+      'spinner', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _PendingCardsRepository(),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openPicker')));
+    // The connections read settles while the Steam card stays pending: one
+    // central spinner, no rows.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('passportAddRow')), findsNothing);
+  });
+
+  testWidgets('footer: an unlinked universe platform yields the connections '
+      'link; tapping it navigates to /connections', (tester) async {
+    await tester.pumpWidget(
+      _routerHarness(connected: const [Platform.steam], existing: const []),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('catalogConnectMoreLink')), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('catalogConnectMoreLink')));
+    await tester.tap(find.byKey(const Key('catalogConnectMoreLink')));
+    await tester.pumpAndSettle();
+
+    // The sheet closed and the connections route is on screen.
+    expect(find.byKey(const Key('catalogConnectMoreLink')), findsNothing);
+    expect(find.text('connections'), findsOneWidget);
+  });
+
+  testWidgets('narrow geometry: the rich all-groups fixture renders with no '
+      'overflow at 340x800', (tester) async {
+    tester.view.physicalSize = const Size(340, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(tester.takeException(), isNull);
+    // Every group is present in the one scroll surface.
+    for (final key in const [
+      'catalogGroupIdentity',
+      'catalogGroupRank',
+      'catalogGroupMain',
+      'catalogGroupMilestone',
+      'catalogGroupCollection',
+      'catalogGroupAchievements',
+    ]) {
+      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+    }
+  });
+
+  testWidgets('narrow geometry: at 392x850 the Collection step-2 is reachable '
+      'with no overflow', (tester) async {
+    tester.view.physicalSize = const Size(392, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await tester.ensureVisible(find.byKey(const Key('collectionCuratedRow')));
+    await tester.tap(find.byKey(const Key('collectionCuratedRow')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('collectionPickerTitle')), findsOneWidget);
+  });
+
+  testWidgets('step-2 back returns to the catalog, writes nothing, and re-entry '
+      'is fresh', (tester) async {
+    // Real narrow viewport, never enlarged.
+    tester.view.physicalSize = const Size(392, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
         cardsRepo: _FakeCardsRepository(
-          _steamCard(
-            const [],
-            stats: const [
-              CardStat(key: 'games_perfect', value: 0, unit: 'count'),
-            ],
-          ),
+          _steamCard([_entry(1), _entry(2), _entry(3)]),
         ),
         widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
         existing: const [],
       ),
     );
     await tester.pumpAndSettle();
+    await _open(tester);
 
-    await tester.tap(find.byKey(const Key('openPicker')));
+    // Milestone step-2 → back → catalog is shown again, step-2 is gone.
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
     await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(find.byKey(const Key('showcasePickerTile_1')), findsOneWidget);
 
-    await tester.tap(find.text(l10n.addCardModeCompletionist));
+    // The one scroll surface keeps its offset across the step swap, so the back
+    // affordance is reached the same way every other element in the sheet is.
+    await tester.ensureVisible(find.byKey(const Key('catalogStepBack')));
+    await tester.tap(find.byKey(const Key('catalogStepBack')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalogGroupIdentity')), findsOneWidget);
+    expect(find.byKey(const Key('showcasePickerTile_1')), findsNothing);
 
-    expect(find.byKey(const Key('completionistPickerEmpty')), findsOneWidget);
-    final button = tester.widget<FilledButton>(
-      find.byKey(const Key('completionistPickerAddButton')),
-    );
-    expect(button.onPressed, isNull);
+    // Collection step-2 → select a tile → back → the catalog is shown again.
+    await tester.ensureVisible(find.byKey(const Key('collectionCuratedRow')));
+    await tester.tap(find.byKey(const Key('collectionCuratedRow')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('collectionPickerTile_1')));
+    await tester.tap(find.byKey(const Key('collectionPickerTile_1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collectionTileCheck_1')), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('catalogStepBack')));
+    await tester.tap(find.byKey(const Key('catalogStepBack')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collectionPickerTitle')), findsNothing);
+
+    // Re-entry rebuilds a fresh Collection surface: the earlier selection is gone.
+    await tester.ensureVisible(find.byKey(const Key('collectionCuratedRow')));
+    await tester.tap(find.byKey(const Key('collectionCuratedRow')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collectionTileCheck_1')), findsNothing);
+
+    // No write was ever issued: navigating in and out of step-2 records nothing.
+    expect(widgetsRepo.lastShowcasePlatform, isNull);
+    expect(widgetsRepo.lastCollectionSelection, isNull);
+    expect(widgetsRepo.lastCollectorPlatform, isNull);
     expect(widgetsRepo.lastCompletionistPlatform, isNull);
-  });
-
-  testWidgets('Completionist mode: a loading card shows the loader, not the '
-      'empty message', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _PendingCardsRepository(),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    // Even in completionist mode, a loading card shows the centralized spinner,
-    // never the empty message — the gate lives inside the data builder.
-    await tester.tap(find.text(l10n.addCardModeCompletionist));
-    await tester.pump();
-
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byKey(const Key('completionistPickerEmpty')), findsNothing);
-  });
-
-  testWidgets('Passport banner: tapping Add records max+1 + wide and closes', (
-    tester,
-  ) async {
-    // A platform widget at position 2 (not a passport, so it does not trip the
-    // already-added guard) proves the insert position is max+1 = 3.
-    final widgetsRepo = _RecordingWidgetsRepository();
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
-        widgetsRepo: widgetsRepo,
-        existing: [_platformWidget(position: 2)],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('passportPickerAddButton')));
-    await tester.pumpAndSettle();
-
-    expect(widgetsRepo.passportAdded, isTrue);
-    expect(widgetsRepo.lastPassportPosition, 3);
-    expect(widgetsRepo.lastPassportSize, ProfileWidgetSize.wide);
-
-    // The sheet closed on Add.
-    expect(find.byKey(const Key('passportPickerAddButton')), findsNothing);
-  });
-
-  testWidgets('Passport banner: an existing passport shows the already-added '
-      'state (no Add)', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: [_passportWidget(position: 0)],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('passportPickerAllAdded')), findsOneWidget);
-    expect(find.byKey(const Key('passportPickerAddButton')), findsNothing);
-  });
-
-  testWidgets('Passport banner is reachable with no Steam card (outside the '
-      'gate)', (tester) async {
-    // The Steam card stays pending, so the mode-toggle body shows its loader —
-    // but the passport banner sits outside that gate and must still offer Add.
-    final widgetsRepo = _RecordingWidgetsRepository();
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _PendingCardsRepository(),
-        widgetsRepo: widgetsRepo,
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    // The Steam-gated body is still loading, yet the banner Add is available.
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.byKey(const Key('passportPickerAddButton')), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('passportPickerAddButton')));
-    await tester.pumpAndSettle();
-
-    expect(widgetsRepo.passportAdded, isTrue);
-    expect(widgetsRepo.lastPassportPosition, 0);
-    expect(widgetsRepo.lastPassportSize, ProfileWidgetSize.wide);
-  });
-
-  testWidgets('the add-card mode toggle still has exactly four segments', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _FakeCardsRepository(_steamCard(const [])),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('openPicker')));
-    await tester.pumpAndSettle();
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-
-    // Adding the passport banner did not touch the four existing modes.
-    expect(find.byKey(const Key('addCardModeToggle')), findsOneWidget);
-    expect(find.text(l10n.addCardModeShowcase), findsOneWidget);
-    expect(find.text(l10n.addCardModeCollection), findsOneWidget);
-    expect(find.text(l10n.addCardModeCollector), findsOneWidget);
-    expect(find.text(l10n.addCardModeCompletionist), findsOneWidget);
+    expect(widgetsRepo.lastPassportPosition, isNull);
+    expect(widgetsRepo.passportAdded, isFalse);
+    expect(widgetsRepo.lastRankPlatform, isNull);
+    expect(widgetsRepo.lastMainPlatform, isNull);
   });
 }
