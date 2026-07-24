@@ -1,6 +1,26 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
+
+/// Renders real platform art at [imageUrl] over the procedural [placeholder], or
+/// the placeholder alone when the url is null. Loading and error both fall back
+/// to the placeholder, so a payload never yields a broken-image glyph (feed
+/// image rules). The single place a personalization card wires art, so every
+/// card's null / loading / error fill is identical.
+Widget personalizationArtOrPlaceholder({
+  required String? imageUrl,
+  required Widget placeholder,
+}) {
+  final url = imageUrl;
+  if (url == null) return placeholder;
+  return CachedNetworkImage(
+    imageUrl: url,
+    fit: BoxFit.cover,
+    placeholder: (_, _) => placeholder,
+    errorWidget: (_, _, _) => placeholder,
+  );
+}
 
 /// One stat-footer entry: a big number with a small uppercase label
 /// (`docs/personalization/spec.md` §6). Both are already-formatted display
@@ -208,14 +228,23 @@ class PersonalizationStatFooter extends StatelessWidget {
   }
 }
 
-/// A neutral token-gradient placeholder for a card's content zone: the personalization art
-/// is a theme gradient, never a bundled asset, so the public repo stays
-/// binary-free. The bottom paint is the solid mid-tone [PersonalizationPalette.artB]
-/// (spec §8: never a gradient that can fall to black).
+/// A card's content-zone art band: the real platform hero at [imageUrl] when the
+/// payload carries one, otherwise a neutral token-gradient placeholder. The
+/// placeholder is a theme gradient, never a bundled asset, so the public repo
+/// stays binary-free; its bottom paint is the solid mid-tone
+/// [PersonalizationPalette.artB] (spec §8: never a gradient that can fall to
+/// black), so a theme swap re-tints it live.
 class PersonalizationArtBox extends StatelessWidget {
-  const PersonalizationArtBox({super.key, required this.aspectRatio});
+  const PersonalizationArtBox({
+    super.key,
+    required this.aspectRatio,
+    this.imageUrl,
+  });
 
   final double aspectRatio;
+
+  /// Real platform art url; null → the procedural gradient placeholder.
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -223,13 +252,19 @@ class PersonalizationArtBox extends StatelessWidget {
 
     return AspectRatio(
       aspectRatio: aspectRatio,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [palette.artC, palette.artA, palette.artB],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: personalizationArtOrPlaceholder(
+          imageUrl: imageUrl,
+          placeholder: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [palette.artC, palette.artA, palette.artB],
+              ),
+            ),
           ),
         ),
       ),
