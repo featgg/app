@@ -40,24 +40,43 @@ void main() {
       );
     });
 
-    test('rank and main are NOT the fallback archetype', () {
-      // A regression guard: were the registry mapping dropped, both would fall
-      // through to fallback and render the generic card instead of their anatomy.
+    test('collection and game_collector → collection, completionist → '
+        'achievement grid', () {
       expect(
-        archetypeForWidget(_widget(ProfileWidgetKind.rank)),
-        isNot(ProfileArchetype.fallback),
+        archetypeForWidget(_widget(ProfileWidgetKind.collection)),
+        ProfileArchetype.collection,
       );
       expect(
-        archetypeForWidget(_widget(ProfileWidgetKind.main)),
-        isNot(ProfileArchetype.fallback),
+        archetypeForWidget(_widget(ProfileWidgetKind.gameCollector)),
+        ProfileArchetype.collection,
       );
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.completionist)),
+        ProfileArchetype.achievementGrid,
+      );
+    });
+
+    test('rank, main, collection, and achievementGrid are NOT the fallback '
+        'archetype', () {
+      // A regression guard: were the registry mapping dropped, each would fall
+      // through to fallback and render the generic card instead of its anatomy.
+      for (final kind in const [
+        ProfileWidgetKind.rank,
+        ProfileWidgetKind.main,
+        ProfileWidgetKind.collection,
+        ProfileWidgetKind.gameCollector,
+        ProfileWidgetKind.completionist,
+      ]) {
+        expect(
+          archetypeForWidget(_widget(kind)),
+          isNot(ProfileArchetype.fallback),
+          reason: '$kind should map to a designed archetype, not fallback',
+        );
+      }
     });
 
     test('every other kind falls through to fallback', () {
       for (final kind in const [
-        ProfileWidgetKind.collection,
-        ProfileWidgetKind.gameCollector,
-        ProfileWidgetKind.completionist,
         ProfileWidgetKind.template,
         ProfileWidgetKind.composed,
         ProfileWidgetKind.dataMenu,
@@ -99,6 +118,16 @@ void main() {
       expect(supportedSizes(ProfileArchetype.rank), {
         ProfileCardSize.full,
         ProfileCardSize.half,
+      });
+    });
+
+    test('collection and achievementGrid are full-only (spec §7)', () {
+      // Full-only drives the editor to offer no half placement / no side-drop.
+      expect(supportedSizes(ProfileArchetype.collection), {
+        ProfileCardSize.full,
+      });
+      expect(supportedSizes(ProfileArchetype.achievementGrid), {
+        ProfileCardSize.full,
       });
     });
   });

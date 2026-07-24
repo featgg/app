@@ -259,6 +259,19 @@ abstract final class PersonalizationLayout {
   static const double mainEmblemFull = 64;
   static const double mainEmblemHalf = 48;
 
+  /// Collection orb diameter (mockup `.leg .orb` 50px) and the width of the cell
+  /// that bounds an orb plus its 1-line caption, so a long caption ellipsizes and
+  /// the orb Wrap wraps to the next line instead of overflowing on a narrow card.
+  static const double collectionOrbSize = 50;
+  static const double collectionOrbCellWidth = 64;
+
+  /// Achievement-grid letter tile edge (mockup `.letter` 42px).
+  static const double letterTileSize = 42;
+
+  /// How many perfect-game letter tiles the Achievement Grid draws; the
+  /// `games_perfect` count stays the hero, so extra shelf entries are not drawn.
+  static const int achievementGridLetterCap = 5;
+
   /// How many stat-footer entries each size renders (spec §6: 2–4 numbers).
   /// Full carries one more than half so the variants differ.
   static const int statCapFull = 3;

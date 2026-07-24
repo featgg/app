@@ -5,6 +5,9 @@ import '../../../core/core.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/collection_value_resolver.dart';
+import '../domain/completionist_value_resolver.dart';
+import '../domain/game_collector_value_resolver.dart';
 import '../domain/main_value_resolver.dart';
 import '../domain/passport_value_resolver.dart';
 import '../domain/profile_archetype.dart';
@@ -12,6 +15,7 @@ import '../domain/profile_widget.dart';
 import '../domain/rank_value_resolver.dart';
 import '../domain/showcase_selection.dart';
 import '../domain/showcase_value_resolver.dart';
+import 'collection_title_labels.dart';
 import 'personalization_card_shell.dart';
 import 'profile_owner_cards_provider.dart';
 
@@ -34,6 +38,17 @@ Key rankBadgeKey(String widgetId) => Key('personalizationRankBadge_$widgetId');
 /// (spec §5) and the token-gradient art are assertable.
 Key mainEmblemKey(String widgetId) =>
     Key('personalizationMainEmblem_$widgetId');
+
+/// Stable key for a Collection orb (curated: one per resolved game; Collector:
+/// the single library emblem), so the per-game orbs and the token-gradient art
+/// (theme inheritance) are assertable.
+Key collectionOrbKey(String widgetId, int index) =>
+    Key('personalizationCollectionOrb_${widgetId}_$index');
+
+/// Stable key for an Achievement Grid letter tile (one per resolved perfect-game
+/// shelf entry), so the letter motif and its accent tint are assertable.
+Key achievementLetterKey(String widgetId, int index) =>
+    Key('personalizationAchievementLetter_${widgetId}_$index');
 
 /// Builds the archetype card for [widget] at [size]. A full-only archetype in a
 /// half slot renders full within its column. Shared by the read view and the
@@ -72,6 +87,15 @@ Widget personalizationCardFor(
     ProfileArchetype.main => MainCard(
       widget: widget,
       size: effectiveSize,
+      cardSource: cardSource,
+    ),
+    // Collection and Achievement Grid are full-only, so they ignore [size].
+    ProfileArchetype.collection => CollectionCard(
+      widget: widget,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.achievementGrid => AchievementGridCard(
+      widget: widget,
       cardSource: cardSource,
     ),
     ProfileArchetype.fallback => FallbackCard(
@@ -456,6 +480,270 @@ class FallbackCard extends ConsumerWidget {
   }
 }
 
+/// Collection archetype (spec §7): a curated multi-game shelf or the whole-library
+/// "Collector" variant, branched on [ProfileWidget.kind]. Full only.
+///
+/// - Curated (`collection`): Steam-first (the kind carries no platform), one orb
+///   per still-in-library game via the pure [resolveCollection], captioned by the
+///   game title, with a game-count footer. No game resolves → a single neutral
+///   orb, no footer — never blank, never a fallback.
+/// - Collector (`game_collector`): the bound platform's whole library as a single
+///   emblem orb via the pure [resolveGameCollector], with games-owned (and hours,
+///   when present) in the footer. A null resolve → the neutral emblem, no footer.
+class CollectionCard extends ConsumerWidget {
+  const CollectionCard({super.key, required this.widget, this.cardSource});
+
+  final ProfileWidget widget;
+  final CardSource? cardSource;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final palette = PersonalizationTheme.of(context);
+
+    if (widget.kind == ProfileWidgetKind.gameCollector) {
+      final platform = widget.platform;
+      final card = platform == null
+          ? null
+          : _resolveCard(ref, cardSource, platform);
+      final resolved = resolveGameCollector(card);
+      return CardShell(
+        key: personalizationCardKey(widget.id),
+        title: l10n.gameCollectorLabel,
+        platformTag: _platformTag(l10n, platform),
+        content: Center(
+          child: _CollectionOrb(
+            orbKey: collectionOrbKey(widget.id, 0),
+            palette: palette,
+          ),
+        ),
+        stats: _collectorStats(resolved, l10n),
+      );
+    }
+
+    // Curated: a collection has no bound platform, so it resolves from Steam.
+    final card = _resolveCard(ref, cardSource, Platform.steam);
+    final data = card?.data;
+    final panels = resolveCollection(
+      data is SteamCardData ? data : null,
+      widget.collectionSelection,
+    );
+    final titleKey = widget.collectionSelection.titleKey;
+    final title =
+        (titleKey == null ? null : collectionTitleLabel(l10n, titleKey)) ??
+        l10n.personalizationCollectionTitle;
+
+    return CardShell(
+      key: personalizationCardKey(widget.id),
+      title: title,
+      platformTag: _platformTag(l10n, widget.platform),
+      content: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: AppSpacing.smMd,
+        runSpacing: AppSpacing.smMd,
+        children: panels.isEmpty
+            ? [
+                _CollectionOrb(
+                  orbKey: collectionOrbKey(widget.id, 0),
+                  palette: palette,
+                ),
+              ]
+            : [
+                for (var i = 0; i < panels.length; i++)
+                  _CollectionOrb(
+                    orbKey: collectionOrbKey(widget.id, i),
+                    palette: palette,
+                    caption: panels[i].title,
+                  ),
+              ],
+      ),
+      stats: panels.isEmpty
+          ? const []
+          : [
+              PersonalizationStat(
+                value: formatShowcaseHeroValue(panels.length),
+                label: l10n.personalizationStatGames,
+              ),
+            ],
+    );
+  }
+}
+
+/// Achievement Grid archetype (spec §7, "Completionist" variant): the bound
+/// platform's perfect-games count as a letter shelf. Full only. Folds the card
+/// through the pure [resolveCompletionist]: a leading and trailing muted diamond
+/// bracket one accent letter tile per perfect-game shelf entry (capped), with a
+/// perfect-count footer (games-owned too, when present). A null resolve → just the
+/// two diamonds, no footer — the no-data state stays a designed card, never a
+/// fallback. A resolved `games_perfect` of 0 is honest data and renders "0".
+class AchievementGridCard extends ConsumerWidget {
+  const AchievementGridCard({super.key, required this.widget, this.cardSource});
+
+  final ProfileWidget widget;
+  final CardSource? cardSource;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final palette = PersonalizationTheme.of(context);
+    final platform = widget.platform;
+    final card = platform == null
+        ? null
+        : _resolveCard(ref, cardSource, platform);
+    final resolved = resolveCompletionist(card);
+
+    final tiles = <Widget>[
+      _LetterTile(
+        tileKey: Key('personalizationAchievementMisc_${widget.id}_0'),
+        glyph: _miscGlyph,
+        palette: palette,
+        isMisc: true,
+      ),
+    ];
+    var i = 0;
+    for (final entry in resolved?.shelf ?? const <PerfectShowcaseEntry>[]) {
+      if (i >= PersonalizationLayout.achievementGridLetterCap) break;
+      final glyph = _letterGlyph(entry.title);
+      if (glyph == null) continue;
+      tiles.add(
+        _LetterTile(
+          tileKey: achievementLetterKey(widget.id, i),
+          glyph: glyph,
+          palette: palette,
+        ),
+      );
+      i++;
+    }
+    tiles.add(
+      _LetterTile(
+        tileKey: Key('personalizationAchievementMisc_${widget.id}_1'),
+        glyph: _miscGlyph,
+        palette: palette,
+        isMisc: true,
+      ),
+    );
+
+    return CardShell(
+      key: personalizationCardKey(widget.id),
+      title: l10n.completionistLabel,
+      platformTag: _platformTag(l10n, platform),
+      content: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: tiles,
+      ),
+      stats: _completionistStats(resolved, l10n),
+    );
+  }
+}
+
+/// A Collection orb (mockup `.leg .orb`): a token-gradient circle with an accent
+/// border and an optional 1-line caption bounded to the cell width. The gradient's
+/// bottom paint is the solid mid-tone [PersonalizationPalette.artB] (spec §8), so
+/// a theme swap re-tints it live; the art is procedural, never a bundled asset.
+class _CollectionOrb extends StatelessWidget {
+  const _CollectionOrb({
+    required this.orbKey,
+    required this.palette,
+    this.caption,
+  });
+
+  final Key orbKey;
+  final PersonalizationPalette palette;
+  final String? caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final captionText = caption;
+
+    return SizedBox(
+      width: PersonalizationLayout.collectionOrbCellWidth,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            key: orbKey,
+            width: PersonalizationLayout.collectionOrbSize,
+            height: PersonalizationLayout.collectionOrbSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: palette.accent,
+                width: PersonalizationLayout.borderWidth,
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [palette.artC, palette.artA, palette.artB],
+              ),
+            ),
+          ),
+          if (captionText != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              captionText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: textTheme.labelSmall?.copyWith(color: palette.muted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The muted diamond bracketing the Achievement Grid letters (mockup
+/// `.letter.misc` ◆), framing the perfect-game initials as a shelf.
+const String _miscGlyph = '◆';
+
+/// An Achievement Grid tile (mockup `.letter`): a `surface2` square with a `line`
+/// border and one glyph — the accent-tinted perfect-game initial, or the muted
+/// `misc` diamond. Every tone reads from the palette, so a theme swap re-tints it.
+class _LetterTile extends StatelessWidget {
+  const _LetterTile({
+    required this.tileKey,
+    required this.glyph,
+    required this.palette,
+    this.isMisc = false,
+  });
+
+  final Key tileKey;
+  final String glyph;
+  final PersonalizationPalette palette;
+  final bool isMisc;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      key: tileKey,
+      width: PersonalizationLayout.letterTileSize,
+      height: PersonalizationLayout.letterTileSize,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: palette.surface2,
+        border: Border.all(
+          color: palette.line,
+          width: PersonalizationLayout.borderWidth,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      child: Text(
+        glyph,
+        style: (isMisc ? textTheme.labelLarge : textTheme.titleMedium)
+            ?.copyWith(
+              color: isMisc ? palette.muted : palette.accent,
+              fontWeight: AppTypography.bold,
+            ),
+      ),
+    );
+  }
+}
+
 class _Capsule extends StatelessWidget {
   const _Capsule({
     required this.capsuleKey,
@@ -720,6 +1008,55 @@ List<PersonalizationStat> _milestoneStats(
     );
   }
   return stats;
+}
+
+/// The Collector footer: games-owned (the hero), plus hours-played when the card
+/// carries it. Empty for a null resolve (the neutral no-data emblem).
+List<PersonalizationStat> _collectorStats(
+  ResolvedGameCollector? resolved,
+  AppLocalizations l10n,
+) {
+  if (resolved == null) return const [];
+  return [
+    PersonalizationStat(
+      value: formatShowcaseHeroValue(resolved.gamesOwned),
+      label: l10n.connectionsStatGamesOwned,
+    ),
+    if (resolved.hoursPlayed case final hours?)
+      PersonalizationStat(
+        value: formatShowcaseHeroValue(hours),
+        label: l10n.connectionsStatHoursPlayed,
+      ),
+  ];
+}
+
+/// The Achievement Grid footer: perfect-games (the hero, honest at 0), plus
+/// games-owned when the card carries it. Empty for a null resolve (the no-data
+/// grid of two diamonds).
+List<PersonalizationStat> _completionistStats(
+  ResolvedCompletionist? resolved,
+  AppLocalizations l10n,
+) {
+  if (resolved == null) return const [];
+  return [
+    PersonalizationStat(
+      value: formatShowcaseHeroValue(resolved.gamesPerfect),
+      label: l10n.personalizationStatPerfect,
+    ),
+    if (resolved.gamesOwned case final owned?)
+      PersonalizationStat(
+        value: formatShowcaseHeroValue(owned),
+        label: l10n.connectionsStatGamesOwned,
+      ),
+  ];
+}
+
+/// The uppercased first character of a perfect-game [title] for its letter tile,
+/// or null for an empty title (that tile is skipped). Reads the first Unicode
+/// code point so an astral leading character is not split mid-surrogate.
+String? _letterGlyph(String title) {
+  if (title.isEmpty) return null;
+  return String.fromCharCode(title.runes.first).toUpperCase();
 }
 
 /// Formats a stat value with its stable unit suffix (mirrors the passport chip

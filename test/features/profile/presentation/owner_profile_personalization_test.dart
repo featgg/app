@@ -5,6 +5,7 @@ import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
@@ -197,6 +198,23 @@ final class _FakeCardsRepo implements CardsRepository {
   ) async => right(null);
 }
 
+/// Reports Chess linked so the add-card catalog offers the Chess Rank/Main rows
+/// the acquire-race guardrail drives (the catalog reads connected platforms).
+final class _FakeConnectionsRepo implements ConnectionsRepository {
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([
+        Connection(
+          platform: Platform.chess,
+          status: ConnectionStatus.active,
+          createdAt: DateTime.utc(2024),
+        ),
+      ]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 /// Serves a Chess card (which carries Main data) for Chess, nothing elsewhere,
 /// so the acquisition section offers exactly the Chess Main/Rank rows.
 final class _ChessCardsRepo implements CardsRepository {
@@ -240,6 +258,7 @@ GameCard _chessCard() => GameCard(
         _FakeWidgetsRepo(_widgets),
       ),
       cardsRepositoryProvider.overrideWithValue(_FakeCardsRepo()),
+      connectionsRepositoryProvider.overrideWithValue(_FakeConnectionsRepo()),
     ],
   );
   addTearDown(container.dispose);
@@ -336,8 +355,8 @@ void main() {
     await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
 
-    // The shared add-card sheet is open (its mode toggle is present).
-    expect(find.byKey(const Key('addCardModeToggle')), findsOneWidget);
+    // The shared add-card catalog is open (its title marks the catalog).
+    expect(find.byKey(const Key('addCatalogTitle')), findsOneWidget);
   });
 
   const cardOnlyProfile = Profile(
@@ -366,6 +385,7 @@ void main() {
         ),
         profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
         cardsRepositoryProvider.overrideWithValue(_ChessCardsRepo()),
+        connectionsRepositoryProvider.overrideWithValue(_FakeConnectionsRepo()),
       ],
     );
     addTearDown(container.dispose);
