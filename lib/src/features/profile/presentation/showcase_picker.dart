@@ -1,36 +1,48 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/core.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/game_card.dart';
+import '../../connections/domain/platform_descriptor.dart';
 import '../domain/completionist_value_resolver.dart';
 import '../domain/game_collector_value_resolver.dart';
+import '../domain/main_value_resolver.dart';
 import '../domain/profile_widget.dart';
+import '../domain/rank_value_resolver.dart';
 import '../domain/showcase_selection.dart';
 import 'collection_picker.dart';
-import 'passport_picker.dart';
+import 'featured_platform_provider.dart';
 import 'profile_owner_cards_provider.dart';
 import 'profile_widgets_controller.dart';
-import 'rank_main_add_section.dart';
 
-/// Opens the visual add-card picker as a modal bottom sheet: the connected
-/// Steam account's library-showcase games as art tiles. Tapping a tile adds a
-/// showcase widget for that game at [existing]'s next position (max+1, the same
-/// rule the other adds use) through the host-observed controller and closes.
+/// Opens the add-card catalog as a modal bottom sheet: a flat, archetype-grouped
+/// list of the cards the owner can add. Auto cards (Identity, Rank, Main,
+/// Collector, Completionist) add in one tap; curated cards (Milestone, curated
+/// Collection) push their picker as an in-sheet step. Every add lands at
+/// [existing]'s next position (max+1, the same rule the other adds use).
 ///
-/// Steam-first this slice: `personalization.md` binds a showcase to a non-null
-/// platform and client rendering is Steam-only, so a non-Steam showcase would
-/// render unavailable — the tile source is the owner's Steam card.
+/// The name is retained (the sheet no longer only picks showcases) to keep its
+/// call sites and the acquire-race guardrail untouched.
 Future<void> showShowcasePicker(
   BuildContext context, {
   required List<ProfileWidget> existing,
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
-  builder: (_) => _ShowcasePickerSheet(existing: existing),
+  builder: (_) => _CatalogSheet(existing: existing),
 );
+
+/// The catalog universe: every platform some archetype can draw from. Unlinked
+/// members are omitted per row and drive the "connect more" footer;
+/// `minecraftHypixel` backs no archetype yet, so it is excluded and never nags.
+final Set<Platform> _catalogUniverse = {
+  Platform.steam,
+  ...kRankPlatforms,
+  ...kMainPlatforms,
+};
 
 /// Showcase text sits on the dark art scrim in BOTH themes, so its neutral
 /// color must always be light — dark theme's `onSurface` already is, light
@@ -39,65 +51,38 @@ Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
     ? scheme.onSurface
     : scheme.onInverseSurface;
 
-/// The four add-card modes the sheet toggles between: a single-game showcase
-/// (default), a multi-game collection, a whole-library game collector, or a
-/// whole-library completionist.
-enum _AddCardMode { showcase, collection, collector, completionist }
+/// The in-sheet step: the grouped catalog, or a curated picker reached from it.
+/// Genuinely ephemeral visual state — it never outlives the sheet and has no
+/// domain meaning — so `setState` is the sanctioned mechanism, and keeping one
+/// modal route preserves the acquire rows' pop-guard semantics.
+enum _Step { catalog, milestone, collection }
 
-class _ShowcasePickerSheet extends ConsumerStatefulWidget {
-  const _ShowcasePickerSheet({required this.existing});
+class _CatalogSheet extends ConsumerStatefulWidget {
+  const _CatalogSheet({required this.existing});
 
   final List<ProfileWidget> existing;
 
   @override
-  ConsumerState<_ShowcasePickerSheet> createState() =>
-      _ShowcasePickerSheetState();
+  ConsumerState<_CatalogSheet> createState() => _CatalogSheetState();
 }
 
-class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
-  _AddCardMode _mode = _AddCardMode.showcase;
+class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
+  _Step _step = _Step.catalog;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    final existing = widget.existing;
-
-    // Append after the current max position to avoid a foreseeable unique
-    // collision; the backend constraint stays authoritative.
-    final nextPosition = existing.isEmpty
-        ? 0
-        : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) + 1;
-    // Steam games already placed as a showcase, keyed by the stored game ref, so
-    // the picker never offers a game that is already on the profile.
-    final alreadyShowcased = {
-      for (final w in existing)
-        if (w.kind == ProfileWidgetKind.showcase &&
-            w.platform == Platform.steam)
-          w.showcaseSelection.gameRef,
+    final nextPosition = _nextPosition(widget.existing);
+    final connected = ref.watch(connectedPlatformsProvider);
+    final linked = connected.value?.toSet() ?? const <Platform>{};
+    // Only linked universe platforms are fetched — an unlinked platform is
+    // never watched, so nothing is fetched for a card that cannot be offered.
+    final cardStates = <Platform, AsyncValue<GameCard?>>{
+      for (final platform in _catalogUniverse)
+        if (linked.contains(platform))
+          platform: ref.watch(ownerCardProvider(platform)),
     };
-    // A game collector is platform-bound (Steam) and carries no game selection,
-    // so at most one Steam collector belongs on the profile; the picker offers
-    // Add only when none is placed yet.
-    final alreadyHasCollector = existing.any(
-      (w) =>
-          w.kind == ProfileWidgetKind.gameCollector &&
-          w.platform == Platform.steam,
-    );
-    // A completionist is likewise platform-bound (Steam) with no game selection,
-    // so at most one belongs on the profile; the picker offers Add only when
-    // none is placed yet.
-    final alreadyHasCompletionist = existing.any(
-      (w) =>
-          w.kind == ProfileWidgetKind.completionist &&
-          w.platform == Platform.steam,
-    );
 
-    final cardState = ref.watch(ownerCardProvider(Platform.steam));
-
-    // One scroll surface for the whole sheet: the fixed banner, the Rank/Main
-    // acquisition rows, and the mode toggle would otherwise crush the mode body
-    // on a phone and strand its tap targets. Capped so short content still hugs
+    // One scroll surface for the whole sheet, capped so short content still hugs
     // its own height and only tall content scrolls.
     return SafeArea(
       child: ConstrainedBox(
@@ -108,258 +93,544 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // The passport add-entry sits above the mode toggle and OUTSIDE
-                // the Steam-card gate below, so a Steam-less user can still add it
-                // (it aggregates every linked platform, not just Steam).
-                PassportAddBanner(existing: existing),
-                // Platform-bound Rank/Main acquisition, also outside the Steam
-                // gate; it collapses to nothing unless a supported, connected
-                // platform carries the data.
-                RankMainAddSection(existing: existing),
-                const SizedBox(height: AppSpacing.md),
-                _ModeToggle(
-                  mode: _mode,
-                  onChanged: (mode) => setState(() => _mode = mode),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AsyncValueWidget<GameCard?>(
-                  value: cardState,
-                  onRetry: () =>
-                      ref.invalidate(ownerCardProvider(Platform.steam)),
-                  data: (card) {
-                    final data = card?.data;
-                    final games = data is SteamCardData
-                        ? data.libraryShowcase
-                        : const <LibraryShowcaseEntry>[];
-                    return switch (_mode) {
-                      _AddCardMode.showcase => _showcaseBody(
-                        l10n,
-                        textTheme,
-                        games,
-                        nextPosition,
-                        alreadyShowcased,
-                      ),
-                      _AddCardMode.collection => CollectionPickerBody(
-                        games: games,
-                        nextPosition: nextPosition,
-                      ),
-                      _AddCardMode.collector => _collectorBody(
-                        l10n,
-                        textTheme,
-                        nextPosition,
-                        alreadyHasCollector,
-                        card,
-                      ),
-                      _AddCardMode.completionist => _completionistBody(
-                        l10n,
-                        textTheme,
-                        nextPosition,
-                        alreadyHasCompletionist,
-                        card,
-                      ),
-                    };
-                  },
-                ),
-              ],
-            ),
+            child: switch (_step) {
+              _Step.catalog => AsyncValueWidget<List<Platform>>(
+                value: connected,
+                onRetry: () => ref.invalidate(connectedPlatformsProvider),
+                data: (_) => _catalog(linked, cardStates, nextPosition),
+              ),
+              _Step.milestone => _milestoneBody(cardStates, nextPosition),
+              _Step.collection => _collectionBody(cardStates, nextPosition),
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _showcaseBody(
-    AppLocalizations l10n,
-    TextTheme textTheme,
-    List<LibraryShowcaseEntry> games,
+  Widget _catalog(
+    Set<Platform> linked,
+    Map<Platform, AsyncValue<GameCard?>> cardStates,
     int nextPosition,
-    Set<String> alreadyShowcased,
   ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          l10n.showcasePickerTitle,
-          key: const Key('showcasePickerTitle'),
-          style: textTheme.titleLarge,
+    // Deterministic load: one spinner while any linked card resolves, so rows
+    // never flicker in one at a time.
+    if (cardStates.values.any((state) => state.isLoading)) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+          child: CircularProgressIndicator.adaptive(),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        if (games.isEmpty)
-          Text(
-            l10n.showcasePickerEmpty,
-            key: const Key('showcasePickerEmpty'),
-            style: textTheme.bodyMedium,
-          )
-        else
-          _tilesOrAllAdded(
-            l10n,
-            textTheme,
-            games,
-            nextPosition,
-            alreadyShowcased,
-          ),
-      ],
-    );
-  }
-
-  /// The Collector mode: a whole-library card bound to Steam. There is no game
-  /// to pick, so the body is a hint plus an Add action — the already-added state
-  /// (no Add) when a Steam collector is already on the profile, or a blocked
-  /// state (message + disabled Add) when the library resolves absent or 0 owned,
-  /// so a card that would read as empty is never created. Runs only inside the
-  /// `data:` builder, so it never fires while the card is still loading.
-  Widget _collectorBody(
-    AppLocalizations l10n,
-    TextTheme textTheme,
-    int nextPosition,
-    bool alreadyHasCollector,
-    GameCard? card,
-  ) {
-    final resolved = resolveGameCollector(card);
-    final blocked = resolved == null || resolved.gamesOwned == 0;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          l10n.gameCollectorPickerTitle,
-          key: const Key('gameCollectorPickerTitle'),
-          style: textTheme.titleLarge,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (alreadyHasCollector)
-          Text(
-            l10n.gameCollectorPickerAlreadyAdded,
-            key: const Key('gameCollectorPickerAllAdded'),
-            style: textTheme.bodyMedium,
-          )
-        else if (blocked) ...[
-          Text(
-            l10n.gameCollectorPickerEmpty,
-            key: const Key('gameCollectorPickerEmpty'),
-            style: textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            key: const Key('gameCollectorPickerAddButton'),
-            onPressed: null,
-            child: Text(l10n.gameCollectorPickerAdd),
-          ),
-        ] else ...[
-          Text(l10n.gameCollectorPickerHint, style: textTheme.bodySmall),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            key: const Key('gameCollectorPickerAddButton'),
-            onPressed: () {
-              ref
-                  .read(profileWidgetsControllerProvider.notifier)
-                  .addGameCollector(
-                    platform: Platform.steam,
-                    position: nextPosition,
-                    size: ProfileWidgetSize.small,
-                  );
-              Navigator.of(context).pop();
-            },
-            child: Text(l10n.gameCollectorPickerAdd),
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// The Completionist mode: a whole-library card bound to Steam whose hero is
-  /// the perfect-games count. There is no game to pick, so the body is a hint
-  /// plus an Add action — the already-added state (no Add) when a Steam
-  /// completionist is already on the profile, or a blocked state (message +
-  /// disabled Add) when the library resolves absent or 0 perfect games, so a card
-  /// that would read as empty is never created. Runs only inside the `data:`
-  /// builder, so it never fires while the card is still loading.
-  Widget _completionistBody(
-    AppLocalizations l10n,
-    TextTheme textTheme,
-    int nextPosition,
-    bool alreadyHasCompletionist,
-    GameCard? card,
-  ) {
-    final resolved = resolveCompletionist(card);
-    final blocked = resolved == null || resolved.gamesPerfect == 0;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          l10n.completionistPickerTitle,
-          key: const Key('completionistPickerTitle'),
-          style: textTheme.titleLarge,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (alreadyHasCompletionist)
-          Text(
-            l10n.completionistPickerAlreadyAdded,
-            key: const Key('completionistPickerAllAdded'),
-            style: textTheme.bodyMedium,
-          )
-        else if (blocked) ...[
-          Text(
-            l10n.completionistPickerEmpty,
-            key: const Key('completionistPickerEmpty'),
-            style: textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            key: const Key('completionistPickerAddButton'),
-            onPressed: null,
-            child: Text(l10n.completionistPickerAdd),
-          ),
-        ] else ...[
-          Text(l10n.completionistPickerHint, style: textTheme.bodySmall),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            key: const Key('completionistPickerAddButton'),
-            onPressed: () {
-              ref
-                  .read(profileWidgetsControllerProvider.notifier)
-                  .addCompletionist(
-                    platform: Platform.steam,
-                    position: nextPosition,
-                    size: ProfileWidgetSize.small,
-                  );
-              Navigator.of(context).pop();
-            },
-            child: Text(l10n.completionistPickerAdd),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _tilesOrAllAdded(
-    AppLocalizations l10n,
-    TextTheme textTheme,
-    List<LibraryShowcaseEntry> games,
-    int nextPosition,
-    Set<String> alreadyShowcased,
-  ) {
-    final addable = [
-      for (final game in games)
-        if (!alreadyShowcased.contains(game.appId.toString())) game,
-    ];
-    if (addable.isEmpty) {
-      return Text(
-        l10n.showcasePickerAllAdded,
-        key: const Key('showcasePickerAllAdded'),
-        style: textTheme.bodyMedium,
       );
     }
 
-    // Two columns, mobile-first: derive the tile width from the sheet's own
-    // constraints rather than querying the screen, so the layout stays local.
-    // The tiles scroll with the shared sheet surface, not a nested scroll view.
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    // An errored or cross-wired card reads as absent data (non-blocking): a card
+    // must belong to the platform it was fetched for to resolve for it.
+    GameCard? cardFor(Platform platform) {
+      final state = cardStates[platform];
+      if (state == null || state.hasError) return null;
+      final card = state.value;
+      if (card == null || card.platform != platform) return null;
+      return card;
+    }
+
+    final steamLinked = linked.contains(Platform.steam);
+    final steamCard = steamLinked ? cardFor(Platform.steam) : null;
+    final steamLibrary = _steamLibrary(steamCard);
+
+    final identityRows = [_identityRow(l10n, linked, nextPosition)];
+    final rankRows = [
+      for (final platform in kRankPlatforms)
+        if (linked.contains(platform))
+          _kindRow(
+            l10n: l10n,
+            kind: ProfileWidgetKind.rank,
+            platform: platform,
+            hasData: resolveRank(cardFor(platform)) != null,
+            reason: l10n.addCatalogReasonRankNoData,
+            nextPosition: nextPosition,
+          ),
+    ];
+    final mainRows = [
+      for (final platform in kMainPlatforms)
+        if (linked.contains(platform))
+          _kindRow(
+            l10n: l10n,
+            kind: ProfileWidgetKind.main,
+            platform: platform,
+            hasData: resolveMain(cardFor(platform)) != null,
+            reason: l10n.addCatalogReasonMainNoData,
+            nextPosition: nextPosition,
+          ),
+    ];
+    // The Steam-derived groups render only when Steam is linked.
+    final milestoneRows = [if (steamLinked) _milestoneRow(l10n, steamLibrary)];
+    final collectionRows = steamLinked
+        ? _collectionRows(l10n, steamCard, steamLibrary, nextPosition)
+        : const <Widget>[];
+    final achievementRows = [
+      if (steamLinked) _completionistRow(l10n, steamCard, nextPosition),
+    ];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.addCatalogTitle,
+          key: const Key('addCatalogTitle'),
+          style: textTheme.titleLarge,
+        ),
+        _group(
+          const Key('catalogGroupIdentity'),
+          l10n.addCatalogGroupIdentity,
+          identityRows,
+        ),
+        _group(
+          const Key('catalogGroupRank'),
+          l10n.addCatalogGroupRank,
+          rankRows,
+        ),
+        _group(
+          const Key('catalogGroupMain'),
+          l10n.addCatalogGroupMain,
+          mainRows,
+        ),
+        _group(
+          const Key('catalogGroupMilestone'),
+          l10n.addCatalogGroupMilestone,
+          milestoneRows,
+        ),
+        _group(
+          const Key('catalogGroupCollection'),
+          l10n.addCatalogGroupCollection,
+          collectionRows,
+        ),
+        _group(
+          const Key('catalogGroupAchievements'),
+          l10n.addCatalogGroupAchievements,
+          achievementRows,
+        ),
+        if (_catalogUniverse.any((platform) => !linked.contains(platform)))
+          _footer(l10n),
+      ],
+    );
+  }
+
+  /// A group renders its header only when it has at least one row.
+  Widget _group(Key headerKey, String header, List<Widget> rows) {
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        Text(header, key: headerKey, style: textTheme.titleSmall),
+        const SizedBox(height: AppSpacing.xs),
+        ...rows,
+      ],
+    );
+  }
+
+  /// Identity (Passport) is cross-platform: placed reads as added; with no
+  /// linked platform it is disabled; otherwise it offers. Never offered empty.
+  Widget _identityRow(
+    AppLocalizations l10n,
+    Set<Platform> linked,
+    int nextPosition,
+  ) {
+    if (widget.existing.any((w) => w.kind == ProfileWidgetKind.passport)) {
+      return _addedRow(const Key('passportAddedRow'), l10n.passportLabel);
+    }
+    if (linked.isEmpty) {
+      return _disabledRow(
+        const Key('passportDisabledRow'),
+        l10n.passportLabel,
+        l10n.addCatalogReasonNoPlatforms,
+      );
+    }
+    return _AddRow(
+      rowKey: const Key('passportAddRow'),
+      label: l10n.passportLabel,
+      onAcquire: (controller) => controller.addPassport(
+        position: nextPosition,
+        size: ProfileWidgetSize.wide,
+      ),
+    );
+  }
+
+  /// A per-platform Rank or Main row: added when already placed, disabled with a
+  /// reason when the card carries no data, otherwise a single-tap offer.
+  Widget _kindRow({
+    required AppLocalizations l10n,
+    required ProfileWidgetKind kind,
+    required Platform platform,
+    required bool hasData,
+    required String reason,
+    required int nextPosition,
+  }) {
+    final label = _brand(platform);
+    final prefix = kind == ProfileWidgetKind.rank ? 'rank' : 'main';
+    if (widget.existing.any((w) => w.kind == kind && w.platform == platform)) {
+      return _addedRow(Key('${prefix}AddedRow_${platform.name}'), label);
+    }
+    if (!hasData) {
+      return _disabledRow(
+        Key('${prefix}DisabledRow_${platform.name}'),
+        label,
+        reason,
+      );
+    }
+    return _AddRow(
+      rowKey: Key('${prefix}AddRow_${platform.name}'),
+      label: label,
+      onAcquire: (controller) => kind == ProfileWidgetKind.rank
+          ? controller.addRank(
+              platform: platform,
+              position: nextPosition,
+              size: ProfileWidgetSize.small,
+            )
+          : controller.addMain(
+              platform: platform,
+              position: nextPosition,
+              size: ProfileWidgetSize.small,
+            ),
+    );
+  }
+
+  /// Milestone offers a single-game showcase picked in step 2. An empty Steam
+  /// library disables the row rather than creating a card that reads as empty.
+  Widget _milestoneRow(
+    AppLocalizations l10n,
+    List<LibraryShowcaseEntry> library,
+  ) {
+    if (library.isEmpty) {
+      return _disabledRow(
+        const Key('milestoneDisabledRow'),
+        l10n.showcasePickerTitle,
+        l10n.showcasePickerEmpty,
+      );
+    }
+    return _stepRow(
+      const Key('milestoneStepRow'),
+      l10n.showcasePickerTitle,
+      () => setState(() => _step = _Step.milestone),
+    );
+  }
+
+  /// The Collection group: a curated set (step 2) and the whole-library
+  /// Collector variant (single tap).
+  List<Widget> _collectionRows(
+    AppLocalizations l10n,
+    GameCard? steamCard,
+    List<LibraryShowcaseEntry> library,
+    int nextPosition,
+  ) {
+    final Widget curated;
+    if (library.isEmpty) {
+      curated = _disabledRow(
+        const Key('collectionCuratedDisabledRow'),
+        l10n.addCatalogRowCollectionCurated,
+        l10n.showcasePickerEmpty,
+      );
+    } else {
+      curated = _stepRow(
+        const Key('collectionCuratedRow'),
+        l10n.addCatalogRowCollectionCurated,
+        () => setState(() => _step = _Step.collection),
+      );
+    }
+
+    final Widget collector;
+    final resolved = resolveGameCollector(steamCard);
+    if (widget.existing.any(
+      (w) =>
+          w.kind == ProfileWidgetKind.gameCollector &&
+          w.platform == Platform.steam,
+    )) {
+      collector = _addedRow(
+        const Key('collectorAddedRow_steam'),
+        l10n.addCatalogRowCollectionLibrary,
+      );
+    } else if (resolved == null || resolved.gamesOwned == 0) {
+      // A would-be-empty collector is never offered.
+      collector = _disabledRow(
+        const Key('collectorDisabledRow_steam'),
+        l10n.addCatalogRowCollectionLibrary,
+        l10n.gameCollectorPickerEmpty,
+      );
+    } else {
+      collector = _AddRow(
+        rowKey: const Key('collectorAddRow_steam'),
+        label: l10n.addCatalogRowCollectionLibrary,
+        onAcquire: (controller) => controller.addGameCollector(
+          platform: Platform.steam,
+          position: nextPosition,
+          size: ProfileWidgetSize.small,
+        ),
+      );
+    }
+    return [curated, collector];
+  }
+
+  /// Achievement Grid offers the whole-library Completionist variant. A card
+  /// with no perfect games is disabled rather than created empty.
+  Widget _completionistRow(
+    AppLocalizations l10n,
+    GameCard? steamCard,
+    int nextPosition,
+  ) {
+    final resolved = resolveCompletionist(steamCard);
+    if (widget.existing.any(
+      (w) =>
+          w.kind == ProfileWidgetKind.completionist &&
+          w.platform == Platform.steam,
+    )) {
+      return _addedRow(
+        const Key('completionistAddedRow_steam'),
+        l10n.completionistLabel,
+      );
+    }
+    if (resolved == null || resolved.gamesPerfect == 0) {
+      return _disabledRow(
+        const Key('completionistDisabledRow_steam'),
+        l10n.completionistLabel,
+        l10n.completionistPickerEmpty,
+      );
+    }
+    return _AddRow(
+      rowKey: const Key('completionistAddRow_steam'),
+      label: l10n.completionistLabel,
+      onAcquire: (controller) => controller.addCompletionist(
+        platform: Platform.steam,
+        position: nextPosition,
+        size: ProfileWidgetSize.small,
+      ),
+    );
+  }
+
+  Widget _footer(AppLocalizations l10n) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: InkWell(
+        key: const Key('catalogConnectMoreLink'),
+        // Capture the router BEFORE popping: the pop unmounts this context, so
+        // navigating on it afterwards would use a defunct element.
+        onTap: () {
+          final router = GoRouter.of(context);
+          Navigator.of(context).pop();
+          router.push('/connections');
+        },
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.smMd,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.add_link,
+                size: AppSpacing.md,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  l10n.addCatalogConnectMore,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _addedRow(Key key, String label) {
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.smMd,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            l10n.addCatalogAdded,
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The reason sits under the label rather than beside it so a long reason
+  /// never competes for width — the row cannot overflow on a narrow phone.
+  Widget _disabledRow(Key key, String label, String reason) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.smMd,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            reason,
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepRow(Key key, String label, VoidCallback onTap) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      key: key,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.smMd,
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: textTheme.bodyMedium)),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(Icons.chevron_right, color: colorScheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Back affordance for a step-2 body. Its tooltip reuses the platform's
+  /// back-button label so no new string is introduced.
+  Widget _backBar() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: IconButton(
+        key: const Key('catalogStepBack'),
+        icon: const Icon(Icons.arrow_back),
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        onPressed: () => setState(() => _step = _Step.catalog),
+      ),
+    );
+  }
+
+  Widget _milestoneBody(
+    Map<Platform, AsyncValue<GameCard?>> cardStates,
+    int nextPosition,
+  ) {
+    final state = cardStates[Platform.steam];
+    if (state == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    return AsyncValueWidget<GameCard?>(
+      value: state,
+      data: (card) {
+        final games = _steamLibrary(card);
+        // A game already placed as a showcase is never offered again.
+        final alreadyShowcased = {
+          for (final w in widget.existing)
+            if (w.kind == ProfileWidgetKind.showcase &&
+                w.platform == Platform.steam)
+              w.showcaseSelection.gameRef,
+        };
+        final addable = [
+          for (final game in games)
+            if (!alreadyShowcased.contains(game.appId.toString())) game,
+        ];
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _backBar(),
+            Text(
+              l10n.showcasePickerTitle,
+              key: const Key('showcasePickerTitle'),
+              style: textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (addable.isEmpty)
+              Text(
+                l10n.showcasePickerAllAdded,
+                key: const Key('showcasePickerAllAdded'),
+                style: textTheme.bodyMedium,
+              )
+            else
+              _tileGrid(addable, nextPosition),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _collectionBody(
+    Map<Platform, AsyncValue<GameCard?>> cardStates,
+    int nextPosition,
+  ) {
+    final state = cardStates[Platform.steam];
+    if (state == null) return const SizedBox.shrink();
+    return AsyncValueWidget<GameCard?>(
+      value: state,
+      data: (card) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _backBar(),
+          CollectionPickerBody(
+            games: _steamLibrary(card),
+            nextPosition: nextPosition,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Two columns, mobile-first: the tile width is derived from the sheet's own
+  /// constraints, and the tiles scroll with the shared sheet surface.
+  Widget _tileGrid(List<LibraryShowcaseEntry> games, int nextPosition) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
@@ -367,7 +638,7 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
-            for (final game in addable)
+            for (final game in games)
               SizedBox(
                 width: tileWidth,
                 child: _GameTile(entry: game, nextPosition: nextPosition),
@@ -377,44 +648,105 @@ class _ShowcasePickerSheetState extends ConsumerState<_ShowcasePickerSheet> {
       },
     );
   }
+
+  List<LibraryShowcaseEntry> _steamLibrary(GameCard? card) {
+    final data = card?.data;
+    return data is SteamCardData
+        ? data.libraryShowcase
+        : const <LibraryShowcaseEntry>[];
+  }
+
+  /// Append after the current max position to avoid a foreseeable unique
+  /// collision; the backend constraint stays authoritative.
+  int _nextPosition(List<ProfileWidget> existing) => existing.isEmpty
+      ? 0
+      : existing.map((w) => w.position).reduce((a, b) => a > b ? a : b) + 1;
+
+  /// Brand-correct platform name (proper noun, intentionally not localized).
+  String _brand(Platform platform) =>
+      platformDescriptors[platform]?.displayName ?? platform.name;
 }
 
-/// The mode toggle at the top of the add-card sheet: Game (a single-game
-/// showcase, the default), Collection (a multi-game collection), Collector (a
-/// whole-library game collector), or Completionist (a whole-library
-/// perfect-games count).
-class _ModeToggle extends StatelessWidget {
-  const _ModeToggle({required this.mode, required this.onChanged});
+/// One tappable auto-acquire row: a label with an Add affordance. Tapping awaits
+/// the repository write and shows a spinner while it is in flight; a local busy
+/// flag ignores a repeat tap on this row so the write fires exactly once.
+/// Landing the acquired card in the working layout is reactive — the owner
+/// wrapper folds each refetch of the widgets read in — so this row deliberately
+/// does not couple placement to the pop.
+class _AddRow extends ConsumerStatefulWidget {
+  const _AddRow({
+    required this.rowKey,
+    required this.label,
+    required this.onAcquire,
+  });
 
-  final _AddCardMode mode;
-  final ValueChanged<_AddCardMode> onChanged;
+  final Key rowKey;
+  final String label;
+  final Future<void> Function(ProfileWidgetsController) onAcquire;
+
+  @override
+  ConsumerState<_AddRow> createState() => _AddRowState();
+}
+
+class _AddRowState extends ConsumerState<_AddRow> {
+  bool _busy = false;
+
+  Future<void> _acquire() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final controller = ref.read(profileWidgetsControllerProvider.notifier);
+    // Await the write only to bound this row's busy/spinner lifetime and keep the
+    // single-tap guard meaningful; the controller routes any failure through its
+    // own error state (it never throws), so this completes on success and failure
+    // alike. Placement is handled reactively by the owner wrapper's listener.
+    await widget.onAcquire(controller);
+    if (!mounted) return;
+    // Close only if this row's own sheet is still the active route. It may have
+    // already been dismissed through another channel while the write was in
+    // flight; its route is then no longer current, and an unconditional pop would
+    // land on the screen beneath the sheet instead.
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return SegmentedButton<_AddCardMode>(
-      key: const Key('addCardModeToggle'),
-      showSelectedIcon: false,
-      segments: [
-        ButtonSegment(
-          value: _AddCardMode.showcase,
-          label: Text(l10n.addCardModeShowcase),
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      key: widget.rowKey,
+      onTap: _busy ? null : _acquire,
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.smMd,
         ),
-        ButtonSegment(
-          value: _AddCardMode.collection,
-          label: Text(l10n.addCardModeCollection),
+        child: Row(
+          children: [
+            Expanded(child: Text(widget.label, style: textTheme.bodyMedium)),
+            const SizedBox(width: AppSpacing.sm),
+            if (_busy)
+              SizedBox(
+                width: AppSpacing.md,
+                height: AppSpacing.md,
+                child: CircularProgressIndicator(
+                  strokeWidth: AppSpacing.hairline,
+                  color: colorScheme.primary,
+                ),
+              )
+            else
+              Text(
+                l10n.addCatalogActionAdd,
+                style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.primary,
+                ),
+              ),
+          ],
         ),
-        ButtonSegment(
-          value: _AddCardMode.collector,
-          label: Text(l10n.addCardModeCollector),
-        ),
-        ButtonSegment(
-          value: _AddCardMode.completionist,
-          label: Text(l10n.addCardModeCompletionist),
-        ),
-      ],
-      selected: {mode},
-      onSelectionChanged: (selection) => onChanged(selection.first),
+      ),
     );
   }
 }

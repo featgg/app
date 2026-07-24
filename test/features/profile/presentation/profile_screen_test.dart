@@ -1311,6 +1311,10 @@ void main() {
 
     await tester.tap(find.byKey(const Key('profileAddCardButton')));
     await tester.pumpAndSettle();
+    // The showcase tiles now live behind the Milestone catalog row.
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('showcasePickerTile_730')), findsOneWidget);
   });
@@ -1346,6 +1350,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('profileAddCardButton')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_730')));
     await tester.pumpAndSettle();
@@ -1386,6 +1393,9 @@ void main() {
     final fetchesBefore = widgetsRepo.fetchCalls;
 
     await tester.tap(find.byKey(const Key('profileAddCardButton')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
+    await tester.tap(find.byKey(const Key('milestoneStepRow')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('showcasePickerTile_730')));
     await tester.pumpAndSettle();
