@@ -77,6 +77,28 @@ void main() {
       );
       expect(resolved, isNull);
     });
+
+    test('the top game carries its hero_image into ResolvedMain', () {
+      final resolved = resolveMain(
+        _card(
+          Platform.steam,
+          data: const SteamCardData(
+            libraryShowcase: [
+              LibraryShowcaseEntry(appId: 1, title: 'Game 1', hours: 100),
+              LibraryShowcaseEntry(
+                appId: 2,
+                title: 'Game 2',
+                hours: 900,
+                heroImage: 'https://cdn.test/cover.jpg',
+              ),
+            ],
+            recentGames: [],
+          ),
+        ),
+      );
+
+      expect(resolved!.heroImage, 'https://cdn.test/cover.jpg');
+    });
   });
 
   group('resolveMain — WoW (Retail)', () {
@@ -97,6 +119,8 @@ void main() {
       expect(resolved!.title, 'Thrall');
       expect(resolved.subtitle, 'Orc Warrior');
       expect(_stat(resolved, 'item_level')?.value, 486);
+      // No per-main image field on a non-Steam main → heroImage stays null.
+      expect(resolved.heroImage, isNull);
     });
 
     test('adds mythic_plus_rating when the block carries a rating', () {

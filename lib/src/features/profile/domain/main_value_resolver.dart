@@ -8,7 +8,12 @@ import '../../connections/domain/game_card.dart';
 /// a secondary [subtitle] token line, and the headline [stats]. The presentation
 /// layer maps each stat key to a localized label and formats the value.
 final class ResolvedMain extends Equatable {
-  const ResolvedMain({this.title, this.subtitle, this.stats = const []});
+  const ResolvedMain({
+    this.title,
+    this.subtitle,
+    this.stats = const [],
+    this.heroImage,
+  });
 
   /// Main name (game / character / mode); null when only a generic is known.
   final String? title;
@@ -19,10 +24,14 @@ final class ResolvedMain extends Equatable {
   /// Stable-keyed headline stats resolved by the shared stat-label map.
   final List<CardStat> stats;
 
+  /// Steam top-game cover art url; null on non-Steam mains (no per-main image
+  /// field) and when the top game carries no art (feed image rules).
+  final String? heroImage;
+
   bool get isEmpty => title == null && subtitle == null && stats.isEmpty;
 
   @override
-  List<Object?> get props => [title, subtitle, stats];
+  List<Object?> get props => [title, subtitle, stats, heroImage];
 }
 
 /// The platforms a Main card is offered for: only these publish a primary
@@ -53,6 +62,7 @@ ResolvedMain? resolveMain(GameCard? card) {
       return ResolvedMain(
         title: top.title,
         stats: [CardStat(key: 'hours_played', value: top.hours)],
+        heroImage: top.heroImage,
       );
     case WowRetailCardData(:final profile, :final mythicPlus):
       final stats = <CardStat>[

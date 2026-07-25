@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/core/theme/personalization_tokens.dart';
@@ -8,6 +9,7 @@ import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
+import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_card_shell.dart';
 import 'package:featgg/src/features/profile/presentation/profile_owner_cards_provider.dart';
@@ -81,6 +83,31 @@ GameCard _steamCard({List<CardStat> stats = const [], SteamCardData? data}) =>
       lastUpdated: DateTime.utc(2026, 6, 1),
       data: data,
     );
+
+// Fixture-controlled art urls — structural, asserted by value, never copy.
+const _heroUrl = 'https://cdn.test/hero.jpg';
+const _coverA = 'https://cdn.test/cover-a.jpg';
+const _coverB = 'https://cdn.test/cover-b.jpg';
+
+/// Finds a rendered [CachedNetworkImage] loading exactly [url] — the shipped
+/// showcase/game-card test idiom for asserting real art independent of load
+/// outcome.
+Finder _artFor(String url) =>
+    find.byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url);
+
+/// A card carrying an envelope [heroImage] — Platform/Fallback read the band art
+/// from here.
+GameCard _heroCard(Platform platform, String heroImage) => GameCard(
+  schemaVersion: 1,
+  platform: platform,
+  title: '${platform.name}-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: heroImage,
+  profileUrl: null,
+  stats: const [],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+);
 
 ProfileWidget _collectionWidget(String id, List<String> gameRefs) =>
     ProfileWidget(
@@ -1151,5 +1178,388 @@ void main() {
     expect(find.byType(FallbackCard), findsNothing);
     expect(find.byKey(collectionOrbKey('c', 0)), findsOneWidget);
     expect(find.byKey(achievementLetterKey('cp', 0)), findsOneWidget);
+  });
+
+  const milestoneWidget = ProfileWidget(
+    id: 'm',
+    kind: ProfileWidgetKind.showcase,
+    platform: Platform.steam,
+    position: 0,
+    isEnabled: true,
+    size: ProfileWidgetSize.small,
+    showcaseSelection: ShowcaseSelection(gameRef: '730'),
+  );
+
+  testWidgets('MilestoneCard renders the showcase hero art', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MilestoneCard(
+          widget: milestoneWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(
+                  appId: 730,
+                  title: 'Counter-Strike',
+                  hours: 100,
+                  heroImage: _heroUrl,
+                ),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_heroUrl), findsOneWidget);
+  });
+
+  testWidgets('MilestoneCard with null hero art renders the gradient capsule, '
+      'no image', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MilestoneCard(
+          widget: milestoneWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(appId: 730, title: 'CS', hours: 100),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byKey(milestoneCapsuleKey('m')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  // The legibility scrim is strictly conditional on art; the finder is scoped
+  // under the capsule key so it never collides with the hero canvas.
+  Finder capsuleScrim() => find.descendant(
+    of: find.byKey(milestoneCapsuleKey('m')),
+    matching: find.byWidgetPredicate(
+      (w) => w is ColoredBox && w.color == PersonalizationArtColors.heroScrim,
+    ),
+  );
+
+  testWidgets('MilestoneCard with art renders exactly one legibility scrim '
+      'inside the capsule', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MilestoneCard(
+          widget: milestoneWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(
+                  appId: 730,
+                  title: 'Counter-Strike',
+                  hours: 100,
+                  heroImage: _heroUrl,
+                ),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(capsuleScrim(), findsOneWidget);
+  });
+
+  testWidgets('MilestoneCard with null hero art renders NO scrim', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MilestoneCard(
+          widget: milestoneWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(appId: 730, title: 'CS', hours: 100),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // "gradient-only capsule is visually unchanged": no scrim without art.
+    expect(capsuleScrim(), findsNothing);
+  });
+
+  testWidgets('PlatformCard renders the envelope hero_image art', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: PlatformCard(
+          widget: _platformWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _heroUrl)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_heroUrl), findsOneWidget);
+  });
+
+  testWidgets('PlatformCard with null hero_image keeps the gradient art box', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: PlatformCard(
+          widget: _platformWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _card(Platform.steam)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationArtBox), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets("Collection curated orbs render each game's cover", (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _collectionWidget('c', const ['730', '570']),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _steamCard(
+            data: steamLibrary(const [
+              LibraryShowcaseEntry(
+                appId: 730,
+                title: 'Counter-Strike',
+                hours: 100,
+                heroImage: _coverA,
+              ),
+              LibraryShowcaseEntry(
+                appId: 570,
+                title: 'Dota 2',
+                hours: 200,
+                heroImage: _coverB,
+              ),
+            ]),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(_artFor(_coverB), findsOneWidget);
+  });
+
+  testWidgets('Collector emblem renders the top-game cover', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _widget(
+            id: 'gc',
+            kind: ProfileWidgetKind.gameCollector,
+            platform: Platform.steam,
+          ),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _steamCard(
+            stats: const [CardStat(key: 'games_owned', value: 300)],
+            data: steamLibrary(const [
+              LibraryShowcaseEntry(appId: 1, title: 'Low', hours: 10),
+              LibraryShowcaseEntry(
+                appId: 2,
+                title: 'Top',
+                hours: 999,
+                heroImage: _coverA,
+              ),
+            ]),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+  });
+
+  testWidgets('Achievement Grid tile renders the perfect-game cover; null '
+      'cover falls back to the letter', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _widget(
+            id: 'cp',
+            kind: ProfileWidgetKind.completionist,
+            platform: Platform.steam,
+          ),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _steamCard(
+            stats: const [CardStat(key: 'games_perfect', value: 2)],
+            data: const SteamCardData(
+              libraryShowcase: [],
+              recentGames: [],
+              perfectShowcase: [
+                PerfectShowcaseEntry(
+                  appId: 1,
+                  title: 'Nier',
+                  heroImage: _coverA,
+                ),
+                PerfectShowcaseEntry(appId: 2, title: 'Ico'),
+              ],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The first entry carries a cover; the second (null cover) keeps its letter.
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(achievementLetterKey('cp', 1)),
+        matching: find.text('I'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('MainCard (Steam) emblem renders the top-game cover', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: _widget(
+            id: 'm',
+            kind: ProfileWidgetKind.main,
+            platform: Platform.steam,
+          ),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(
+                  appId: 1,
+                  title: 'Game 1',
+                  hours: 100,
+                  heroImage: _coverA,
+                ),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+  });
+
+  testWidgets('RankCard renders no art', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RankCard(
+          widget: _widget(
+            id: 'r',
+            kind: ProfileWidgetKind.rank,
+            platform: Platform.leagueOfLegends,
+          ),
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
+        cards: lolRankCards(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // No documented rank-crest art in any payload → the crest is always the
+    // gradient; a future accidental wiring would flip this red.
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byKey(rankBadgeKey('r')), findsOneWidget);
+  });
+
+  testWidgets('art renders through the public (visitor) CardSource', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _collectionWidget('c', const ['730']),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _steamCard(
+            data: steamLibrary(const [
+              LibraryShowcaseEntry(
+                appId: 730,
+                title: 'Counter-Strike',
+                hours: 100,
+                heroImage: _coverA,
+              ),
+            ]),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Owner fetch is always null in the split repo, so a hit proves the art
+    // binds to the injected public source — visitor parity is inherent.
+    expect(_artFor(_coverA), findsOneWidget);
   });
 }

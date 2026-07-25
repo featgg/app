@@ -272,6 +272,7 @@ class PlatformCard extends ConsumerWidget {
         aspectRatio: isFull
             ? PersonalizationLayout.platformArtFullAspect
             : PersonalizationLayout.platformArtHalfAspect,
+        imageUrl: card?.heroImage,
       ),
       stats: _cardStats(
         card,
@@ -325,6 +326,7 @@ class MilestoneCard extends ConsumerWidget {
             ? PersonalizationLayout.capsuleFullAspect
             : PersonalizationLayout.capsuleHalfAspect,
         title: resolved?.title,
+        heroImage: resolved?.heroImage,
         palette: palette,
       ),
       stats: _milestoneStats(resolved, l10n),
@@ -423,6 +425,7 @@ class MainCard extends ConsumerWidget {
             : PersonalizationLayout.mainEmblemHalf,
         title: resolved?.title ?? l10n.personalizationMainTopChampion,
         subtitle: resolved?.subtitle,
+        heroImage: resolved?.heroImage,
         palette: palette,
       ),
       stats: _statsFromResolved(
@@ -468,6 +471,7 @@ class FallbackCard extends ConsumerWidget {
         aspectRatio: isFull
             ? PersonalizationLayout.platformArtFullAspect
             : PersonalizationLayout.platformArtHalfAspect,
+        imageUrl: card?.heroImage,
       ),
       stats: _cardStats(
         card,
@@ -515,6 +519,7 @@ class CollectionCard extends ConsumerWidget {
           child: _CollectionOrb(
             orbKey: collectionOrbKey(widget.id, 0),
             palette: palette,
+            imageUrl: resolved?.heroImage,
           ),
         ),
         stats: _collectorStats(resolved, l10n),
@@ -554,6 +559,7 @@ class CollectionCard extends ConsumerWidget {
                     orbKey: collectionOrbKey(widget.id, i),
                     palette: palette,
                     caption: panels[i].title,
+                    imageUrl: panels[i].heroImage,
                   ),
               ],
       ),
@@ -610,6 +616,7 @@ class AchievementGridCard extends ConsumerWidget {
           tileKey: achievementLetterKey(widget.id, i),
           glyph: glyph,
           palette: palette,
+          imageUrl: entry.heroImage,
         ),
       );
       i++;
@@ -647,11 +654,15 @@ class _CollectionOrb extends StatelessWidget {
     required this.orbKey,
     required this.palette,
     this.caption,
+    this.imageUrl,
   });
 
   final Key orbKey;
   final PersonalizationPalette palette;
   final String? caption;
+
+  /// The game's cover; null → the procedural gradient orb.
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -669,14 +680,24 @@ class _CollectionOrb extends StatelessWidget {
             height: PersonalizationLayout.collectionOrbSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: palette.accent,
-                width: PersonalizationLayout.borderWidth,
-              ),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [palette.artC, palette.artA, palette.artB],
+              ),
+            ),
+            // The accent ring stays visible over a loaded cover.
+            foregroundDecoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: palette.accent,
+                width: PersonalizationLayout.borderWidth,
+              ),
+            ),
+            child: ClipOval(
+              child: personalizationArtOrPlaceholder(
+                imageUrl: imageUrl,
+                placeholder: const SizedBox.expand(),
               ),
             ),
           ),
@@ -709,12 +730,17 @@ class _LetterTile extends StatelessWidget {
     required this.glyph,
     required this.palette,
     this.isMisc = false,
+    this.imageUrl,
   });
 
   final Key tileKey;
   final String glyph;
   final PersonalizationPalette palette;
   final bool isMisc;
+
+  /// The perfect-game's cover; null → the themed letter glyph (misc diamonds
+  /// never carry art).
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -723,22 +749,33 @@ class _LetterTile extends StatelessWidget {
       key: tileKey,
       width: PersonalizationLayout.letterTileSize,
       height: PersonalizationLayout.letterTileSize,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: palette.surface2,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      // The line border stays visible over a loaded cover.
+      foregroundDecoration: BoxDecoration(
         border: Border.all(
           color: palette.line,
           width: PersonalizationLayout.borderWidth,
         ),
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
-      child: Text(
-        glyph,
-        style: (isMisc ? textTheme.labelLarge : textTheme.titleMedium)
-            ?.copyWith(
-              color: isMisc ? palette.muted : palette.accent,
-              fontWeight: AppTypography.bold,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: personalizationArtOrPlaceholder(
+          imageUrl: imageUrl,
+          placeholder: Center(
+            child: Text(
+              glyph,
+              style: (isMisc ? textTheme.labelLarge : textTheme.titleMedium)
+                  ?.copyWith(
+                    color: isMisc ? palette.muted : palette.accent,
+                    fontWeight: AppTypography.bold,
+                  ),
             ),
+          ),
+        ),
       ),
     );
   }
@@ -750,6 +787,7 @@ class _Capsule extends StatelessWidget {
     required this.aspectRatio,
     required this.title,
     required this.palette,
+    this.heroImage,
   });
 
   final Key capsuleKey;
@@ -757,26 +795,41 @@ class _Capsule extends StatelessWidget {
   final String? title;
   final PersonalizationPalette palette;
 
+  /// The showcased game's cover; null → the procedural gradient capsule.
+  final String? heroImage;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final capsuleTitle = title;
+    final art = heroImage;
 
     return AspectRatio(
       key: capsuleKey,
       aspectRatio: aspectRatio,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [palette.artC, palette.artA, palette.artB],
-          ),
-        ),
-        child: capsuleTitle == null
-            ? const SizedBox.shrink()
-            : Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            personalizationArtOrPlaceholder(
+              imageUrl: art,
+              placeholder: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [palette.artC, palette.artA, palette.artB],
+                  ),
+                ),
+              ),
+            ),
+            // Legibility scrim only over real art, so the gradient-only capsule
+            // is visually unchanged.
+            if (art != null)
+              const ColoredBox(color: PersonalizationArtColors.heroScrim),
+            if (capsuleTitle != null)
+              Center(
                 child: Text(
                   capsuleTitle.toUpperCase(),
                   maxLines: 1,
@@ -788,6 +841,8 @@ class _Capsule extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
+        ),
       ),
     );
   }
@@ -803,11 +858,16 @@ class _GradientBadge extends StatelessWidget {
     required this.badgeKey,
     required this.size,
     required this.palette,
+    this.imageUrl,
   });
 
   final Key badgeKey;
   final double size;
   final PersonalizationPalette palette;
+
+  /// The emblem's cover art; null → the procedural gradient badge (Rank always
+  /// passes null — no documented rank-crest art).
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -816,14 +876,25 @@ class _GradientBadge extends StatelessWidget {
     height: size,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(AppRadii.md),
-      border: Border.all(
-        color: palette.line,
-        width: PersonalizationLayout.borderWidth,
-      ),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [palette.artC, palette.artA, palette.artB],
+      ),
+    ),
+    // The line border stays visible over a loaded cover.
+    foregroundDecoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      border: Border.all(
+        color: palette.line,
+        width: PersonalizationLayout.borderWidth,
+      ),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      child: personalizationArtOrPlaceholder(
+        imageUrl: imageUrl,
+        placeholder: const SizedBox.expand(),
       ),
     ),
   );
@@ -894,6 +965,7 @@ class _MainContent extends StatelessWidget {
     required this.title,
     this.subtitle,
     required this.palette,
+    this.heroImage,
   });
 
   final Key emblemKey;
@@ -901,6 +973,9 @@ class _MainContent extends StatelessWidget {
   final String title;
   final String? subtitle;
   final PersonalizationPalette palette;
+
+  /// The Steam top-game cover; null → the procedural gradient emblem.
+  final String? heroImage;
 
   @override
   Widget build(BuildContext context) {
@@ -910,7 +985,12 @@ class _MainContent extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _GradientBadge(badgeKey: emblemKey, size: emblemSize, palette: palette),
+        _GradientBadge(
+          badgeKey: emblemKey,
+          size: emblemSize,
+          palette: palette,
+          imageUrl: heroImage,
+        ),
         const SizedBox(width: AppSpacing.smMd),
         Expanded(
           child: Column(
