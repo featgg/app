@@ -23,7 +23,7 @@ A good profile is ~60–70% aesthetics legitimized by ~30–40% data.
 
 ## 2. Core principles (hard rules)
 
-1. **A card answers one question, with one number and one image.**
+1. **A card answers one question, with one hero number and one image.** Anything else on the card exists only to explain that number (§6.2), never to compete with it.
 2. **A complete datum is number + what it is + what it is about.** With real art, the art carries the subject; without art, the label carries it in full, platform included. A card whose subject cannot be named does not ship.
 3. **One card = one platform.** The platform lives inside the sentence that gives the number meaning, never as a decorative tag. Cross-platform identity emerges from composition and from the profile header (§4), never from merging platform stats inside a card.
 4. **Theme is profile-level.** All cards, background and placeholder art inherit the active theme palette. No per-card colors in v1.
@@ -71,7 +71,9 @@ Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (on
 
 ## 6. Card formats and anatomy
 
-Everything on a profile is a card. Two families: **data cards** answer a question with a number; **visual cards** carry only imagery (the profile header art; screenshots later, §10). The distinction surfaces only in the add catalog (§7); in the layout they behave identically.
+Every card in the catalog is a **data card**: it answers a question with a number. A second family — **visual cards**, which carry imagery and no datum — is deferred until there is something to put in it (screenshots, §10); when it lands, visual cards are placed, paired and moved exactly like data cards, and the distinction surfaces only in the add catalog (§7).
+
+The profile header (§4) is not a card of either family. It is a fixed surface outside the row model.
 
 ### 6.1 The two formats
 
@@ -112,7 +114,7 @@ Card by card:
 
 | Card | Question it answers | Sizes | Origin | Notes |
 |---|---|---|---|---|
-| Main | what I play the most | full, half | curated | the primary game, character or mode on one platform |
+| Main | what I play the most | full, half | auto | the platform's top or primary game, character or mode, derived from published data |
 | Recent | what I am playing lately | set by the registry when the card lands (#229) | auto | the game and its recent playtime |
 | Rank | how good I am | full, half | auto | current standing on one platform; the full variant carries a larger crest |
 | Personal Best | the best I have ever done | full, half | auto | the peak figure with the mode or context it belongs to (#227) |
@@ -128,7 +130,9 @@ Not every platform gets every card: a card is offered only where the data genuin
 
 The registry is the extensibility seam. Each entry declares: the category and question it answers; the sizes it supports (§5); its format (§6.1) and, when framed, its motif; whether its content is auto-derived or owner-curated, and at what scope (account vs activity: per queue, per mode, per character, per minigame); and the availability rule that decides whether it is offered at all.
 
-Adding a card is one registry entry plus its designed variants; the layout, editor and persistence do not change. Implemented today in `lib/src/features/profile/domain/profile_archetype.dart`.
+Adding a card is one registry entry plus its designed variants; the layout, editor and persistence do not change.
+
+Its seam today is `lib/src/features/profile/domain/profile_archetype.dart`, which carries the archetype set, the wire-kind mapping and the supported sizes. The remaining fields above — category, question, format, motif, origin, scope and availability — are declared there as the catalog work lands; until then they live in each card's own code and in the add catalog.
 
 ### 7.2 Platform data and art sources
 
