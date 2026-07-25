@@ -1,7 +1,13 @@
-# Feat.gg Profile Personalization — Specification (v3.1)
+# Feat.gg Profile Personalization — Specification (v4)
 
-> **Status:** Approved. v3.1 incorporates the pre-task audit decisions (2026-07-18). Supersedes v3 and all previous personalization stories/designs (iteration 1 "data tables", iteration 2 "mixed-platform cards", and the span-based grid model).
-> **Normative visual contract:** `mockups/profile-view.html` (layout, hero, themes) and `mockups/layout-editor.html` (editor behavior). When prose and mockup disagree, flag it — do not silently pick one.
+> **Status:** Approved. Supersedes v3.1 and every earlier personalization
+> design. The card model, formats, anatomy and catalog are the decision of
+> record on #220.
+> **Mockups.** `mockups/layout-editor.html` is normative for editor
+> interaction only (§9.1). `mockups/profile-view.html` is a non-normative
+> visual reference, kept for the per-archetype motif vocabulary (§6.1) and the
+> background/theme treatment. Neither is normative for card anatomy. Where
+> prose and a mockup disagree, the prose wins.
 
 ---
 
@@ -17,14 +23,15 @@ A good profile is ~60–70% aesthetics legitimized by ~30–40% data.
 
 ## 2. Core principles (hard rules)
 
-1. **One card = one platform.** Multi-platform identity emerges from profile composition, never from mixing platform *data* inside a card. (The Identity archetype is the sanctioned exception: it shows cross-platform *membership* — which platforms you're on — never merged stats.)
-2. **Never a naked number.** Every stat is anchored to art or a visual grid. Data signs, art moves.
-3. **Theme is profile-level.** All cards, background and placeholder art inherit the active theme palette. No per-card colors in v1.
-4. **Size hierarchy is mandatory.** There is always one dominant hero card. Sizes come from placement, never from user free-resizing (see §5).
-5. **Bounded free text.** Text cards exist but are hard-capped (140 chars) and never dominant. Free-text *editing* is gated on public-text moderation (§10).
-6. **Composition is a contract.** Same proportions, same order, same grouping on every screen size. Only global scale changes. No responsive re-flow of the composition, ever.
+1. **A card answers one question, with one number and one image.**
+2. **A complete datum is number + what it is + what it is about.** With real art, the art carries the subject; without art, the label carries it in full, platform included. A card whose subject cannot be named does not ship.
+3. **One card = one platform.** The platform lives inside the sentence that gives the number meaning, never as a decorative tag. Cross-platform identity emerges from composition and from the profile header (§4), never from merging platform stats inside a card.
+4. **Theme is profile-level.** All cards, background and placeholder art inherit the active theme palette. No per-card colors in v1.
+5. **Hierarchy is mandatory.** Inside a card the hero number dominates; inside the column, full rows dominate pairs. Sizes come from placement (§5), never from user free-resizing.
+6. **Bounded free text.** Text cards exist but are hard-capped (140 chars) and never dominant. Free-text *editing* is gated on public-text moderation (§10).
+7. **Composition is a contract.** Same proportions, same order, same grouping on every screen size. Only global scale changes. No responsive re-flow of the composition, ever.
 
-Anti-patterns: uniform grids with no hierarchy; walls of text as protagonist; backgrounds that don't share a palette with the cards; numbers without art.
+Anti-patterns: uniform grids with no hierarchy; walls of text as protagonist; backgrounds that don't share a palette with the cards; a number whose subject is not named; chrome at the top of a card.
 
 ## 3. Layout system: the fixed center column
 
@@ -34,80 +41,125 @@ Anti-patterns: uniform grids with no hierarchy; walls of text as protagonist; ba
 - No horizontal scrolling under any circumstance.
 - This replaces the legacy 1/2/3-column responsive grid (`maxContentWidth 1200`) entirely.
 
-## 4. Hero Canvas (profile art)
+### 3.1 Column metrics
 
-- Upload standard: **4:5 portrait**. Single asset.
-- Render rule (conditional fit): natural 4:5 height at full column width **unless** it exceeds the viewport budget; then the frame shortens, the art shows fully contained and centered, and the sides fill with the same art blurred (blur-extend).
+These are the values the profile is designed to; the narrowest supported width (320px) is the width §6.2's no-truncation rule is measured at.
 
-```css
-.hero-frame { height: min(78svh, calc((min(600px, 100vw) - 28px) * 1.25)); }
-.hero-blur  { position:absolute; inset:-30px; filter: blur(34px) brightness(.65) saturate(1.2); }
-.hero-art   { height:100%; aspect-ratio:4/5; margin:0 auto; }
-```
+- Column width: `min(600px, 100%)`.
+- Design floor: 320px.
+- Side padding: 14px.
+- Row gap: 14px.
 
-- `svh` on web (URL-bar-proof); `MediaQuery`-computed budget in Flutter.
-- The art is **always shown complete** (contained mode never crops). If any future crop applies, anchor top-center.
-- Profile header above the hero has a fixed max height (~140px) so header + full hero fit the first paint.
-- Backend: a dedicated hero upload + moderation path with **4:5 dimension validation**, rate-limited like the avatar upload; contract coordinated via the integration brief.
+## 4. Profile header
 
-## 5. Card sizes (v3.1 — replaces small/wide/large)
+The header opens the profile and is the answer to "who I am": it carries chosen art, the avatar, the display name, and the marks of the platforms the owner has linked.
+
+- The art is the owner's to choose and change, and it defaults to the best real art already on the profile, so the header is never an empty gradient. Uploading your own art is deferred (§10).
+- The header is a **visual surface, not a data card** (§6): it carries no datum.
+- It is not part of the row model (§9): it cannot be moved, paired or removed.
+- It reads as one designed block at the narrow and wide ends of §3.
+
+## 5. Card sizes
 
 Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (one slot of a pair row).
 
 - **Size is not stored per card.** It derives from placement: card in a `full` row → full variant; card in a `pair` row → half variant. There is no size field in card settings.
 - The legacy `size` token (`small`/`wide`/`large`) and its aspect-ratio mapping (1/1, 2/1, 3/4) are **retired**; remove from settings envelope, pickers, option menus and renderers (extend the legacy-cleanup issue accordingly).
-- Each archetype declares its supported sizes in the **archetype registry**: `[full]`, `[half]`, or `[full, half]`. One designed variant per supported size — fixed anatomy per variant, no free ratios.
+- Each archetype declares its supported sizes in the **archetype registry** (§7.1): `[full]`, `[half]`, or `[full, half]`. One designed variant per supported size — fixed anatomy per variant, no free ratios.
 - An orphan (a `pair` row with one card) renders as a centered half. Designed state, not an error.
-- Focal-point/reframing control for art (#182) survives, re-scoped: per designed variant, not per free size.
+- Art placement within bleed cards (#182) is per designed variant, not per free size.
 
-## 6. Card anatomy (from Steam)
+## 6. Card formats and anatomy
 
-Every card has three zones:
-1. **Title bar** — card title (left) + platform tag (right, accent color).
-2. **Content zone** — art, grid, or visual; the emotional part.
-3. **Stat footer** — 2–4 big numbers with small uppercase labels; the proof part. Optional only for pure-art cards (Hero).
+Everything on a profile is a card. Two families: **data cards** answer a question with a number; **visual cards** carry only imagery (the profile header art; screenshots later, §10). The distinction surfaces only in the add catalog (§7); in the layout they behave identically.
 
-## 7. Card taxonomy
+### 6.1 The two formats
 
-Three axes classify every card: **Archetype** (which question it answers), **Scope** (account vs activity: GW2 account/fractals/PvP/WvW/raids; LoL account/queue/champion; Chess time control; Hypixel network/minigame; WoW character/activity; Steam & Retro account/game), **Origin** (data-driven vs user-curated; auto-computed vs user-selected).
+- **Bleed** — real art fills the card edge to edge; a short bottom gradient plus a text shadow guarantees legibility over light art; the datum sits bottom-left, over the art. The designed variant accommodates the art's orientation; placement within the frame is per variant (#182).
+- **Framed** — no art; the archetype's own motif fills the card; the datum sits in its own band; a single line closes the card at the bottom; no side or top borders.
+- **Nothing sits at the top of any card**: no card title, no platform tag, no date.
+- Format is a registry property (§7.1), not per-card special-casing: bleed when real art exists for the card's subject (§7.2), framed otherwise.
+- A generic gradient is not an acceptable motif — each archetype gets its own. The shipped visual vocabulary (crest, emblem, game capsule, orb shelf, letter tiles) is the starting point; `mockups/profile-view.html` is the non-normative reference for it.
 
-### Archetype catalog (v1)
+### 6.2 Anatomy rules
 
-| Archetype | Question | Sizes | Origin | Notes |
+- The datum block occupies ~13% of a full card and ~18% of a half card, scaling with the card's real width.
+- Half cards carry exactly one datum, with its subject. Nothing else.
+- Full cards carry at most two supporting stats, placed to the right of the hero number, and only when they explain it.
+- The hero number uses tabular figures so values do not reflow the layout as they change; labels are uppercase with wide tracking and a floor of 11pt (the `tag` size in `docs/design-system.md` § 6).
+- Values are formatted compactly so a number is never truncated at the narrowest supported width (§3.1).
+- Where a datum has no possible visual subject (a whole library, a lifetime count), the number itself becomes the graphic and centres.
+
+### 6.3 Empty, unavailable and stale states
+
+- A card whose subject cannot be named does not ship (§2, rule 2).
+- A card the owner has not filled, or one whose platform cannot support it, renders as an owner-only placeholder and is hidden from visitors (the behavior `docs/integration/personalization.md` § `type` already describes for a showcase bound to an unsupported platform).
+- A visitor never sees stale platform data presented as current; the composed render applies the same freshness rule the platform card render applies. How staleness reads visually — withheld or marked — is settled by #232.
+
+## 7. Card catalog
+
+Cards are grouped by the question they answer, never by platform. The category order drives three things at once: the add catalog's groups, a fresh composition's default order, and how a profile reads top to bottom.
+
+| Category | Question | Cards |
+|---|---|---|
+| Who I am | Who are you across games? | the profile header (§4); Text Note when it lands (§10) |
+| What I play | Where does your time go? | Main · Recent |
+| How good I am | How good are you? | Rank · Personal Best |
+| What I achieved | What did you accomplish? | Milestone · Achievement shelf · Rarest Achievement |
+| What I own | What did you build up? | Collection · Collector |
+
+Card by card:
+
+| Card | Question it answers | Sizes | Origin | Notes |
 |---|---|---|---|---|
-| Hero Canvas | "who am I" | full | curated upload (image/GIF) | 4:5; defines profile vibe; moderation applies |
-| Identity | "where am I" | full | auto (linked platforms) | cross-platform *membership* collage + platform chips; evolves the shipped Passport card into v3 anatomy/theme |
-| Rank | "how good am I" | full, half | auto | crest/piece visual + rating; per-scope; full variant = larger crest + wider stat cap, half unchanged |
-| Main / Favorite | "what defines me" | full, half | curated | character/spec/game hero with emblem art |
-| Milestone | "what did I conquer" | full, half | curated pick, auto data | game capsule + progress + medal; full variant = wider capsule; evolves the shipped Showcase card |
-| Collection | "what do I own/chase" | full | curated | item/game panels with progress states; evolves the shipped Collection & Game Collector cards (Collector = variant) |
-| Achievement Grid | "achievement flex" | full | curated icons, auto stats | letter-tile typography pattern + completion stats; the shipped Completionist card maps here as a variant |
-| Text Note | "one line about me" | full, half | curated | ≤140 chars, muted styling; **editing gated on public-text moderation** (§10) — renders from seed/empty until then |
+| Main | what I play the most | full, half | curated | the primary game, character or mode on one platform |
+| Recent | what I am playing lately | set by the registry when the card lands (#229) | auto | the game and its recent playtime |
+| Rank | how good I am | full, half | auto | current standing on one platform; the full variant carries a larger crest |
+| Personal Best | the best I have ever done | full, half | auto | the peak figure with the mode or context it belongs to (#227) |
+| Milestone | what I conquered | full, half | curated pick, auto data | one chosen game's progress |
+| Achievement shelf | how much I completed | full | auto | whole-library completion |
+| Rarest Achievement | the hardest thing I have done | set by the registry when the card lands (#231) | auto | the achievement, its game and how rare it is |
+| Collection | what I own or chase | full | curated | a chosen set of games with progress states |
+| Collector | how big my library is | full | auto | one platform's whole library aggregated |
 
-### Legacy card mapping (maximize reuse; art infra — scrim, on-art color, tint — carries over)
+Not every platform gets every card: a card is offered only where the data genuinely supports it. Per-card availability is declared in the registry (§7.1) and enforced by the add catalog's availability rules. This document does not enumerate a card × platform matrix — the registry owns it, and an enumeration in prose would be stale within a story.
 
-| Shipped card | v3 destination |
-|---|---|
-| showcase | Milestone (basis of the archetype) |
-| collection | Collection |
-| game_collector | Collection, "Collector" variant |
-| completionist | Achievement Grid, "Completionist" variant |
-| passport | Identity |
-| platform / template / composed / data_menu | retired (legacy cleanup issue) |
+### 7.1 The archetype registry
 
-Exact variant naming is planner latitude **within the registry**; the registry must make adding a new archetype/variant cheap (extensibility is a priority).
+The registry is the extensibility seam. Each entry declares: the category and question it answers; the sizes it supports (§5); its format (§6.1) and, when framed, its motif; whether its content is auto-derived or owner-curated, and at what scope (account vs activity: per queue, per mode, per character, per minigame); and the availability rule that decides whether it is offered at all.
 
-### Platform → data & canonical art sources
+Adding a card is one registry entry plus its designed variants; the layout, editor and persistence do not change. Implemented today in `lib/src/features/profile/domain/profile_archetype.dart`.
+
+### 7.2 Platform data and art sources
+
+This table is what decides bleed vs framed (§6.1): where a platform publishes real art for a card's subject, that card is bleed.
 
 | Platform | Key data | Canonical art source |
 |---|---|---|
-| GW2 | AP, masteries, wallet, legendary armory, PvP/WvW ranks, fractal tier, raid clears, titles | official render service (item/skin icons), spec art; bespoke vector art issue applies |
+| GW2 | AP, masteries, wallet, legendary armory, PvP/WvW ranks, fractal tier, raid clears, titles | official render service (item/skin icons), spec art |
 | LoL | rank per queue, champion mastery | Data Dragon splash arts & portraits |
 | WoW | ilvl, spec, mounts, pets, raid/M+ progress | armory character render + media API |
-| Chess.com | rating per mode, puzzles, W/L/D | none — Feat.gg original piece art (bespoke vector issue) |
+| Chess.com | rating per mode, puzzles, W/L/D | none — framed format (§6.1) |
 | Hypixel | Bedwars (beds, stars, FKDR), network level | Minecraft skin render + Feat.gg minigame icons |
 | RetroAchievements | points, mastered games | retro box art + achievement badges |
 | Steam | games, hours, perfect games, level, achievements | store capsules/headers CDN + achievement icons |
+
+The table lists sources, not per-card guarantees; per-card availability is the registry's (§7.1).
+
+### 7.3 Wire kinds → catalog
+
+| Wire kind | Catalog card |
+|---|---|
+| `showcase` | Milestone |
+| `collection` | Collection |
+| `game_collector` | Collector |
+| `completionist` | Achievement shelf |
+| `rank` | Rank |
+| `main` | Main |
+
+`platform`, `template`, `composed_card`, `data_menu` and `passport` map to no card and are retired by #173 (identity is the profile header, §4).
+
+A new card lands with its own kind, added to the personalization brief; `docs/integration/personalization.md` is the only place a wire contract is written.
 
 ## 8. Theme system
 
@@ -123,7 +175,7 @@ Exact variant naming is planner latitude **within the registry**; the registry m
    --surface2:#1C1C24; --line:#26262F; --text:#EFEFF2; --muted:#96969F; */
 ```
 
-- Mandatory inheritance: card accents, tags, stat highlights, progress bars, background art, placeholder art all read theme tokens; switching re-tints the whole profile live.
+- Mandatory inheritance: card accents, datum highlights, motifs, progress bars, background art and placeholder art all read theme tokens; switching re-tints the whole profile live.
 - **The closed set (8 themes).** `theme_id` is one of these lowercase-ascii tokens, rendered in this order (default/brand first, then warm→cool). Each is built to the same recipe: `--art-a` = the bright accent, `--art-b` = a mid tone, `--art-c` = a deep tone, `--accent-soft` = the accent at ~16% alpha.
 
   | id | accent | art-b | art-c |
@@ -150,13 +202,13 @@ Exact variant naming is planner latitude **within the registry**; the registry m
   | arcane | ≈ 4.3:1 | pass | brand baseline |
   | rose | ≈ 5.7:1 | pass | pass |
 
-- **Migration note:** an earlier profile theme field carried a different closed list (`classic|immersive|retro|analyst`, stored but visually inert). Migrate to this list; those rows remap to `crimson`; unknown values fall back to `crimson` on read.
+- **Legacy theme values:** an earlier profile theme field carried a different closed list (`classic|immersive|retro|analyst`, stored but visually inert). Those rows remap to `crimson`; unknown values fall back to `crimson` on read.
 - Typography: Space Grotesk (display/numbers) + Inter (body/labels). Dark-first only in v1.
 - Placeholder-art rule: bottom paint layer is a **solid mid-tone** (`--art-b`), never a gradient that can fall to black.
 
-## 9. Row-based layout model
+## 9. Layout persistence and the composition editor
 
-**The row is the object, not the card.** The profile layout is an ordered list of rows, persisted as JSON (new column; the legacy integer `position` + parking reorder is retired).
+**The row is the object, not the card.** The profile layout is an ordered list of rows (persisted as an ordered JSON array of rows; the legacy integer `position` and its parking reorder are retired).
 
 ```ts
 type Row =
@@ -171,7 +223,7 @@ Invariants (these delete the legacy layout bugs by construction):
 - Orphan pair → single half card, centered.
 - Mutations are local: at most origin row + destination row change.
 - Size is a consequence of placement (§5); the editor only offers legal placements per the archetype registry.
-- Server-side validation required (row shape, known card ids, each card at most once, size supported by archetype). The current direct-write model cannot express this, so it points to a new validated write path — mechanism decided at planning, coordinated via the integration brief.
+- The layout is written through the owner-scoped layout write operation documented in `docs/integration/personalization.md` § Layout write (composition editor), which validates row shape, cell counts, ownership and uniqueness. Per-archetype size support is **not** server-validated — the client offers only legal placements (§7.1).
 
 ### 9.1 Editor interaction (edit mode)
 
@@ -185,23 +237,22 @@ Single-gesture model: **size and position are one decision** — where you drop 
 - Validity: both cards must support `half`; a full pair accepts no third card; full-only archetypes accept no side-drops. Invalid zones never light up.
 - **Discoverability:** on lift, every valid pair destination glows (dashed accent outline) — the system explains itself at the moment of need. One-time tooltip optional.
 - Complementary **⇆ size toggle** on dual-size archetypes: full → orphan half in place; half → new full row inserted after the origin row, ex-partner stays centered orphan.
-- Reference implementation: `mockups/layout-editor.html` — its mutations (`removeCard`, `insertAsRow`, `pairWith`, `toggleSize`) and drop-zone semantics are normative. Port the behavior, not the code.
+- `mockups/layout-editor.html` is normative for editor interaction — its mutations (`removeCard`, `insertAsRow`, `pairWith`, `toggleSize`) and drop-zone semantics — and for nothing else. Port the behavior, not the code. Drag ergonomics work is #208.
 
-## 10. Deferred (explicitly out of v1, each with its own issue)
+## 10. Deferred
 
-- **Media archetype** (user-uploaded screenshot galleries, 1 big + 3 small): requires a multi-image upload/moderation/storage pipeline no story covers. Reuses the hero pipeline when taken.
-- **Recap / "Feat Replay"** (monthly wrapped card): requires historical aggregation (monthly stat snapshots) that does not exist. Own epic post-v1; high retention value, not a launch blocker.
-- **Public-text moderation** (unblocks Text Note *editing*; one policy for note + display_name + bio, reusing the existing moderation provider seam with text input): lands together with the future card-content-editing story, not with Stories 1–3.
-- Per-platform premium card art; user-derived palettes; multi-asset hero; animated backgrounds.
+Out of v1 — deferred, not rejected, except where a line says otherwise.
+
+- **Media** — a visual-card family (user-uploaded screenshot galleries, 1 big + 3 small): requires a multi-image upload/moderation/storage pipeline no story covers (#198).
+- **Recap / "Feat Replay"** (monthly wrapped card): requires historical aggregation (monthly stat snapshots) that does not exist. Own epic post-V1; high retention value, not a launch blocker.
+- **Public-text moderation** — unblocks Text Note *editing*; one policy for note + display_name + bio, reusing the existing moderation provider seam with text input (#199).
+- Uploading your own header art (choosing among the art the profile already carries is part of the header, §4).
+- **Motion** — there is none today, and adding it is post-V1 polish.
+- Per-platform premium card art; user-derived palettes; multi-asset header art; animated backgrounds.
 - 3+ column layouts, vertical spans, free grid — **explicitly rejected**.
 
 ## 11. Rollout
 
-Pre-task (investigation): **done 2026-07-18** — audit informed this v3.1.
+The sequencing rule is fixed: the visual regression net lands first (#222), then presentation quality (formats #223, datum rules #224, profile header #225, catalog categories #226), then new vocabulary (#227, #229, #231 and their siblings), then polish and cleanup (#232, #208, #182, #191, #173).
 
-Three demo-able stories, strictly ordered, each mergeable alone:
-1. **Profile render (read-only)** — column, rows, archetypes+variants (full/half), hero, anatomy, seed data, layout read path. See #195.
-2. **Theme system** — curated themes + full inheritance + migration from the legacy theme list. See #196.
-3. **Composition editor** — edit mode, drag & drop, ⇆ toggle, validated persistence. See #197.
-
-Legacy cleanup (retired cards, size token, span grid, parking reorder) rides the extended cleanup issue, sequenced with Story 1.
+This document describes the target; until a story lands, the surface it replaces still ships. The live, checkable story list is the epic (#20).
