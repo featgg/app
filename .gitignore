@@ -85,6 +85,9 @@ env.*.json
 *.p12
 *.pfx
 
+# Golden comparison output (written by the test runner on a mismatch)
+test/**/failures/
+
 # AI agent pipeline run artifacts (local notes, never committed)
 .ai/runs/**
 

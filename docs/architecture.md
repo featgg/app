@@ -195,9 +195,21 @@ The goal is to cover the most probable failure points, not to maximize line cove
 3. **Mutation controllers (presentation)** — `AsyncNotifier`s that carry mutation logic, tested with `ProviderContainer`/`ProviderScope` overrides that inject fakes. Read-only passthrough providers are not worth testing.
 4. **Widget tests (presentation)** — assert that each `AsyncValue` state renders correctly (loading, error, data). These catch UI-state regressions.
 
-This is not "four tests per feature": a given feature may have tests in only one or two of these layers. **Golden tests are deferred** (fragile across platforms and fonts, high maintenance) and are not a gate; they may later cover a small set of stable design-system components. **Integration tests are not run as a suite** (slow and brittle for a solo developer); at most a single end-to-end test for one critical flow may be added if that flow proves regression-prone.
+This is not "four tests per feature": a given feature may have tests in only one or two of these layers. **Integration tests are not run as a suite** (slow and brittle for a solo developer); at most a single end-to-end test for one critical flow may be added if that flow proves regression-prone.
 
 Mocking uses `mocktail` (no code generation), to be added to dev dependencies. Riverpod is tested with `ProviderContainer` from the framework — no `bloc_test`-style package is required. The pull-request gate is qualitative, not a percentage: when a repository implementation is created or changed, it lands with its mapping and error tests.
+
+### Golden tests
+
+Golden tests are a gate, bounded to the surface where a pixel regression is the failure that matters: the personalization card catalog at the narrowest supported width on the default palette, plus two whole-profile compositions bracketing the column's width range. Everything else — other themes, other widths, other features — stays out; a width × theme × card matrix buys little over the structural assertions already covering palette wiring, and every reference is a committed binary.
+
+Three properties keep them from becoming the maintenance sink the fragility reputation is earned on:
+
+- **They run in CI only.** The references are rendered on the Linux runner; a `golden` tag excludes them from every local run (`AGENTS.md` § Commands). Two platforms do not rasterise identically, and maintaining one reference set per platform is where golden suites usually die.
+- **They render a committed test-only font.** It lives under `test/golden/fonts/` with its licence and provenance, is never declared as an app asset, and never reaches a build. Without it every glyph draws as a filled box and a reference over number-led cards proves nothing.
+- **The Flutter version is pinned** (`pubspec.yaml`), so a reference only moves when someone deliberately changes a card or the SDK.
+
+**Refreshing references.** Push to a `goldens/**` branch (or run `goldens.yml` via `workflow_dispatch`), then download the `goldens` artifact and commit its contents to `test/golden/goldens/`. A refresh is valid only when the visual change was intended and a human has looked at the new images. Making a red golden green by refreshing it, widening a tolerance, or deleting the test is bending the harness to silence a real signal — the regression it hides is exactly what the suite exists to catch.
 
 ## Observability — crash reporting and analytics
 

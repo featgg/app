@@ -1,0 +1,3 @@
+# Golden references are rendered on Linux by CI; local runs exclude this tag.
+tags:
+  golden:

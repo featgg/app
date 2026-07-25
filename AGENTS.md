@@ -66,8 +66,10 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 dart format --output=none --set-exit-if-changed .
 flutter analyze
-flutter test
+flutter test --exclude-tags golden
 ```
+
+Golden references are rendered by CI on Linux; running them on a developer machine produces false failures, so the local sequence excludes them. CI runs the bare `flutter test` and the goldens gate there.
 
 Run exactly what the plan's "Verification commands" section lists for your stage — no more, no less. Plans scope the Stage-2 `flutter test` to the suites the change touches; the full suite runs once, at Stage 3.
 
@@ -80,6 +82,8 @@ Tests accompany behavior changes; pick the lowest level that proves the behavior
 Each plan declares `testing_policy`: `none`, `existing`, or `required`. Default by work type: documentation/research → `none`; fix/feature → `required`. Tests assert what the spec requires, not what the code currently does.
 
 Tests never assert hard-coded user-facing or localized copy. A translated string is owned by its ARB file and edited freely; assert against the l10n key or structural behavior (a locale resolves, two locales differ, a value is non-empty) — never a literal translation. A copy edit must never break a test.
+
+The single exception is a golden reference, which captures rendered pixels and therefore captures whatever copy the covered widget draws. An ARB edit that changes text on a covered surface requires a deliberate reference refresh. This never licenses asserting a literal string anywhere, and it applies only to reference images — no other test may be justified by it.
 
 **Green tests prove logic, not integration.** Unit and widget tests run against fakes (hand-rolled SDK/repository/picker/data-source fakes), below the real integration boundary — they exercise neither a deployed backend endpoint, the client SDK against a live service, nor device/platform capabilities (camera, image codecs, file pickers, permissions, deep links). A feature whose behavior depends on any of those is **not "working" or "done" on green tests + `analyze` alone** — that only means its logic is sound. Claiming such a path works requires a real run on a target device/platform against the deployed backend; absent that, it ships explicitly marked "not integration-validated; blocked on `<dependency>`". No agent, report, or summary claims a backend-, SDK-, or device-dependent path "works" on the strength of green fakes — and a plan that depends on a backend surface must name the deploy/provisioning prerequisite in its smoke test, not assume it.
 
