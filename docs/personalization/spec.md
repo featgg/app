@@ -5,8 +5,8 @@
 > record on #220.
 > **Mockups.** `mockups/layout-editor.html` is normative for editor
 > interaction only (§9.1). `mockups/profile-view.html` is a non-normative
-> visual reference, kept for the per-archetype motif vocabulary (§6.1) and the
-> background/theme treatment. Neither is normative for card anatomy. Where
+> visual reference, kept for the background/theme treatment. Neither is
+> normative for card anatomy. Where
 > prose and a mockup disagree, the prose wins.
 
 ---
@@ -78,10 +78,10 @@ The profile header (§4) is not a card of either family. It is a fixed surface o
 ### 6.1 The two formats
 
 - **Bleed** — real art fills the card edge to edge; a short bottom gradient plus a text shadow guarantees legibility over light art; the datum sits bottom-left, over the art. The designed variant accommodates the art's orientation; placement within the frame is per variant (#182).
-- **Framed** — no art; the archetype's own motif fills the card; the datum sits in its own band; a single line closes the card at the bottom; no side or top borders.
+- **Framed** — no art; the theme's own vertical fill grounds the card, with nothing drawn over it; the datum sits in its own band; a single line closes the card at the bottom; no side or top borders.
 - **Nothing sits at the top of any card**: no card title, no platform tag, no date.
 - Format is a registry property (§7.1), not per-card special-casing: bleed when real art exists for the card's subject (§7.2), framed otherwise.
-- A generic gradient is not an acceptable motif — each archetype gets its own. The shipped visual vocabulary (crest, emblem, game capsule, orb shelf, letter tiles) is the starting point; `mockups/profile-view.html` is the non-normative reference for it.
+- A framed card's ground carries no drawn figure — it is the theme's own vertical fill and nothing else, closing on the solid mid-tone §11 requires. Per-archetype motifs were tried and withdrawn: the shipped vocabulary repeated the shape of the content it sat behind — circles behind the orb shelf, tiles behind the letter shelf — so the two read as a collision rather than as texture. Giving each archetype its own character is still the goal and is taken up with the art work; until then a card earns its distinctiveness from its content, not from its background.
 
 ### 6.2 Anatomy rules
 
@@ -128,11 +128,11 @@ Not every platform gets every card: a card is offered only where the data genuin
 
 ### 7.1 The archetype registry
 
-The registry is the extensibility seam. Each entry declares: the category and question it answers; the sizes it supports (§5); its format (§6.1) and, when framed, its motif; whether its content is auto-derived or owner-curated, and at what scope (account vs activity: per queue, per mode, per character, per minigame); and the availability rule that decides whether it is offered at all.
+The registry is the extensibility seam. Each entry declares: the category and question it answers; the sizes it supports (§5); its format (§6.1); whether its content is auto-derived or owner-curated, and at what scope (account vs activity: per queue, per mode, per character, per minigame); and the availability rule that decides whether it is offered at all.
 
 Adding a card is one registry entry plus its designed variants; the layout, editor and persistence do not change.
 
-Its seam today is `lib/src/features/profile/domain/profile_archetype.dart`, which carries the archetype set, the wire-kind mapping and the supported sizes. The remaining fields above — category, question, format, motif, origin, scope and availability — are declared there as the catalog work lands; until then they live in each card's own code and in the add catalog.
+Its seam today is `lib/src/features/profile/domain/profile_archetype.dart`, which carries the archetype set, the wire-kind mapping and the supported sizes. The remaining fields above — category, question, format, origin, scope and availability — are declared there as the catalog work lands; until then they live in each card's own code and in the add catalog.
 
 ### 7.2 Platform data and art sources
 
@@ -179,7 +179,7 @@ A new card lands with its own kind, added to the personalization brief; `docs/in
    --surface2:#1C1C24; --line:#26262F; --text:#EFEFF2; --muted:#96969F; */
 ```
 
-- Mandatory inheritance: card accents, datum highlights, motifs, progress bars, background art and placeholder art all read theme tokens; switching re-tints the whole profile live.
+- Mandatory inheritance: card accents, datum highlights, card grounds, progress bars, background art and placeholder art all read theme tokens; switching re-tints the whole profile live.
 - **The closed set (8 themes).** `theme_id` is one of these lowercase-ascii tokens, rendered in this order (default/brand first, then warm→cool). Each is built to the same recipe: `--art-a` = the bright accent, `--art-b` = a mid tone, `--art-c` = a deep tone, `--accent-soft` = the accent at ~16% alpha.
 
   | id | accent | art-b | art-c |

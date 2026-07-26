@@ -40,21 +40,8 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
 
 /// Which chassis an archetype is designed for. [bleed] fills the card with the
 /// subject's real art and lays the datum over it; [framed] fills the card with
-/// the archetype's own drawn motif and gives the datum its own band.
+/// the theme's own ground and gives the datum its own band.
 enum ProfileCardFormat { bleed, framed }
-
-/// The drawn motif that fills a framed card. Each archetype declares its own —
-/// a shared gradient would make two different cards read as the same card.
-enum ProfileMotif {
-  chips,
-  bars,
-  capsule,
-  crest,
-  emblem,
-  orbShelf,
-  letterTiles,
-  hatch,
-}
 
 /// The format [a] is designed for: bleed where the platform publishes real art
 /// for the card's subject, framed where no art source exists for it.
@@ -75,18 +62,6 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   ProfileArchetype.achievementGrid => ProfileCardFormat.framed,
   // Falls back to the card envelope's hero image when the kind carries one.
   ProfileArchetype.fallback => ProfileCardFormat.bleed,
-};
-
-/// The motif [a] draws when it renders framed.
-ProfileMotif cardMotif(ProfileArchetype a) => switch (a) {
-  ProfileArchetype.identity => ProfileMotif.chips,
-  ProfileArchetype.platform => ProfileMotif.bars,
-  ProfileArchetype.milestone => ProfileMotif.capsule,
-  ProfileArchetype.rank => ProfileMotif.crest,
-  ProfileArchetype.main => ProfileMotif.emblem,
-  ProfileArchetype.collection => ProfileMotif.orbShelf,
-  ProfileArchetype.achievementGrid => ProfileMotif.letterTiles,
-  ProfileArchetype.fallback => ProfileMotif.hatch,
 };
 
 /// The format a card actually renders in: the format [a] is designed for,

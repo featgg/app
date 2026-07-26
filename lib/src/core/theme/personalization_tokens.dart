@@ -257,13 +257,30 @@ abstract final class PersonalizationLayout {
   static const double cardFullAspect = 3 / 2;
   static const double cardHalfAspect = 4 / 5;
 
-  /// Motif line weight — heavier than a hairline so the drawn shape reads as a
-  /// motif rather than as a border.
-  static const double motifStrokeWidth = 2;
+  /// Datum type sizes, each a fraction of the card's rendered height. A card is
+  /// a fraction of the page it sits on, so its band is sized from the card
+  /// rather than from the page's own type scale.
+  static const double datumValueFactor = 0.075;
+  static const double datumSubjectFactor = 0.058;
+  static const double datumLabelFactor = 0.042;
 
-  /// How many orbs the Collection shelf draws. The datum keeps the true count;
-  /// the shelf is a motif, and an uncapped shelf clips inside a card whose
-  /// height is a function of its width.
+  /// Bounds on those derived sizes: a card in an extreme slot must not read as
+  /// a heading at one end, and holds the 11pt label floor at the other.
+  static const double datumValueMin = 13;
+  static const double datumValueMax = 20;
+  static const double datumSubjectMin = 11;
+  static const double datumSubjectMax = 15;
+  static const double datumLabelMin = 11;
+  static const double datumLabelMax = 13;
+
+  /// Datum line height, tighter than the default. Once the label floor binds,
+  /// leading rather than type size is what keeps the band from taking a share
+  /// of the card its content does not need.
+  static const double datumLeading = 1.15;
+
+  /// How many orbs the Collection shelf draws. The datum keeps the true count,
+  /// and an uncapped shelf clips inside a card whose height is a function of
+  /// its width.
   static const int collectionOrbCap = 3;
 
   /// Collection orb diameter (mockup `.leg .orb` 50px) and the width of the cell

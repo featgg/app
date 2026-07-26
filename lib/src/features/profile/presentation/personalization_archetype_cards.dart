@@ -160,7 +160,7 @@ class IdentityCard extends ConsumerWidget {
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.identity,
       size: ProfileCardSize.full,
-      motifContent: Wrap(
+      framedContent: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         children: [
@@ -473,7 +473,7 @@ class CollectionCard extends ConsumerWidget {
         key: personalizationCardKey(widget.id),
         archetype: ProfileArchetype.collection,
         size: ProfileCardSize.full,
-        motifContent: Center(
+        framedContent: Center(
           child: _CollectionOrb(
             orbKey: collectionOrbKey(widget.id, 0),
             palette: palette,
@@ -501,7 +501,7 @@ class CollectionCard extends ConsumerWidget {
       archetype: ProfileArchetype.collection,
       size: ProfileCardSize.full,
       subject: title,
-      motifContent: Center(
+      framedContent: Center(
         child: Wrap(
           alignment: WrapAlignment.center,
           spacing: AppSpacing.smMd,
@@ -599,7 +599,7 @@ class AchievementGridCard extends ConsumerWidget {
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.achievementGrid,
       size: ProfileCardSize.full,
-      motifContent: Center(
+      framedContent: Center(
         child: Wrap(
           alignment: WrapAlignment.center,
           spacing: AppSpacing.sm,
