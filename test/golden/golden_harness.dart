@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -92,6 +93,35 @@ Future<void> loadGoldenFonts() async {
   final loader = FontLoader(goldenFontFamily);
   final bytes = await file.readAsBytes();
   loader.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
+  await loader.load();
+  await _loadBundledFont(_iconFontFamily);
+}
+
+/// Family the icon glyphs come from. Cards draw their empty-state motifs from
+/// it, and an unregistered icon font rasterises every one of them as the same
+/// blank box — a reference that freezes the absence of the motif it exists to
+/// cover.
+const _iconFontFamily = 'MaterialIcons';
+
+/// Registers a family the asset bundle already carries. `flutter test` builds
+/// the bundle the app ships, so this is the same file the device draws from —
+/// unlike the text font, nothing is committed for it.
+Future<void> _loadBundledFont(String family) async {
+  final manifest =
+      json.decode(await rootBundle.loadString('FontManifest.json'))
+          as List<dynamic>;
+  final entry = manifest.cast<Map<String, dynamic>>().firstWhere(
+    (candidate) => candidate['family'] == family,
+    orElse: () => throw StateError(
+      'No "$family" family in FontManifest.json. Icon motifs would render as '
+      'blank boxes in every reference image.',
+    ),
+  );
+  final loader = FontLoader(family);
+  for (final asset
+      in (entry['fonts'] as List<dynamic>).cast<Map<String, dynamic>>()) {
+    loader.addFont(rootBundle.load(asset['asset'] as String));
+  }
   await loader.load();
 }
 
