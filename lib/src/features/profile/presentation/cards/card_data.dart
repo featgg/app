@@ -234,19 +234,30 @@ String? cardStatLabel(AppLocalizations l10n, String key) => switch (key) {
 };
 
 /// Whether [key] needs its platform named beside it. Jargon belonging to one
-/// platform already names it — a reader seeing Bed Wars knows where it is from,
-/// where hours could be anyone's. Naming it anyway would cost the width the
-/// noun needs.
+/// Whether [key] carries its platform. Naming it is the rule, because a card
+/// with no art has nothing else that can: an unnamed number leaves a reader
+/// guessing which account it came from. The exceptions are the handful whose
+/// noun is long enough that the platform would not fit beside it — and those
+/// are the ones that need it least, being jargon a single platform owns. Bed
+/// Wars, Puzzle Rush and Summoner name their own; hours could be anyone's.
 bool cardStatNeedsPlatform(String key) => const {
   'rating',
   'games_owned',
   'hours_played',
+  'network_level',
+  'karma',
   'achievement_points',
   'total_achievement_points',
   'retro_rank',
   'completion_pct',
+  'rank_lp',
   'winrate',
+  'mastery_points',
+  'item_level',
+  'mythic_plus_rating',
   'followers',
+  'wvw_rank',
+  'total_ap',
   'account_age_hours',
 }.contains(key);
 

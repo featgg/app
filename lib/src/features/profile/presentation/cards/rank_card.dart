@@ -53,19 +53,20 @@ class RankCard extends ConsumerWidget {
     // platform's own name does the naming.
     final tier = resolved?.heading;
     final scope = resolved?.scope;
-    final fallbackLabel = shortName == null
-        ? l10n.personalizationStatRank
-        : '$shortName ${l10n.personalizationStatRank}';
+    // The scope narrows the platform rather than replacing it: a Chess rating
+    // labelled only RAPID says which mode and not which game. Both, or the
+    // platform with the generic noun where the payload publishes no scope.
+    final heroLabel = [
+      ?shortName,
+      scope ?? l10n.personalizationStatRank,
+    ].join(' ');
     final PersonalizationStat? hero;
     final List<PersonalizationStat> supporting;
     if (tier != null) {
-      hero = PersonalizationStat(value: tier, label: scope ?? fallbackLabel);
+      hero = PersonalizationStat(value: tier, label: heroLabel);
       supporting = stats;
     } else if (stats.isNotEmpty) {
-      hero = PersonalizationStat(
-        value: stats.first.value,
-        label: scope ?? fallbackLabel,
-      );
+      hero = PersonalizationStat(value: stats.first.value, label: heroLabel);
       supporting = stats.skip(1).toList();
     } else {
       hero = null;

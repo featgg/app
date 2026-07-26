@@ -63,13 +63,20 @@ void main() {
     // still fit. Every platform, not the longest — a card is written per
     // platform and any one of them overflowing is a truncated label on someone's
     // profile.
+    //
+    // The noun is read from the localizations rather than written here: a word
+    // spelled into a test measures itself, and stops measuring the copy a card
+    // renders the moment either one changes.
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    final noun = cardStatLabel(l10n, 'hours_played')!;
+
     for (final descriptor in platformDescriptors.values) {
-      final width = _labelWidth('${descriptor.shortName} hours');
+      final width = _labelWidth('${descriptor.shortName} $noun');
       expect(
         width,
         lessThanOrEqualTo(_labelBudget),
         reason:
-            '"${descriptor.shortName} hours" needs '
+            '"${descriptor.shortName} $noun" needs '
             '${width.toStringAsFixed(1)}pt of '
             '${_labelBudget.toStringAsFixed(1)}pt',
       );
@@ -151,12 +158,14 @@ void main() {
     // nothing. Not every brand name overflows — Chess.com fits as it is — so
     // the claim is that the longest one does, which is what made a shorter
     // vocabulary necessary rather than tidy.
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    final noun = cardStatLabel(l10n, 'hours_played')!;
     final longest = platformDescriptors.values
         .map((descriptor) => descriptor.displayName)
         .reduce((a, b) => _labelWidth(a) >= _labelWidth(b) ? a : b);
 
     expect(
-      _labelWidth('$longest hours'),
+      _labelWidth('$longest $noun'),
       greaterThan(_labelBudget),
       reason: '$longest fit after all',
     );

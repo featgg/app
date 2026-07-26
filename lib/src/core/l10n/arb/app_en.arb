@@ -1504,7 +1504,7 @@
   "@cardStatSummonerLevel": {
     "description": "Card datum label for the summonerLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
   },
-  "cardStatItemLevel": "Item level",
+  "cardStatItemLevel": "iLvl",
   "@cardStatItemLevel": {
     "description": "Card datum label for the itemLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
   },
