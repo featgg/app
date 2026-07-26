@@ -96,18 +96,21 @@ const _coverB = 'https://cdn.test/cover-b.jpg';
 Finder _artFor(String url) =>
     find.byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url);
 
-/// The motif a card is painting, read off the painter so the assertion covers
-/// what reaches the canvas rather than a widget flag.
-PersonalizationMotifPainter _motifPainter(WidgetTester tester) =>
-    tester
-            .widget<CustomPaint>(
-              find.descendant(
-                of: find.byType(PersonalizationMotifField),
-                matching: find.byType(CustomPaint),
-              ),
-            )
-            .painter!
-        as PersonalizationMotifPainter;
+/// The colors a card's ground is filled with, read off the decoration so the
+/// assertion covers what reaches the canvas rather than a widget flag.
+List<Color> _groundColors(WidgetTester tester) {
+  final decoration =
+      tester
+              .widget<DecoratedBox>(
+                find.descendant(
+                  of: find.byType(PersonalizationCardGround),
+                  matching: find.byType(DecoratedBox),
+                ),
+              )
+              .decoration
+          as BoxDecoration;
+  return (decoration.gradient! as LinearGradient).colors;
+}
 
 /// The designed aspect a card rendered at.
 double _cardAspect(WidgetTester tester, String widgetId) => tester
@@ -422,9 +425,9 @@ void main() {
     // The designed anatomy renders, never the generic Fallback card.
     expect(find.byType(RankCard), findsOneWidget);
     expect(find.byType(FallbackCard), findsNothing);
-    // No platform publishes rank-crest art, so the card is always its motif and
+    // No platform publishes rank-crest art, so the card is always framed and
     // the tier line moved into the datum rather than being dropped.
-    expect(_motifPainter(tester).motif, ProfileMotif.crest);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
     expect(
       find.ancestor(
         of: find.text('GOLD IV'),
@@ -511,8 +514,8 @@ void main() {
 
     expect(find.byType(RankCard), findsOneWidget);
     expect(find.byType(FallbackCard), findsNothing);
-    // The crest motif is still painted; the datum band renders empty.
-    expect(_motifPainter(tester).motif, ProfileMotif.crest);
+    // The card still renders framed; the datum band renders empty.
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(PersonalizationDatum),
@@ -600,7 +603,7 @@ void main() {
   });
 
   testWidgets('MainCard on a platform that publishes no cover renders the '
-      'emblem motif with the name and sub-line in the datum', (tester) async {
+      'framed ground with the name and sub-line in the datum', (tester) async {
     await tester.pumpWidget(
       _harness(
         card: MainCard(
@@ -642,7 +645,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(_motifPainter(tester).motif, ProfileMotif.emblem);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
     expect(
       find.ancestor(
         of: find.text('Ellathir'),
@@ -675,7 +678,7 @@ void main() {
     ),
   };
 
-  Widget rankMotifHarness(PersonalizationPalette palette) => _harness(
+  Widget rankGroundHarness(PersonalizationPalette palette) => _harness(
     card: RankCard(
       widget: _widget(
         id: 'r',
@@ -689,26 +692,32 @@ void main() {
     palette: palette,
   );
 
-  testWidgets('the motif is painted with the installed palette (crimson)', (
+  testWidgets('the ground is filled with the installed palette (crimson)', (
     tester,
   ) async {
-    await tester.pumpWidget(rankMotifHarness(PersonalizationPalette.crimson));
+    await tester.pumpWidget(rankGroundHarness(PersonalizationPalette.crimson));
     await tester.pumpAndSettle();
 
-    // A motif reads the theme, so switching the palette re-tints it live.
-    expect(_motifPainter(tester).palette, PersonalizationPalette.crimson);
+    // The ground reads the theme, so switching the palette re-tints it live.
+    expect(_groundColors(tester), [
+      PersonalizationPalette.crimson.artC,
+      PersonalizationPalette.crimson.artB,
+    ]);
   });
 
-  testWidgets('the motif re-tints under a different palette (chak)', (
+  testWidgets('the ground re-tints under a different palette (chak)', (
     tester,
   ) async {
-    await tester.pumpWidget(rankMotifHarness(PersonalizationPalette.chak));
+    await tester.pumpWidget(rankGroundHarness(PersonalizationPalette.chak));
     await tester.pumpAndSettle();
 
-    expect(_motifPainter(tester).palette, PersonalizationPalette.chak);
+    expect(_groundColors(tester), [
+      PersonalizationPalette.chak.artC,
+      PersonalizationPalette.chak.artB,
+    ]);
   });
 
-  test('the two theme accent tones differ, so the motif assertions are '
+  test('the two theme accent tones differ, so the ground assertions are '
       'falsifiable', () {
     expect(
       PersonalizationPalette.crimson.accent,
@@ -787,7 +796,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The shelf is a motif and is capped; the number stays honest.
+    // The shelf is capped; the number stays honest.
     expect(
       find.byKey(collectionOrbKey('c', PersonalizationLayout.collectionOrbCap)),
       findsNothing,
@@ -1262,7 +1271,7 @@ void main() {
     );
   });
 
-  testWidgets('MilestoneCard with no cover renders the capsule motif and still '
+  testWidgets('MilestoneCard with no cover renders the framed ground and still '
       'names the game', (tester) async {
     await tester.pumpWidget(
       _harness(
@@ -1289,7 +1298,7 @@ void main() {
     // A subject that cannot be named does not ship: the game keeps its name
     // even where the platform publishes no cover for it.
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(_motifPainter(tester).motif, ProfileMotif.capsule);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
     expect(
       find.ancestor(
         of: find.text('CS'),
@@ -1318,25 +1327,26 @@ void main() {
     expect(_artFor(_heroUrl), findsOneWidget);
   });
 
-  testWidgets('PlatformCard with null hero_image falls back to its own motif', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _harness(
-        card: PlatformCard(
-          widget: _platformWidget,
-          size: ProfileCardSize.full,
-          cardSource: _publicSource(),
+  testWidgets(
+    'PlatformCard with null hero_image falls back to its own ground',
+    (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          card: PlatformCard(
+            widget: _platformWidget,
+            size: ProfileCardSize.full,
+            cardSource: _publicSource(),
+          ),
+          cards: {Platform.steam: _card(Platform.steam)},
         ),
-        cards: {Platform.steam: _card(Platform.steam)},
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(_motifPainter(tester).motif, ProfileMotif.bars);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byType(CachedNetworkImage), findsNothing);
+      expect(find.byType(PersonalizationCardGround), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets("Collection curated orbs render each game's cover", (
     tester,
@@ -1470,9 +1480,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // No documented rank-crest art in any payload → the card is always its
-    // motif; a future accidental wiring would flip this red.
+    // ground; a future accidental wiring would flip this red.
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(_motifPainter(tester).motif, ProfileMotif.crest);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
   });
 
   testWidgets('art renders through the public (visitor) CardSource', (

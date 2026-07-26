@@ -3,7 +3,28 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
 import '../domain/profile_archetype.dart';
-import 'personalization_motifs.dart';
+
+/// The ground a framed card sits on: the theme's own vertical fill, nothing
+/// drawn over it. The bottom paint is the solid mid-tone, never a gradient that
+/// can fall to black, so the card stays inside the theme.
+class PersonalizationCardGround extends StatelessWidget {
+  const PersonalizationCardGround({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = PersonalizationTheme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [palette.artC, palette.artB],
+        ),
+      ),
+      child: const SizedBox.expand(),
+    );
+  }
+}
 
 /// Renders real platform art at [imageUrl] over the procedural [placeholder], or
 /// the placeholder alone when the url is null. Loading and error both fall back
@@ -45,7 +66,7 @@ class PersonalizationCardShell extends StatelessWidget {
     required this.archetype,
     required this.size,
     this.art,
-    this.motifContent,
+    this.framedContent,
     this.subject,
     this.detail,
     this.stats = const [],
@@ -57,12 +78,12 @@ class PersonalizationCardShell extends StatelessWidget {
   final ProfileCardSize size;
 
   /// The subject's real art. Null — or a url that fails to load — renders the
-  /// framed format over the archetype's motif.
+  /// framed format over the theme's ground.
   final String? art;
 
-  /// The archetype's designed content, drawn over the motif field (the orb
-  /// shelf, the letter shelf, the platform chips). Framed cards only.
-  final Widget? motifContent;
+  /// The archetype's designed content, drawn over the ground (the orb shelf,
+  /// the letter shelf, the platform chips). Framed cards only.
+  final Widget? framedContent;
 
   /// What the number is about, and its secondary line.
   final String? subject;
@@ -74,14 +95,7 @@ class PersonalizationCardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = PersonalizationTheme.of(context);
     final format = renderedCardFormat(archetype, hasArt: art != null);
-    final motifField = PersonalizationMotifField(motif: cardMotif(archetype));
-    final datum = PersonalizationDatum(
-      format: format,
-      subject: subject,
-      detail: detail,
-      stats: stats,
-    );
-    final content = motifContent;
+    final content = framedContent;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(palette.radius),
@@ -92,49 +106,65 @@ class PersonalizationCardShell extends StatelessWidget {
         aspectRatio: size == ProfileCardSize.full
             ? PersonalizationLayout.cardFullAspect
             : PersonalizationLayout.cardHalfAspect,
-        child: format == ProfileCardFormat.bleed
-            ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  personalizationArtOrPlaceholder(
-                    imageUrl: art,
-                    placeholder: motifField,
-                  ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.center,
-                        colors: [
-                          PersonalizationArtColors.heroScrim,
-                          PersonalizationArtColors.transparent,
+        // The datum's type is a function of the card's real height, so the band
+        // keeps its share of the card at every width instead of carrying
+        // page-level sizes onto a card a fraction of that size.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final datum = PersonalizationDatum(
+              format: format,
+              cardHeight: constraints.maxHeight,
+              subject: subject,
+              detail: detail,
+              stats: stats,
+            );
+            return format == ProfileCardFormat.bleed
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      personalizationArtOrPlaceholder(
+                        imageUrl: art,
+                        placeholder: const PersonalizationCardGround(),
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.center,
+                            colors: [
+                              PersonalizationArtColors.heroScrim,
+                              PersonalizationArtColors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(left: 0, right: 0, bottom: 0, child: datum),
+                    ],
+                  )
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const PersonalizationCardGround(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: content == null
+                                ? const SizedBox.expand()
+                                : Padding(
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.smMd,
+                                    ),
+                                    child: content,
+                                  ),
+                          ),
+                          datum,
                         ],
                       ),
-                    ),
-                  ),
-                  Positioned(left: 0, right: 0, bottom: 0, child: datum),
-                ],
-              )
-            : Stack(
-                fit: StackFit.expand,
-                children: [
-                  motifField,
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: content == null
-                            ? const SizedBox.expand()
-                            : Padding(
-                                padding: const EdgeInsets.all(AppSpacing.smMd),
-                                child: content,
-                              ),
-                      ),
-                      datum,
                     ],
-                  ),
-                ],
-              ),
+                  );
+          },
+        ),
       ),
     );
   }
@@ -148,12 +178,18 @@ class PersonalizationDatum extends StatelessWidget {
   const PersonalizationDatum({
     super.key,
     required this.format,
+    required this.cardHeight,
     this.subject,
     this.detail,
     this.stats = const [],
   });
 
   final ProfileCardFormat format;
+
+  /// The card's rendered height. Every type size here is a fraction of it, so
+  /// the band holds its designed share of the card (spec §6.2) at any width.
+  final double cardHeight;
+
   final String? subject;
   final String? detail;
   final List<PersonalizationStat> stats;
@@ -162,6 +198,16 @@ class PersonalizationDatum extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = PersonalizationTheme.of(context);
     final textTheme = Theme.of(context).textTheme;
+    // Clamped so a card in an extreme slot does not read as a heading at one
+    // end, and holds the spec's 11pt label floor (§6.2) at the other — the
+    // floor wins over the band's target share when the two disagree.
+    final valueSize = (0.075 * cardHeight).clamp(13.0, 20.0);
+    final subjectSize = (0.058 * cardHeight).clamp(11.0, 15.0);
+    final labelSize = (0.042 * cardHeight).clamp(11.0, 13.0);
+    // Leading, not type size, is what buys the band its target share (§6.2)
+    // once the 11pt floor is binding: at the default the three lines carry a
+    // third of their height as empty space the card cannot spare.
+    const leading = 1.15;
     final onArt = format == ProfileCardFormat.bleed;
     // Muted grey is not legible over light art even under the bottom gradient,
     // so both lines take the on-art tone there.
@@ -182,6 +228,8 @@ class PersonalizationDatum extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: textTheme.titleSmall?.copyWith(
               color: primary,
+              fontSize: subjectSize,
+              height: leading,
               fontWeight: AppTypography.bold,
               shadows: shadows,
             ),
@@ -193,6 +241,8 @@ class PersonalizationDatum extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: textTheme.labelSmall?.copyWith(
               color: secondary,
+              fontSize: labelSize,
+              height: leading,
               shadows: shadows,
             ),
           ),
@@ -217,6 +267,8 @@ class PersonalizationDatum extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.titleMedium?.copyWith(
                             color: primary,
+                            fontSize: valueSize,
+                            height: leading,
                             fontWeight: AppTypography.bold,
                             shadows: shadows,
                           ),
@@ -227,6 +279,8 @@ class PersonalizationDatum extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.labelSmall?.copyWith(
                             color: secondary,
+                            fontSize: labelSize,
+                            height: leading,
                             letterSpacing: PersonalizationLayout.labelTracking,
                             shadows: shadows,
                           ),
@@ -242,7 +296,7 @@ class PersonalizationDatum extends StatelessWidget {
 
     const padding = EdgeInsets.symmetric(
       horizontal: AppSpacing.smMd,
-      vertical: AppSpacing.sm,
+      vertical: AppSpacing.xs,
     );
 
     if (onArt) return Padding(padding: padding, child: body);

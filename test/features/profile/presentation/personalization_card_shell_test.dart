@@ -3,7 +3,6 @@ import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/core/theme/personalization_tokens.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_card_shell.dart';
-import 'package:featgg/src/features/profile/presentation/personalization_motifs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +36,13 @@ Widget _wrapDatum({
   required List<PersonalizationStat> stats,
 }) => _wrap(
   width: width,
-  child: PersonalizationDatum(format: ProfileCardFormat.framed, stats: stats),
+  child: PersonalizationDatum(
+    format: ProfileCardFormat.framed,
+    // The half-card height [width] implies, so the datum sizes its type the
+    // same way it does inside a real card.
+    cardHeight: width / PersonalizationLayout.cardHalfAspect,
+    stats: stats,
+  ),
 );
 
 /// Mounts a whole shell for [archetype] at a fixed [width].
@@ -92,7 +97,7 @@ void _expectNothingInTheTopHalf(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('a bleed archetype with art renders the art and no motif field', (
+  testWidgets('a bleed archetype with art renders the art and no ground fill', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -112,16 +117,16 @@ void main() {
       ),
       findsOneWidget,
     );
-    // A bleed card never builds the framed chassis: the motif field can only
+    // A bleed card never builds the framed chassis: the ground can only
     // appear as the art layer's own placeholder, never as the card's fill.
     expect(
-      tester.widgetList(find.byType(PersonalizationMotifField)),
+      tester.widgetList(find.byType(PersonalizationCardGround)),
       hasLength(
         tester
             .widgetList(
               find.descendant(
                 of: _artFor(_artUrl),
-                matching: find.byType(PersonalizationMotifField),
+                matching: find.byType(PersonalizationCardGround),
               ),
             )
             .length,
@@ -155,7 +160,7 @@ void main() {
     expect(style.color, PersonalizationArtColors.onArt);
   });
 
-  testWidgets('the same archetype with no art renders its motif field and a '
+  testWidgets('the same archetype with no art renders its ground and a '
       'datum band closed by a single bottom line', (tester) async {
     await tester.pumpWidget(
       _wrapCard(
@@ -166,7 +171,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(PersonalizationMotifField), findsOneWidget);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
 
     final decoration =
         tester
@@ -200,7 +205,7 @@ void main() {
     await tester.pump();
 
     // The registry, not the caller, owns the format.
-    expect(find.byType(PersonalizationMotifField), findsOneWidget);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (w) =>

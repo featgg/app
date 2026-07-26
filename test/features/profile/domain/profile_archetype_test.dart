@@ -172,22 +172,6 @@ void main() {
     });
   });
 
-  group('cardMotif', () {
-    test('every archetype declares a motif', () {
-      for (final archetype in ProfileArchetype.values) {
-        expect(cardMotif(archetype), isA<ProfileMotif>());
-      }
-    });
-
-    test('no two archetypes share a motif', () {
-      // "A generic gradient is not an acceptable motif — each archetype gets
-      // its own": two archetypes sharing one would make two different cards
-      // read as the same card.
-      final motifs = ProfileArchetype.values.map(cardMotif).toList();
-      expect(motifs.toSet(), hasLength(ProfileArchetype.values.length));
-    });
-  });
-
   group('renderedCardFormat', () {
     test(
       'a bleed archetype degrades to framed when the subject has no art',
