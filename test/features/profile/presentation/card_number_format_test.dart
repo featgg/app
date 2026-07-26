@@ -99,5 +99,10 @@ void main() {
     // shows the same shape either way.
     expect(formatCardValue(12.0, l10n), '12');
     expect(formatCardValue(1200.0, l10n), formatCardValue(1200, l10n));
+    // The case the magnitude threshold does not catch on its own: a value well
+    // inside the spelled-out range still overflows a supporting slot once a
+    // decimal rides along, so the fraction goes rather than the digits.
+    expect(formatCardValue(1234.5, l10n), formatCardValue(1235, l10n));
+    expect(formatCardValue(1234.5, l10n), isNot(contains('.')));
   });
 }

@@ -16,7 +16,11 @@ import '../profile_owner_cards_provider.dart';
 /// upstream account happens to hold. Compact notation differs by language, so
 /// it comes from the reader's locale rather than a suffix written here.
 String formatCardValue(num value, AppLocalizations l10n) {
-  final whole = value == value.truncate() ? value.truncate() : value;
+  // Rounded, not truncated to the integer part: a fraction is width the card
+  // cannot promise — a four-digit value carrying one decimal reads seven
+  // characters wide, which is the ellipsis this exists to prevent. A card
+  // answers with a figure, not a measurement.
+  final whole = value.round();
   if (whole.abs() < PersonalizationLayout.compactValueThreshold) {
     return NumberFormat.decimalPattern(l10n.localeName).format(whole);
   }
