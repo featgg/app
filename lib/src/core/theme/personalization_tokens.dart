@@ -285,6 +285,12 @@ abstract final class PersonalizationLayout {
   static const int supportingCapFull = 2;
   static const int supportingCapHalf = 0;
 
+  /// Where a plain number stops fitting and compact notation takes over. Four
+  /// digits is what a supporting stat gets on a full card, where the hero and
+  /// two others share the row at the narrowest column width; below that,
+  /// spelling the value out keeps a precision compact notation would throw away.
+  static const int compactValueThreshold = 10000;
+
   /// Datum line height, tighter than the default. Once the label floor binds,
   /// leading rather than type size is what keeps the band from taking a share
   /// of the card its content does not need.

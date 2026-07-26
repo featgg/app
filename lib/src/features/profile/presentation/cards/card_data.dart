@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/core.dart';
 import '../../../connections/domain/connection.dart';
 import '../../../connections/domain/game_card.dart';
@@ -8,6 +9,19 @@ import '../../domain/showcase_selection.dart';
 import '../../domain/showcase_value_resolver.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
+
+/// A number as a card shows it. Spelled out while it still fits the narrowest
+/// card the column supports, and compact past that — which bounds how wide any
+/// value can get, so a card's layout does not depend on how large a number an
+/// upstream account happens to hold. Compact notation differs by language, so
+/// it comes from the reader's locale rather than a suffix written here.
+String formatCardValue(num value, AppLocalizations l10n) {
+  final whole = value == value.truncate() ? value.truncate() : value;
+  if (whole.abs() < PersonalizationLayout.compactValueThreshold) {
+    return NumberFormat.decimalPattern(l10n.localeName).format(whole);
+  }
+  return NumberFormat.compact(locale: l10n.localeName).format(whole);
+}
 
 /// The current card for [platform] from the injected [source] (owner default is
 /// [ownerCardProvider]; the visitor render injects a public source). An errored
@@ -39,7 +53,9 @@ List<PersonalizationStat> statsFromResolved(
   for (final stat in stats) {
     final label = connectionsStatLabel(l10n, stat.key);
     if (label == null) continue;
-    out.add(PersonalizationStat(value: formatStatValue(stat), label: label));
+    out.add(
+      PersonalizationStat(value: formatStatValue(stat, l10n), label: label),
+    );
     if (out.length == cap) break;
   }
   return out;
@@ -52,7 +68,7 @@ List<PersonalizationStat> milestoneStats(
   if (resolved == null) return const [];
   final stats = <PersonalizationStat>[
     PersonalizationStat(
-      value: formatShowcaseHeroValue(resolved.heroValue),
+      value: formatCardValue(resolved.heroValue, l10n),
       label: l10n.connectionsStatHoursPlayed,
     ),
   ];
@@ -78,12 +94,12 @@ List<PersonalizationStat> collectorStats(
   if (resolved == null) return const [];
   return [
     PersonalizationStat(
-      value: formatShowcaseHeroValue(resolved.gamesOwned),
+      value: formatCardValue(resolved.gamesOwned, l10n),
       label: l10n.connectionsStatGamesOwned,
     ),
     if (resolved.hoursPlayed case final hours?)
       PersonalizationStat(
-        value: formatShowcaseHeroValue(hours),
+        value: formatCardValue(hours, l10n),
         label: l10n.connectionsStatHoursPlayed,
       ),
   ];
@@ -99,12 +115,12 @@ List<PersonalizationStat> completionistStats(
   if (resolved == null) return const [];
   return [
     PersonalizationStat(
-      value: formatShowcaseHeroValue(resolved.gamesPerfect),
+      value: formatCardValue(resolved.gamesPerfect, l10n),
       label: l10n.personalizationStatPerfect,
     ),
     if (resolved.gamesOwned case final owned?)
       PersonalizationStat(
-        value: formatShowcaseHeroValue(owned),
+        value: formatCardValue(owned, l10n),
         label: l10n.connectionsStatGamesOwned,
       ),
   ];
@@ -121,9 +137,9 @@ String? letterGlyph(String title) {
 /// Formats a stat value with its stable unit suffix (mirrors the passport chip
 /// rule): `%` for percent, ` LP` for lp; every other unit renders the bare
 /// number, its label already naming it.
-String formatStatValue(CardStat stat) {
+String formatStatValue(CardStat stat, AppLocalizations l10n) {
   final value = stat.value;
-  final base = value is num ? formatShowcaseHeroValue(value) : value.toString();
+  final base = value is num ? formatCardValue(value, l10n) : value.toString();
   return switch (stat.unit) {
     'percent' => '$base%',
     'lp' => '$base LP',

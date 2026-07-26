@@ -7,7 +7,6 @@ import '../../domain/collection_value_resolver.dart';
 import '../../domain/game_collector_value_resolver.dart';
 import '../../domain/profile_archetype.dart';
 import '../../domain/profile_widget.dart';
-import '../../domain/showcase_value_resolver.dart';
 import '../collection_title_labels.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
@@ -78,7 +77,7 @@ class CollectionCard extends ConsumerWidget {
       hero: panels.isEmpty
           ? null
           : PersonalizationStat(
-              value: formatShowcaseHeroValue(panels.length),
+              value: formatCardValue(panels.length, l10n),
               label: title,
             ),
       framedContent: Center(

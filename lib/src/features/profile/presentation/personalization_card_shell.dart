@@ -278,6 +278,11 @@ class PersonalizationDatum extends StatelessWidget {
             fontSize: isHero ? heroSize : supportSize,
             height: leading,
             fontWeight: AppTypography.bold,
+            // Equal-advance digits, so a value that changes does not shift what
+            // sits beside it. The face the app renders with today gives this
+            // anyway; asking for it is what keeps the property when the face
+            // changes.
+            fontFeatures: const [FontFeature.tabularFigures()],
             shadows: shadows,
           ),
         ),

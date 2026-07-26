@@ -221,7 +221,15 @@ Map<Platform, GameCard?> _steamThreeStats() => {
   ),
 };
 
+/// The card's own formatter, so a value assertion reads what a card renders
+/// without pinning the test to one locale's separator or compact suffix.
+late AppLocalizations _en;
+
 void main() {
+  setUpAll(() async {
+    _en = await AppLocalizations.delegate.load(const Locale('en'));
+  });
+
   testWidgets('PlatformCard full renders up to three stats, all in the datum', (
     tester,
   ) async {
@@ -238,11 +246,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // The third stat value is present at full size.
-    expect(find.text('4242'), findsOneWidget);
+    expect(find.text(formatCardValue(4242, _en)), findsOneWidget);
     // Every stat renders inside the datum zone, not loose over the fill.
     expect(
       find.ancestor(
-        of: find.text('300'),
+        of: find.text(formatCardValue(300, _en)),
         matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
@@ -265,8 +273,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // The first two stats render; the third is dropped, so half differs.
-    expect(find.text('300'), findsOneWidget);
-    expect(find.text('4242'), findsNothing);
+    expect(find.text(formatCardValue(300, _en)), findsOneWidget);
+    expect(find.text(formatCardValue(4242, _en)), findsNothing);
   });
 
   testWidgets('full and half render the two designed aspects', (tester) async {
@@ -534,7 +542,7 @@ void main() {
     expect(find.text('RAPID'), findsOneWidget);
     expect(
       find.ancestor(
-        of: find.text('1500'),
+        of: find.text(formatCardValue(1500, _en)),
         matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
@@ -960,7 +968,7 @@ void main() {
     expect(find.byKey(collectionOrbKey('gc', 0)), findsOneWidget);
     expect(
       find.ancestor(
-        of: find.text('300'),
+        of: find.text(formatCardValue(300, _en)),
         matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,

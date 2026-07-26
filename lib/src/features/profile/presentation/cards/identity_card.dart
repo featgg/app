@@ -7,7 +7,6 @@ import '../../../connections/domain/platform_descriptor.dart';
 import '../../domain/passport_value_resolver.dart';
 import '../../domain/profile_archetype.dart';
 import '../../domain/profile_widget.dart';
-import '../../domain/showcase_value_resolver.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
@@ -62,7 +61,7 @@ class IdentityCard extends ConsumerWidget {
       ),
       stats: [
         PersonalizationStat(
-          value: formatShowcaseHeroValue(entries.length),
+          value: formatCardValue(entries.length, l10n),
           label: l10n.personalizationStatPlatforms,
         ),
         if (memberSince case final since?)

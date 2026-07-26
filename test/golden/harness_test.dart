@@ -103,6 +103,36 @@ void main() {
     );
   });
 
+  testWidgets('digits keep their column as a value changes', (tester) async {
+    // Asserts the property a card's layout depends on, not the mechanism that
+    // delivers it: this face gives equal-advance digits on its own, another may
+    // need the tabular-figures feature asked for explicitly. Either way a
+    // number that grows must not move what sits beside it, and a brand face
+    // adopted without the feature would land here in red.
+    final style = goldenTheme().textTheme.bodyMedium?.copyWith(
+      fontFeatures: const [ui.FontFeature.tabularFigures()],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: goldenTheme(),
+        home: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('111111', key: const Key('narrowDigits'), style: style),
+              Text('999999', key: const Key('wideDigits'), style: style),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    double widthOf(String key) => tester.getSize(find.byKey(Key(key))).width;
+
+    expect(widthOf('narrowDigits'), widthOf('wideDigits'));
+  });
+
   testWidgets('bundled icon glyphs draw their own shape, not the missing-glyph '
       'box', (tester) async {
     await tester.pumpWidget(
