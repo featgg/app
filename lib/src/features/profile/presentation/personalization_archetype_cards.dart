@@ -17,6 +17,7 @@ import '../domain/showcase_selection.dart';
 import '../domain/showcase_value_resolver.dart';
 import 'collection_title_labels.dart';
 import 'personalization_card_shell.dart';
+import 'personalization_motifs.dart';
 import 'profile_owner_cards_provider.dart';
 
 /// Stable key for a rendered archetype card, keyed by the composing widget id so
@@ -24,20 +25,6 @@ import 'profile_owner_cards_provider.dart';
 /// card's inner content.
 Key personalizationCardKey(String widgetId) =>
     Key('personalizationCard_$widgetId');
-
-/// Stable key for the Milestone capsule, so the full vs half capsule aspect
-/// difference (spec §7) is assertable.
-Key milestoneCapsuleKey(String widgetId) =>
-    Key('personalizationMilestoneCapsule_$widgetId');
-
-/// Stable key for the Rank crest, so the token-gradient art (theme inheritance)
-/// is assertable.
-Key rankBadgeKey(String widgetId) => Key('personalizationRankBadge_$widgetId');
-
-/// Stable key for the Main emblem, so the full vs half emblem-size difference
-/// (spec §5) and the token-gradient art are assertable.
-Key mainEmblemKey(String widgetId) =>
-    Key('personalizationMainEmblem_$widgetId');
 
 /// Stable key for a Collection orb (curated: one per resolved game; Collector:
 /// the single library emblem), so the per-game orbs and the token-gradient art
@@ -123,13 +110,18 @@ Widget personalizationPairFrame({
       ),
     );
   }
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(child: left),
-      const SizedBox(width: PersonalizationLayout.rowGap),
-      Expanded(child: right),
-    ],
+  // Stretch alone is illegal in a column whose height is unbounded;
+  // IntrinsicHeight bounds the row to the taller card, and stretch then hands
+  // both slots that height so a pair always ends on one line.
+  return IntrinsicHeight(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: PersonalizationLayout.rowGap),
+        Expanded(child: right),
+      ],
+    ),
   );
 }
 
@@ -150,7 +142,7 @@ class IdentityCard extends ConsumerWidget {
   final CardSource? cardSource;
 
   /// Profile creation date backing the member-since stat; omitted from the
-  /// footer when null (never fabricated).
+  /// datum when null (never fabricated).
   final DateTime? memberSince;
 
   @override
@@ -164,11 +156,11 @@ class IdentityCard extends ConsumerWidget {
     };
     final entries = resolvePassport(cards)?.entries ?? const <PassportEntry>[];
 
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.passportLabel,
-      platformTag: l10n.personalizationIdentityTag,
-      content: Wrap(
+      archetype: ProfileArchetype.identity,
+      size: ProfileCardSize.full,
+      motifContent: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         children: [
@@ -264,16 +256,11 @@ class PlatformCard extends ConsumerWidget {
         : _resolveCard(ref, cardSource, platform);
 
     final isFull = size == ProfileCardSize.full;
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.personalizationPlatformTitle,
-      platformTag: _platformTag(l10n, platform),
-      content: PersonalizationArtBox(
-        aspectRatio: isFull
-            ? PersonalizationLayout.platformArtFullAspect
-            : PersonalizationLayout.platformArtHalfAspect,
-        imageUrl: card?.heroImage,
-      ),
+      archetype: ProfileArchetype.platform,
+      size: size,
+      art: card?.heroImage,
       stats: _cardStats(
         card,
         l10n,
@@ -285,10 +272,10 @@ class PlatformCard extends ConsumerWidget {
   }
 }
 
-/// Milestone archetype (spec §7, evolves the Showcase card): a game capsule with
-/// progress. Full = wider capsule, half = compact capsule — a visibly different
-/// aspect. Resolves the showcased game through the pure [resolveShowcase]; an
-/// unresolved game renders a neutral capsule with no stats.
+/// Milestone archetype (spec §7, evolves the Showcase card): the showcased
+/// game's cover fills the card with its progress in the datum. Resolves the game
+/// through the pure [resolveShowcase]; a game with no cover — or none resolved —
+/// degrades to the archetype's motif with whatever the datum still names.
 class MilestoneCard extends ConsumerWidget {
   const MilestoneCard({
     super.key,
@@ -304,7 +291,6 @@ class MilestoneCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final palette = PersonalizationTheme.of(context);
     final platform = widget.platform;
     final card = platform == null
         ? null
@@ -315,30 +301,22 @@ class MilestoneCard extends ConsumerWidget {
       widget.showcaseSelection,
     );
 
-    final isFull = size == ProfileCardSize.full;
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.personalizationMilestoneTitle,
-      platformTag: _platformTag(l10n, platform),
-      content: _Capsule(
-        capsuleKey: milestoneCapsuleKey(widget.id),
-        aspectRatio: isFull
-            ? PersonalizationLayout.capsuleFullAspect
-            : PersonalizationLayout.capsuleHalfAspect,
-        title: resolved?.title,
-        heroImage: resolved?.heroImage,
-        palette: palette,
-      ),
+      archetype: ProfileArchetype.milestone,
+      size: size,
+      art: resolved?.heroImage,
+      subject: resolved?.title,
       stats: _milestoneStats(resolved, l10n),
     );
   }
 }
 
-/// Rank archetype (spec §7): "how good am I" — a crest with the tier line and
-/// headline numbers. Full and half differ visibly (crest size + stat cap,
-/// spec §5). Folds the bound platform's card through the pure [resolveRank]; a
-/// payload with no rank/rating renders a neutral no-data crest (art + tag, no
-/// heading/scope/stats), never a fallback.
+/// Rank archetype (spec §7): "how good am I" — no platform publishes rank-crest
+/// art, so the card always renders framed over its crest motif, with the tier
+/// line and headline numbers in the datum. Folds the bound platform's card
+/// through the pure [resolveRank]; a payload with no rank/rating renders a
+/// neutral no-data crest, never a fallback.
 class RankCard extends ConsumerWidget {
   const RankCard({
     super.key,
@@ -354,7 +332,6 @@ class RankCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final palette = PersonalizationTheme.of(context);
     final platform = widget.platform;
     final card = platform == null
         ? null
@@ -362,19 +339,12 @@ class RankCard extends ConsumerWidget {
     final resolved = resolveRank(card);
 
     final isFull = size == ProfileCardSize.full;
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.personalizationRankTitle,
-      platformTag: _platformTag(l10n, platform),
-      content: _RankContent(
-        badgeKey: rankBadgeKey(widget.id),
-        badgeSize: isFull
-            ? PersonalizationLayout.rankBadgeSizeFull
-            : PersonalizationLayout.rankBadgeSizeHalf,
-        heading: resolved?.heading,
-        scope: resolved?.scope,
-        palette: palette,
-      ),
+      archetype: ProfileArchetype.rank,
+      size: size,
+      subject: resolved?.heading,
+      detail: resolved?.scope,
       stats: _statsFromResolved(
         resolved?.stats ?? const [],
         l10n,
@@ -386,11 +356,11 @@ class RankCard extends ConsumerWidget {
   }
 }
 
-/// Main archetype (spec §7): "what defines me" — an emblem with the primary
-/// game/character/mode and 2–3 headline numbers. Full and half differ visibly
-/// (emblem size + stat cap, spec §5). Folds the bound platform's card through the
-/// pure [resolveMain]; a payload with no main renders a neutral no-data card
-/// (emblem + tag + generic title, no stats), never a fallback.
+/// Main archetype (spec §7): "what defines me" — the primary game / character /
+/// mode's cover fills the card, with its name and 2–3 headline numbers in the
+/// datum. Folds the bound platform's card through the pure [resolveMain]; a
+/// payload with no main renders a neutral no-data card over the archetype's
+/// motif, never a fallback.
 class MainCard extends ConsumerWidget {
   const MainCard({
     super.key,
@@ -406,7 +376,6 @@ class MainCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final palette = PersonalizationTheme.of(context);
     final platform = widget.platform;
     final card = platform == null
         ? null
@@ -414,20 +383,13 @@ class MainCard extends ConsumerWidget {
     final resolved = resolveMain(card);
 
     final isFull = size == ProfileCardSize.full;
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.personalizationMainTitle,
-      platformTag: _platformTag(l10n, platform),
-      content: _MainContent(
-        emblemKey: mainEmblemKey(widget.id),
-        emblemSize: isFull
-            ? PersonalizationLayout.mainEmblemFull
-            : PersonalizationLayout.mainEmblemHalf,
-        title: resolved?.title ?? l10n.personalizationMainTopChampion,
-        subtitle: resolved?.subtitle,
-        heroImage: resolved?.heroImage,
-        palette: palette,
-      ),
+      archetype: ProfileArchetype.main,
+      size: size,
+      art: resolved?.heroImage,
+      subject: resolved?.title ?? l10n.personalizationMainTopChampion,
+      detail: resolved?.subtitle,
       stats: _statsFromResolved(
         resolved?.stats ?? const [],
         l10n,
@@ -440,8 +402,9 @@ class MainCard extends ConsumerWidget {
 }
 
 /// Fallback archetype for any kind without a built card:
-/// a safe, never-blank card — platform tag, neutral art, and any resolvable
-/// stats. Keeps an unrecognized layout slot from crashing or reading as empty.
+/// a safe, never-blank card — whatever art the envelope carries and any
+/// resolvable stats. Keeps an unrecognized layout slot from crashing or reading
+/// as empty.
 class FallbackCard extends ConsumerWidget {
   const FallbackCard({
     super.key,
@@ -463,16 +426,11 @@ class FallbackCard extends ConsumerWidget {
         : _resolveCard(ref, cardSource, platform);
 
     final isFull = size == ProfileCardSize.full;
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.personalizationFallbackTitle,
-      platformTag: _platformTag(l10n, platform),
-      content: PersonalizationArtBox(
-        aspectRatio: isFull
-            ? PersonalizationLayout.platformArtFullAspect
-            : PersonalizationLayout.platformArtHalfAspect,
-        imageUrl: card?.heroImage,
-      ),
+      archetype: ProfileArchetype.fallback,
+      size: size,
+      art: card?.heroImage,
       stats: _cardStats(
         card,
         l10n,
@@ -489,11 +447,11 @@ class FallbackCard extends ConsumerWidget {
 ///
 /// - Curated (`collection`): Steam-first (the kind carries no platform), one orb
 ///   per still-in-library game via the pure [resolveCollection], captioned by the
-///   game title, with a game-count footer. No game resolves → a single neutral
-///   orb, no footer — never blank, never a fallback.
+///   game title, with the game count in the datum. No game resolves → a single
+///   neutral orb, no datum stats — never blank, never a fallback.
 /// - Collector (`game_collector`): the bound platform's whole library as a single
 ///   emblem orb via the pure [resolveGameCollector], with games-owned (and hours,
-///   when present) in the footer. A null resolve → the neutral emblem, no footer.
+///   when present) in the datum. A null resolve → the neutral emblem, no stats.
 class CollectionCard extends ConsumerWidget {
   const CollectionCard({super.key, required this.widget, this.cardSource});
 
@@ -511,11 +469,11 @@ class CollectionCard extends ConsumerWidget {
           ? null
           : _resolveCard(ref, cardSource, platform);
       final resolved = resolveGameCollector(card);
-      return CardShell(
+      return PersonalizationCardShell(
         key: personalizationCardKey(widget.id),
-        title: l10n.gameCollectorLabel,
-        platformTag: _platformTag(l10n, platform),
-        content: Center(
+        archetype: ProfileArchetype.collection,
+        size: ProfileCardSize.full,
+        motifContent: Center(
           child: _CollectionOrb(
             orbKey: collectionOrbKey(widget.id, 0),
             palette: palette,
@@ -538,30 +496,40 @@ class CollectionCard extends ConsumerWidget {
         (titleKey == null ? null : collectionTitleLabel(l10n, titleKey)) ??
         l10n.personalizationCollectionTitle;
 
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: title,
-      platformTag: _platformTag(l10n, widget.platform),
-      content: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: AppSpacing.smMd,
-        runSpacing: AppSpacing.smMd,
-        children: panels.isEmpty
-            ? [
-                _CollectionOrb(
-                  orbKey: collectionOrbKey(widget.id, 0),
-                  palette: palette,
-                ),
-              ]
-            : [
-                for (var i = 0; i < panels.length; i++)
+      archetype: ProfileArchetype.collection,
+      size: ProfileCardSize.full,
+      subject: title,
+      motifContent: Center(
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.smMd,
+          runSpacing: AppSpacing.smMd,
+          children: panels.isEmpty
+              ? [
                   _CollectionOrb(
-                    orbKey: collectionOrbKey(widget.id, i),
+                    orbKey: collectionOrbKey(widget.id, 0),
                     palette: palette,
-                    caption: panels[i].title,
-                    imageUrl: panels[i].heroImage,
                   ),
-              ],
+                ]
+              : [
+                  // A display cap: the shelf is a motif, and the datum below
+                  // still reports every resolved game.
+                  for (
+                    var i = 0;
+                    i < panels.length &&
+                        i < PersonalizationLayout.collectionOrbCap;
+                    i++
+                  )
+                    _CollectionOrb(
+                      orbKey: collectionOrbKey(widget.id, i),
+                      palette: palette,
+                      caption: panels[i].title,
+                      imageUrl: panels[i].heroImage,
+                    ),
+                ],
+        ),
       ),
       stats: panels.isEmpty
           ? const []
@@ -578,10 +546,11 @@ class CollectionCard extends ConsumerWidget {
 /// Achievement Grid archetype (spec §7, "Completionist" variant): the bound
 /// platform's perfect-games count as a letter shelf. Full only. Folds the card
 /// through the pure [resolveCompletionist]: a leading and trailing muted diamond
-/// bracket one accent letter tile per perfect-game shelf entry (capped), with a
-/// perfect-count footer (games-owned too, when present). A null resolve → just the
-/// two diamonds, no footer — the no-data state stays a designed card, never a
-/// fallback. A resolved `games_perfect` of 0 is honest data and renders "0".
+/// bracket one accent letter tile per perfect-game shelf entry (capped), with the
+/// perfect count (games-owned too, when present) in the datum. A null resolve →
+/// just the two diamonds, no stats — the no-data state stays a designed card,
+/// never a fallback. A resolved `games_perfect` of 0 is honest data and
+/// renders "0".
 class AchievementGridCard extends ConsumerWidget {
   const AchievementGridCard({super.key, required this.widget, this.cardSource});
 
@@ -601,9 +570,7 @@ class AchievementGridCard extends ConsumerWidget {
     final tiles = <Widget>[
       _LetterTile(
         tileKey: Key('personalizationAchievementMisc_${widget.id}_0'),
-        glyph: _miscGlyph,
         palette: palette,
-        isMisc: true,
       ),
     ];
     var i = 0;
@@ -624,21 +591,21 @@ class AchievementGridCard extends ConsumerWidget {
     tiles.add(
       _LetterTile(
         tileKey: Key('personalizationAchievementMisc_${widget.id}_1'),
-        glyph: _miscGlyph,
         palette: palette,
-        isMisc: true,
       ),
     );
 
-    return CardShell(
+    return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
-      title: l10n.completionistLabel,
-      platformTag: _platformTag(l10n, platform),
-      content: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        children: tiles,
+      archetype: ProfileArchetype.achievementGrid,
+      size: ProfileCardSize.full,
+      motifContent: Center(
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: tiles,
+        ),
       ),
       stats: _completionistStats(resolved, l10n),
     );
@@ -717,34 +684,32 @@ class _CollectionOrb extends StatelessWidget {
   }
 }
 
-/// The muted diamond bracketing the Achievement Grid letters (mockup
-/// `.letter.misc` ◆), framing the perfect-game initials as a shelf.
-const String _miscGlyph = '◆';
-
 /// An Achievement Grid tile (mockup `.letter`): a `surface2` square with a `line`
-/// border and one glyph — the accent-tinted perfect-game initial, or the muted
-/// `misc` diamond. Every tone reads from the palette, so a theme swap re-tints it.
+/// border holding the accent-tinted perfect-game initial, or — with no [glyph] —
+/// the muted diamond that brackets the shelf. Every tone reads from the palette,
+/// so a theme swap re-tints it.
 class _LetterTile extends StatelessWidget {
   const _LetterTile({
     required this.tileKey,
-    required this.glyph,
     required this.palette,
-    this.isMisc = false,
+    this.glyph,
     this.imageUrl,
   });
 
   final Key tileKey;
-  final String glyph;
   final PersonalizationPalette palette;
-  final bool isMisc;
 
-  /// The perfect-game's cover; null → the themed letter glyph (misc diamonds
-  /// never carry art).
+  /// The perfect-game's initial; null renders the bracketing diamond instead.
+  final String? glyph;
+
+  /// The perfect-game's cover; null → the themed letter glyph (the bracketing
+  /// diamonds never carry art).
   final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final letter = glyph;
     return Container(
       key: tileKey,
       width: PersonalizationLayout.letterTileSize,
@@ -766,259 +731,21 @@ class _LetterTile extends StatelessWidget {
         child: personalizationArtOrPlaceholder(
           imageUrl: imageUrl,
           placeholder: Center(
-            child: Text(
-              glyph,
-              style: (isMisc ? textTheme.labelLarge : textTheme.titleMedium)
-                  ?.copyWith(
-                    color: isMisc ? palette.muted : palette.accent,
-                    fontWeight: AppTypography.bold,
+            child: letter == null
+                ? PersonalizationDiamond(
+                    color: palette.muted,
+                    size: AppSpacing.smMd,
+                  )
+                : Text(
+                    letter,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: palette.accent,
+                      fontWeight: AppTypography.bold,
+                    ),
                   ),
-            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Capsule extends StatelessWidget {
-  const _Capsule({
-    required this.capsuleKey,
-    required this.aspectRatio,
-    required this.title,
-    required this.palette,
-    this.heroImage,
-  });
-
-  final Key capsuleKey;
-  final double aspectRatio;
-  final String? title;
-  final PersonalizationPalette palette;
-
-  /// The showcased game's cover; null → the procedural gradient capsule.
-  final String? heroImage;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final capsuleTitle = title;
-    final art = heroImage;
-
-    return AspectRatio(
-      key: capsuleKey,
-      aspectRatio: aspectRatio,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            personalizationArtOrPlaceholder(
-              imageUrl: art,
-              placeholder: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [palette.artC, palette.artA, palette.artB],
-                  ),
-                ),
-              ),
-            ),
-            // Legibility scrim only over real art, so the gradient-only capsule
-            // is visually unchanged.
-            if (art != null)
-              const ColoredBox(color: PersonalizationArtColors.heroScrim),
-            if (capsuleTitle != null)
-              Center(
-                child: Text(
-                  capsuleTitle.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.labelLarge?.copyWith(
-                    color: PersonalizationArtColors.onArt,
-                    fontWeight: AppTypography.medium,
-                    letterSpacing: PersonalizationLayout.labelTracking,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A token-gradient placeholder square for the Rank crest / Main emblem. The
-/// personalization art is a theme gradient, never a bundled asset, so the public
-/// repo stays binary-free; the bottom paint is the solid mid-tone
-/// [PersonalizationPalette.artB] (spec §8: never a gradient that can fall to
-/// black), so a theme swap re-tints it live.
-class _GradientBadge extends StatelessWidget {
-  const _GradientBadge({
-    required this.badgeKey,
-    required this.size,
-    required this.palette,
-    this.imageUrl,
-  });
-
-  final Key badgeKey;
-  final double size;
-  final PersonalizationPalette palette;
-
-  /// The emblem's cover art; null → the procedural gradient badge (Rank always
-  /// passes null — no documented rank-crest art).
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    key: badgeKey,
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [palette.artC, palette.artA, palette.artB],
-      ),
-    ),
-    // The line border stays visible over a loaded cover.
-    foregroundDecoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      border: Border.all(
-        color: palette.line,
-        width: PersonalizationLayout.borderWidth,
-      ),
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      child: personalizationArtOrPlaceholder(
-        imageUrl: imageUrl,
-        placeholder: const SizedBox.expand(),
-      ),
-    ),
-  );
-}
-
-/// The Rank card's centered content column (mockup `.center-col`): the crest,
-/// the tier line ([heading]) when the platform names one, and a data-derived
-/// sub-label ([scope]) when present. A no-data render shows just the crest.
-class _RankContent extends StatelessWidget {
-  const _RankContent({
-    required this.badgeKey,
-    required this.badgeSize,
-    this.heading,
-    this.scope,
-    required this.palette,
-  });
-
-  final Key badgeKey;
-  final double badgeSize;
-  final String? heading;
-  final String? scope;
-  final PersonalizationPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final headingText = heading;
-    final scopeText = scope;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _GradientBadge(badgeKey: badgeKey, size: badgeSize, palette: palette),
-        if (headingText != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            headingText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.titleMedium?.copyWith(
-              color: palette.text,
-              fontWeight: AppTypography.bold,
-            ),
-          ),
-        ],
-        if (scopeText != null) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            scopeText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.labelSmall?.copyWith(color: palette.muted),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// The Main card's content row (mockup `.main-card .card-body`): the emblem beside
-/// an info column of [title] (the primary name, or the generic) and [subtitle]
-/// when present.
-class _MainContent extends StatelessWidget {
-  const _MainContent({
-    required this.emblemKey,
-    required this.emblemSize,
-    required this.title,
-    this.subtitle,
-    required this.palette,
-    this.heroImage,
-  });
-
-  final Key emblemKey;
-  final double emblemSize;
-  final String title;
-  final String? subtitle;
-  final PersonalizationPalette palette;
-
-  /// The Steam top-game cover; null → the procedural gradient emblem.
-  final String? heroImage;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final subtitleText = subtitle;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _GradientBadge(
-          badgeKey: emblemKey,
-          size: emblemSize,
-          palette: palette,
-          imageUrl: heroImage,
-        ),
-        const SizedBox(width: AppSpacing.smMd),
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleMedium?.copyWith(
-                  color: palette.text,
-                  fontWeight: AppTypography.bold,
-                ),
-              ),
-              if (subtitleText != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  subtitleText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall?.copyWith(color: palette.muted),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1033,13 +760,6 @@ GameCard? _resolveCard(WidgetRef ref, CardSource? source, Platform platform) {
   return state.hasError ? null : state.value;
 }
 
-/// The accent tag for a card: the platform's brand name, or the generic profile
-/// tag when the card has no source platform.
-String _platformTag(AppLocalizations l10n, Platform? platform) =>
-    platform == null
-    ? l10n.personalizationProfileTag
-    : platformDescriptors[platform]?.displayName ?? platform.name;
-
 /// The first [cap] of the card's envelope stats whose key resolves to a label.
 List<PersonalizationStat> _cardStats(
   GameCard? card,
@@ -1047,10 +767,10 @@ List<PersonalizationStat> _cardStats(
   int cap,
 ) => _statsFromResolved(card?.stats ?? const [], l10n, cap);
 
-/// The first [cap] [stats] whose key resolves to a label, formatted for the stat
-/// footer. A stat with an unrecognized key or non-numeric value is skipped rather
+/// The first [cap] [stats] whose key resolves to a label, formatted for the
+/// datum. A stat with an unrecognized key or non-numeric value is skipped rather
 /// than rendered raw. Shared by the envelope-stat cards (Platform / Fallback) and
-/// the resolver-driven cards (Rank / Main) so all footers format identically.
+/// the resolver-driven cards (Rank / Main) so every datum formats identically.
 List<PersonalizationStat> _statsFromResolved(
   List<CardStat> stats,
   AppLocalizations l10n,
@@ -1090,7 +810,7 @@ List<PersonalizationStat> _milestoneStats(
   return stats;
 }
 
-/// The Collector footer: games-owned (the hero), plus hours-played when the card
+/// The Collector datum: games-owned (the hero), plus hours-played when the card
 /// carries it. Empty for a null resolve (the neutral no-data emblem).
 List<PersonalizationStat> _collectorStats(
   ResolvedGameCollector? resolved,
@@ -1110,7 +830,7 @@ List<PersonalizationStat> _collectorStats(
   ];
 }
 
-/// The Achievement Grid footer: perfect-games (the hero, honest at 0), plus
+/// The Achievement Grid datum: perfect-games (the hero, honest at 0), plus
 /// games-owned when the card carries it. Empty for a null resolve (the no-data
 /// grid of two diamonds).
 List<PersonalizationStat> _completionistStats(

@@ -38,6 +38,67 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   _ => ProfileArchetype.fallback,
 };
 
+/// Which chassis an archetype is designed for. [bleed] fills the card with the
+/// subject's real art and lays the datum over it; [framed] fills the card with
+/// the archetype's own drawn motif and gives the datum its own band.
+enum ProfileCardFormat { bleed, framed }
+
+/// The drawn motif that fills a framed card. Each archetype declares its own —
+/// a shared gradient would make two different cards read as the same card.
+enum ProfileMotif {
+  chips,
+  bars,
+  capsule,
+  crest,
+  emblem,
+  orbShelf,
+  letterTiles,
+  hatch,
+}
+
+/// The format [a] is designed for: bleed where the platform publishes real art
+/// for the card's subject, framed where no art source exists for it.
+ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
+  // No single subject to picture — the content is a chip per linked platform.
+  ProfileArchetype.identity => ProfileCardFormat.framed,
+  // The card envelope's hero image is the subject's art.
+  ProfileArchetype.platform => ProfileCardFormat.bleed,
+  // The showcased game's cover.
+  ProfileArchetype.milestone => ProfileCardFormat.bleed,
+  // No platform publishes rank-crest art, so a rank never has a subject image.
+  ProfileArchetype.rank => ProfileCardFormat.framed,
+  // The top game / character cover.
+  ProfileArchetype.main => ProfileCardFormat.bleed,
+  // A shelf of many games, not one image — both the curated and library kinds.
+  ProfileArchetype.collection => ProfileCardFormat.framed,
+  // A shelf of many entries.
+  ProfileArchetype.achievementGrid => ProfileCardFormat.framed,
+  // Falls back to the card envelope's hero image when the kind carries one.
+  ProfileArchetype.fallback => ProfileCardFormat.bleed,
+};
+
+/// The motif [a] draws when it renders framed.
+ProfileMotif cardMotif(ProfileArchetype a) => switch (a) {
+  ProfileArchetype.identity => ProfileMotif.chips,
+  ProfileArchetype.platform => ProfileMotif.bars,
+  ProfileArchetype.milestone => ProfileMotif.capsule,
+  ProfileArchetype.rank => ProfileMotif.crest,
+  ProfileArchetype.main => ProfileMotif.emblem,
+  ProfileArchetype.collection => ProfileMotif.orbShelf,
+  ProfileArchetype.achievementGrid => ProfileMotif.letterTiles,
+  ProfileArchetype.fallback => ProfileMotif.hatch,
+};
+
+/// The format a card actually renders in: the format [a] is designed for,
+/// degraded to [ProfileCardFormat.framed] when the subject publishes no art.
+/// The one place that decision is made, so no card carries a format branch.
+ProfileCardFormat renderedCardFormat(
+  ProfileArchetype a, {
+  required bool hasArt,
+}) => cardFormat(a) == ProfileCardFormat.bleed && hasArt
+    ? ProfileCardFormat.bleed
+    : ProfileCardFormat.framed;
+
 /// The sizes an archetype can render (spec §5). A full-only archetype dropped
 /// into a pair slot renders full within that column (the seed never does this,
 /// so it is a defensive branch).

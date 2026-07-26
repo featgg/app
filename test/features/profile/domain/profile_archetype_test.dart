@@ -131,4 +131,92 @@ void main() {
       });
     });
   });
+
+  group('cardFormat', () {
+    test('an archetype whose subject has a published art source is bleed', () {
+      for (final archetype in const [
+        ProfileArchetype.platform,
+        ProfileArchetype.milestone,
+        ProfileArchetype.main,
+        ProfileArchetype.fallback,
+      ]) {
+        expect(
+          cardFormat(archetype),
+          ProfileCardFormat.bleed,
+          reason: '$archetype resolves real art for its subject',
+        );
+      }
+    });
+
+    test('an archetype with no art source for its subject is framed', () {
+      for (final archetype in const [
+        ProfileArchetype.identity,
+        ProfileArchetype.rank,
+        ProfileArchetype.collection,
+        ProfileArchetype.achievementGrid,
+      ]) {
+        expect(
+          cardFormat(archetype),
+          ProfileCardFormat.framed,
+          reason: '$archetype has no single published subject image',
+        );
+      }
+    });
+
+    test('the format is declared for every archetype', () {
+      // A new archetype cannot render without declaring its format here rather
+      // than branching inside its card.
+      for (final archetype in ProfileArchetype.values) {
+        expect(cardFormat(archetype), isA<ProfileCardFormat>());
+      }
+    });
+  });
+
+  group('cardMotif', () {
+    test('every archetype declares a motif', () {
+      for (final archetype in ProfileArchetype.values) {
+        expect(cardMotif(archetype), isA<ProfileMotif>());
+      }
+    });
+
+    test('no two archetypes share a motif', () {
+      // "A generic gradient is not an acceptable motif — each archetype gets
+      // its own": two archetypes sharing one would make two different cards
+      // read as the same card.
+      final motifs = ProfileArchetype.values.map(cardMotif).toList();
+      expect(motifs.toSet(), hasLength(ProfileArchetype.values.length));
+    });
+  });
+
+  group('renderedCardFormat', () {
+    test(
+      'a bleed archetype degrades to framed when the subject has no art',
+      () {
+        expect(
+          renderedCardFormat(ProfileArchetype.milestone, hasArt: false),
+          ProfileCardFormat.framed,
+        );
+      },
+    );
+
+    test('a bleed archetype renders bleed when real art exists', () {
+      expect(
+        renderedCardFormat(ProfileArchetype.milestone, hasArt: true),
+        ProfileCardFormat.bleed,
+      );
+    });
+
+    test('a framed archetype renders framed even when handed art', () {
+      // The registry owns the format, so a mis-wired art url cannot flip a
+      // framed card into the bleed chassis.
+      expect(
+        renderedCardFormat(ProfileArchetype.rank, hasArt: true),
+        ProfileCardFormat.framed,
+      );
+      expect(
+        renderedCardFormat(ProfileArchetype.rank, hasArt: false),
+        ProfileCardFormat.framed,
+      );
+    });
+  });
 }

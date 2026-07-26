@@ -14,8 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'golden_harness.dart';
 
 /// A Milestone card bound to a Steam game. Milestone is the whole art path in
-/// one card: no cover keeps the procedural capsule and drops the legibility
-/// scrim, a resolved cover replaces both.
+/// one card: a resolved cover fills it edge to edge, no cover degrades it to the
+/// drawn motif.
 Widget _milestoneCard() => MilestoneCard(
   widget: goldenWidget(
     id: 'guard',
@@ -103,9 +103,8 @@ void main() {
     );
   });
 
-  testWidgets('icon motifs draw their own glyph, not the missing-glyph box', (
-    tester,
-  ) async {
+  testWidgets('bundled icon glyphs draw their own shape, not the missing-glyph '
+      'box', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: goldenTheme(),
@@ -159,6 +158,8 @@ void main() {
       cards: _steamLibrary(),
     );
 
+    // Also the framed degradation: with no cover the card is a drawn motif, so
+    // there is nothing raster-backed in it at all.
     expect(_fixtureRaster, findsNothing);
     expect(find.byType(RawImage), findsNothing);
   });

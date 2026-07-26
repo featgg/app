@@ -9,9 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'golden_harness.dart';
 
 /// Heights that fit the whole composition without scrolling at each width. Held
-/// as constants so the assertion below can prove they still do.
-const _narrowHeight = 1800.0;
-const _wideHeight = 2200.0;
+/// as constants so the assertion below can prove they still do. A card's height
+/// is a function of its width, so both grew with the designed aspects.
+const _narrowHeight = 1900.0;
+const _wideHeight = 3400.0;
 
 /// Exercises every row form in one composition: a full row, a pair of two
 /// different archetypes, a wrapping multi-orb full row, a pair mixing two

@@ -197,6 +197,17 @@ abstract final class PersonalizationArtColors {
   static const Color heroBlurVeil = Color(0x59000000); // ~35% black
 }
 
+/// Legibility treatment for text drawn directly over real art: a soft dark
+/// shadow, so a hero number holds up where the art beneath it is bright and the
+/// bottom gradient alone is not enough.
+abstract final class PersonalizationArtText {
+  static const Color shadowColor = Color(0xB3000000);
+  static const double shadowBlur = 6;
+  static const List<Shadow> shadows = <Shadow>[
+    Shadow(color: shadowColor, blurRadius: shadowBlur),
+  ];
+}
+
 /// Named layout constants for the personalization profile. Keeps every size out of the
 /// presentation files as literals (`docs/architecture.md` § No hard-coded
 /// values); the fixed column width and hero budget are tokens, not magic
@@ -238,26 +249,22 @@ abstract final class PersonalizationLayout {
   /// Blur-extend sigma (mockup `blur(34px)`).
   static const double heroBlurSigma = 34;
 
-  /// Placeholder art aspect ratios per size (width / height). The full platform
-  /// card shows a taller art band than the half so the two variants read as
-  /// visibly different (spec §5).
-  static const double platformArtFullAspect = 16 / 9;
-  static const double platformArtHalfAspect = 16 / 6;
+  /// Designed card aspect ratios (width / height), one per rendered size. A
+  /// card's height is a function of its width, so the two variants keep their
+  /// proportions on every device and a full row always reads heavier than a
+  /// pair: at the narrowest column a full card is both taller and about twice
+  /// the area of a half.
+  static const double cardFullAspect = 3 / 2;
+  static const double cardHalfAspect = 4 / 5;
 
-  /// Milestone capsule aspect ratios: full = wider capsule, half = compact
-  /// (spec §7 "full variant = wider capsule").
-  static const double capsuleFullAspect = 16 / 7;
-  static const double capsuleHalfAspect = 16 / 11;
+  /// Motif line weight — heavier than a hairline so the drawn shape reads as a
+  /// motif rather than as a border.
+  static const double motifStrokeWidth = 2;
 
-  /// Rank crest square edges per size (mockup `.crystal`). Full > half so the two
-  /// Rank variants read as visibly different (spec §5), mirroring the Main emblem.
-  static const double rankBadgeSizeHalf = 58;
-  static const double rankBadgeSizeFull = 78;
-
-  /// Main emblem square edges (mockup `.emblem` 64px). Full > half so the two
-  /// Main variants read as visibly different (spec §5).
-  static const double mainEmblemFull = 64;
-  static const double mainEmblemHalf = 48;
+  /// How many orbs the Collection shelf draws. The datum keeps the true count;
+  /// the shelf is a motif, and an uncapped shelf clips inside a card whose
+  /// height is a function of its width.
+  static const int collectionOrbCap = 3;
 
   /// Collection orb diameter (mockup `.leg .orb` 50px) and the width of the cell
   /// that bounds an orb plus its 1-line caption, so a long caption ellipsizes and
