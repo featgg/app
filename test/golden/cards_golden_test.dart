@@ -45,7 +45,7 @@ const _longTitle = 'A Very Long Game Title That Should Ellipsize Cleanly';
 void main() {
   group('Identity', () {
     goldenTest('full renders one chip per linked platform over the '
-        'platform-count and member-since footer', (tester) async {
+        'platform-count and member-since datum', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(
@@ -88,7 +88,7 @@ void main() {
       ],
     );
 
-    goldenTest('full renders the tall art band over a three-stat footer', (
+    goldenTest('full bleeds the platform art under a three-stat datum', (
       tester,
     ) async {
       await pumpCardGolden(
@@ -105,9 +105,8 @@ void main() {
       );
     });
 
-    goldenTest('half renders the short art band and drops to two stats', (
-      tester,
-    ) async {
+    goldenTest('half bleeds the same art at the pair aspect and drops to two '
+        'stats', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.half),
@@ -144,7 +143,7 @@ void main() {
       ]),
     );
 
-    goldenTest('full renders the wide capsule with the scrimmed game title', (
+    goldenTest('full bleeds the game cover with the game named in the datum', (
       tester,
     ) async {
       await pumpCardGolden(
@@ -161,7 +160,7 @@ void main() {
       );
     });
 
-    goldenTest('half renders the compact capsule aspect', (tester) async {
+    goldenTest('half bleeds the same cover at the pair aspect', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.half),
@@ -176,7 +175,7 @@ void main() {
       );
     });
 
-    goldenTest('half ellipsizes a long game title inside the capsule', (
+    goldenTest('half ellipsizes a long game title in the datum', (
       tester,
     ) async {
       await pumpCardGolden(
@@ -193,8 +192,8 @@ void main() {
       );
     });
 
-    goldenTest('full falls back to the gradient capsule with no scrim when the '
-        'game publishes no cover', (tester) async {
+    goldenTest('full degrades to the drawn motif when the game publishes no '
+        'cover', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.full),
@@ -230,7 +229,7 @@ void main() {
       losses: 40,
     );
 
-    goldenTest('full renders the large crest above the tier line and footer', (
+    goldenTest('full renders the crest motif under the tier line and datum', (
       tester,
     ) async {
       await pumpCardGolden(
@@ -246,9 +245,8 @@ void main() {
       );
     });
 
-    goldenTest('half renders the compact crest with the two-stat footer', (
-      tester,
-    ) async {
+    goldenTest('half renders the same motif at the pair aspect with a two-stat '
+        'datum', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.half),
@@ -262,8 +260,8 @@ void main() {
       );
     });
 
-    goldenTest('an unranked summoner keeps the neutral crest and drops the '
-        'footer instead of falling back', (tester) async {
+    goldenTest('an unranked summoner keeps the neutral crest and empties the '
+        'datum instead of falling back', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.full),
@@ -295,9 +293,7 @@ void main() {
       ]),
     );
 
-    goldenTest('full renders the large emblem beside the top game', (
-      tester,
-    ) async {
+    goldenTest('full bleeds the cover of the top game', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.full),
@@ -312,9 +308,7 @@ void main() {
       );
     });
 
-    goldenTest('half renders the smaller emblem on the same row', (
-      tester,
-    ) async {
+    goldenTest('half bleeds the same cover at the pair aspect', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.half),
@@ -330,10 +324,10 @@ void main() {
     });
 
     // Guild Wars 2 is the only main that publishes both a name and a token
-    // sub-line, so it is where two text lines share the row with the emblem.
-    goldenTest('half ellipsizes a long name and sub-line beside the emblem', (
-      tester,
-    ) async {
+    // sub-line, and it publishes no cover, so it is the framed datum carrying
+    // two text lines at the narrowest width.
+    goldenTest('half ellipsizes a long name and sub-line in the datum over the '
+        'emblem motif', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(
@@ -411,9 +405,8 @@ void main() {
       ]),
     );
 
-    goldenTest('curated renders one captioned orb per resolved game', (
-      tester,
-    ) async {
+    goldenTest('curated renders one captioned orb per resolved game over the '
+        'shelf motif', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.full),
@@ -444,7 +437,7 @@ void main() {
     });
 
     goldenTest('the Collector variant renders one library emblem over the '
-        'owned and hours footer', (tester) async {
+        'owned and hours datum', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(
@@ -487,8 +480,8 @@ void main() {
       platform: Platform.steam,
     );
 
-    goldenTest('renders the perfect-game letters bracketed by the misc '
-        'diamonds over the perfect footer', (tester) async {
+    goldenTest('renders the perfect-game letters bracketed by the drawn '
+        'diamonds over the perfect-count datum', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.full),
@@ -522,7 +515,7 @@ void main() {
     });
 
     goldenTest('a card with no perfect count keeps the two bracketing diamonds '
-        'and drops the footer', (tester) async {
+        'and empties the datum', (tester) async {
       await pumpCardGolden(
         tester,
         card: _card(widget, ProfileCardSize.full),

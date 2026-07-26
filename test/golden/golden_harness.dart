@@ -97,10 +97,9 @@ Future<void> loadGoldenFonts() async {
   await _loadBundledFont(_iconFontFamily);
 }
 
-/// Family the icon glyphs come from. Cards draw their empty-state motifs from
-/// it, and an unregistered icon font rasterises every one of them as the same
-/// blank box — a reference that freezes the absence of the motif it exists to
-/// cover.
+/// Family the bundled icon glyphs come from. An unregistered icon font
+/// rasterises every codepoint as the same blank box, so any reference covering a
+/// bundled icon would freeze that blank rather than the glyph.
 const _iconFontFamily = 'MaterialIcons';
 
 /// Registers a family the asset bundle already carries. `flutter test` builds
@@ -113,7 +112,7 @@ Future<void> _loadBundledFont(String family) async {
   final entry = manifest.cast<Map<String, dynamic>>().firstWhere(
     (candidate) => candidate['family'] == family,
     orElse: () => throw StateError(
-      'No "$family" family in FontManifest.json. Icon motifs would render as '
+      'No "$family" family in FontManifest.json. Icon glyphs would render as '
       'blank boxes in every reference image.',
     ),
   );

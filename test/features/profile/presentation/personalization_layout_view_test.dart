@@ -281,6 +281,35 @@ void main() {
     expect(aWidth, lessThan(cWidth));
   });
 
+  testWidgets('a pair row ends both cards on the same line whatever their '
+      'natural heights differ by', (tester) async {
+    // A full-only archetype dropped into a pair slot clamps to the full variant,
+    // so its natural height differs from its dual-size partner's — the only case
+    // where a pair's two cards would end on different lines.
+    final widgets = [
+      _widget('short', ProfileWidgetKind.completionist),
+      _widget('tall', ProfileWidgetKind.template),
+    ];
+    const profile = Profile(
+      id: _userId,
+      username: 'nico',
+      displayName: 'Nico',
+      avatarUrl: null,
+      bio: null,
+      theme: ProfileTheme.crimson,
+      privacy: ProfilePrivacy.public,
+      featuredPlatform: null,
+      layout: [PairRow(left: 'short', right: 'tall')],
+    );
+
+    await _pumpAt(tester, 600, profile: profile, widgets: widgets);
+
+    final short = tester.getRect(find.byKey(personalizationCardKey('short')));
+    final tall = tester.getRect(find.byKey(personalizationCardKey('tall')));
+    expect(short.height, moreOrLessEquals(tall.height, epsilon: 0.5));
+    expect(short.bottom, moreOrLessEquals(tall.bottom, epsilon: 0.5));
+  });
+
   testWidgets('an injected owner widgetsProvider resolves the cards', (
     tester,
   ) async {

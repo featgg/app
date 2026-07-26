@@ -12,6 +12,7 @@ import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_card_shell.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_motifs.dart';
 import 'package:featgg/src/features/profile/presentation/profile_owner_cards_provider.dart';
 import 'package:featgg/src/features/profile/presentation/public_owner_cards_provider.dart';
 import 'package:flutter/material.dart';
@@ -95,8 +96,31 @@ const _coverB = 'https://cdn.test/cover-b.jpg';
 Finder _artFor(String url) =>
     find.byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url);
 
-/// A card carrying an envelope [heroImage] — Platform/Fallback read the band art
-/// from here.
+/// The motif a card is painting, read off the painter so the assertion covers
+/// what reaches the canvas rather than a widget flag.
+PersonalizationMotifPainter _motifPainter(WidgetTester tester) =>
+    tester
+            .widget<CustomPaint>(
+              find.descendant(
+                of: find.byType(PersonalizationMotifField),
+                matching: find.byType(CustomPaint),
+              ),
+            )
+            .painter!
+        as PersonalizationMotifPainter;
+
+/// The designed aspect a card rendered at.
+double _cardAspect(WidgetTester tester, String widgetId) => tester
+    .widget<AspectRatio>(
+      find.descendant(
+        of: find.byKey(personalizationCardKey(widgetId)),
+        matching: find.byType(AspectRatio),
+      ),
+    )
+    .aspectRatio;
+
+/// A card carrying an envelope [heroImage] — Platform/Fallback fill the card
+/// with it.
 GameCard _heroCard(Platform platform, String heroImage) => GameCard(
   schemaVersion: 1,
   platform: platform,
@@ -189,33 +213,32 @@ Map<Platform, GameCard?> _steamThreeStats() => {
 };
 
 void main() {
-  testWidgets(
-    'PlatformCard full renders up to three stats, all in the footer',
-    (tester) async {
-      await tester.pumpWidget(
-        _harness(
-          card: PlatformCard(
-            widget: _platformWidget,
-            size: ProfileCardSize.full,
-            cardSource: _publicSource(),
-          ),
-          cards: _steamThreeStats(),
+  testWidgets('PlatformCard full renders up to three stats, all in the datum', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: PlatformCard(
+          widget: _platformWidget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
         ),
-      );
-      await tester.pumpAndSettle();
+        cards: _steamThreeStats(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      // The third stat value is present at full size.
-      expect(find.text('4242'), findsOneWidget);
-      // Every stat renders inside the stat-footer zone (spec §6), not loose.
-      expect(
-        find.ancestor(
-          of: find.text('300'),
-          matching: find.byType(PersonalizationStatFooter),
-        ),
-        findsOneWidget,
-      );
-    },
-  );
+    // The third stat value is present at full size.
+    expect(find.text('4242'), findsOneWidget);
+    // Every stat renders inside the datum zone, not loose over the fill.
+    expect(
+      find.ancestor(
+        of: find.text('300'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('PlatformCard half caps at two stats (differs from full)', (
     tester,
@@ -237,58 +260,45 @@ void main() {
     expect(find.text('4242'), findsNothing);
   });
 
-  testWidgets('MilestoneCard full uses the wide capsule aspect', (
-    tester,
-  ) async {
-    final widget = _widget(
-      id: 'm',
-      kind: ProfileWidgetKind.showcase,
-      platform: Platform.steam,
-    );
-
+  testWidgets('full and half render the two designed aspects', (tester) async {
     await tester.pumpWidget(
       _harness(
-        card: MilestoneCard(widget: widget, size: ProfileCardSize.full),
+        card: Column(
+          children: [
+            PlatformCard(
+              widget: _widget(
+                id: 'full',
+                kind: ProfileWidgetKind.platform,
+                platform: Platform.steam,
+              ),
+              size: ProfileCardSize.full,
+              cardSource: _publicSource(),
+            ),
+            PlatformCard(
+              widget: _widget(
+                id: 'half',
+                kind: ProfileWidgetKind.platform,
+                platform: Platform.steam,
+              ),
+              size: ProfileCardSize.half,
+              cardSource: _publicSource(),
+            ),
+          ],
+        ),
+        cards: _steamThreeStats(),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(
-      tester
-          .widget<AspectRatio>(find.byKey(milestoneCapsuleKey('m')))
-          .aspectRatio,
-      PersonalizationLayout.capsuleFullAspect,
-    );
+    // One designed variant per size, no free ratios.
+    expect(_cardAspect(tester, 'full'), PersonalizationLayout.cardFullAspect);
+    expect(_cardAspect(tester, 'half'), PersonalizationLayout.cardHalfAspect);
   });
 
-  testWidgets('MilestoneCard half uses the compact capsule aspect', (
-    tester,
-  ) async {
-    final widget = _widget(
-      id: 'm',
-      kind: ProfileWidgetKind.showcase,
-      platform: Platform.steam,
-    );
-
-    await tester.pumpWidget(
-      _harness(
-        card: MilestoneCard(widget: widget, size: ProfileCardSize.half),
-      ),
-    );
-    await tester.pumpAndSettle();
-
+  test('the two designed card aspects differ', () {
     expect(
-      tester
-          .widget<AspectRatio>(find.byKey(milestoneCapsuleKey('m')))
-          .aspectRatio,
-      PersonalizationLayout.capsuleHalfAspect,
-    );
-  });
-
-  test('milestone full and half capsule aspects differ (spec §7)', () {
-    expect(
-      PersonalizationLayout.capsuleFullAspect,
-      isNot(PersonalizationLayout.capsuleHalfAspect),
+      PersonalizationLayout.cardFullAspect,
+      isNot(PersonalizationLayout.cardHalfAspect),
     );
   });
 
@@ -316,17 +326,17 @@ void main() {
       find.byKey(const Key('personalizationIdentityChip_pass_chess')),
       findsOneWidget,
     );
-    // The linked-platform count is the card's footer stat.
+    // The linked-platform count is the card's datum stat.
     expect(
       find.ancestor(
         of: find.text('2'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
   });
 
-  testWidgets('IdentityCard renders the member-since year in the footer', (
+  testWidgets('IdentityCard renders the member-since year in the datum', (
     tester,
   ) async {
     final widget = _widget(id: 'pass', kind: ProfileWidgetKind.passport);
@@ -346,7 +356,7 @@ void main() {
     expect(
       find.ancestor(
         of: find.text('2025'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
@@ -368,7 +378,7 @@ void main() {
     // a member-since value is never fabricated.
     expect(
       find.descendant(
-        of: find.byType(PersonalizationStatFooter),
+        of: find.byType(PersonalizationDatum),
         matching: find.byType(Text),
       ),
       findsNWidgets(2),
@@ -412,12 +422,21 @@ void main() {
     // The designed anatomy renders, never the generic Fallback card.
     expect(find.byType(RankCard), findsOneWidget);
     expect(find.byType(FallbackCard), findsNothing);
-    expect(find.text('GOLD IV'), findsOneWidget);
-    // The LP stat renders inside the footer zone with its unit suffix.
+    // No platform publishes rank-crest art, so the card is always its motif and
+    // the tier line moved into the datum rather than being dropped.
+    expect(_motifPainter(tester).motif, ProfileMotif.crest);
+    expect(
+      find.ancestor(
+        of: find.text('GOLD IV'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+    // The LP stat renders inside the datum with its unit suffix.
     expect(
       find.ancestor(
         of: find.text('42 LP'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
@@ -457,14 +476,14 @@ void main() {
     expect(
       find.ancestor(
         of: find.text('1500'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
   });
 
   testWidgets('RankCard with a no-data payload renders the neutral crest '
-      '(no footer), not Fallback', (tester) async {
+      '(no stats), not Fallback', (tester) async {
     final widget = _widget(
       id: 'r',
       kind: ProfileWidgetKind.rank,
@@ -492,85 +511,14 @@ void main() {
 
     expect(find.byType(RankCard), findsOneWidget);
     expect(find.byType(FallbackCard), findsNothing);
-    // The crest is still painted; the stat footer is omitted (no stats).
-    expect(find.byKey(rankBadgeKey('r')), findsOneWidget);
-    expect(find.byType(PersonalizationStatFooter), findsNothing);
-  });
-
-  Map<Platform, GameCard?> steamMainCards() => {
-    Platform.steam: _cardData(
-      Platform.steam,
-      const SteamCardData(
-        libraryShowcase: [
-          LibraryShowcaseEntry(appId: 1, title: 'Game 1', hours: 100),
-        ],
-        recentGames: [],
-      ),
-    ),
-  };
-
-  testWidgets('MainCard full uses the full emblem size', (tester) async {
-    final widget = _widget(
-      id: 'm',
-      kind: ProfileWidgetKind.main,
-      platform: Platform.steam,
-    );
-
-    await tester.pumpWidget(
-      _harness(
-        card: MainCard(
-          widget: widget,
-          size: ProfileCardSize.full,
-          cardSource: _publicSource(),
-        ),
-        cards: steamMainCards(),
-      ),
-    );
-    await tester.pumpAndSettle();
-
+    // The crest motif is still painted; the datum band renders empty.
+    expect(_motifPainter(tester).motif, ProfileMotif.crest);
     expect(
-      tester.widget<Container>(find.byKey(mainEmblemKey('m'))).constraints,
-      BoxConstraints.tightFor(
-        width: PersonalizationLayout.mainEmblemFull,
-        height: PersonalizationLayout.mainEmblemFull,
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.byType(Text),
       ),
-    );
-  });
-
-  testWidgets('MainCard half uses the (smaller) half emblem size', (
-    tester,
-  ) async {
-    final widget = _widget(
-      id: 'm',
-      kind: ProfileWidgetKind.main,
-      platform: Platform.steam,
-    );
-
-    await tester.pumpWidget(
-      _harness(
-        card: MainCard(
-          widget: widget,
-          size: ProfileCardSize.half,
-          cardSource: _publicSource(),
-        ),
-        cards: steamMainCards(),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      tester.widget<Container>(find.byKey(mainEmblemKey('m'))).constraints,
-      BoxConstraints.tightFor(
-        width: PersonalizationLayout.mainEmblemHalf,
-        height: PersonalizationLayout.mainEmblemHalf,
-      ),
-    );
-  });
-
-  test('main full and half emblem sizes differ (spec §5)', () {
-    expect(
-      PersonalizationLayout.mainEmblemFull,
-      isNot(PersonalizationLayout.mainEmblemHalf),
+      findsNothing,
     );
   });
 
@@ -610,6 +558,107 @@ void main() {
     expect(find.text(l10n.personalizationMainTopChampion), findsOneWidget);
   });
 
+  testWidgets('MainCard with a Steam cover renders bleed', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: _widget(
+            id: 'm',
+            kind: ProfileWidgetKind.main,
+            platform: Platform.steam,
+          ),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _cardData(
+            Platform.steam,
+            const SteamCardData(
+              libraryShowcase: [
+                LibraryShowcaseEntry(
+                  appId: 1,
+                  title: 'Game 1',
+                  hours: 100,
+                  heroImage: _coverA,
+                ),
+              ],
+              recentGames: [],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('MainCard on a platform that publishes no cover renders the '
+      'emblem motif with the name and sub-line in the datum', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: _widget(
+            id: 'm',
+            kind: ProfileWidgetKind.main,
+            platform: Platform.gw2,
+          ),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.gw2: _cardData(
+            Platform.gw2,
+            const Gw2CardData(
+              mainProfession: 'ELEMENTALIST',
+              account: Gw2Account(
+                accountAgeHours: 12000,
+                veterancyYears: 8,
+                totalAp: 24000,
+                fractalLevel: 90,
+              ),
+              topCharacters: [
+                Gw2Character(
+                  name: 'Ellathir',
+                  race: 'SYLVARI',
+                  profession: 'ELEMENTALIST',
+                  level: 80,
+                  deaths: 412,
+                  hoursPlayed: 900,
+                  isMain: true,
+                ),
+              ],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(_motifPainter(tester).motif, ProfileMotif.emblem);
+    expect(
+      find.ancestor(
+        of: find.text('Ellathir'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text('ELEMENTALIST'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
+
   Map<Platform, GameCard?> lolRankCards() => {
     Platform.leagueOfLegends: _cardData(
       Platform.leagueOfLegends,
@@ -626,154 +675,48 @@ void main() {
     ),
   };
 
-  testWidgets('RankCard full renders a visibly larger crest than half '
-      '(spec §5)', (tester) async {
-    final full = _widget(
-      id: 'rf',
-      kind: ProfileWidgetKind.rank,
-      platform: Platform.leagueOfLegends,
-    );
-    final half = _widget(
-      id: 'rh',
-      kind: ProfileWidgetKind.rank,
-      platform: Platform.leagueOfLegends,
-    );
-
-    // Both variants in one tree so their crests are measured side by side.
-    await tester.pumpWidget(
-      _harness(
-        card: Column(
-          children: [
-            RankCard(
-              widget: full,
-              size: ProfileCardSize.full,
-              cardSource: _publicSource(),
-            ),
-            RankCard(
-              widget: half,
-              size: ProfileCardSize.half,
-              cardSource: _publicSource(),
-            ),
-          ],
-        ),
-        cards: lolRankCards(),
+  Widget rankMotifHarness(PersonalizationPalette palette) => _harness(
+    card: RankCard(
+      widget: _widget(
+        id: 'r',
+        kind: ProfileWidgetKind.rank,
+        platform: Platform.leagueOfLegends,
       ),
-    );
+      size: ProfileCardSize.half,
+      cardSource: _publicSource(),
+    ),
+    cards: lolRankCards(),
+    palette: palette,
+  );
+
+  testWidgets('the motif is painted with the installed palette (crimson)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(rankMotifHarness(PersonalizationPalette.crimson));
     await tester.pumpAndSettle();
 
-    final fullCrest = tester.getSize(find.byKey(rankBadgeKey('rf')));
-    final halfCrest = tester.getSize(find.byKey(rankBadgeKey('rh')));
-    expect(fullCrest.width, greaterThan(halfCrest.width));
-    expect(
-      PersonalizationLayout.rankBadgeSizeFull,
-      greaterThan(PersonalizationLayout.rankBadgeSizeHalf),
-    );
+    // A motif reads the theme, so switching the palette re-tints it live.
+    expect(_motifPainter(tester).palette, PersonalizationPalette.crimson);
   });
 
-  LinearGradient badgeGradient(WidgetTester tester, Key key) =>
-      (tester.widget<Container>(find.byKey(key)).decoration as BoxDecoration)
-              .gradient!
-          as LinearGradient;
-
-  testWidgets('RankCard crest gradient bottom paint reads the palette artB '
-      '(crimson)', (tester) async {
-    final widget = _widget(
-      id: 'r',
-      kind: ProfileWidgetKind.rank,
-      platform: Platform.leagueOfLegends,
-    );
-
-    await tester.pumpWidget(
-      _harness(
-        card: RankCard(
-          widget: widget,
-          size: ProfileCardSize.half,
-          cardSource: _publicSource(),
-        ),
-        cards: lolRankCards(),
-        palette: PersonalizationPalette.crimson,
-      ),
-    );
+  testWidgets('the motif re-tints under a different palette (chak)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(rankMotifHarness(PersonalizationPalette.chak));
     await tester.pumpAndSettle();
 
-    // The bottom paint is the solid mid-tone artB (spec §8), so it re-tints with
-    // the theme rather than falling to a fixed black.
-    expect(
-      badgeGradient(tester, rankBadgeKey('r')).colors.last,
-      PersonalizationPalette.crimson.artB,
-    );
+    expect(_motifPainter(tester).palette, PersonalizationPalette.chak);
   });
 
-  testWidgets('RankCard crest gradient re-tints under a different palette '
-      '(chak)', (tester) async {
-    final widget = _widget(
-      id: 'r',
-      kind: ProfileWidgetKind.rank,
-      platform: Platform.leagueOfLegends,
-    );
-
-    await tester.pumpWidget(
-      _harness(
-        card: RankCard(
-          widget: widget,
-          size: ProfileCardSize.half,
-          cardSource: _publicSource(),
-        ),
-        cards: lolRankCards(),
-        palette: PersonalizationPalette.chak,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      badgeGradient(tester, rankBadgeKey('r')).colors.last,
-      PersonalizationPalette.chak.artB,
-    );
-  });
-
-  test('the two theme artB tones differ, so the crest assertions are '
+  test('the two theme accent tones differ, so the motif assertions are '
       'falsifiable', () {
+    expect(
+      PersonalizationPalette.crimson.accent,
+      isNot(PersonalizationPalette.chak.accent),
+    );
     expect(
       PersonalizationPalette.crimson.artB,
       isNot(PersonalizationPalette.chak.artB),
-    );
-  });
-
-  testWidgets('MainCard emblem gradient reads the palette artB', (
-    tester,
-  ) async {
-    final widget = _widget(
-      id: 'm',
-      kind: ProfileWidgetKind.main,
-      platform: Platform.steam,
-    );
-
-    await tester.pumpWidget(
-      _harness(
-        card: MainCard(
-          widget: widget,
-          size: ProfileCardSize.full,
-          cardSource: _publicSource(),
-        ),
-        cards: {
-          Platform.steam: _cardData(
-            Platform.steam,
-            const SteamCardData(
-              libraryShowcase: [
-                LibraryShowcaseEntry(appId: 1, title: 'Game 1', hours: 100),
-              ],
-              recentGames: [],
-            ),
-          ),
-        },
-        palette: PersonalizationPalette.arcane,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      badgeGradient(tester, mainEmblemKey('m')).colors.last,
-      PersonalizationPalette.arcane.artB,
     );
   });
 
@@ -810,18 +753,62 @@ void main() {
     expect(find.byType(FallbackCard), findsNothing);
     expect(find.byKey(collectionOrbKey('c', 0)), findsOneWidget);
     expect(find.byKey(collectionOrbKey('c', 1)), findsOneWidget);
-    // The game count is the footer stat.
+    // The game count is the datum stat.
     expect(
       find.ancestor(
         of: find.text('2'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the collection shelf is capped while the datum keeps the true '
+      'count', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _collectionWidget('c', const ['1', '2', '3', '4', '5']),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _steamCard(
+            data: steamLibrary(const [
+              LibraryShowcaseEntry(appId: 1, title: 'One', hours: 1),
+              LibraryShowcaseEntry(appId: 2, title: 'Two', hours: 2),
+              LibraryShowcaseEntry(appId: 3, title: 'Three', hours: 3),
+              LibraryShowcaseEntry(appId: 4, title: 'Four', hours: 4),
+              LibraryShowcaseEntry(appId: 5, title: 'Five', hours: 5),
+            ]),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The shelf is a motif and is capped; the number stays honest.
+    expect(
+      find.byKey(collectionOrbKey('c', PersonalizationLayout.collectionOrbCap)),
+      findsNothing,
+    );
+    expect(
+      find.byKey(
+        collectionOrbKey('c', PersonalizationLayout.collectionOrbCap - 1),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text('5'),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
   });
 
   testWidgets('collection (curated) with no resolved game renders a single '
-      'neutral orb and no footer, not Fallback', (tester) async {
+      'neutral orb and no stats, not Fallback', (tester) async {
     await tester.pumpWidget(
       _harness(
         // Refs that no longer resolve against an empty library.
@@ -838,7 +825,7 @@ void main() {
     expect(find.byType(CollectionCard), findsOneWidget);
     expect(find.byType(FallbackCard), findsNothing);
     expect(find.byKey(collectionOrbKey('c', 0)), findsOneWidget);
-    expect(find.byType(PersonalizationStatFooter), findsNothing);
+    expect(find.text('0'), findsNothing);
   });
 
   testWidgets('game_collector renders the Collector variant with the '
@@ -875,7 +862,7 @@ void main() {
     expect(
       find.ancestor(
         of: find.text('300'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
@@ -923,18 +910,18 @@ void main() {
     expect(find.byKey(achievementLetterKey('cp', 0)), findsOneWidget);
     expect(find.byKey(achievementLetterKey('cp', 1)), findsOneWidget);
     expect(find.byKey(achievementLetterKey('cp', 2)), findsOneWidget);
-    // The perfect-games count is the footer hero.
+    // The perfect-games count is the datum hero.
     expect(
       find.ancestor(
         of: find.text('3'),
-        matching: find.byType(PersonalizationStatFooter),
+        matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
   });
 
   testWidgets('completionist with no games_perfect renders the neutral no-data '
-      'grid (no footer), not Fallback', (tester) async {
+      'grid (no stats), not Fallback', (tester) async {
     final widget = _widget(
       id: 'cp',
       kind: ProfileWidgetKind.completionist,
@@ -956,8 +943,14 @@ void main() {
 
     expect(find.byType(AchievementGridCard), findsOneWidget);
     expect(find.byType(FallbackCard), findsNothing);
-    // No footer and no letter tiles — only the two bracketing diamonds remain.
-    expect(find.byType(PersonalizationStatFooter), findsNothing);
+    // No stats and no letter tiles — only the two bracketing diamonds remain.
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.byType(Text),
+      ),
+      findsNothing,
+    );
     expect(find.byKey(achievementLetterKey('cp', 0)), findsNothing);
     expect(
       find.byKey(const Key('personalizationAchievementMisc_cp_0')),
@@ -966,6 +959,43 @@ void main() {
     expect(
       find.byKey(const Key('personalizationAchievementMisc_cp_1')),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('the achievement shelf bracket is a drawn shape, not a glyph', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _widget(
+            id: 'cp',
+            kind: ProfileWidgetKind.completionist,
+            platform: Platform.steam,
+          ),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _steamCard(data: steamLibrary(const []))},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A decorative character depends on a font the app does not ship, so the
+    // bracket is drawn: a returning glyph flips this red.
+    final bracket = find.byKey(
+      const Key('personalizationAchievementMisc_cp_0'),
+    );
+    expect(
+      find.descendant(
+        of: bracket,
+        matching: find.byType(PersonalizationDiamond),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: bracket, matching: find.byType(Text)),
+      findsNothing,
     );
   });
 
@@ -983,6 +1013,11 @@ void main() {
     },
     palette: palette,
   );
+
+  LinearGradient badgeGradient(WidgetTester tester, Key key) =>
+      (tester.widget<Container>(find.byKey(key)).decoration as BoxDecoration)
+              .gradient!
+          as LinearGradient;
 
   testWidgets('collection orb gradient bottom paint reads the palette artB '
       '(crimson)', (tester) async {
@@ -1062,14 +1097,6 @@ void main() {
     expect(letterColor(tester), PersonalizationPalette.chak.accent);
   });
 
-  test('the two theme accent tones differ, so the letter-tint assertions are '
-      'falsifiable', () {
-    expect(
-      PersonalizationPalette.crimson.accent,
-      isNot(PersonalizationPalette.chak.accent),
-    );
-  });
-
   testWidgets('collection and achievement cards render without overflow at '
       '340dp', (tester) async {
     await tester.pumpWidget(
@@ -1124,8 +1151,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The content zones are Wraps, so an over-wide run wraps rather than
-    // overflowing the 340dp phone floor.
+    // A framed card's height follows its width, so the capped shelves must fit
+    // inside it at the narrowest phone rather than overflowing the inner Column.
     expect(tester.takeException(), isNull);
   });
 
@@ -1190,7 +1217,8 @@ void main() {
     showcaseSelection: ShowcaseSelection(gameRef: '730'),
   );
 
-  testWidgets('MilestoneCard renders the showcase hero art', (tester) async {
+  testWidgets('MilestoneCard with a game cover renders bleed and names the '
+      'game in the datum', (tester) async {
     await tester.pumpWidget(
       _harness(
         card: MilestoneCard(
@@ -1219,10 +1247,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_artFor(_heroUrl), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text('Counter-Strike'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('MilestoneCard with null hero art renders the gradient capsule, '
-      'no image', (tester) async {
+  testWidgets('MilestoneCard with no cover renders the capsule motif and still '
+      'names the game', (tester) async {
     await tester.pumpWidget(
       _harness(
         card: MilestoneCard(
@@ -1245,79 +1286,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // A subject that cannot be named does not ship: the game keeps its name
+    // even where the platform publishes no cover for it.
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(find.byKey(milestoneCapsuleKey('m')), findsOneWidget);
+    expect(_motifPainter(tester).motif, ProfileMotif.capsule);
+    expect(
+      find.ancestor(
+        of: find.text('CS'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
-  });
-
-  // The legibility scrim is strictly conditional on art; the finder is scoped
-  // under the capsule key so it never collides with the hero canvas.
-  Finder capsuleScrim() => find.descendant(
-    of: find.byKey(milestoneCapsuleKey('m')),
-    matching: find.byWidgetPredicate(
-      (w) => w is ColoredBox && w.color == PersonalizationArtColors.heroScrim,
-    ),
-  );
-
-  testWidgets('MilestoneCard with art renders exactly one legibility scrim '
-      'inside the capsule', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        card: MilestoneCard(
-          widget: milestoneWidget,
-          size: ProfileCardSize.full,
-          cardSource: _publicSource(),
-        ),
-        cards: {
-          Platform.steam: _cardData(
-            Platform.steam,
-            const SteamCardData(
-              libraryShowcase: [
-                LibraryShowcaseEntry(
-                  appId: 730,
-                  title: 'Counter-Strike',
-                  hours: 100,
-                  heroImage: _heroUrl,
-                ),
-              ],
-              recentGames: [],
-            ),
-          ),
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(capsuleScrim(), findsOneWidget);
-  });
-
-  testWidgets('MilestoneCard with null hero art renders NO scrim', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _harness(
-        card: MilestoneCard(
-          widget: milestoneWidget,
-          size: ProfileCardSize.full,
-          cardSource: _publicSource(),
-        ),
-        cards: {
-          Platform.steam: _cardData(
-            Platform.steam,
-            const SteamCardData(
-              libraryShowcase: [
-                LibraryShowcaseEntry(appId: 730, title: 'CS', hours: 100),
-              ],
-              recentGames: [],
-            ),
-          ),
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // "gradient-only capsule is visually unchanged": no scrim without art.
-    expect(capsuleScrim(), findsNothing);
   });
 
   testWidgets('PlatformCard renders the envelope hero_image art', (
@@ -1338,7 +1318,7 @@ void main() {
     expect(_artFor(_heroUrl), findsOneWidget);
   });
 
-  testWidgets('PlatformCard with null hero_image keeps the gradient art box', (
+  testWidgets('PlatformCard with null hero_image falls back to its own motif', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -1354,7 +1334,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(find.byType(PersonalizationArtBox), findsOneWidget);
+    expect(_motifPainter(tester).motif, ProfileMotif.bars);
     expect(tester.takeException(), isNull);
   });
 
@@ -1472,43 +1452,6 @@ void main() {
     );
   });
 
-  testWidgets('MainCard (Steam) emblem renders the top-game cover', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _harness(
-        card: MainCard(
-          widget: _widget(
-            id: 'm',
-            kind: ProfileWidgetKind.main,
-            platform: Platform.steam,
-          ),
-          size: ProfileCardSize.full,
-          cardSource: _publicSource(),
-        ),
-        cards: {
-          Platform.steam: _cardData(
-            Platform.steam,
-            const SteamCardData(
-              libraryShowcase: [
-                LibraryShowcaseEntry(
-                  appId: 1,
-                  title: 'Game 1',
-                  hours: 100,
-                  heroImage: _coverA,
-                ),
-              ],
-              recentGames: [],
-            ),
-          ),
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(_artFor(_coverA), findsOneWidget);
-  });
-
   testWidgets('RankCard renders no art', (tester) async {
     await tester.pumpWidget(
       _harness(
@@ -1526,10 +1469,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // No documented rank-crest art in any payload → the crest is always the
-    // gradient; a future accidental wiring would flip this red.
+    // No documented rank-crest art in any payload → the card is always its
+    // motif; a future accidental wiring would flip this red.
     expect(find.byType(CachedNetworkImage), findsNothing);
-    expect(find.byKey(rankBadgeKey('r')), findsOneWidget);
+    expect(_motifPainter(tester).motif, ProfileMotif.crest);
   });
 
   testWidgets('art renders through the public (visitor) CardSource', (
