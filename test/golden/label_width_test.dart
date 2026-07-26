@@ -1,0 +1,82 @@
+import 'package:featgg/src/core/theme/personalization_tokens.dart';
+import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'golden_harness.dart';
+
+/// The width a stat label actually gets on the narrowest card the column
+/// supports: a half card, less the datum's own horizontal padding on both
+/// sides. Measured here rather than assumed, because every label written for a
+/// card is written against this number.
+const _labelBudget =
+    goldenHalfWidth - 2 * PersonalizationLayout.datumHorizontalPadding;
+
+/// Lays out [text] the way the datum does — uppercase, tracked, at the label
+/// size a half card gives it — and reports how wide it comes out.
+double _labelWidth(String text) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text.toUpperCase(),
+      style: TextStyle(
+        fontFamily: goldenFontFamily,
+        fontSize: PersonalizationLayout.datumLabelMin,
+        letterSpacing: PersonalizationLayout.labelTracking,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  )..layout();
+  return painter.width;
+}
+
+void main() {
+  // Untagged, like the harness guards: a label that does not fit is a defect a
+  // developer needs to see while writing the label, not a reference image
+  // rendered later.
+
+  testWidgets('the label budget is wide enough to be worth writing to', (
+    tester,
+  ) async {
+    // Guards the measurement itself. If padding or the column floor changed
+    // enough to leave a handful of characters, every label below would "pass"
+    // by being unwritable rather than by fitting.
+    expect(_labelBudget, greaterThan(80));
+  });
+
+  testWidgets('every platform short name leaves room for what it names', (
+    tester,
+  ) async {
+    // The property the vocabulary exists for: each one prefixes a noun and both
+    // still fit. Every platform, not the longest — a card is written per
+    // platform and any one of them overflowing is a truncated label on someone's
+    // profile.
+    for (final descriptor in platformDescriptors.values) {
+      final width = _labelWidth('${descriptor.shortName} hours');
+      expect(
+        width,
+        lessThanOrEqualTo(_labelBudget),
+        reason:
+            '"${descriptor.shortName} hours" needs '
+            '${width.toStringAsFixed(1)}pt of '
+            '${_labelBudget.toStringAsFixed(1)}pt',
+      );
+    }
+  });
+
+  testWidgets('the short names are load-bearing, not cosmetic', (tester) async {
+    // Without this the test above would pass for a vocabulary that changed
+    // nothing. Not every brand name overflows — Chess.com fits as it is — so
+    // the claim is that the longest one does, which is what made a shorter
+    // vocabulary necessary rather than tidy.
+    final longest = platformDescriptors.values
+        .map((descriptor) => descriptor.displayName)
+        .reduce((a, b) => _labelWidth(a) >= _labelWidth(b) ? a : b);
+
+    expect(
+      _labelWidth('$longest hours'),
+      greaterThan(_labelBudget),
+      reason: '$longest fit after all',
+    );
+  });
+}

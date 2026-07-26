@@ -354,7 +354,7 @@ class PersonalizationDatum extends StatelessWidget {
     );
 
     const padding = EdgeInsets.symmetric(
-      horizontal: AppSpacing.smMd,
+      horizontal: PersonalizationLayout.datumHorizontalPadding,
       vertical: AppSpacing.xs,
     );
 
