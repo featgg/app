@@ -68,7 +68,12 @@ List<PersonalizationStat> statsFromResolved(
   for (final stat in stats) {
     final noun = cardStatLabel(l10n, stat.key);
     if (noun == null) continue;
-    final label = platform != null && cardStatNeedsPlatform(stat.key)
+    // Only the first entry — the one the card answers with — carries the
+    // platform. The rest explain that number, so the card has already said
+    // which platform they belong to, and repeating it would spend width they
+    // do not have: beside a hero and each other they get a third of the row.
+    final label =
+        out.isEmpty && platform != null && cardStatNeedsPlatform(stat.key)
         ? '$platform $noun'
         : noun;
     out.add(

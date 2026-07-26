@@ -14,6 +14,16 @@ import 'golden_harness.dart';
 const _labelBudget =
     goldenHalfWidth - 2 * PersonalizationLayout.datumHorizontalPadding;
 
+/// What a *supporting* label gets, which is far less and is the case a budget
+/// taken from a half card misses: on a full card the hero and two stats share
+/// one row, so each is about a third of it. Measured because reading the first
+/// version of this off the wider number let a label through that truncated.
+const _supportingBudget =
+    (goldenFullWidth -
+        2 * PersonalizationLayout.datumHorizontalPadding -
+        2 * PersonalizationLayout.datumEntryGap) /
+    (1 + PersonalizationLayout.supportingCapFull);
+
 /// Lays out [text] the way the datum does — uppercase, tracked, at the label
 /// size a half card gives it — and reports how wide it comes out.
 double _labelWidth(String text) {
@@ -102,6 +112,37 @@ void main() {
       reason:
           'over the ${_labelBudget.toStringAsFixed(1)}pt a label gets:\n'
           '${failures.join('\n')}',
+    );
+  });
+
+  testWidgets('every card label fits beside a hero, in every language', (
+    tester,
+  ) async {
+    // The case the budget above misses, and the one a rendered card caught after
+    // this file was already green: a label explaining the hero gets a third of a
+    // row, not the whole of one. Only the hero carries a platform, so what is
+    // measured here is the bare noun — but it is measured against the width it
+    // really has.
+    final failures = <String>[];
+    for (final tag in ['en', 'es', 'pt']) {
+      final l10n = await AppLocalizations.delegate.load(Locale(tag));
+      for (final key in cardStatKeys) {
+        final width = _labelWidth(cardStatLabel(l10n, key)!);
+        if (width > _supportingBudget) {
+          failures.add(
+            '$tag/$key: "${cardStatLabel(l10n, key)!.toUpperCase()}" '
+            '${width.toStringAsFixed(1)}pt',
+          );
+        }
+      }
+    }
+
+    expect(
+      failures,
+      isEmpty,
+      reason:
+          'over the ${_supportingBudget.toStringAsFixed(1)}pt a supporting '
+          'label gets:\n${failures.join('\n')}',
     );
   });
 

@@ -298,6 +298,11 @@ abstract final class PersonalizationLayout {
   /// truncates on a real device.
   static const double datumHorizontalPadding = AppSpacing.smMd;
 
+  /// The gap between the hero and each number explaining it. The other term in
+  /// what a supporting label gets, which is a third of a row rather than the
+  /// whole of one — the distinction a budget read off a half card misses.
+  static const double datumEntryGap = AppSpacing.md;
+
   /// Datum line height, tighter than the default. Once the label floor binds,
   /// leading rather than type size is what keeps the band from taking a share
   /// of the card its content does not need.
