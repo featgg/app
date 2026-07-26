@@ -33,19 +33,12 @@ class PlatformCard extends ConsumerWidget {
         ? null
         : resolveCard(ref, cardSource, platform);
 
-    final isFull = size == ProfileCardSize.full;
     return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.platform,
       size: size,
       art: card?.heroImage,
-      stats: cardStats(
-        card,
-        l10n,
-        isFull
-            ? PersonalizationLayout.statCapFull
-            : PersonalizationLayout.statCapHalf,
-      ),
+      stats: cardStats(card, l10n, PersonalizationLayout.statCapFull),
     );
   }
 }

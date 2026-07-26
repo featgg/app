@@ -435,15 +435,65 @@ void main() {
       ),
       findsOneWidget,
     );
-    // The LP stat renders inside the datum with its unit suffix.
-    expect(
-      find.ancestor(
-        of: find.text('42 LP'),
-        matching: find.byType(PersonalizationDatum),
-      ),
-      findsOneWidget,
-    );
+    // A half card carries the one datum and nothing else, so the LP the
+    // payload also publishes is not placed beside it — the card answers with
+    // the tier alone. The full variant below is where LP earns its place.
+    expect(find.text('42 LP'), findsNothing);
   });
+
+  testWidgets(
+    'RankCard full places the same payload\'s stats beside the tier',
+    (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          card: RankCard(
+            widget: _widget(
+              id: 'r',
+              kind: ProfileWidgetKind.rank,
+              platform: Platform.leagueOfLegends,
+            ),
+            size: ProfileCardSize.full,
+            cardSource: _publicSource(),
+          ),
+          cards: {
+            Platform.leagueOfLegends: _cardData(
+              Platform.leagueOfLegends,
+              const LeagueOfLegendsCardData(
+                rank: LolRank(
+                  tier: 'GOLD',
+                  division: 'IV',
+                  lp: 42,
+                  wins: 60,
+                  losses: 40,
+                ),
+                topMastery: [],
+              ),
+            ),
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Same payload as the half above: what a card shows is a function of the
+      // size it was placed at, not of what the platform published. Without this
+      // pair the half's assertion would also pass if the stats were dropped
+      // everywhere.
+      expect(
+        find.ancestor(
+          of: find.text('GOLD IV'),
+          matching: find.byType(PersonalizationDatum),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(
+          of: find.text('42 LP'),
+          matching: find.byType(PersonalizationDatum),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('RankCard renders the Chess mode scope and rating stat', (
     tester,

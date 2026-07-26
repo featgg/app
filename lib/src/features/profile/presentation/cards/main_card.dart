@@ -35,7 +35,6 @@ class MainCard extends ConsumerWidget {
         : resolveCard(ref, cardSource, platform);
     final resolved = resolveMain(card);
 
-    final isFull = size == ProfileCardSize.full;
     return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.main,
@@ -46,9 +45,7 @@ class MainCard extends ConsumerWidget {
       stats: statsFromResolved(
         resolved?.stats ?? const [],
         l10n,
-        isFull
-            ? PersonalizationLayout.statCapFull
-            : PersonalizationLayout.statCapHalf,
+        PersonalizationLayout.statCapFull,
       ),
     );
   }

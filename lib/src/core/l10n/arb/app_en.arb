@@ -1440,6 +1440,10 @@
   "@personalizationStatPerfect": {
     "description": "Stat-footer label on the Achievement Grid card; the value is the count of 100%-completed (perfect) games."
   },
+  "personalizationStatRank": "Rank",
+  "@personalizationStatRank": {
+    "description": "Datum label on the Rank card, where the value is the tier itself (e.g. 'Gold IV') rather than a number."
+  },
   "addCatalogTitle": "Add a card",
   "@addCatalogTitle": {
     "description": "Title of the add-card sheet, a flat archetype-grouped catalog of the cards the owner can add."
