@@ -22,5 +22,5 @@ pre-push:
       run: flutter analyze
       fail_text: "flutter analyze reported issues."
     test:
-      run: flutter test
+      run: flutter test --exclude-tags golden
       fail_text: "flutter test failed."

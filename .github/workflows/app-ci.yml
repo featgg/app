@@ -61,6 +61,18 @@ jobs:
       - name: flutter test
         run: flutter test
 
+      # On the Linux runner nothing excludes the golden tag, so the reference
+      # images run inside the step above. A mismatch needs a human to look at
+      # the pixels, so ship them off the runner.
+      - name: Upload golden failures
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: golden-failures
+          path: test/**/failures/**
+          if-no-files-found: ignore
+          retention-days: 7
+
   contract:
     name: contract
     runs-on: ubuntu-latest

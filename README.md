@@ -45,12 +45,14 @@ On every push (`pre-push`):
 
 - `gitleaks detect` to scan the full commit history for secrets
 - `flutter analyze` on the working tree
-- `flutter test` on the working tree
+- `flutter test --exclude-tags golden` on the working tree
 
 The analyzer and test suite run on push rather than on every commit so
-individual commits stay fast while each push is still gated. The same
-format / analyze / test checks also run in CI; the local hooks catch
-them earlier. Secret scanning runs locally on commit (staged diff) and
+individual commits stay fast while each push is still gated. Golden tests
+are excluded locally because their reference images are rendered on the
+Linux CI runner; running them on another platform produces false failures.
+CI runs the same format / analyze / test checks — including the goldens —
+so the local hooks catch everything else earlier. Secret scanning runs locally on commit (staged diff) and
 on push (full history) — the last gate before anything leaves the
 machine — and again in CI (full history) as defense in depth.
 

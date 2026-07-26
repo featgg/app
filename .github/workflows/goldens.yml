@@ -1,0 +1,60 @@
+name: goldens
+
+# Regenerates the golden reference images in the same environment that gates
+# them, and uploads them as an artifact for a human to review and commit.
+# The push trigger exists because workflow_dispatch only works once this file
+# is on the default branch — it is what makes the first seed possible.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["goldens/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  goldens:
+    name: goldens
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.41.2
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Cache build_runner output
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .dart_tool/build
+            lib/**/*.g.dart
+          key: build-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'build.yaml') }}-${{ github.run_id }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'build.yaml') }}-
+
+      - name: dart run build_runner build
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Regenerate golden references
+        run: flutter test --tags golden --update-goldens
+
+      - name: Upload regenerated goldens
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: goldens
+          path: test/golden/goldens/**
+          if-no-files-found: error
+          retention-days: 7
