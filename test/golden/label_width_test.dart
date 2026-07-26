@@ -1,5 +1,7 @@
+import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/core/theme/personalization_tokens.dart';
 import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
+import 'package:featgg/src/features/profile/presentation/cards/card_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -62,6 +64,45 @@ void main() {
             '${_labelBudget.toStringAsFixed(1)}pt',
       );
     }
+  });
+
+  testWidgets('every card label fits, in every language', (tester) async {
+    // The acceptance this story turns on, asserted over the real strings rather
+    // than a sample: a label that overflows is a number whose subject a reader
+    // cannot read, which is the defect the copy exists to remove.
+    //
+    // A prefixed label is measured against the longest platform name, because
+    // that is the one that has to fit — a noun sized to WoW and overflowing on
+    // Hypixel is a label that truncates on somebody's profile.
+    final longestPlatform = platformDescriptors.values
+        .map((descriptor) => descriptor.shortName)
+        .reduce((a, b) => _labelWidth(a) >= _labelWidth(b) ? a : b);
+
+    final failures = <String>[];
+    for (final tag in ['en', 'es', 'pt']) {
+      final l10n = await AppLocalizations.delegate.load(Locale(tag));
+      for (final key in cardStatKeys) {
+        final noun = cardStatLabel(l10n, key)!;
+        final label = cardStatNeedsPlatform(key)
+            ? '$longestPlatform $noun'
+            : noun;
+        final width = _labelWidth(label);
+        if (width > _labelBudget) {
+          failures.add(
+            '$tag/$key: "${label.toUpperCase()}" '
+            '${width.toStringAsFixed(1)}pt',
+          );
+        }
+      }
+    }
+
+    expect(
+      failures,
+      isEmpty,
+      reason:
+          'over the ${_labelBudget.toStringAsFixed(1)}pt a label gets:\n'
+          '${failures.join('\n')}',
+    );
   });
 
   testWidgets('the short names are load-bearing, not cosmetic', (tester) async {

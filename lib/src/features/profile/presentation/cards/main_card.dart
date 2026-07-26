@@ -46,6 +46,10 @@ class MainCard extends ConsumerWidget {
         resolved?.stats ?? const [],
         l10n,
         PersonalizationLayout.statCapFull,
+        platform: cardLabelPlatform(
+          widget.platform,
+          hasArt: resolved?.heroImage != null,
+        ),
       ),
     );
   }

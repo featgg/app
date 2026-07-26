@@ -1440,6 +1440,106 @@
   "@personalizationStatPerfect": {
     "description": "Stat-footer label on the Achievement Grid card; the value is the count of 100%-completed (perfect) games."
   },
+  "cardStatRating": "Rating",
+  "@cardStatRating": {
+    "description": "Card datum label for the rating stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatGamesOwned": "Games",
+  "@cardStatGamesOwned": {
+    "description": "Card datum label for the gamesOwned stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatHoursPlayed": "Hours",
+  "@cardStatHoursPlayed": {
+    "description": "Card datum label for the hoursPlayed stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatNetworkLevel": "Network",
+  "@cardStatNetworkLevel": {
+    "description": "Card datum label for the networkLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatBedwarsWins": "BW wins",
+  "@cardStatBedwarsWins": {
+    "description": "Card datum label for the bedwarsWins stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatBedwarsKills": "BW kills",
+  "@cardStatBedwarsKills": {
+    "description": "Card datum label for the bedwarsKills stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatKarma": "Karma",
+  "@cardStatKarma": {
+    "description": "Card datum label for the karma stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatAchievementPoints": "Points",
+  "@cardStatAchievementPoints": {
+    "description": "Card datum label for the achievementPoints stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatTotalAchievementPoints": "Points",
+  "@cardStatTotalAchievementPoints": {
+    "description": "Card datum label for the totalAchievementPoints stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatRetroRank": "Rank",
+  "@cardStatRetroRank": {
+    "description": "Card datum label for the retroRank stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatCompletionPct": "Complete",
+  "@cardStatCompletionPct": {
+    "description": "Card datum label for the completionPct stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatRankLp": "LP",
+  "@cardStatRankLp": {
+    "description": "Card datum label for the rankLp stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatWinrate": "Win %",
+  "@cardStatWinrate": {
+    "description": "Card datum label for the winrate stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatMasteryPoints": "Mastery",
+  "@cardStatMasteryPoints": {
+    "description": "Card datum label for the masteryPoints stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatChallengePoints": "Challenges",
+  "@cardStatChallengePoints": {
+    "description": "Card datum label for the challengePoints stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatSummonerLevel": "Summoner",
+  "@cardStatSummonerLevel": {
+    "description": "Card datum label for the summonerLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatItemLevel": "Item level",
+  "@cardStatItemLevel": {
+    "description": "Card datum label for the itemLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatMythicPlusRating": "Mythic+",
+  "@cardStatMythicPlusRating": {
+    "description": "Card datum label for the mythicPlusRating stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatFollowers": "Fans",
+  "@cardStatFollowers": {
+    "description": "Card datum label for the followers stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatPuzzleRush": "Puzzle Rush",
+  "@cardStatPuzzleRush": {
+    "description": "Card datum label for the puzzleRush stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatWvwRank": "WvW",
+  "@cardStatWvwRank": {
+    "description": "Card datum label for the wvwRank stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatFractalLevel": "Fractals",
+  "@cardStatFractalLevel": {
+    "description": "Card datum label for the fractalLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatTotalAp": "AP",
+  "@cardStatTotalAp": {
+    "description": "Card datum label for the totalAp stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatAccountAgeHours": "Age",
+  "@cardStatAccountAgeHours": {
+    "description": "Card datum label for the accountAgeHours stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardStatVeterancyYears": "Veterancy",
+  "@cardStatVeterancyYears": {
+    "description": "Card datum label for the veterancyYears stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
   "personalizationStatRank": "Rank",
   "@personalizationStatRank": {
     "description": "Datum label on the Rank card, where the value is the tier itself (e.g. 'Gold IV') rather than a number."

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/core.dart';
 import '../../../connections/domain/connection.dart';
 import '../../../connections/domain/game_card.dart';
+import '../../../connections/domain/platform_descriptor.dart';
 import '../../domain/completionist_value_resolver.dart';
 import '../../domain/game_collector_value_resolver.dart';
 import '../../domain/showcase_selection.dart';
@@ -41,8 +42,17 @@ GameCard? resolveCard(WidgetRef ref, CardSource? source, Platform platform) {
 List<PersonalizationStat> cardStats(
   GameCard? card,
   AppLocalizations l10n,
-  int cap,
-) => statsFromResolved(card?.stats ?? const [], l10n, cap);
+  int cap, {
+  String? platform,
+}) => statsFromResolved(card?.stats ?? const [], l10n, cap, platform: platform);
+
+/// The platform a card should name beside its numbers, or null where the card
+/// carries real art: the picture already says what the numbers are about, and
+/// repeating it spends width the noun needs.
+String? cardLabelPlatform(Platform? platform, {required bool hasArt}) =>
+    hasArt || platform == null
+    ? null
+    : platformDescriptors[platform]?.shortName;
 
 /// The first [cap] [stats] whose key resolves to a label, formatted for the
 /// datum. A stat with an unrecognized key or non-numeric value is skipped rather
@@ -51,12 +61,16 @@ List<PersonalizationStat> cardStats(
 List<PersonalizationStat> statsFromResolved(
   List<CardStat> stats,
   AppLocalizations l10n,
-  int cap,
-) {
+  int cap, {
+  String? platform,
+}) {
   final out = <PersonalizationStat>[];
   for (final stat in stats) {
-    final label = connectionsStatLabel(l10n, stat.key);
-    if (label == null) continue;
+    final noun = cardStatLabel(l10n, stat.key);
+    if (noun == null) continue;
+    final label = platform != null && cardStatNeedsPlatform(stat.key)
+        ? '$platform $noun'
+        : noun;
     out.add(
       PersonalizationStat(value: formatStatValue(stat, l10n), label: label),
     );
@@ -150,6 +164,86 @@ String formatStatValue(CardStat stat, AppLocalizations l10n) {
     _ => base,
   };
 }
+
+/// Every stat key a card can label. Enumerable so the width guard can measure
+/// all of them rather than a sample, and so a key added without card copy is
+/// caught there instead of shipping as a number with no subject.
+const List<String> cardStatKeys = [
+  'rating',
+  'games_owned',
+  'hours_played',
+  'network_level',
+  'bedwars_wins',
+  'bedwars_kills',
+  'karma',
+  'achievement_points',
+  'total_achievement_points',
+  'retro_rank',
+  'completion_pct',
+  'rank_lp',
+  'winrate',
+  'mastery_points',
+  'challenge_points',
+  'summoner_level',
+  'item_level',
+  'mythic_plus_rating',
+  'followers',
+  'puzzle_rush',
+  'wvw_rank',
+  'fractal_level',
+  'total_ap',
+  'account_age_hours',
+  'veterancy_years',
+];
+
+/// A card's label for [key]: the terse noun, without the platform. Distinct
+/// from the shared stat copy, which the feed and the connections screen were
+/// written around and which is too long to sit beside a platform name.
+String? cardStatLabel(AppLocalizations l10n, String key) => switch (key) {
+  'rating' => l10n.cardStatRating,
+  'games_owned' => l10n.cardStatGamesOwned,
+  'hours_played' => l10n.cardStatHoursPlayed,
+  'network_level' => l10n.cardStatNetworkLevel,
+  'bedwars_wins' => l10n.cardStatBedwarsWins,
+  'bedwars_kills' => l10n.cardStatBedwarsKills,
+  'karma' => l10n.cardStatKarma,
+  'achievement_points' => l10n.cardStatAchievementPoints,
+  'total_achievement_points' => l10n.cardStatTotalAchievementPoints,
+  'retro_rank' => l10n.cardStatRetroRank,
+  'completion_pct' => l10n.cardStatCompletionPct,
+  'rank_lp' => l10n.cardStatRankLp,
+  'winrate' => l10n.cardStatWinrate,
+  'mastery_points' => l10n.cardStatMasteryPoints,
+  'challenge_points' => l10n.cardStatChallengePoints,
+  'summoner_level' => l10n.cardStatSummonerLevel,
+  'item_level' => l10n.cardStatItemLevel,
+  'mythic_plus_rating' => l10n.cardStatMythicPlusRating,
+  'followers' => l10n.cardStatFollowers,
+  'puzzle_rush' => l10n.cardStatPuzzleRush,
+  'wvw_rank' => l10n.cardStatWvwRank,
+  'fractal_level' => l10n.cardStatFractalLevel,
+  'total_ap' => l10n.cardStatTotalAp,
+  'account_age_hours' => l10n.cardStatAccountAgeHours,
+  'veterancy_years' => l10n.cardStatVeterancyYears,
+  _ => null,
+};
+
+/// Whether [key] needs its platform named beside it. Jargon belonging to one
+/// platform already names it — a reader seeing Bed Wars knows where it is from,
+/// where hours could be anyone's. Naming it anyway would cost the width the
+/// noun needs.
+bool cardStatNeedsPlatform(String key) => const {
+  'rating',
+  'games_owned',
+  'hours_played',
+  'achievement_points',
+  'total_achievement_points',
+  'retro_rank',
+  'completion_pct',
+  'winrate',
+  'followers',
+  'account_age_hours',
+}.contains(key);
 
 /// Maps a raw envelope stat key (`GameCard.stats` carries the platform's own
 /// tokens, e.g. `games_owned`) to its localized label, or null for a key with

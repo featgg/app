@@ -39,6 +39,7 @@ class RankCard extends ConsumerWidget {
       resolved?.stats ?? const [],
       l10n,
       PersonalizationLayout.statCapFull,
+      platform: cardLabelPlatform(platform, hasArt: false),
     );
     // What this card answers with depends on the platform: a tier where one is
     // published, the rating itself where none is. Either way the scope — a
