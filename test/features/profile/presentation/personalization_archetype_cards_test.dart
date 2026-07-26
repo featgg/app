@@ -136,16 +136,22 @@ GameCard _heroCard(Platform platform, String heroImage) => GameCard(
   lastUpdated: DateTime.utc(2026, 6, 1),
 );
 
-ProfileWidget _collectionWidget(String id, List<String> gameRefs) =>
-    ProfileWidget(
-      id: id,
-      kind: ProfileWidgetKind.collection,
-      platform: null,
-      position: 0,
-      isEnabled: true,
-      size: ProfileWidgetSize.small,
-      collectionSelection: CollectionSelection(gameRefs: gameRefs),
-    );
+ProfileWidget _collectionWidget(
+  String id,
+  List<String> gameRefs, {
+  String? titleKey,
+}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.collection,
+  platform: null,
+  position: 0,
+  isEnabled: true,
+  size: ProfileWidgetSize.small,
+  collectionSelection: CollectionSelection(
+    gameRefs: gameRefs,
+    titleKey: titleKey,
+  ),
+);
 
 ProfileWidget _widget({
   required String id,
@@ -860,6 +866,40 @@ void main() {
     expect(
       find.ancestor(
         of: find.text('5'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('collection names which shelf the count is of', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _collectionWidget('c', const [
+            '1',
+          ], titleKey: 'collectionTitleBacklog'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.steam: _steamCard(
+            data: steamLibrary(const [
+              LibraryShowcaseEntry(appId: 1, title: 'One', hours: 1),
+            ]),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The shelf the owner picked is theirs to name, so no written label covers
+    // it. Without it in the datum two shelves on one profile read identically,
+    // and a count of nothing nameable is not a datum.
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(
+      find.ancestor(
+        of: find.text(l10n.collectionTitleBacklog.toUpperCase()),
         matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
