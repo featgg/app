@@ -78,10 +78,10 @@ The profile header (§4) is not a card of either family. It is a fixed surface o
 ### 6.1 The two formats
 
 - **Bleed** — real art fills the card edge to edge; a short bottom gradient plus a text shadow guarantees legibility over light art; the datum sits bottom-left, over the art. The designed variant accommodates the art's orientation; placement within the frame is per variant (#182).
-- **Framed** — no art; the theme's own ground fills the card; the datum sits in its own band; a single line closes the card at the bottom; no side or top borders.
+- **Framed** — no art; the theme's own vertical fill grounds the card, with nothing drawn over it; the datum sits in its own band; a single line closes the card at the bottom; no side or top borders.
 - **Nothing sits at the top of any card**: no card title, no platform tag, no date.
 - Format is a registry property (§7.1), not per-card special-casing: bleed when real art exists for the card's subject (§7.2), framed otherwise.
-- A framed card's ground is the theme fill, flat. Per-archetype drawn motifs were tried and withdrawn: the shipped vocabulary repeated the shape of the content it sat behind — circles behind the orb shelf, tiles behind the letter shelf — so the two read as a collision rather than as texture. Giving each archetype its own character is still the goal and is taken up with the art work; until then a card earns its distinctiveness from its content, not from its background.
+- A framed card's ground carries no drawn figure — it is the theme's own vertical fill and nothing else, closing on the solid mid-tone §11 requires. Per-archetype motifs were tried and withdrawn: the shipped vocabulary repeated the shape of the content it sat behind — circles behind the orb shelf, tiles behind the letter shelf — so the two read as a collision rather than as texture. Giving each archetype its own character is still the goal and is taken up with the art work; until then a card earns its distinctiveness from its content, not from its background.
 
 ### 6.2 Anatomy rules
 

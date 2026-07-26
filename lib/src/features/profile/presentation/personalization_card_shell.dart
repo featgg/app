@@ -187,7 +187,7 @@ class PersonalizationDatum extends StatelessWidget {
   final ProfileCardFormat format;
 
   /// The card's rendered height. Every type size here is a fraction of it, so
-  /// the band holds its designed share of the card (spec §6.2) at any width.
+  /// the band holds its share of the card at any width.
   final double cardHeight;
 
   final String? subject;
@@ -198,16 +198,25 @@ class PersonalizationDatum extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = PersonalizationTheme.of(context);
     final textTheme = Theme.of(context).textTheme;
-    // Clamped so a card in an extreme slot does not read as a heading at one
-    // end, and holds the spec's 11pt label floor (§6.2) at the other — the
-    // floor wins over the band's target share when the two disagree.
-    final valueSize = (0.075 * cardHeight).clamp(13.0, 20.0);
-    final subjectSize = (0.058 * cardHeight).clamp(11.0, 15.0);
-    final labelSize = (0.042 * cardHeight).clamp(11.0, 13.0);
-    // Leading, not type size, is what buys the band its target share (§6.2)
-    // once the 11pt floor is binding: at the default the three lines carry a
-    // third of their height as empty space the card cannot spare.
-    const leading = 1.15;
+    // The label floor wins over the band's target share when the two disagree:
+    // a band that hits its proportion with unreadable labels has traded away
+    // the thing the band exists for.
+    final valueSize = (PersonalizationLayout.datumValueFactor * cardHeight)
+        .clamp(
+          PersonalizationLayout.datumValueMin,
+          PersonalizationLayout.datumValueMax,
+        );
+    final subjectSize = (PersonalizationLayout.datumSubjectFactor * cardHeight)
+        .clamp(
+          PersonalizationLayout.datumSubjectMin,
+          PersonalizationLayout.datumSubjectMax,
+        );
+    final labelSize = (PersonalizationLayout.datumLabelFactor * cardHeight)
+        .clamp(
+          PersonalizationLayout.datumLabelMin,
+          PersonalizationLayout.datumLabelMax,
+        );
+    const leading = PersonalizationLayout.datumLeading;
     final onArt = format == ProfileCardFormat.bleed;
     // Muted grey is not legible over light art even under the bottom gradient,
     // so both lines take the on-art tone there.
