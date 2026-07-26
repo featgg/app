@@ -67,6 +67,7 @@ class PersonalizationCardShell extends StatelessWidget {
     required this.size,
     this.art,
     this.framedContent,
+    this.hero,
     this.subject,
     this.detail,
     this.stats = const [],
@@ -85,10 +86,17 @@ class PersonalizationCardShell extends StatelessWidget {
   /// the letter shelf, the platform chips). Framed cards only.
   final Widget? framedContent;
 
-  /// What the number is about, and its secondary line.
+  /// The one number this card answers with, where that is not simply the first
+  /// entry of [stats] — a rank answers with its tier, which is not a stat the
+  /// platform publishes. Left null, the first of [stats] is the hero.
+  final PersonalizationStat? hero;
+
+  /// What the number is about, and its secondary line. Drawn over art only.
   final String? subject;
   final String? detail;
 
+  /// Everything the card has to say in numbers. The shell decides how many of
+  /// them the card's size can answer for; a card never caps its own.
   final List<PersonalizationStat> stats;
 
   @override
@@ -111,12 +119,29 @@ class PersonalizationCardShell extends StatelessWidget {
         // page-level sizes onto a card a fraction of that size.
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // The cap lives here rather than in each card so no payload can
+            // put more numbers on a card than its size answers for, however
+            // many stats the platform happens to publish.
+            final heroStat = hero ?? (stats.isEmpty ? null : stats.first);
+            final rest = hero == null ? stats.skip(1) : stats;
+            // A card designed for art that resolved none is showing a fallback:
+            // its subject is a proper noun no generic label can carry, so it
+            // keeps its own line. A card designed framed names its subject in
+            // the hero's label and spends no line on one.
+            final degraded = cardFormat(archetype) == ProfileCardFormat.bleed;
             final datum = PersonalizationDatum(
               format: format,
               cardHeight: constraints.maxHeight,
-              subject: subject,
-              detail: detail,
-              stats: stats,
+              hero: heroStat,
+              subject: degraded ? subject : null,
+              detail: degraded ? detail : null,
+              supporting: rest
+                  .take(
+                    size == ProfileCardSize.full
+                        ? PersonalizationLayout.supportingCapFull
+                        : PersonalizationLayout.supportingCapHalf,
+                  )
+                  .toList(),
             );
             return format == ProfileCardFormat.bleed
                 ? Stack(
@@ -179,9 +204,10 @@ class PersonalizationDatum extends StatelessWidget {
     super.key,
     required this.format,
     required this.cardHeight,
+    this.hero,
     this.subject,
     this.detail,
-    this.stats = const [],
+    this.supporting = const [],
   });
 
   final ProfileCardFormat format;
@@ -190,9 +216,18 @@ class PersonalizationDatum extends StatelessWidget {
   /// the band holds its share of the card at any width.
   final double cardHeight;
 
+  /// The one number the card answers with. A framed card names its subject in
+  /// this entry's own label, which is why it spends no separate line on one.
+  final PersonalizationStat? hero;
+
+  /// What the number is about, where no label can name it — a character, a
+  /// game title. The shell decides when a card is entitled to the line.
   final String? subject;
   final String? detail;
-  final List<PersonalizationStat> stats;
+
+  /// The numbers that explain [hero], drawn beside it and smaller. A half card
+  /// takes none — it carries the one datum and nothing else.
+  final List<PersonalizationStat> supporting;
 
   @override
   Widget build(BuildContext context) {
@@ -201,10 +236,14 @@ class PersonalizationDatum extends StatelessWidget {
     // The label floor wins over the band's target share when the two disagree:
     // a band that hits its proportion with unreadable labels has traded away
     // the thing the band exists for.
-    final valueSize = (PersonalizationLayout.datumValueFactor * cardHeight)
+    final heroSize = (PersonalizationLayout.datumHeroFactor * cardHeight).clamp(
+      PersonalizationLayout.datumHeroMin,
+      PersonalizationLayout.datumHeroMax,
+    );
+    final supportSize = (PersonalizationLayout.datumSupportFactor * cardHeight)
         .clamp(
-          PersonalizationLayout.datumValueMin,
-          PersonalizationLayout.datumValueMax,
+          PersonalizationLayout.datumSupportMin,
+          PersonalizationLayout.datumSupportMax,
         );
     final subjectSize = (PersonalizationLayout.datumSubjectFactor * cardHeight)
         .clamp(
@@ -225,6 +264,39 @@ class PersonalizationDatum extends StatelessWidget {
     final shadows = onArt ? PersonalizationArtText.shadows : null;
     final subjectText = subject;
     final detailText = detail;
+
+    Widget entry(PersonalizationStat stat, {required bool isHero}) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          stat.value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.titleMedium?.copyWith(
+            color: primary,
+            fontSize: isHero ? heroSize : supportSize,
+            height: leading,
+            fontWeight: AppTypography.bold,
+            shadows: shadows,
+          ),
+        ),
+        Text(
+          stat.label.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.labelSmall?.copyWith(
+            color: secondary,
+            fontSize: labelSize,
+            height: leading,
+            letterSpacing: PersonalizationLayout.labelTracking,
+            shadows: shadows,
+          ),
+        ),
+      ],
+    );
+
+    final heroStat = hero;
 
     final body = Column(
       mainAxisSize: MainAxisSize.min,
@@ -255,47 +327,20 @@ class PersonalizationDatum extends StatelessWidget {
               shadows: shadows,
             ),
           ),
-        if (stats.isNotEmpty)
+        if (heroStat != null)
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              for (final stat in stats)
-                // Loose so an entry sizes to content when it fits, but stays
-                // width-bounded on a narrow half card so its label ellipsizes
-                // instead of forcing the Row past the card edge.
+              // Loose so an entry sizes to content when it fits, but stays
+              // width-bounded on a narrow half card so its label ellipsizes
+              // instead of forcing the Row past the card edge.
+              Flexible(child: entry(heroStat, isHero: true)),
+              for (final stat in supporting)
                 Flexible(
                   child: Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.md),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          stat.value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: primary,
-                            fontSize: valueSize,
-                            height: leading,
-                            fontWeight: AppTypography.bold,
-                            shadows: shadows,
-                          ),
-                        ),
-                        Text(
-                          stat.label.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: secondary,
-                            fontSize: labelSize,
-                            height: leading,
-                            letterSpacing: PersonalizationLayout.labelTracking,
-                            shadows: shadows,
-                          ),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.only(left: AppSpacing.md),
+                    child: entry(stat, isHero: false),
                   ),
                 ),
             ],

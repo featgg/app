@@ -260,18 +260,30 @@ abstract final class PersonalizationLayout {
   /// Datum type sizes, each a fraction of the card's rendered height. A card is
   /// a fraction of the page it sits on, so its band is sized from the card
   /// rather than from the page's own type scale.
-  static const double datumValueFactor = 0.075;
+  ///
+  /// The hero outsizes the numbers beside it by enough to be read as the
+  /// card's answer rather than as the first of several: a reader must be able
+  /// to tell which number the card is about without reading a label.
+  static const double datumHeroFactor = 0.095;
+  static const double datumSupportFactor = 0.062;
   static const double datumSubjectFactor = 0.058;
   static const double datumLabelFactor = 0.042;
 
   /// Bounds on those derived sizes: a card in an extreme slot must not read as
   /// a heading at one end, and holds the 11pt label floor at the other.
-  static const double datumValueMin = 13;
-  static const double datumValueMax = 20;
+  static const double datumHeroMin = 14;
+  static const double datumHeroMax = 24;
+  static const double datumSupportMin = 12;
+  static const double datumSupportMax = 16;
   static const double datumSubjectMin = 11;
   static const double datumSubjectMax = 15;
   static const double datumLabelMin = 11;
   static const double datumLabelMax = 13;
+
+  /// How many numbers explain the hero, by size. A half card carries the one
+  /// datum and nothing else; a full card has the width for two that explain it.
+  static const int supportingCapFull = 2;
+  static const int supportingCapHalf = 0;
 
   /// Datum line height, tighter than the default. Once the label floor binds,
   /// leading rather than type size is what keeps the band from taking a share
@@ -296,10 +308,10 @@ abstract final class PersonalizationLayout {
   /// `games_perfect` count stays the hero, so extra shelf entries are not drawn.
   static const int achievementGridLetterCap = 5;
 
-  /// How many stat-footer entries each size renders (spec §6: 2–4 numbers).
-  /// Full carries one more than half so the variants differ.
-  static const int statCapFull = 3;
-  static const int statCapHalf = 2;
+  /// How many stats a card bothers resolving: the hero plus the most any size
+  /// can place beside it. What actually renders is capped by the card's size,
+  /// so this is an upper bound on work, not on what a reader sees.
+  static const int statCapFull = 1 + supportingCapFull;
 
   /// Width of a centered orphan half relative to the column (spec §9: a pair
   /// with one card renders as a single centered half).

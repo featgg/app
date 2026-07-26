@@ -85,10 +85,10 @@ The profile header (§4) is not a card of either family. It is a fixed surface o
 
 ### 6.2 Anatomy rules
 
-- The datum block occupies ~13% of a full card and ~18% of a half card, scaling with the card's real width.
+- The datum block's share of a card is a range, not a fixed fraction: roughly 23% at the narrowest supported width down to ~13% at the widest. It is largest where the card is smallest, because the label floor below does not scale down with the card — a minimum legible size is a floor in points, not a proportion. A single percentage cannot hold at both ends, and the narrow end is the one to design against.
 - Half cards carry exactly one datum, with its subject. Nothing else.
 - Full cards carry at most two supporting stats, placed to the right of the hero number, and only when they explain it.
-- The hero number uses tabular figures so values do not reflow the layout as they change; labels are uppercase with wide tracking and a floor of 11pt (the `tag` size in `docs/design-system.md` § 6).
+- The hero number uses tabular figures so values do not reflow the layout as they change; labels are uppercase with wide tracking and a floor of 11pt (the `tag` size in `docs/design-system.md` § 6). Where the floor and the block's target share disagree, **the floor wins**: a block that meets a percentage with labels nobody can read has traded away the thing it exists for.
 - Values are formatted compactly so a number is never truncated at the narrowest supported width (§3.1).
 - Where a datum has no possible visual subject (a whole library, a lifetime count), the number itself becomes the graphic and centres.
 

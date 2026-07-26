@@ -72,7 +72,15 @@ class CollectionCard extends ConsumerWidget {
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.collection,
       size: ProfileCardSize.full,
-      subject: title,
+      // Which collection this is comes from the owner's own pick, so no written
+      // label covers it and the count alone would leave two shelves on one
+      // profile indistinguishable. It is the hero's label.
+      hero: panels.isEmpty
+          ? null
+          : PersonalizationStat(
+              value: formatShowcaseHeroValue(panels.length),
+              label: title,
+            ),
       framedContent: Center(
         child: Wrap(
           alignment: WrapAlignment.center,
@@ -103,14 +111,6 @@ class CollectionCard extends ConsumerWidget {
                 ],
         ),
       ),
-      stats: panels.isEmpty
-          ? const []
-          : [
-              PersonalizationStat(
-                value: formatShowcaseHeroValue(panels.length),
-                label: l10n.personalizationStatGames,
-              ),
-            ],
     );
   }
 }

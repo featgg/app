@@ -41,7 +41,10 @@ Widget _wrapDatum({
     // The half-card height [width] implies, so the datum sizes its type the
     // same way it does inside a real card.
     cardHeight: width / PersonalizationLayout.cardHalfAspect,
-    stats: stats,
+    // Mounted below the shell, so the size cap is not in play: these cases
+    // exercise the datum's own geometry with a hero and something beside it.
+    hero: stats.first,
+    supporting: stats.skip(1).toList(),
   ),
 );
 

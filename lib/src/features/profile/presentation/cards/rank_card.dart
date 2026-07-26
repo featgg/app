@@ -35,20 +35,43 @@ class RankCard extends ConsumerWidget {
         : resolveCard(ref, cardSource, platform);
     final resolved = resolveRank(card);
 
-    final isFull = size == ProfileCardSize.full;
+    final stats = statsFromResolved(
+      resolved?.stats ?? const [],
+      l10n,
+      PersonalizationLayout.statCapFull,
+    );
+    // What this card answers with depends on the platform: a tier where one is
+    // published, the rating itself where none is. Either way the scope — a
+    // Chess mode, a queue — is what makes the answer mean something, so it is
+    // the hero's label rather than a line of its own. No static label can carry
+    // it: it comes from the payload.
+    final tier = resolved?.heading;
+    final scope = resolved?.scope;
+    final PersonalizationStat? hero;
+    final List<PersonalizationStat> supporting;
+    if (tier != null) {
+      hero = PersonalizationStat(
+        value: tier,
+        label: scope ?? l10n.personalizationStatRank,
+      );
+      supporting = stats;
+    } else if (stats.isNotEmpty) {
+      hero = PersonalizationStat(
+        value: stats.first.value,
+        label: scope ?? stats.first.label,
+      );
+      supporting = stats.skip(1).toList();
+    } else {
+      hero = null;
+      supporting = const [];
+    }
+
     return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.rank,
       size: size,
-      subject: resolved?.heading,
-      detail: resolved?.scope,
-      stats: statsFromResolved(
-        resolved?.stats ?? const [],
-        l10n,
-        isFull
-            ? PersonalizationLayout.statCapFull
-            : PersonalizationLayout.statCapHalf,
-      ),
+      hero: hero,
+      stats: supporting,
     );
   }
 }
