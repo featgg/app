@@ -32,14 +32,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _displayNameController;
   late final TextEditingController _bioController;
-  late ProfileTheme _selectedTheme;
-  late Platform? _selectedFeaturedPlatform;
-  late Platform? _selectedHeaderPlatform;
 
-  late final ProfileEdit _seed;
-
-  void _onFieldChanged() => setState(() {});
-
+  /// The two text controllers are all the widget owns: a cursor and a selection
+  /// are widget lifecycle, and nothing else here is. Every value the form can
+  /// submit lives in [ProfileEditController].
   @override
   void initState() {
     super.initState();
@@ -47,49 +43,26 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       text: widget.profile.displayName,
     );
     _bioController = TextEditingController(text: widget.profile.bio ?? '');
-    _selectedTheme = widget.profile.theme;
-    _selectedFeaturedPlatform = widget.profile.featuredPlatform;
-    _selectedHeaderPlatform = widget.profile.headerPlatform;
-    _seed = _editFrom(widget.profile);
 
-    _displayNameController.addListener(_onFieldChanged);
-    _bioController.addListener(_onFieldChanged);
+    _displayNameController.addListener(_onDisplayNameChanged);
+    _bioController.addListener(_onBioChanged);
   }
+
+  ProfileEditController get _controller =>
+      ref.read(profileEditControllerProvider(widget.profile).notifier);
+
+  void _onDisplayNameChanged() =>
+      _controller.editDisplayName(_displayNameController.text);
+
+  void _onBioChanged() => _controller.editBio(_bioController.text);
 
   @override
   void dispose() {
-    _displayNameController.removeListener(_onFieldChanged);
-    _bioController.removeListener(_onFieldChanged);
+    _displayNameController.removeListener(_onDisplayNameChanged);
+    _bioController.removeListener(_onBioChanged);
     _displayNameController.dispose();
     _bioController.dispose();
     super.dispose();
-  }
-
-  /// Builds a [ProfileEdit] from a seed [Profile].
-  ProfileEdit _editFrom(Profile p) {
-    final bioRaw = (p.bio ?? '').trim();
-    return ProfileEdit(
-      displayName: p.displayName.trim(),
-      bio: bioRaw.isEmpty ? null : bioRaw,
-      theme: p.theme,
-      privacy: p.privacy,
-      featuredPlatform: p.featuredPlatform,
-      headerPlatform: p.headerPlatform,
-    );
-  }
-
-  ProfileEdit _buildEdit() {
-    final bioRaw = _bioController.text.trim();
-    return ProfileEdit(
-      displayName: _displayNameController.text.trim(),
-      bio: bioRaw.isEmpty ? null : bioRaw,
-      theme: _selectedTheme,
-      // Privacy is no longer edited here; the seed value is passed through so
-      // an edit-save does not overwrite a privacy change made in Settings.
-      privacy: widget.profile.privacy,
-      featuredPlatform: _selectedFeaturedPlatform,
-      headerPlatform: _selectedHeaderPlatform,
-    );
   }
 
   /// The connected platforms plus [seeded], so a stored preference naming a
@@ -101,26 +74,25 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         ...?(seeded != null ? [seeded] : null),
       }.toList();
 
-  bool get _isDirty => _buildEdit() != _seed;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final editState = ref.watch(profileEditControllerProvider);
-    final controller = ref.read(profileEditControllerProvider.notifier);
+    final editState = ref.watch(profileEditControllerProvider(widget.profile));
+    final draft = editState.draft;
+    final controller = _controller;
     final uploadState = ref.watch(avatarUploadControllerProvider);
 
-    ref.listen(profileEditControllerProvider.select((s) => s.saved), (
-      previous,
-      next,
-    ) {
-      if (next) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
-      }
-    });
+    ref.listen(
+      profileEditControllerProvider(widget.profile).select((s) => s.saved),
+      (previous, next) {
+        if (next) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
+        }
+      },
+    );
 
     ref.listen(avatarUploadControllerProvider, (previous, next) {
       if (next.status == AvatarUploadStatus.success) {
@@ -169,8 +141,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           _SaveButton(
             key: const Key('profileSaveButton'),
             submitting: editState.submitting,
-            onPressed: (_isDirty && !editState.submitting && !avatarInFlight)
-                ? () => controller.submit(_buildEdit())
+            onPressed:
+                (editState.isDirty && !editState.submitting && !avatarInFlight)
+                ? controller.submit
                 : null,
             l10n: l10n,
           ),
@@ -264,9 +237,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       const SizedBox(height: AppSpacing.sm),
                       _ThemeSwatchRow(
                         key: const Key('profileThemeSwatchRow'),
-                        selected: _selectedTheme,
+                        selected: draft.theme,
                         enabled: !editState.submitting,
-                        onChanged: (t) => setState(() => _selectedTheme = t),
+                        onChanged: controller.selectTheme,
                         l10n: l10n,
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -289,15 +262,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                             _PlatformPreferenceSelector(
                               key: const Key('featuredCardSelector'),
                               dropdownKey: const Key('featuredCardDropdown'),
-                              selected: _selectedFeaturedPlatform,
+                              selected: draft.featuredPlatform,
                               platforms: _selectableWith(
                                 platforms,
-                                _selectedFeaturedPlatform,
+                                draft.featuredPlatform,
                               ),
                               enabled: !editState.submitting,
                               defaultLabel: l10n.profileFeaturedCardDefault,
-                              onChanged: (p) =>
-                                  setState(() => _selectedFeaturedPlatform = p),
+                              onChanged: controller.selectFeaturedPlatform,
                             ),
                             const SizedBox(height: AppSpacing.lg),
                             Text(
@@ -308,15 +280,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                             _PlatformPreferenceSelector(
                               key: const Key('headerArtSelector'),
                               dropdownKey: const Key('headerArtDropdown'),
-                              selected: _selectedHeaderPlatform,
+                              selected: draft.headerPlatform,
                               platforms: _selectableWith(
                                 platforms,
-                                _selectedHeaderPlatform,
+                                draft.headerPlatform,
                               ),
                               enabled: !editState.submitting,
                               defaultLabel: l10n.profileHeaderArtDefault,
-                              onChanged: (p) =>
-                                  setState(() => _selectedHeaderPlatform = p),
+                              onChanged: controller.selectHeaderPlatform,
                             ),
                           ],
                         ),
