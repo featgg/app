@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clock/clock.dart';
 import 'package:featgg/src/core/error/failure.dart';
@@ -9,6 +11,7 @@ import 'package:featgg/src/features/connections/domain/connections_providers.dar
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
 import 'package:featgg/src/features/profile/presentation/profile_header.dart';
 import 'package:featgg/src/features/profile/presentation/public_owner_cards_provider.dart';
 import 'package:flutter/material.dart';
@@ -147,6 +150,30 @@ List<String> _marks(WidgetTester tester) =>
 String _mark(Platform platform) =>
     platformDescriptors[platform]!.shortName.toUpperCase();
 
+/// WCAG relative luminance of one channel.
+double _channel(double c) =>
+    c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+
+double _luminance(Color c) =>
+    0.2126 * _channel(c.r) + 0.7152 * _channel(c.g) + 0.0722 * _channel(c.b);
+
+/// [over] composited onto [under], for a surface token that is translucent.
+Color _composite(Color over, Color under) => Color.from(
+  alpha: 1,
+  red: over.r * over.a + under.r * (1 - over.a),
+  green: over.g * over.a + under.g * (1 - over.a),
+  blue: over.b * over.a + under.b * (1 - over.a),
+);
+
+/// WCAG contrast ratio between two opaque colors.
+double _contrast(Color a, Color b) {
+  final la = _luminance(a);
+  final lb = _luminance(b);
+  final hi = math.max(la, lb);
+  final lo = math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 void main() {
   group('avatar', () {
     testWidgets('renders the profile\'s own image when it has one', (
@@ -220,6 +247,44 @@ void main() {
       await _pump(tester, profile: _profile());
 
       expect(find.byKey(kProfileHeaderMarksKey), findsNothing);
+    });
+  });
+
+  group('legibility', () {
+    testWidgets('the handle clears AA against the surface it sits on', (
+      tester,
+    ) async {
+      // The identity moved onto solid ground, which is what makes contrast
+      // assertable at all — over art it depended on whatever the art was.
+      await _pump(tester, profile: _profile());
+
+      const palette = PersonalizationPalette.crimson;
+      final handle = tester
+          .widget<Text>(find.byKey(kProfileHeaderHandleKey))
+          .style!;
+      final ground = _composite(palette.surface, palette.bg);
+
+      expect(
+        _contrast(handle.color!, ground),
+        greaterThanOrEqualTo(4.5),
+        reason: 'small text needs 4.5:1; the brand accent lands near 3.4:1',
+      );
+    });
+
+    test('every curated theme keeps the secondary text tone legible', () {
+      // The header reads its secondary lines from `muted`. Shared across the
+      // eight palettes today, so this goes red the day one of them diverges
+      // into something that no longer carries small text.
+      for (final theme in ProfileTheme.values) {
+        final palette = paletteForTheme(theme);
+        final ground = _composite(palette.surface, palette.bg);
+
+        expect(
+          _contrast(palette.muted, ground),
+          greaterThanOrEqualTo(4.5),
+          reason: '${theme.name} fails AA for small text',
+        );
+      }
     });
   });
 

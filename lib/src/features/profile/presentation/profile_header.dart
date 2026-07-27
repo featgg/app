@@ -16,6 +16,7 @@ import 'profile_owner_cards_provider.dart';
 const Key kProfileHeaderCoverKey = Key('profileHeaderCover');
 const Key kProfileHeaderAvatarKey = Key('profileHeaderAvatar');
 const Key kProfileHeaderNameKey = Key('profileHeaderName');
+const Key kProfileHeaderHandleKey = Key('profileHeaderHandle');
 const Key kProfileHeaderMarksKey = Key('profileHeaderMarks');
 
 /// The profile header — the answer to "who am I", and the one surface on the
@@ -193,10 +194,14 @@ class _Identity extends StatelessWidget {
         ),
         Text(
           l10n.profileHandle(profile.username),
+          key: kProfileHeaderHandleKey,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: textTheme.labelMedium?.copyWith(
-            color: palette.accent,
+            // Not the accent: at this size the brand red on the surface lands
+            // near 3.4:1, under the 4.5:1 small text needs. The weight carries
+            // the handle instead of the colour.
+            color: palette.muted,
             fontWeight: AppTypography.semiBold,
           ),
         ),
