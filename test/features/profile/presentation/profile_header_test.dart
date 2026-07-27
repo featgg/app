@@ -7,6 +7,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/presentation/profile_header.dart';
 import 'package:featgg/src/features/profile/presentation/public_owner_cards_provider.dart';
@@ -135,6 +136,15 @@ Finder _imageFor(String url) =>
 String _textAt(WidgetTester tester, Key key) =>
     tester.widget<Text>(find.byKey(key)).data!;
 
+/// The rendered marks, one per entry. Read as a list rather than compared to a
+/// written-out line so what is asserted is which platforms are named and in
+/// what order — revising a brand's short form is a copy call, not a regression.
+List<String> _marks(WidgetTester tester) =>
+    _textAt(tester, kProfileHeaderMarksKey).split(' · ');
+
+String _mark(Platform platform) =>
+    platformDescriptors[platform]!.shortName.toUpperCase();
+
 void main() {
   group('avatar', () {
     testWidgets('renders the profile\'s own image when it has one', (
@@ -178,7 +188,28 @@ void main() {
         },
       );
 
-      expect(_textAt(tester, kProfileHeaderMarksKey), 'STEAM · WOW');
+      expect(_marks(tester), [
+        _mark(Platform.steam),
+        _mark(Platform.wowRetail),
+      ]);
+    });
+
+    testWidgets('a mark is the platform\'s short form, not its full title', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        profile: _profile(),
+        cards: {Platform.wowRetail: _card(Platform.wowRetail)},
+      );
+
+      final descriptor = platformDescriptors[Platform.wowRetail]!;
+      final line = _textAt(tester, kProfileHeaderMarksKey);
+
+      expect(line, contains(descriptor.shortName.toUpperCase()));
+      // The full title is what the retired identity card showed. On one line
+      // beside the other marks it would push them off the header.
+      expect(line, isNot(contains(descriptor.displayName.toUpperCase())));
     });
 
     testWidgets('a profile with nothing linked shows no marks line', (
