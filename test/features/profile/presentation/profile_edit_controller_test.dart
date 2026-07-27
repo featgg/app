@@ -1,4 +1,5 @@
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,24 +17,17 @@ const _profile = Profile(
   featuredPlatform: null,
 );
 
-const _validEdit = ProfileEdit(
-  displayName: 'Updated Name',
-  bio: 'Updated bio',
-  theme: ProfileTheme.frost,
-  privacy: ProfilePrivacy.private,
-  featuredPlatform: null,
-  headerPlatform: null,
-);
+/// The form for [_profile]. Keyed by the profile it opens on, so reading it is
+/// what seeds it.
+final _provider = profileEditControllerProvider(_profile);
 
-// Empty display name fails client validation before any backend call.
-const _invalidEdit = ProfileEdit(
-  displayName: '',
-  bio: null,
-  theme: ProfileTheme.crimson,
-  privacy: ProfilePrivacy.public,
-  featuredPlatform: null,
-  headerPlatform: null,
-);
+/// Makes one real edit, which is the state a
+/// user is in when Save is live.
+ProfileEditController _edited(ProviderContainer container) {
+  final controller = container.read(_provider.notifier)
+    ..editDisplayName('Updated Name');
+  return controller;
+}
 
 /// Recording fake — counts reads and writes; the update outcome is injected.
 final class _RecordingRepository implements ProfileRepository {
@@ -71,7 +65,7 @@ ProviderContainer _container(ProfileRepository repo) {
   );
   addTearDown(container.dispose);
   // Keep the auto-dispose controller alive across the awaits in submit.
-  container.listen(profileEditControllerProvider, (_, _) {});
+  container.listen(_provider, (_, _) {});
   return container;
 }
 
@@ -87,11 +81,9 @@ void main() {
         await container.read(profileProvider.future);
         expect(repo.fetchCalls, 1);
 
-        await container
-            .read(profileEditControllerProvider.notifier)
-            .submit(_validEdit);
+        await _edited(container).submit();
 
-        final state = container.read(profileEditControllerProvider);
+        final state = container.read(_provider);
         expect(state.saved, isTrue);
         expect(state.failure, isNull);
         expect(state.submitting, isFalse);
@@ -102,15 +94,50 @@ void main() {
       },
     );
 
+    test('an untouched form is not dirty, and Save has nothing to write', () {
+      final repo = _RecordingRepository(updateResult: () => right(_profile));
+      final container = _container(repo);
+
+      expect(container.read(_provider).isDirty, isFalse);
+    });
+
+    test('editing a field and putting it back is not dirty either', () {
+      final repo = _RecordingRepository(updateResult: () => right(_profile));
+      final container = _container(repo);
+
+      container.read(_provider.notifier)
+        ..editDisplayName('Something else')
+        ..editDisplayName(_profile.displayName);
+
+      expect(container.read(_provider).isDirty, isFalse);
+    });
+
+    test('each editable field on its own makes the form dirty', () {
+      for (final edit in <void Function(ProfileEditController)>[
+        (c) => c.editDisplayName('Renamed'),
+        (c) => c.editBio('A different bio'),
+        (c) => c.selectTheme(ProfileTheme.frost),
+        (c) => c.selectFeaturedPlatform(Platform.steam),
+        (c) => c.selectHeaderPlatform(Platform.wowRetail),
+      ]) {
+        final repo = _RecordingRepository(updateResult: () => right(_profile));
+        final container = _container(repo);
+        edit(container.read(_provider.notifier));
+
+        expect(container.read(_provider).isDirty, isTrue);
+      }
+    });
+
     test('a client validation error does not call the backend', () async {
       final repo = _RecordingRepository(updateResult: () => right(_profile));
       final container = _container(repo);
 
-      await container
-          .read(profileEditControllerProvider.notifier)
-          .submit(_invalidEdit);
+      // Empty display name fails client validation before any backend call.
+      final controller = container.read(_provider.notifier)
+        ..editDisplayName('');
+      await controller.submit();
 
-      final state = container.read(profileEditControllerProvider);
+      final state = container.read(_provider);
       expect(state.fieldErrors, isNotEmpty);
       expect(state.saved, isFalse);
       expect(repo.updateCalls, 0);
@@ -122,11 +149,9 @@ void main() {
       );
       final container = _container(repo);
 
-      await container
-          .read(profileEditControllerProvider.notifier)
-          .submit(_validEdit);
+      await _edited(container).submit();
 
-      final state = container.read(profileEditControllerProvider);
+      final state = container.read(_provider);
       expect(state.failure, isA<InputFailure>());
       expect(state.saved, isFalse);
       expect(state.submitting, isFalse);

@@ -152,6 +152,29 @@ final class ProfileEdit extends Equatable {
   /// The platform whose art the header shows, or null to let the client pick.
   final Platform? headerPlatform;
 
+  /// The edit with one field replaced. Nullable fields take a nullary function
+  /// so a caller can set them back to null — clearing a bio or a platform
+  /// preference is a real edit, not an omission.
+  ProfileEdit copyWith({
+    String? displayName,
+    String? Function()? bio,
+    ProfileTheme? theme,
+    ProfilePrivacy? privacy,
+    Platform? Function()? featuredPlatform,
+    Platform? Function()? headerPlatform,
+  }) => ProfileEdit(
+    displayName: displayName ?? this.displayName,
+    bio: bio != null ? bio() : this.bio,
+    theme: theme ?? this.theme,
+    privacy: privacy ?? this.privacy,
+    featuredPlatform: featuredPlatform != null
+        ? featuredPlatform()
+        : this.featuredPlatform,
+    headerPlatform: headerPlatform != null
+        ? headerPlatform()
+        : this.headerPlatform,
+  );
+
   /// Pure client-side validation mirroring the documented constraints.
   /// Returns the per-field errors found, empty when the edit is valid.
   /// UX feedback only; the backend remains authoritative.
