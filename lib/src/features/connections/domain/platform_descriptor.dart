@@ -14,6 +14,7 @@ final class PlatformDescriptor {
   const PlatformDescriptor({
     required this.platform,
     required this.displayName,
+    required this.shortName,
     required this.wireValue,
     required this.syncFunctionName,
   });
@@ -24,6 +25,13 @@ final class PlatformDescriptor {
   /// Brand-correct display name shown in the UI (e.g. 'Steam', not the enum
   /// token). These are proper nouns and are intentionally not localized.
   final String displayName;
+
+  /// The name for a surface that has room for a word, not a title — a card
+  /// label naming what a number is about. Chosen to survive being uppercased,
+  /// which is how a label renders: an abbreviation whose meaning lives in its
+  /// camel case loses it there, so this prefers the readable word over the
+  /// shorter initialism. Proper nouns, so not localized either.
+  final String shortName;
 
   /// Wire platform token used in every API request body and Shape-2 query.
   final String wireValue;
@@ -39,42 +47,49 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
   Platform.steam: PlatformDescriptor(
     platform: Platform.steam,
     displayName: 'Steam',
+    shortName: 'Steam',
     wireValue: 'steam',
     syncFunctionName: 'sync-steam',
   ),
   Platform.minecraftHypixel: PlatformDescriptor(
     platform: Platform.minecraftHypixel,
     displayName: 'Minecraft (Hypixel)',
+    shortName: 'Hypixel',
     wireValue: 'minecraft_hypixel',
     syncFunctionName: 'sync-minecraft-hypixel',
   ),
   Platform.retroachievements: PlatformDescriptor(
     platform: Platform.retroachievements,
     displayName: 'RetroAchievements',
+    shortName: 'Retro',
     wireValue: 'retroachievements',
     syncFunctionName: 'sync-retroachievements',
   ),
   Platform.leagueOfLegends: PlatformDescriptor(
     platform: Platform.leagueOfLegends,
     displayName: 'League of Legends',
+    shortName: 'League',
     wireValue: 'league_of_legends',
     syncFunctionName: 'sync-league-of-legends',
   ),
   Platform.wowRetail: PlatformDescriptor(
     platform: Platform.wowRetail,
     displayName: 'World of Warcraft (Retail)',
+    shortName: 'WoW',
     wireValue: 'wow_retail',
     syncFunctionName: 'sync-wow-retail',
   ),
   Platform.chess: PlatformDescriptor(
     platform: Platform.chess,
     displayName: 'Chess.com',
+    shortName: 'Chess',
     wireValue: 'chess',
     syncFunctionName: 'sync-chess',
   ),
   Platform.gw2: PlatformDescriptor(
     platform: Platform.gw2,
     displayName: 'Guild Wars 2',
+    shortName: 'GW2',
     wireValue: 'gw2',
     syncFunctionName: 'sync-gw2',
   ),

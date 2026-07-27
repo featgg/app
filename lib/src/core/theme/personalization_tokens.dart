@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 
+import 'tokens.dart';
+
 /// Theme-independent base tokens shared by every curated palette:
 /// only the accent and art tones vary between themes, so the base lives here
 /// once and no palette can drift from it.
@@ -290,6 +292,16 @@ abstract final class PersonalizationLayout {
   /// two others share the row at the narrowest column width; below that,
   /// spelling the value out keeps a precision compact notation would throw away.
   static const int compactValueThreshold = 10000;
+
+  /// The datum band's side inset. Named because it is one of the two terms in
+  /// the width a label has to fit, and a label written against the wrong number
+  /// truncates on a real device.
+  static const double datumHorizontalPadding = AppSpacing.smMd;
+
+  /// The gap between the hero and each number explaining it. The other term in
+  /// what a supporting label gets, which is a third of a row rather than the
+  /// whole of one — the distinction a budget read off a half card misses.
+  static const double datumEntryGap = AppSpacing.md;
 
   /// Datum line height, tighter than the default. Once the label floor binds,
   /// leading rather than type size is what keeps the band from taking a share

@@ -38,7 +38,15 @@ class PlatformCard extends ConsumerWidget {
       archetype: ProfileArchetype.platform,
       size: size,
       art: card?.heroImage,
-      stats: cardStats(card, l10n, PersonalizationLayout.statCapFull),
+      stats: cardStats(
+        card,
+        l10n,
+        PersonalizationLayout.statCapFull,
+        platform: cardLabelPlatform(
+          widget.platform,
+          hasArt: card?.heroImage != null,
+        ),
+      ),
     );
   }
 }

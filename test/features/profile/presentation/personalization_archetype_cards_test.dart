@@ -6,6 +6,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -539,7 +540,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(FallbackCard), findsNothing);
-    expect(find.text('RAPID'), findsOneWidget);
+    // The mode narrows the platform rather than standing in for it: a rating
+    // labelled only RAPID says which mode and not which game, and this card is
+    // always framed, so its label is the only thing that can say.
+    expect(
+      find.text(
+        '${platformDescriptors[Platform.chess]!.shortName} RAPID'.toUpperCase(),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.ancestor(
         of: find.text(formatCardValue(1500, _en)),

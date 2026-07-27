@@ -35,6 +35,11 @@ class RankCard extends ConsumerWidget {
         : resolveCard(ref, cardSource, platform);
     final resolved = resolveRank(card);
 
+    // This card is always framed, so nothing but its label says which platform
+    // the rank belongs to — and the label belongs to the hero, which is the
+    // number the card answers with. The stats beside it explain that number and
+    // inherit the platform from it.
+    final shortName = cardLabelPlatform(platform, hasArt: false);
     final stats = statsFromResolved(
       resolved?.stats ?? const [],
       l10n,
@@ -44,22 +49,24 @@ class RankCard extends ConsumerWidget {
     // published, the rating itself where none is. Either way the scope — a
     // Chess mode, a queue — is what makes the answer mean something, so it is
     // the hero's label rather than a line of its own. No static label can carry
-    // it: it comes from the payload.
+    // it: it comes from the payload, and where the payload has none the
+    // platform's own name does the naming.
     final tier = resolved?.heading;
     final scope = resolved?.scope;
+    // The scope narrows the platform rather than replacing it: a Chess rating
+    // labelled only RAPID says which mode and not which game. Both, or the
+    // platform with the generic noun where the payload publishes no scope.
+    final heroLabel = [
+      ?shortName,
+      scope ?? l10n.personalizationStatRank,
+    ].join(' ');
     final PersonalizationStat? hero;
     final List<PersonalizationStat> supporting;
     if (tier != null) {
-      hero = PersonalizationStat(
-        value: tier,
-        label: scope ?? l10n.personalizationStatRank,
-      );
+      hero = PersonalizationStat(value: tier, label: heroLabel);
       supporting = stats;
     } else if (stats.isNotEmpty) {
-      hero = PersonalizationStat(
-        value: stats.first.value,
-        label: scope ?? stats.first.label,
-      );
+      hero = PersonalizationStat(value: stats.first.value, label: heroLabel);
       supporting = stats.skip(1).toList();
     } else {
       hero = null;

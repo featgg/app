@@ -344,7 +344,9 @@ class PersonalizationDatum extends StatelessWidget {
               for (final stat in supporting)
                 Flexible(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: AppSpacing.md),
+                    padding: const EdgeInsets.only(
+                      left: PersonalizationLayout.datumEntryGap,
+                    ),
                     child: entry(stat, isHero: false),
                   ),
                 ),
@@ -354,7 +356,7 @@ class PersonalizationDatum extends StatelessWidget {
     );
 
     const padding = EdgeInsets.symmetric(
-      horizontal: AppSpacing.smMd,
+      horizontal: PersonalizationLayout.datumHorizontalPadding,
       vertical: AppSpacing.xs,
     );
 
