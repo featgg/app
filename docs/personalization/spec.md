@@ -52,13 +52,18 @@ These are the values the profile is designed to; the narrowest supported width (
 
 ## 4. Profile header
 
-The header opens the profile and is the answer to "who I am": it carries chosen art, the avatar, the display name, and the marks of the platforms the owner has linked.
+The header opens the profile and is the answer to "who I am": a wide, shallow **cover**, with the avatar straddling its lower edge and the display name, handle and platform marks on the surface beneath.
 
-- The art is the owner's to choose and change, and it defaults to the best real art already on the profile, so the header is never an empty gradient. Best means the platform the owner features — a choice they have already made about what represents them — and otherwise the first linked platform that publishes any art. A profile with nothing linked has no real art to show and falls back to the theme's own fill. Uploading your own art is deferred (§10).
+- **The cover is short on purpose.** The header frames the profile; the cards are the profile. A cover deep enough to fill a phone screen buys atmosphere with the thing people came for, so it is a fraction of the column it spans rather than a multiple of it.
+- The cover art is the owner's to choose and change, and it defaults to the best real art already on the profile. Best means the platform the owner features — a choice they have already made about what represents them — and otherwise the first linked platform that publishes any art. A profile with nothing linked falls back to the theme's own fill. Uploading your own cover is deferred (§10).
+- The cover **crops** what it is given rather than letterboxing it: it takes the middle of the art at its own proportions, the way a cover does.
 - The marks are **text, never logos or brand colors**: they say which accounts stand behind the profile without turning the header into a sponsor wall.
+- The identity sits on the theme's surface, not over the art, so nothing there depends on a scrim to stay legible.
 - The header is a **visual surface, not a data card** (§6): it carries no datum.
 - It is not part of the row model (§9): it cannot be moved, paired or removed.
 - It reads as one designed block at the narrow and wide ends of §3.
+
+A large, full-bleed art surface is still wanted — but as a **card the owner places**, not as a fixed block every profile is given. That belongs to the visual-card family (§6), not here.
 
 ## 5. Card sizes
 

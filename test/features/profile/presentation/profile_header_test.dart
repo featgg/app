@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clock/clock.dart';
 import 'package:featgg/src/core/error/failure.dart';
@@ -9,6 +11,7 @@ import 'package:featgg/src/features/connections/domain/connections_providers.dar
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
 import 'package:featgg/src/features/profile/presentation/profile_header.dart';
 import 'package:featgg/src/features/profile/presentation/public_owner_cards_provider.dart';
 import 'package:flutter/material.dart';
@@ -147,6 +150,30 @@ List<String> _marks(WidgetTester tester) =>
 String _mark(Platform platform) =>
     platformDescriptors[platform]!.shortName.toUpperCase();
 
+/// WCAG relative luminance of one channel.
+double _channel(double c) =>
+    c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+
+double _luminance(Color c) =>
+    0.2126 * _channel(c.r) + 0.7152 * _channel(c.g) + 0.0722 * _channel(c.b);
+
+/// [over] composited onto [under], for a surface token that is translucent.
+Color _composite(Color over, Color under) => Color.from(
+  alpha: 1,
+  red: over.r * over.a + under.r * (1 - over.a),
+  green: over.g * over.a + under.g * (1 - over.a),
+  blue: over.b * over.a + under.b * (1 - over.a),
+);
+
+/// WCAG contrast ratio between two opaque colors.
+double _contrast(Color a, Color b) {
+  final la = _luminance(a);
+  final lb = _luminance(b);
+  final hi = math.max(la, lb);
+  final lo = math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 void main() {
   group('avatar', () {
     testWidgets('renders the profile\'s own image when it has one', (
@@ -223,6 +250,81 @@ void main() {
     });
   });
 
+  group('legibility', () {
+    testWidgets('the handle clears AA against the surface it sits on', (
+      tester,
+    ) async {
+      // The identity moved onto solid ground, which is what makes contrast
+      // assertable at all — over art it depended on whatever the art was.
+      await _pump(tester, profile: _profile());
+
+      const palette = PersonalizationPalette.crimson;
+      final handle = tester
+          .widget<Text>(find.byKey(kProfileHeaderHandleKey))
+          .style!;
+      final ground = _composite(palette.surface, palette.bg);
+
+      expect(
+        _contrast(handle.color!, ground),
+        greaterThanOrEqualTo(4.5),
+        reason: 'small text needs 4.5:1; the brand accent lands near 3.4:1',
+      );
+    });
+
+    test('every curated theme keeps the secondary text tone legible', () {
+      // The header reads its secondary lines from `muted`. Shared across the
+      // eight palettes today, so this goes red the day one of them diverges
+      // into something that no longer carries small text.
+      for (final theme in ProfileTheme.values) {
+        final palette = paletteForTheme(theme);
+        final ground = _composite(palette.surface, palette.bg);
+
+        expect(
+          _contrast(palette.muted, ground),
+          greaterThanOrEqualTo(4.5),
+          reason: '${theme.name} fails AA for small text',
+        );
+      }
+    });
+  });
+
+  group('cover', () {
+    testWidgets('is wide and shallow, not a block the cards sit below', (
+      tester,
+    ) async {
+      const column = 400.0;
+      await _pump(tester, profile: _profile(), columnWidth: column);
+
+      final cover = tester.getSize(find.byKey(kProfileHeaderCoverKey));
+
+      expect(cover.width, moreOrLessEquals(column, epsilon: 0.5));
+      expect(
+        cover.height,
+        moreOrLessEquals(
+          column / PersonalizationLayout.coverAspect,
+          epsilon: 0.5,
+        ),
+      );
+      // The whole point of the shape: the header cannot fill a phone screen.
+      expect(cover.height, lessThan(column / 2));
+    });
+
+    testWidgets('the avatar straddles the seam rather than sitting below it', (
+      tester,
+    ) async {
+      const column = 400.0;
+      await _pump(tester, profile: _profile(), columnWidth: column);
+
+      final coverBottom = tester
+          .getRect(find.byKey(kProfileHeaderCoverKey))
+          .bottom;
+      final avatar = tester.getRect(find.byKey(kProfileHeaderAvatarKey));
+
+      expect(avatar.top, lessThan(coverBottom));
+      expect(avatar.bottom, greaterThan(coverBottom));
+    });
+  });
+
   group('art', () {
     testWidgets('defaults to the featured platform\'s art', (tester) async {
       await _pump(
@@ -280,13 +382,13 @@ void main() {
         profile: _profile(displayName: '', username: 'nico'),
       );
 
-      expect(_textAt(tester, kProfileHeaderNameKey), 'NICO');
+      // Rendered as written, not uppercased: at strip height the header reads
+      // as an identity line rather than a display banner.
+      expect(_textAt(tester, kProfileHeaderNameKey), 'nico');
     });
   });
 
-  testWidgets('the identity fits the art frame at the narrowest column', (
-    tester,
-  ) async {
+  testWidgets('the header fits at the narrowest column', (tester) async {
     // Everything the header can carry at once, on the smallest phone the
     // profile is designed for and a viewport short enough to shorten the frame:
     // the identity stack has to fit the art rather than overflow it.

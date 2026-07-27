@@ -18,23 +18,19 @@ PersonalizationPalette _paletteWith(Color accent) => PersonalizationPalette(
 );
 
 void main() {
-  group('heroFrameHeight (spec §4 conditional-fit budget)', () {
-    const columnWidth = 572.0;
-
-    test('a tall viewport is bounded by the 4:5 column height (fill)', () {
-      // 0.78 * 2000 = 1560 > 572 * 1.25 = 715 → the aspect budget wins.
-      expect(
-        heroFrameHeight(2000, columnWidth),
-        columnWidth * PersonalizationLayout.heroAspectFactor,
-      );
+  group('header cover', () {
+    test('is wide and shallow, so the cards are not pushed off the screen', () {
+      // The shape this replaced was taller than the column was wide. Asserting
+      // the direction, not the number, so retuning the cover does not redden
+      // this — but turning it back into a portrait block does.
+      expect(PersonalizationLayout.coverAspect, greaterThan(1));
     });
 
-    test('a short viewport is bounded by the viewport budget (contain)', () {
-      // 0.78 * 600 = 468 < 572 * 1.25 = 715 → the viewport budget wins.
-      expect(
-        heroFrameHeight(600, columnWidth),
-        PersonalizationLayout.heroViewportFactor * 600,
-      );
+    test('a cover is a fraction of the column it spans', () {
+      const columnWidth = 572.0;
+      final coverHeight = columnWidth / PersonalizationLayout.coverAspect;
+
+      expect(coverHeight, lessThan(columnWidth / 2));
     });
   });
 
