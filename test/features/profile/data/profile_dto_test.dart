@@ -8,6 +8,7 @@ Map<String, dynamic> _fullRow({
   String privacyLevel = 'public',
   String themeId = 'crimson',
   Object? featuredPlatform,
+  Object? headerPlatform,
   Object? deletionRequestedAt,
   List<dynamic>? layout,
   Object? createdAt,
@@ -20,6 +21,7 @@ Map<String, dynamic> _fullRow({
   'theme_id': themeId,
   'privacy_level': privacyLevel,
   'featured_platform': featuredPlatform,
+  'header_platform': headerPlatform,
   'deletion_requested_at': deletionRequestedAt,
   'layout': ?layout,
   'created_at': ?createdAt,
@@ -38,6 +40,24 @@ void main() {
       expect(profile.bio, 'Hello world');
       expect(profile.privacy, ProfilePrivacy.public);
       expect(profile.theme, ProfileTheme.crimson);
+    });
+
+    test('header_platform maps independently of featured_platform', () {
+      // The two preferences share a type and mean different things; a client
+      // that read one into the other would pass a fixture where they agree.
+      final dto = ProfileDto.fromJson(
+        _fullRow(featuredPlatform: 'steam', headerPlatform: 'wow_retail'),
+      );
+      final profile = profileFromDto(dto);
+
+      expect(profile.featuredPlatform, Platform.steam);
+      expect(profile.headerPlatform, Platform.wowRetail);
+    });
+
+    test('an absent header_platform reads as no preference', () {
+      final profile = profileFromDto(ProfileDto.fromJson(_fullRow()));
+
+      expect(profile.headerPlatform, isNull);
     });
 
     test('privacy_level "private" maps to ProfilePrivacy.private', () {
@@ -150,6 +170,7 @@ void main() {
         theme: ProfileTheme.frost,
         privacy: ProfilePrivacy.private,
         featuredPlatform: null,
+        headerPlatform: null,
       );
       final columns = profileEditToColumns(edit);
 
@@ -206,11 +227,27 @@ void main() {
             theme: ProfileTheme.crimson,
             privacy: ProfilePrivacy.public,
             featuredPlatform: Platform.steam,
+            headerPlatform: null,
           );
           final columns = profileEditToColumns(edit);
           expect(columns['featured_platform'], 'steam');
         },
       );
+
+      test('profileEditToColumns emits the header platform separately', () {
+        const edit = ProfileEdit(
+          displayName: 'Bob',
+          bio: null,
+          theme: ProfileTheme.crimson,
+          privacy: ProfilePrivacy.public,
+          featuredPlatform: Platform.steam,
+          headerPlatform: Platform.wowRetail,
+        );
+        final columns = profileEditToColumns(edit);
+
+        expect(columns['featured_platform'], 'steam');
+        expect(columns['header_platform'], 'wow_retail');
+      });
 
       test('profileEditToColumns emits null when platform is cleared', () {
         const edit = ProfileEdit(
@@ -219,6 +256,7 @@ void main() {
           theme: ProfileTheme.crimson,
           privacy: ProfilePrivacy.public,
           featuredPlatform: null,
+          headerPlatform: null,
         );
         final columns = profileEditToColumns(edit);
         expect(columns['featured_platform'], isNull);

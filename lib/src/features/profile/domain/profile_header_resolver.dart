@@ -21,16 +21,18 @@ final class ResolvedProfileHeader extends Equatable {
 
 /// Folds the owner's per-platform [cards] into the header.
 ///
-/// The header's art is the owner's to choose; until they have, it defaults to
-/// the best real art the profile already carries, so the surface that answers
-/// "who am I" is never a bare gradient. Best means the platform the owner
-/// features — the choice they have already made about what represents them —
-/// and otherwise the first linked platform that publishes any art at all.
+/// [chosen] is the platform the owner picked for their header. Where they have
+/// not picked one, the art defaults to the best real art the profile already
+/// carries, so the surface that answers "who am I" is never a bare gradient:
+/// the platform they feature — the choice they have already made about what
+/// represents them — and otherwise the first linked platform that publishes any
+/// art at all.
 ///
 /// Pure: no clock, no network, no copy. A platform with no card is not linked
 /// and gets no mark.
 ResolvedProfileHeader resolveProfileHeader(
   Map<Platform, GameCard?> cards, {
+  Platform? chosen,
   Platform? featured,
 }) {
   final platforms = [
@@ -39,19 +41,23 @@ ResolvedProfileHeader resolveProfileHeader(
   ];
   return ResolvedProfileHeader(
     platforms: platforms,
-    art: _bestArt(cards, platforms, featured),
+    art: _bestArt(cards, platforms, chosen, featured),
   );
 }
 
 String? _bestArt(
   Map<Platform, GameCard?> cards,
   List<Platform> platforms,
+  Platform? chosen,
   Platform? featured,
 ) {
-  // A featured platform that publishes nothing still loses to one that does:
-  // the point of the default is that something real renders.
-  if (featured != null) {
-    final art = _artOf(cards[featured]);
+  // A named platform that publishes nothing still loses to one that does —
+  // including one the owner picked. Showing them a bare gradient because the
+  // platform they chose has no art today serves nobody; the choice is honored
+  // again the moment that platform publishes something.
+  for (final candidate in [chosen, featured]) {
+    if (candidate == null) continue;
+    final art = _artOf(cards[candidate]);
     if (art != null) return art;
   }
   for (final platform in platforms) {

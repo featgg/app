@@ -26,6 +26,7 @@ final class Profile extends Equatable {
     required this.theme,
     required this.privacy,
     required this.featuredPlatform,
+    this.headerPlatform,
     this.deletionRequestedAt,
     this.layout = const [],
     this.createdAt,
@@ -47,6 +48,11 @@ final class Profile extends Equatable {
   /// The platform card the user has pinned as their discovery-feed preview,
   /// or null to use the default (most-recently-updated card).
   final Platform? featuredPlatform;
+
+  /// The platform whose art the profile header shows, or null to let the
+  /// client pick. Separate from [featuredPlatform]: that one is about how the
+  /// profile reads in the feed, this one about how it reads on its own page.
+  final Platform? headerPlatform;
 
   /// Server-managed read-only marker set when a deletion is pending, or null
   /// when none is. The client reads but never writes it.
@@ -80,6 +86,7 @@ final class Profile extends Equatable {
     ProfileTheme? theme,
     ProfilePrivacy? privacy,
     Platform? Function()? featuredPlatform,
+    Platform? Function()? headerPlatform,
     DateTime? Function()? deletionRequestedAt,
   }) => Profile(
     id: id,
@@ -92,6 +99,9 @@ final class Profile extends Equatable {
     featuredPlatform: featuredPlatform != null
         ? featuredPlatform()
         : this.featuredPlatform,
+    headerPlatform: headerPlatform != null
+        ? headerPlatform()
+        : this.headerPlatform,
     deletionRequestedAt: deletionRequestedAt != null
         ? deletionRequestedAt()
         : this.deletionRequestedAt,
@@ -107,6 +117,7 @@ final class Profile extends Equatable {
     theme,
     privacy,
     featuredPlatform,
+    headerPlatform,
     deletionRequestedAt,
     layout,
     createdAt,
@@ -122,6 +133,7 @@ final class ProfileEdit extends Equatable {
     required this.theme,
     required this.privacy,
     required this.featuredPlatform,
+    required this.headerPlatform,
   });
 
   final String displayName;
@@ -132,6 +144,9 @@ final class ProfileEdit extends Equatable {
   /// The platform card to pin as the discovery-feed preview, or null to use
   /// the default (most-recently-updated card).
   final Platform? featuredPlatform;
+
+  /// The platform whose art the header shows, or null to let the client pick.
+  final Platform? headerPlatform;
 
   /// Pure client-side validation mirroring the documented constraints.
   /// Returns the per-field errors found, empty when the edit is valid.
@@ -162,6 +177,7 @@ final class ProfileEdit extends Equatable {
     theme,
     privacy,
     featuredPlatform,
+    headerPlatform,
   ];
 }
 

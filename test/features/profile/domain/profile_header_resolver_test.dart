@@ -44,6 +44,42 @@ void main() {
     });
   });
 
+  group('chosen art', () {
+    test('the owner\'s choice wins over the platform they feature', () {
+      final resolved = resolveProfileHeader(
+        {
+          Platform.steam: _card(Platform.steam, heroImage: 'steam-hero'),
+          Platform.wowRetail: _card(Platform.wowRetail, heroImage: 'wow-hero'),
+        },
+        chosen: Platform.wowRetail,
+        featured: Platform.steam,
+      );
+
+      expect(resolved.art, 'wow-hero');
+    });
+
+    test('a choice that publishes no art falls back rather than blanking', () {
+      final resolved = resolveProfileHeader(
+        {
+          Platform.steam: _card(Platform.steam, heroImage: 'steam-hero'),
+          Platform.chess: _card(Platform.chess),
+        },
+        chosen: Platform.chess,
+        featured: Platform.steam,
+      );
+
+      expect(resolved.art, 'steam-hero');
+    });
+
+    test('a choice naming an unlinked platform falls back', () {
+      final resolved = resolveProfileHeader({
+        Platform.steam: _card(Platform.steam, heroImage: 'steam-hero'),
+      }, chosen: Platform.gw2);
+
+      expect(resolved.art, 'steam-hero');
+    });
+  });
+
   group('default art', () {
     test('the featured platform wins over an earlier linked one', () {
       final resolved = resolveProfileHeader({

@@ -22,6 +22,7 @@ const _validEdit = ProfileEdit(
   theme: ProfileTheme.frost,
   privacy: ProfilePrivacy.private,
   featuredPlatform: null,
+  headerPlatform: null,
 );
 
 // Empty display name fails client validation before any backend call.
@@ -31,6 +32,7 @@ const _invalidEdit = ProfileEdit(
   theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
+  headerPlatform: null,
 );
 
 /// Recording fake — counts reads and writes; the update outcome is injected.

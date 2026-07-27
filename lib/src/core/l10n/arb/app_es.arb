@@ -214,6 +214,8 @@
   "profileNoCardsYet": "Aún no tienes tarjetas. Conecta una plataforma para obtener tu primera tarjeta.",
   "profileFeaturedCardLabel": "Tarjeta destacada",
   "profileFeaturedCardDefault": "Predeterminada — tarjeta más reciente",
+  "profileHeaderArtLabel": "Arte del encabezado",
+  "profileHeaderArtDefault": "Automático",
   "settingsTitle": "Ajustes",
   "settingsPrivacyUpdated": "Privacidad actualizada.",
   "settingsDeleteAccount": "Eliminar cuenta",

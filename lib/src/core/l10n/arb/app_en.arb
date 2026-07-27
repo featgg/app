@@ -891,6 +891,14 @@
   "@profileFeaturedCardDefault": {
     "description": "Option in the featured-card dropdown that clears the preference, letting the backend fall back to the most-recently-updated card."
   },
+  "profileHeaderArtLabel": "Header art",
+  "@profileHeaderArtLabel": {
+    "description": "Section label above the header-art selector on the profile-edit screen."
+  },
+  "profileHeaderArtDefault": "Automatic",
+  "@profileHeaderArtDefault": {
+    "description": "Option in the header-art dropdown that clears the preference, letting the app pick art from the platforms the user has linked."
+  },
   "settingsTitle": "Settings",
   "@settingsTitle": {
     "description": "App bar title for the settings screen."

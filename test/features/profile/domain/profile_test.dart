@@ -9,6 +9,7 @@ ProfileEdit _edit({String displayName = 'Valid Name', String? bio}) =>
       theme: ProfileTheme.crimson,
       privacy: ProfilePrivacy.public,
       featuredPlatform: null,
+      headerPlatform: null,
     );
 
 Profile _profile({DateTime? deletionRequestedAt}) => Profile(
