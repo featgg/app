@@ -111,9 +111,12 @@ class PersonalizationCardShell extends StatelessWidget {
       // known without loading an image; under a tight height (a stretched pair
       // slot) it takes that height instead and the fill covers it.
       child: AspectRatio(
-        aspectRatio: size == ProfileCardSize.full
-            ? PersonalizationLayout.cardFullAspect
-            : PersonalizationLayout.cardHalfAspect,
+        aspectRatio: switch (size) {
+          ProfileCardSize.half => PersonalizationLayout.cardHalfAspect,
+          ProfileCardSize.full when rendersPortraitFull(archetype) =>
+            PersonalizationLayout.cardArtFullAspect,
+          ProfileCardSize.full => PersonalizationLayout.cardFullAspect,
+        },
         // The datum's type is a function of the card's real height, so the band
         // keeps its share of the card at every width instead of carrying
         // page-level sizes onto a card a fraction of that size.

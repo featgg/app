@@ -1694,6 +1694,30 @@ void main() {
     expect(find.byType(PersonalizationCardGround), findsOneWidget);
   });
 
+  testWidgets('ArtCard full renders at the tall portrait aspect, not the '
+      'landscape full', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a', source: Platform.steam),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverA)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The picture is the card, so full-width means a tall plate — the same
+    // 4:5 the half cards use, at column width — never a landscape strip that
+    // crops tall game art to a sliver.
+    expect(_cardAspect(tester, 'a'), PersonalizationLayout.cardArtFullAspect);
+    expect(
+      _cardAspect(tester, 'a'),
+      isNot(PersonalizationLayout.cardFullAspect),
+    );
+  });
+
   testWidgets('personalizationCardFor builds an ArtCard for an art widget', (
     tester,
   ) async {

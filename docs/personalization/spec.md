@@ -130,7 +130,7 @@ Card by card:
 | Rarest Achievement | the hardest thing I have done | set by the registry when the card lands (#231) | auto | the achievement, its game and how rare it is |
 | Collection | what I own or chase | full | curated | a chosen set of games with progress states |
 | Collector | how big my library is | full | auto | one platform's whole library aggregated |
-| Art | none — it is a picture | full, half | curated pick, auto art | the owner points it at one linked platform; it renders that platform's art with no datum over it, and the theme's ground when the platform publishes none |
+| Art | none — it is a picture | full, half | curated pick, auto art | the owner points it at one linked platform; it renders that platform's art with no datum over it, and the theme's ground when the platform publishes none. Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
 
 Not every platform gets every card: a card is offered only where the data genuinely supports it. Per-card availability is declared in the registry (§7.1) and enforced by the add catalog's availability rules. This document does not enumerate a card × platform matrix — the registry owns it, and an enumeration in prose would be stale within a story.
 
