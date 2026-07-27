@@ -34,6 +34,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late final TextEditingController _bioController;
   late ProfileTheme _selectedTheme;
   late Platform? _selectedFeaturedPlatform;
+  late Platform? _selectedHeaderPlatform;
 
   late final ProfileEdit _seed;
 
@@ -48,6 +49,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _bioController = TextEditingController(text: widget.profile.bio ?? '');
     _selectedTheme = widget.profile.theme;
     _selectedFeaturedPlatform = widget.profile.featuredPlatform;
+    _selectedHeaderPlatform = widget.profile.headerPlatform;
     _seed = _editFrom(widget.profile);
 
     _displayNameController.addListener(_onFieldChanged);
@@ -72,6 +74,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       theme: p.theme,
       privacy: p.privacy,
       featuredPlatform: p.featuredPlatform,
+      headerPlatform: p.headerPlatform,
     );
   }
 
@@ -85,8 +88,18 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       // an edit-save does not overwrite a privacy change made in Settings.
       privacy: widget.profile.privacy,
       featuredPlatform: _selectedFeaturedPlatform,
+      headerPlatform: _selectedHeaderPlatform,
     );
   }
+
+  /// The connected platforms plus [seeded], so a stored preference naming a
+  /// platform the owner has since unlinked still has an item to select — a
+  /// Material dropdown asserts on a value absent from its items.
+  List<Platform> _selectableWith(List<Platform> connected, Platform? seeded) =>
+      {
+        ...connected,
+        ...?(seeded != null ? [seeded] : null),
+      }.toList();
 
   bool get _isDirty => _buildEdit() != _seed;
 
@@ -257,37 +270,56 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         l10n: l10n,
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        l10n.profileFeaturedCardLabel,
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
+                      // Both platform preferences read the same connections
+                      // list, so they share one async section: a failed read is
+                      // one message with one retry, not the same error twice.
                       AsyncValueWidget<List<Platform>>(
                         key: const Key('featuredCardAsyncSection'),
                         value: ref.watch(connectedPlatformsProvider),
                         onRetry: () =>
                             ref.invalidate(connectedPlatformsProvider),
-                        data: (platforms) {
-                          // Union of connected platforms and the seeded
-                          // featured platform (if any) avoids a Material
-                          // dropdown assertion when the stored value is no
-                          // longer in the connected list.
-                          final items = {
-                            ...platforms,
-                            ...?(_selectedFeaturedPlatform != null
-                                ? [_selectedFeaturedPlatform!]
-                                : null),
-                          }.toList();
-                          return _FeaturedCardSelector(
-                            key: const Key('featuredCardSelector'),
-                            selected: _selectedFeaturedPlatform,
-                            platforms: items,
-                            enabled: !editState.submitting,
-                            onChanged: (p) =>
-                                setState(() => _selectedFeaturedPlatform = p),
-                            l10n: l10n,
-                          );
-                        },
+                        data: (platforms) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              l10n.profileFeaturedCardLabel,
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            _PlatformPreferenceSelector(
+                              key: const Key('featuredCardSelector'),
+                              dropdownKey: const Key('featuredCardDropdown'),
+                              selected: _selectedFeaturedPlatform,
+                              platforms: _selectableWith(
+                                platforms,
+                                _selectedFeaturedPlatform,
+                              ),
+                              enabled: !editState.submitting,
+                              defaultLabel: l10n.profileFeaturedCardDefault,
+                              onChanged: (p) =>
+                                  setState(() => _selectedFeaturedPlatform = p),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Text(
+                              l10n.profileHeaderArtLabel,
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            _PlatformPreferenceSelector(
+                              key: const Key('headerArtSelector'),
+                              dropdownKey: const Key('headerArtDropdown'),
+                              selected: _selectedHeaderPlatform,
+                              platforms: _selectableWith(
+                                platforms,
+                                _selectedHeaderPlatform,
+                              ),
+                              enabled: !editState.submitting,
+                              defaultLabel: l10n.profileHeaderArtDefault,
+                              onChanged: (p) =>
+                                  setState(() => _selectedHeaderPlatform = p),
+                            ),
+                          ],
+                        ),
                       ),
                       if (editState.failure != null) ...[
                         const SizedBox(height: AppSpacing.md),
@@ -447,32 +479,38 @@ class _SaveButton extends StatelessWidget {
   );
 }
 
-class _FeaturedCardSelector extends StatelessWidget {
-  const _FeaturedCardSelector({
+/// A display preference picked from the platforms the owner has linked, with a
+/// leading option that clears it. Shared by the two such preferences on this
+/// screen — which card fronts the profile in the feed, and which platform's art
+/// sits behind the identity — so both read and behave identically.
+class _PlatformPreferenceSelector extends StatelessWidget {
+  const _PlatformPreferenceSelector({
     super.key,
+    required this.dropdownKey,
     required this.selected,
     required this.platforms,
     required this.enabled,
+    required this.defaultLabel,
     required this.onChanged,
-    required this.l10n,
   });
 
+  final Key dropdownKey;
   final Platform? selected;
   final List<Platform> platforms;
   final bool enabled;
+
+  /// Copy for the option that stores no preference.
+  final String defaultLabel;
+
   final ValueChanged<Platform?> onChanged;
-  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<Platform?>(
-    key: const Key('featuredCardDropdown'),
+    key: dropdownKey,
     initialValue: selected,
     onChanged: enabled ? onChanged : null,
     items: [
-      DropdownMenuItem<Platform?>(
-        value: null,
-        child: Text(l10n.profileFeaturedCardDefault),
-      ),
+      DropdownMenuItem<Platform?>(value: null, child: Text(defaultLabel)),
       ...platforms.map(
         (p) => DropdownMenuItem<Platform?>(
           value: p,

@@ -1,4 +1,5 @@
 import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Builds a ProfileEdit with valid defaults so each test isolates one field.
@@ -9,6 +10,7 @@ ProfileEdit _edit({String displayName = 'Valid Name', String? bio}) =>
       theme: ProfileTheme.crimson,
       privacy: ProfilePrivacy.public,
       featuredPlatform: null,
+      headerPlatform: null,
     );
 
 Profile _profile({DateTime? deletionRequestedAt}) => Profile(
@@ -21,9 +23,27 @@ Profile _profile({DateTime? deletionRequestedAt}) => Profile(
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
   deletionRequestedAt: deletionRequestedAt,
+  layout: const [
+    FullRow('a'),
+    PairRow(left: 'b', right: 'c'),
+  ],
+  createdAt: DateTime.utc(2025, 3, 1),
 );
 
 void main() {
+  group('Profile.copyWith', () {
+    test('carries the server-managed fields it does not edit', () {
+      // A copy is made to change one editable field. Dropping the layout there
+      // would move the profile off its composed render — silently, and only
+      // for the user whose profile was copied.
+      final copied = _profile().copyWith(displayName: 'Renamed');
+
+      expect(copied.displayName, 'Renamed');
+      expect(copied.layout, _profile().layout);
+      expect(copied.createdAt, _profile().createdAt);
+    });
+  });
+
   group('Profile deletion markers', () {
     test('a null marker is not pending and has no scheduled target', () {
       final profile = _profile();

@@ -63,6 +63,7 @@ Profile _profile({
   String? avatarUrl,
   String? bio,
   Platform? featured,
+  Platform? header,
 }) => Profile(
   id: _userId,
   username: username,
@@ -72,6 +73,7 @@ Profile _profile({
   theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: featured,
+  headerPlatform: header,
   createdAt: DateTime.utc(2025, 3, 1),
 );
 
@@ -226,6 +228,22 @@ void main() {
       await _pump(
         tester,
         profile: _profile(featured: Platform.wowRetail),
+        cards: {
+          Platform.steam: _card(Platform.steam, heroImage: _steamArt),
+          Platform.wowRetail: _card(Platform.wowRetail, heroImage: _wowArt),
+        },
+      );
+
+      expect(_imageFor(_wowArt), findsWidgets);
+      expect(_imageFor(_steamArt), findsNothing);
+    });
+
+    testWidgets('the owner\'s chosen platform wins over the featured one', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        profile: _profile(featured: Platform.steam, header: Platform.wowRetail),
         cards: {
           Platform.steam: _card(Platform.steam, heroImage: _steamArt),
           Platform.wowRetail: _card(Platform.wowRetail, heroImage: _wowArt),

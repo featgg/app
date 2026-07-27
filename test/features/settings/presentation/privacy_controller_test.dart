@@ -1,4 +1,5 @@
 import 'package:featgg/src/core/error/failure.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +16,10 @@ const _seedProfile = Profile(
   bio: 'Seed bio',
   theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
-  featuredPlatform: null,
+  // Non-null, and different from each other: a privacy write that dropped one
+  // preference, or read one into the other, would pass against nulls.
+  featuredPlatform: Platform.steam,
+  headerPlatform: Platform.wowRetail,
 );
 
 /// Recording fake: counts reads/writes, captures the last edit, and lets each
@@ -91,6 +95,7 @@ void main() {
       expect(repo.lastEdit!.bio, _seedProfile.bio);
       expect(repo.lastEdit!.theme, _seedProfile.theme);
       expect(repo.lastEdit!.featuredPlatform, _seedProfile.featuredPlatform);
+      expect(repo.lastEdit!.headerPlatform, _seedProfile.headerPlatform);
       expect(container.read(privacyControllerProvider), isA<AsyncData<void>>());
 
       // Invalidation: re-reading the settings seam re-fetches (one fetch for

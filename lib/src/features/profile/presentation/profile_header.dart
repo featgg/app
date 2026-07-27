@@ -51,6 +51,7 @@ class ProfileHeader extends ConsumerWidget {
     };
     final header = resolveProfileHeader(
       cards,
+      chosen: profile.headerPlatform,
       featured: profile.featuredPlatform,
     );
 

@@ -41,6 +41,7 @@ class PrivacyController extends _$PrivacyController {
       theme: profile.theme,
       privacy: privacy,
       featuredPlatform: profile.featuredPlatform,
+      headerPlatform: profile.headerPlatform,
     );
 
     final updateResult = await repo.updateMyProfile(edit);

@@ -696,6 +696,83 @@ void main() {
     },
   );
 
+  testWidgets(
+    'picking header art carries it on submit without touching the featured card',
+    (tester) async {
+      ProfileEdit? capturedEdit;
+
+      final connectionsRepo = _FakeConnectionsRepository(
+        connectionsResult: () => right([
+          Connection(
+            platform: Platform.steam,
+            status: ConnectionStatus.active,
+            createdAt: DateTime.utc(2024),
+          ),
+        ]),
+      );
+
+      final recordingRepo = _RecordingFeaturedRepo(
+        onUpdate: (edit) {
+          capturedEdit = edit;
+          return right(_profile);
+        },
+      );
+
+      await tester.pumpWidget(
+        _screen(recordingRepo, connectionsRepo: connectionsRepo),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('headerArtDropdown')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('headerArtDropdown')));
+      await tester.pumpAndSettle();
+
+      final steamItems = find.byWidgetPredicate(
+        (w) => w is DropdownMenuItem<Platform?> && w.value == Platform.steam,
+      );
+      await tester.tap(steamItems.last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('profileSaveButton')));
+      await tester.pumpAndSettle();
+
+      expect(capturedEdit, isNotNull);
+      expect(capturedEdit!.headerPlatform, Platform.steam);
+      // The two preferences are independent; picking one must not set the
+      // other, which is exactly what a shared selector could get wrong.
+      expect(capturedEdit!.featuredPlatform, isNull);
+    },
+  );
+
+  testWidgets('the header-art selector seeds from the profile', (tester) async {
+    const seeded = Profile(
+      id: 'user-1',
+      username: 'testuser',
+      displayName: 'Test User',
+      avatarUrl: null,
+      bio: 'My bio',
+      theme: ProfileTheme.crimson,
+      privacy: ProfilePrivacy.public,
+      featuredPlatform: null,
+      headerPlatform: Platform.wowRetail,
+    );
+
+    await tester.pumpWidget(
+      _screen(
+        _FakeRepository(updateResult: () => right(seeded)),
+        profile: seeded,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final dropdown = tester.widget<DropdownButtonFormField<Platform?>>(
+      find.byKey(const Key('headerArtDropdown')),
+    );
+    expect(dropdown.initialValue, Platform.wowRetail);
+  });
+
   // ── Theme swatch tests ────────────────────────────────────────────────────
 
   bool? swatchSelected(WidgetTester tester, ProfileTheme t) => tester

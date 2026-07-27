@@ -309,6 +309,7 @@ void main() {
         theme: ProfileTheme.frost,
         privacy: ProfilePrivacy.private,
         featuredPlatform: null,
+        headerPlatform: null,
       );
       final columns = profileEditToColumns(edit);
       expect(columns.containsKey('avatar_url'), isFalse);
@@ -320,6 +321,7 @@ void main() {
       theme: ProfileTheme.frost,
       privacy: ProfilePrivacy.private,
       featuredPlatform: null,
+      headerPlatform: null,
     );
 
     final updatedDto = ProfileDto.fromJson(const {

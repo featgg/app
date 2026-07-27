@@ -20,14 +20,14 @@ it — a user can update only their own profile.
 
 - **Table.** `profiles`
 - **Readable columns.** `id`, `username`, `display_name`, `avatar_url`,
-  `bio`, `theme_id`, `privacy_level`, `featured_platform`, `layout`,
-  `created_at`. A public profile exposes these to anyone; a private profile is
+  `bio`, `theme_id`, `privacy_level`, `featured_platform`, `header_platform`,
+  `layout`, `created_at`. A public profile exposes these to anyone; a private profile is
   readable only by its owner.
 - **Owner-only readable column.** `deletion_requested_at` — readable only by the
   owner, server-managed, and never client-writable (see below). It is not part
   of the public readable set above, even on a public profile.
 - **Writable columns (owner only).** `display_name`, `bio`, `theme_id`,
-  `privacy_level`, `featured_platform`.
+  `privacy_level`, `featured_platform`, `header_platform`.
 - **Server-managed (read-only to the client).** `id`, `created_at`,
   `last_updated_at`, `deletion_requested_at`, `layout`, and `avatar_url`. Never
   client-writable directly; `avatar_url` is updated by the upload endpoint
@@ -51,6 +51,14 @@ it — a user can update only their own profile.
     means the most-recently-updated card. Resolution is soft — pointing at a
     platform the user no longer has falls back to the freshest card; the
     client never needs to clean it up.
+  - `header_platform` — one of the platform values (see `connections.md`),
+    or `null`. A display preference: which platform's art sits behind the
+    identity in the profile header. Independent of `featured_platform` — that
+    one is about how the profile reads in the feed, this one about how it
+    reads on its own page. `null` means the client picks. Resolution is soft —
+    pointing at a platform the user no longer has, or one publishing no art,
+    falls back to the client's own default; the client never needs to clean
+    it up.
   - `layout` — a JSON array of ordered rows composing the personalization profile, each row
     `{ "t": "full"|"pair", "c": [ cardId | null, … ] }` referencing the
     profile's own widget ids. `[]` means no composed

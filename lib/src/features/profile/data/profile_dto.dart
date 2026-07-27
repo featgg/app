@@ -18,6 +18,7 @@ final class ProfileDto {
     required this.themeId,
     required this.privacyLevel,
     required this.featuredPlatform,
+    this.headerPlatform,
     this.deletionRequestedAt,
     required this.layout,
     this.createdAt,
@@ -36,6 +37,8 @@ final class ProfileDto {
   final String privacyLevel;
   @JsonKey(name: 'featured_platform')
   final String? featuredPlatform;
+  @JsonKey(name: 'header_platform')
+  final String? headerPlatform;
   @JsonKey(name: 'deletion_requested_at')
   final DateTime? deletionRequestedAt;
 
@@ -60,6 +63,7 @@ Profile profileFromDto(ProfileDto dto) => Profile(
   theme: _themeFromWire(dto.themeId),
   privacy: _privacyFromWire(dto.privacyLevel),
   featuredPlatform: _platformFromWireOrNull(dto.featuredPlatform),
+  headerPlatform: _platformFromWireOrNull(dto.headerPlatform),
   deletionRequestedAt: dto.deletionRequestedAt,
   layout: _layoutFromWire(dto.layout),
   createdAt: dto.createdAt,
@@ -161,4 +165,7 @@ Map<String, dynamic> profileEditToColumns(ProfileEdit e) => {
   'featured_platform': e.featuredPlatform == null
       ? null
       : platformDescriptors[e.featuredPlatform!]!.wireValue,
+  'header_platform': e.headerPlatform == null
+      ? null
+      : platformDescriptors[e.headerPlatform!]!.wireValue,
 };
