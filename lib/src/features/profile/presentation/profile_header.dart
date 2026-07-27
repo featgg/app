@@ -9,11 +9,11 @@ import '../domain/profile.dart';
 import '../domain/profile_header_resolver.dart';
 import 'cards/card_data.dart';
 import 'personalization_card_shell.dart';
-import 'personalization_hero_canvas.dart';
 import 'profile_owner_cards_provider.dart';
 
-/// Stable keys for the header's identity, so a test can assert each part is the
-/// real one rather than the stand-in it used to be.
+/// Stable keys for the header's parts, so a test can assert each is the real
+/// one rather than a stand-in.
+const Key kProfileHeaderCoverKey = Key('profileHeaderCover');
 const Key kProfileHeaderAvatarKey = Key('profileHeaderAvatar');
 const Key kProfileHeaderNameKey = Key('profileHeaderName');
 const Key kProfileHeaderMarksKey = Key('profileHeaderMarks');
@@ -22,7 +22,10 @@ const Key kProfileHeaderMarksKey = Key('profileHeaderMarks');
 /// profile that is not a card: it carries no number, and it cannot be moved,
 /// paired or removed.
 ///
-/// Art, avatar, name and the marks of every linked platform read as one block.
+/// A wide, shallow cover with the identity beneath it and the avatar straddling
+/// the seam. Deliberately short: the header frames the profile, the cards are
+/// the profile, and every pixel spent here is one the first card does not get.
+///
 /// The marks are text, never a logo or a brand color: they say which accounts
 /// stand behind the profile without turning the header into a sponsor wall.
 class ProfileHeader extends ConsumerWidget {
@@ -35,7 +38,7 @@ class ProfileHeader extends ConsumerWidget {
 
   final Profile profile;
 
-  /// The column the header spans; the art budget and the type scale derive
+  /// The column the header spans; the cover height and the type scale derive
   /// from it.
   final double columnWidth;
 
@@ -45,6 +48,7 @@ class ProfileHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = PersonalizationTheme.of(context);
     final cards = <Platform, GameCard?>{
       for (final platform in Platform.values)
         platform: resolveCard(ref, cardSource, platform),
@@ -54,14 +58,52 @@ class ProfileHeader extends ConsumerWidget {
       chosen: profile.headerPlatform,
       featured: profile.featuredPlatform,
     );
+    final avatarSize = fluidByWidth(
+      columnWidth,
+      min: PersonalizationLayout.avatarMinSize,
+      max: PersonalizationLayout.avatarSize,
+    );
+    final rise = avatarSize * PersonalizationLayout.avatarOverlap;
 
-    return PersonalizationHeroCanvas(
-      columnWidth: columnWidth,
-      imageUrl: header.art,
-      child: _Identity(
-        profile: profile,
-        platforms: header.platforms,
-        columnWidth: columnWidth,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(palette.radius),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Cover(imageUrl: header.art),
+              ColoredBox(
+                color: palette.surface,
+                // The identity clears the part of the avatar hanging into it.
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    rise + AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: _Identity(
+                    profile: profile,
+                    platforms: header.platforms,
+                    columnWidth: columnWidth,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            left: AppSpacing.md,
+            // Straddles the seam rather than sitting under it, which is what
+            // ties the two halves into one block.
+            top: columnWidth / PersonalizationLayout.coverAspect - rise,
+            child: _Avatar(
+              url: profile.avatarUrl,
+              word: profileHeaderName(profile),
+              size: avatarSize,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -71,6 +113,39 @@ class ProfileHeader extends ConsumerWidget {
 String profileHeaderName(Profile profile) =>
     profile.displayName.isNotEmpty ? profile.displayName : profile.username;
 
+/// The cover: real art cropped to a wide, shallow frame, or the theme's own
+/// fill for a profile with nothing linked. Cropping is the point — a cover
+/// takes the middle of whatever it is given rather than letterboxing it.
+class _Cover extends StatelessWidget {
+  const _Cover({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = PersonalizationTheme.of(context);
+    return AspectRatio(
+      key: kProfileHeaderCoverKey,
+      aspectRatio: PersonalizationLayout.coverAspect,
+      child: personalizationArtOrPlaceholder(
+        imageUrl: imageUrl,
+        placeholder: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [palette.artC, palette.artA, palette.artB],
+            ),
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Name, handle, platform marks and bio, on the theme's own surface. On solid
+/// ground rather than over art, so none of it needs a scrim to stay legible.
 class _Identity extends StatelessWidget {
   const _Identity({
     required this.profile,
@@ -84,12 +159,13 @@ class _Identity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = PersonalizationTheme.of(context);
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final bio = profile.bio;
-    // Brand names, so not localized. Joined into one line rather than a row of
-    // chips: over art, seven outlined pills read as clutter competing with the
-    // name, and the line ellipsizes cleanly where the chips would wrap.
+    // Brand names, so not localized. One line rather than a row of chips: seven
+    // outlined pills read as clutter beside a name, and the line ellipsizes
+    // cleanly where chips would wrap and grow the header.
     final marks = platforms
         .map((platform) => platformDescriptors[platform]?.shortName ?? '')
         .where((mark) => mark.isNotEmpty)
@@ -99,31 +175,20 @@ class _Identity extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Avatar(
-          url: profile.avatarUrl,
-          word: profileHeaderName(profile),
-          size: fluidByWidth(
-            columnWidth,
-            min: PersonalizationLayout.avatarMinSize,
-            max: PersonalizationLayout.avatarSize,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
         Text(
-          profileHeaderName(profile).toUpperCase(),
+          profileHeaderName(profile),
           key: kProfileHeaderNameKey,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: textTheme.headlineMedium?.copyWith(
-            color: PersonalizationArtColors.onArt,
+          style: textTheme.headlineSmall?.copyWith(
+            color: palette.text,
             fontWeight: AppTypography.bold,
-            letterSpacing: PersonalizationLayout.heroWordTracking,
+            letterSpacing: PersonalizationLayout.headerNameTracking,
             fontSize: fluidByWidth(
               columnWidth,
-              min: PersonalizationLayout.heroWordMinSize,
-              max: PersonalizationLayout.heroWordMaxSize,
+              min: PersonalizationLayout.headerNameMinSize,
+              max: PersonalizationLayout.headerNameMaxSize,
             ),
-            shadows: PersonalizationArtText.shadows,
           ),
         ),
         Text(
@@ -131,9 +196,8 @@ class _Identity extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: textTheme.labelMedium?.copyWith(
-            color: PersonalizationArtColors.onArt,
+            color: palette.accent,
             fontWeight: AppTypography.semiBold,
-            shadows: PersonalizationArtText.shadows,
           ),
         ),
         if (marks.isNotEmpty) ...[
@@ -144,9 +208,8 @@ class _Identity extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: textTheme.labelSmall?.copyWith(
-              color: PersonalizationArtColors.onArt,
+              color: palette.muted,
               letterSpacing: PersonalizationLayout.tagTracking,
-              shadows: PersonalizationArtText.shadows,
             ),
           ),
         ],
@@ -154,14 +217,9 @@ class _Identity extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             bio,
-            // One line here: the header's job is identity, and the art behind it
-            // is the budget every extra line spends.
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: textTheme.bodySmall?.copyWith(
-              color: PersonalizationArtColors.onArt,
-              shadows: PersonalizationArtText.shadows,
-            ),
+            style: textTheme.bodySmall?.copyWith(color: palette.muted),
           ),
         ],
       ],
@@ -169,8 +227,9 @@ class _Identity extends StatelessWidget {
   }
 }
 
-/// The owner's avatar, falling back to a monogram on the theme's art tones for a
-/// profile that has none — and while the image loads, and if it fails.
+/// The owner's avatar, falling back to a monogram on the theme's art tones for
+/// a profile that has none — and while the image loads, and if it fails. The
+/// surface-colored ring is what separates it from the art it straddles.
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.url, required this.word, required this.size});
 
@@ -186,22 +245,29 @@ class _Avatar extends StatelessWidget {
 
     return Container(
       key: kProfileHeaderAvatarKey,
-      width: size,
-      height: size,
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(AppSpacing.hairline),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [palette.artA, palette.artC]),
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: palette.accent, width: AppSpacing.hairline),
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg + AppSpacing.hairline),
       ),
-      child: personalizationArtOrPlaceholder(
-        imageUrl: url,
-        placeholder: Center(
-          child: Text(
-            initial,
-            style: textTheme.headlineSmall?.copyWith(
-              color: PersonalizationArtColors.onArt,
-              fontWeight: AppTypography.bold,
+      child: Container(
+        width: size,
+        height: size,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [palette.artA, palette.artC]),
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: Border.all(color: palette.accent, width: AppSpacing.hairline),
+        ),
+        child: personalizationArtOrPlaceholder(
+          imageUrl: url,
+          placeholder: Center(
+            child: Text(
+              initial,
+              style: textTheme.titleLarge?.copyWith(
+                color: PersonalizationArtColors.onArt,
+                fontWeight: AppTypography.bold,
+              ),
             ),
           ),
         ),

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 
@@ -193,10 +191,6 @@ abstract final class PersonalizationArtColors {
 
   /// Hero word / on-art light text (`rgba(255,255,255,.92)`).
   static const Color onArt = Color(0xEBFFFFFF);
-
-  /// Dark veil laid over the blur-extend fill so the contained hero art reads as
-  /// the foreground (mockup `brightness(.65)`).
-  static const Color heroBlurVeil = Color(0x59000000); // ~35% black
 }
 
 /// Legibility treatment for text drawn directly over real art: a soft dark
@@ -235,20 +229,20 @@ abstract final class PersonalizationLayout {
   /// Hairline border width (mockup 1px card/chip borders).
   static const double borderWidth = 1;
 
-  /// Header art viewport budget factor.
-  static const double heroViewportFactor = 0.78;
+  /// Header cover aspect (width / height). Wide and shallow: the cover frames
+  /// the identity, and every pixel it takes is one the cards do not get.
+  static const double coverAspect = 4;
 
-  /// Header art aspect factor: `height = width * 1.25`.
-  static const double heroAspectFactor = 1.25;
+  /// How far the avatar rises above the cover's lower edge, as a fraction of
+  /// its own size.
+  static const double avatarOverlap = 0.5;
 
-  /// Header art aspect ratio: 4:5 portrait, width / height.
-  static const double heroArtAspect = 4 / 5;
-
-  /// Blur-extend fill overhang (mockup `inset:-30px`).
-  static const double heroBlurInset = 30;
-
-  /// Blur-extend sigma (mockup `blur(34px)`).
-  static const double heroBlurSigma = 34;
+  /// Header name fluid size bounds and tracking. Smaller and tighter than the
+  /// full-bleed treatment it replaces: at strip height a heavily tracked line
+  /// reads as spaced-out rather than deliberate.
+  static const double headerNameMinSize = 22;
+  static const double headerNameMaxSize = 30;
+  static const double headerNameTracking = 1.5;
 
   /// Designed card aspect ratios (width / height), one per rendered size. A
   /// card's height is a function of its width, so the two variants keep their
@@ -338,27 +332,11 @@ abstract final class PersonalizationLayout {
   static const double tagTracking = 0.8;
   static const double labelTracking = 0.5;
 
-  /// Wide tracking for the hero word (mockup `letter-spacing:.38em`).
-  static const double heroWordTracking = 6;
-
-  /// Hero word fluid size bounds (mockup `clamp(2rem, 9vw, 3rem)`).
-  static const double heroWordMinSize = 28;
-  static const double heroWordMaxSize = 44;
-
   /// Composition-editor drag ghost: capped width so a lifted card reads as a
   /// compact preview, and a slight transparency so it reads as a ghost.
   static const double editorGhostMaxWidth = 240;
   static const double editorGhostOpacity = 0.85;
 }
-
-/// The header art's conditional-fit budget: the frame is the natural 4:5
-/// height at the column width unless that exceeds the viewport budget, in which
-/// case it shortens and the art shows fully contained with a blurred side-fill.
-/// Pure and testable — the frame height alone decides fit vs contain.
-double heroFrameHeight(double screenHeight, double columnWidth) => math.min(
-  PersonalizationLayout.heroViewportFactor * screenHeight,
-  columnWidth * PersonalizationLayout.heroAspectFactor,
-);
 
 /// A fluid size that ramps with the column width between [min] and [max],
 /// mirroring the mockup's `clamp()` type scale so the column looks identical in

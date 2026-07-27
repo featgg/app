@@ -223,6 +223,43 @@ void main() {
     });
   });
 
+  group('cover', () {
+    testWidgets('is wide and shallow, not a block the cards sit below', (
+      tester,
+    ) async {
+      const column = 400.0;
+      await _pump(tester, profile: _profile(), columnWidth: column);
+
+      final cover = tester.getSize(find.byKey(kProfileHeaderCoverKey));
+
+      expect(cover.width, moreOrLessEquals(column, epsilon: 0.5));
+      expect(
+        cover.height,
+        moreOrLessEquals(
+          column / PersonalizationLayout.coverAspect,
+          epsilon: 0.5,
+        ),
+      );
+      // The whole point of the shape: the header cannot fill a phone screen.
+      expect(cover.height, lessThan(column / 2));
+    });
+
+    testWidgets('the avatar straddles the seam rather than sitting below it', (
+      tester,
+    ) async {
+      const column = 400.0;
+      await _pump(tester, profile: _profile(), columnWidth: column);
+
+      final coverBottom = tester
+          .getRect(find.byKey(kProfileHeaderCoverKey))
+          .bottom;
+      final avatar = tester.getRect(find.byKey(kProfileHeaderAvatarKey));
+
+      expect(avatar.top, lessThan(coverBottom));
+      expect(avatar.bottom, greaterThan(coverBottom));
+    });
+  });
+
   group('art', () {
     testWidgets('defaults to the featured platform\'s art', (tester) async {
       await _pump(
@@ -280,13 +317,13 @@ void main() {
         profile: _profile(displayName: '', username: 'nico'),
       );
 
-      expect(_textAt(tester, kProfileHeaderNameKey), 'NICO');
+      // Rendered as written, not uppercased: at strip height the header reads
+      // as an identity line rather than a display banner.
+      expect(_textAt(tester, kProfileHeaderNameKey), 'nico');
     });
   });
 
-  testWidgets('the identity fits the art frame at the narrowest column', (
-    tester,
-  ) async {
+  testWidgets('the header fits at the narrowest column', (tester) async {
     // Everything the header can carry at once, on the smallest phone the
     // profile is designed for and a viewport short enough to shorten the frame:
     // the identity stack has to fit the art rather than overflow it.
