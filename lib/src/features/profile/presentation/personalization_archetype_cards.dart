@@ -4,6 +4,7 @@ import '../domain/profile_archetype.dart';
 import '../domain/profile_widget.dart';
 import 'profile_owner_cards_provider.dart';
 import 'cards/achievement_grid_card.dart';
+import 'cards/art_card.dart';
 import 'cards/collection_card.dart';
 import 'cards/fallback_card.dart';
 import 'cards/identity_card.dart';
@@ -13,6 +14,7 @@ import 'cards/platform_card.dart';
 import 'cards/rank_card.dart';
 
 export 'cards/achievement_grid_card.dart';
+export 'cards/art_card.dart';
 export 'cards/card_data.dart';
 export 'cards/card_key.dart';
 export 'cards/collection_card.dart';
@@ -69,6 +71,11 @@ Widget personalizationCardFor(
     ),
     ProfileArchetype.achievementGrid => AchievementGridCard(
       widget: widget,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.art => ArtCard(
+      widget: widget,
+      size: effectiveSize,
       cardSource: cardSource,
     ),
     ProfileArchetype.fallback => FallbackCard(

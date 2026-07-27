@@ -143,6 +143,10 @@ class PersonalizationCardShell extends StatelessWidget {
                   )
                   .toList(),
             );
+            // A card with nothing to say draws nothing over its art. The
+            // gradient exists to keep a datum legible; with no datum it is a
+            // shadow across a picture for no reason.
+            final hasDatum = heroStat != null || (degraded && subject != null);
             return format == ProfileCardFormat.bleed
                 ? Stack(
                     fit: StackFit.expand,
@@ -151,19 +155,21 @@ class PersonalizationCardShell extends StatelessWidget {
                         imageUrl: art,
                         placeholder: const PersonalizationCardGround(),
                       ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.center,
-                            colors: [
-                              PersonalizationArtColors.heroScrim,
-                              PersonalizationArtColors.transparent,
-                            ],
+                      if (hasDatum) ...[
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.center,
+                              colors: [
+                                PersonalizationArtColors.heroScrim,
+                                PersonalizationArtColors.transparent,
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(left: 0, right: 0, bottom: 0, child: datum),
+                        Positioned(left: 0, right: 0, bottom: 0, child: datum),
+                      ],
                     ],
                   )
                 : Stack(

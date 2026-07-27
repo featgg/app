@@ -12,6 +12,7 @@ enum ProfileArchetype {
   main,
   collection,
   achievementGrid,
+  art,
   fallback,
 }
 
@@ -35,6 +36,7 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.collection ||
   ProfileWidgetKind.gameCollector => ProfileArchetype.collection,
   ProfileWidgetKind.completionist => ProfileArchetype.achievementGrid,
+  ProfileWidgetKind.art => ProfileArchetype.art,
   _ => ProfileArchetype.fallback,
 };
 
@@ -60,6 +62,9 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   ProfileArchetype.collection => ProfileCardFormat.framed,
   // A shelf of many entries.
   ProfileArchetype.achievementGrid => ProfileCardFormat.framed,
+  // The picture is the whole card — this is the one archetype whose art is not
+  // illustrating a number, because it has none.
+  ProfileArchetype.art => ProfileCardFormat.bleed,
   // Falls back to the card envelope's hero image when the kind carries one.
   ProfileArchetype.fallback => ProfileCardFormat.bleed,
 };
@@ -95,6 +100,8 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   // offers them no side-drop and no size toggle.
   ProfileArchetype.collection => const {ProfileCardSize.full},
   ProfileArchetype.achievementGrid => const {ProfileCardSize.full},
+  // Both sizes: a picture is worth placing wide or beside something.
+  ProfileArchetype.art => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.fallback => const {
     ProfileCardSize.full,
     ProfileCardSize.half,

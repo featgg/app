@@ -96,6 +96,13 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addArtWidget({
+    required Platform source,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
     required ProfileWidgetSize size,

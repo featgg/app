@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'art_selection.dart';
 import 'collection_selection.dart';
 import 'composed_card.dart';
 import 'data_menu_selection.dart';
@@ -23,6 +24,7 @@ enum ProfileWidgetKind {
   passport,
   rank,
   main,
+  art,
 }
 
 /// Grid footprint a widget occupies. Maps to row-layout spans in
@@ -52,6 +54,7 @@ final class ProfileWidget extends Equatable {
     this.composedFill = ComposedFill.empty,
     this.showcaseSelection = ShowcaseSelection.empty,
     this.collectionSelection = CollectionSelection.empty,
+    this.artSelection = ArtSelection.empty,
   });
 
   final String id;
@@ -86,6 +89,9 @@ final class ProfileWidget extends Equatable {
   /// Empty (default) otherwise.
   final CollectionSelection collectionSelection;
 
+  /// Where an art widget's picture comes from; empty for every other kind.
+  final ArtSelection artSelection;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
@@ -95,6 +101,7 @@ final class ProfileWidget extends Equatable {
     ComposedFill? composedFill,
     ShowcaseSelection? showcaseSelection,
     CollectionSelection? collectionSelection,
+    ArtSelection? artSelection,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -107,6 +114,7 @@ final class ProfileWidget extends Equatable {
     composedFill: composedFill ?? this.composedFill,
     showcaseSelection: showcaseSelection ?? this.showcaseSelection,
     collectionSelection: collectionSelection ?? this.collectionSelection,
+    artSelection: artSelection ?? this.artSelection,
   );
 
   @override
