@@ -11,6 +11,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
@@ -379,6 +380,7 @@ ProfileWidget goldenWidget({
   Platform? platform,
   ShowcaseSelection showcaseSelection = ShowcaseSelection.empty,
   CollectionSelection collectionSelection = CollectionSelection.empty,
+  ArtSelection artSelection = ArtSelection.empty,
 }) => ProfileWidget(
   id: id,
   kind: kind,
@@ -388,6 +390,7 @@ ProfileWidget goldenWidget({
   size: ProfileWidgetSize.small,
   showcaseSelection: showcaseSelection,
   collectionSelection: collectionSelection,
+  artSelection: artSelection,
 );
 
 /// A Steam library entry.

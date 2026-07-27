@@ -79,6 +79,13 @@ ProfileCardFormat renderedCardFormat(
     ? ProfileCardFormat.bleed
     : ProfileCardFormat.framed;
 
+/// Whether [a] has a datum zone at all. Every archetype does except
+/// [ProfileArchetype.art], whose content is the picture: a band under it —
+/// empty, or a shadow over nothing — would be the card claiming to answer
+/// something. This is not the same as an archetype whose datum resolved empty;
+/// that band is a real no-data state and stays.
+bool hasDatumZone(ProfileArchetype a) => a != ProfileArchetype.art;
+
 /// The sizes an archetype can render (spec §5). A full-only archetype dropped
 /// into a pair slot renders full within that column (the seed never does this,
 /// so it is a defensive branch).

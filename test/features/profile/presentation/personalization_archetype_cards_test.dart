@@ -7,6 +7,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -152,6 +153,17 @@ ProfileWidget _collectionWidget(
     gameRefs: gameRefs,
     titleKey: titleKey,
   ),
+);
+
+ProfileWidget _artWidget(String id, {Platform? source}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.art,
+  // Platform-less row: the picture's source is the selection, not a binding.
+  platform: null,
+  position: 0,
+  isEnabled: true,
+  size: ProfileWidgetSize.wide,
+  artSelection: ArtSelection(source: source),
 );
 
 ProfileWidget _widget({
@@ -1621,5 +1633,83 @@ void main() {
     // Owner fetch is always null in the split repo, so a hit proves the art
     // binds to the injected public source — visitor parity is inherent.
     expect(_artFor(_coverA), findsOneWidget);
+  });
+
+  testWidgets('ArtCard fills the card with its source art and says nothing '
+      'over it', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a', source: Platform.steam),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverA)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+    // The one archetype with no datum: a scrim or a stat band over the picture
+    // would be the shell failing to notice this card has nothing to say.
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('ArtCard whose source publishes no art renders the theme ground, '
+      'not an error tile', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a', source: Platform.gw2),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.gw2: _card(Platform.gw2)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('an art card pointing nowhere renders the ground and reads no '
+      'card at all', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverA)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // No source means no platform is read, so the Steam art on offer is not
+    // borrowed — an unpointed card is quiet, not opportunistic.
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+  });
+
+  testWidgets('personalizationCardFor builds an ArtCard for an art widget', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _artWidget('a', source: Platform.steam),
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverB)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ArtCard), findsOneWidget);
+    expect(_artFor(_coverB), findsOneWidget);
   });
 }

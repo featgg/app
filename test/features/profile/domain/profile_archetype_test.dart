@@ -203,4 +203,14 @@ void main() {
       );
     });
   });
+
+  group('hasDatumZone', () {
+    test('art is the only archetype without one', () {
+      expect(hasDatumZone(ProfileArchetype.art), isFalse);
+      for (final archetype in ProfileArchetype.values) {
+        if (archetype == ProfileArchetype.art) continue;
+        expect(hasDatumZone(archetype), isTrue, reason: archetype.name);
+      }
+    });
+  });
 }

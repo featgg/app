@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../connections/domain/connection.dart';
 import '../../../connections/domain/game_card.dart';
 import '../../domain/profile_archetype.dart';
 import '../../domain/profile_widget.dart';
@@ -51,11 +50,3 @@ class ArtCard extends ConsumerWidget {
 /// rule the profile header uses, so the picture a card shows and the picture
 /// the header offers for it are the same picture.
 String? artOf(GameCard? card) => card?.heroImage ?? card?.iconImage;
-
-/// The platforms whose art an art card can point at: the linked ones that
-/// publish any. A platform with nothing to show is not offered, because
-/// choosing it would render the theme ground and read as a bug.
-List<Platform> artSources(Map<Platform, GameCard?> cards) => [
-  for (final platform in Platform.values)
-    if (artOf(cards[platform]) != null) platform,
-];

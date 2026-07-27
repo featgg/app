@@ -146,7 +146,10 @@ class PersonalizationCardShell extends StatelessWidget {
             // A card with nothing to say draws nothing over its art. The
             // gradient exists to keep a datum legible; with no datum it is a
             // shadow across a picture for no reason.
-            final hasDatum = heroStat != null || (degraded && subject != null);
+            final datumZone = hasDatumZone(archetype);
+            final hasDatum =
+                datumZone &&
+                (heroStat != null || (degraded && subject != null));
             return format == ProfileCardFormat.bleed
                 ? Stack(
                     fit: StackFit.expand,
@@ -189,7 +192,7 @@ class PersonalizationCardShell extends StatelessWidget {
                                     child: content,
                                   ),
                           ),
-                          datum,
+                          if (datumZone) datum,
                         ],
                       ),
                     ],

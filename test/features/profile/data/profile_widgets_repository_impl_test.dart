@@ -817,6 +817,68 @@ void main() {
     });
   });
 
+  group('addArtWidget', () {
+    test('writes type art, a null platform, and the source in the '
+        'envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'ar',
+          'platform': null,
+          'type': 'art',
+          'position': 2,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'wide',
+            'art': {'source': 'league_of_legends'},
+          },
+        }),
+      );
+      final result = await _repo(source, _RecordingReporter()).addArtWidget(
+        source: Platform.leagueOfLegends,
+        position: 2,
+        size: ProfileWidgetSize.wide,
+      );
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'ar');
+        expect(widget.kind, ProfileWidgetKind.art);
+        expect(widget.platform, isNull);
+        expect(widget.artSelection.source, Platform.leagueOfLegends);
+      });
+
+      expect(source.lastInsert!['type'], 'art');
+      // The row stays unbound: the picture's source is a choice in the
+      // envelope, not an account the card reads.
+      expect(source.lastInsert!['platform'], isNull);
+      expect(source.lastInsert!['position'], 2);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings['size'], 'wide');
+      expect((settings['art']! as Map)['source'], 'league_of_legends');
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'cap exceeded', code: '23514'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(source, reporter).addArtWidget(
+        source: Platform.steam,
+        position: 0,
+        size: ProfileWidgetSize.wide,
+      );
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
   group('addRankWidget', () {
     test('writes type rank, a non-null platform, and a size-only '
         'envelope', () async {

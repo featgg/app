@@ -7,6 +7,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
@@ -44,13 +45,31 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Platform? lastMainPlatform;
   int? lastMainPosition;
   ProfileWidgetSize? lastMainSize;
+  Platform? lastArtSource;
+  int? lastArtPosition;
+  ProfileWidgetSize? lastArtSize;
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     required Platform source,
     required int position,
     required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
+  }) async {
+    lastArtSource = source;
+    lastArtPosition = position;
+    lastArtSize = size;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: position,
+        isEnabled: true,
+        size: size,
+        artSelection: ArtSelection(source: source),
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
@@ -304,18 +323,27 @@ GameCard _steamCard(
   data: SteamCardData(libraryShowcase: library, recentGames: const []),
 );
 
-GameCard _card(Platform platform, CardData data) => GameCard(
-  schemaVersion: 1,
-  platform: platform,
-  title: platform.name,
-  subtitle: null,
-  iconImage: null,
-  heroImage: null,
-  profileUrl: null,
-  stats: const [],
-  lastUpdated: DateTime.utc(2026, 6, 1),
-  data: data,
-);
+GameCard _card(Platform platform, CardData data, {String? heroImage}) =>
+    GameCard(
+      schemaVersion: 1,
+      platform: platform,
+      title: platform.name,
+      subtitle: null,
+      iconImage: null,
+      heroImage: heroImage,
+      profileUrl: null,
+      stats: const [],
+      lastUpdated: DateTime.utc(2026, 6, 1),
+      data: data,
+    );
+
+/// Art is what the Art group offers, so its rows need a card that publishes
+/// one. The other fixtures stay art-less on purpose (no image decodes in a
+/// widget test), which is exactly the disabled case the group must handle.
+const _artUrl = 'https://cdn.test/art.jpg';
+
+GameCard _leagueCardWithArt() =>
+    _card(Platform.leagueOfLegends, _leagueCard().data!, heroImage: _artUrl);
 
 GameCard _leagueCard() => _card(
   Platform.leagueOfLegends,
@@ -436,6 +464,18 @@ ProfileWidget _passportWidget({required int position}) => ProfileWidget(
   isEnabled: true,
   size: ProfileWidgetSize.wide,
 );
+
+ProfileWidget _artWidget(Platform source, {required int position}) =>
+    ProfileWidget(
+      id: 'art-${source.name}',
+      kind: ProfileWidgetKind.art,
+      // Platform-less row; the picture's source is the selection.
+      platform: null,
+      position: position,
+      isEnabled: true,
+      size: ProfileWidgetSize.wide,
+      artSelection: ArtSelection(source: source),
+    );
 
 ProfileWidget _rankWidget(Platform platform, {required int position}) =>
     ProfileWidget(
@@ -596,6 +636,7 @@ void main() {
       'catalogGroupMilestone',
       'catalogGroupCollection',
       'catalogGroupAchievements',
+      'catalogGroupArt',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget, reason: key);
     }
@@ -1089,6 +1130,7 @@ void main() {
       'catalogGroupMilestone',
       'catalogGroupCollection',
       'catalogGroupAchievements',
+      'catalogGroupArt',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget, reason: key);
     }
@@ -1185,5 +1227,113 @@ void main() {
     expect(widgetsRepo.passportAdded, isFalse);
     expect(widgetsRepo.lastRankPlatform, isNull);
     expect(widgetsRepo.lastMainPlatform, isNull);
+  });
+
+  testWidgets('Art row: single-tap adds a wide art card at max+1 pointing at '
+      'the row platform, and closes', (tester) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.leagueOfLegends: _leagueCardWithArt(),
+        }),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.leagueOfLegends],
+        existing: [_rankWidget(Platform.leagueOfLegends, position: 3)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    final row = find.byKey(const Key('artAddRow_leagueOfLegends'));
+    await tester.ensureVisible(row);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastArtSource, Platform.leagueOfLegends);
+    expect(widgetsRepo.lastArtPosition, 4);
+    // A picture is the point, so it is born full-width.
+    expect(widgetsRepo.lastArtSize, ProfileWidgetSize.wide);
+    expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
+  });
+
+  testWidgets('Art row: a linked platform that publishes no artwork is '
+      'disabled, and adding it is impossible', (tester) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          // Rank data but no image: the Rank group offers it, Art cannot.
+          Platform.leagueOfLegends: _leagueCard(),
+        }),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.leagueOfLegends],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(
+      find.byKey(const Key('artDisabledRow_leagueOfLegends')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('artAddRow_leagueOfLegends')), findsNothing);
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsOneWidget);
+    expect(widgetsRepo.lastArtSource, isNull);
+  });
+
+  testWidgets('Art row: an art card already pointing at a source reads as '
+      'added; another source with art still offers', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.leagueOfLegends: _leagueCardWithArt(),
+          Platform.chess: _card(
+            Platform.chess,
+            _chessCard().data!,
+            heroImage: _artUrl,
+          ),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.leagueOfLegends, Platform.chess],
+        existing: [_artWidget(Platform.leagueOfLegends, position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // "Already added" is asked of the selection, not of a platform binding the
+    // row does not carry.
+    expect(
+      find.byKey(const Key('artAddedRow_leagueOfLegends')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('artAddRow_leagueOfLegends')), findsNothing);
+    expect(find.byKey(const Key('artAddRow_chess')), findsOneWidget);
+  });
+
+  testWidgets('Art row: an unlinked platform is never offered', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.leagueOfLegends: _leagueCardWithArt(),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.leagueOfLegends],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('artAddRow_leagueOfLegends')), findsOneWidget);
+    for (final key in const [
+      'artAddRow_chess',
+      'artDisabledRow_chess',
+      'artAddedRow_chess',
+    ]) {
+      expect(find.byKey(Key(key)), findsNothing, reason: key);
+    }
   });
 }
