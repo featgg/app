@@ -16,10 +16,10 @@ const Color _baseText = Color(0xFFEFEFF2);
 const Color _baseMuted = Color(0xFF96969F);
 const double _baseRadius = 14;
 
-/// The personalization palette (`docs/personalization/spec.md` §8). Every
-/// personalization color derives from a palette so switching themes is a
-/// one-line palette swap, not a card rewrite. This is the single home of the personalization
-/// raw color values; presentation reads tokens through [PersonalizationTheme].
+/// The personalization palette. Every personalization color derives from a
+/// palette so switching themes is a one-line palette swap, not a card rewrite.
+/// This is the single home of the raw color values; presentation reads them
+/// through [PersonalizationTheme].
 final class PersonalizationPalette extends Equatable {
   const PersonalizationPalette({
     required this.bg,
@@ -155,8 +155,8 @@ final class PersonalizationPalette extends Equatable {
   /// Low-alpha accent wash for chip/backing fills.
   final Color accentSoft;
 
-  /// Bright / mid / deep art tones for placeholder gradients (spec §8; the
-  /// bottom paint is a solid mid-tone [artB], never a gradient falling to black).
+  /// Bright / mid / deep art tones for placeholder gradients. The bottom paint
+  /// is a solid mid-tone [artB], never a gradient falling to black.
   final Color artA;
   final Color artB;
   final Color artC;
@@ -211,38 +211,37 @@ abstract final class PersonalizationArtText {
 }
 
 /// Named layout constants for the personalization profile. Keeps every size out of the
-/// presentation files as literals (`docs/architecture.md` § No hard-coded
-/// values); the fixed column width and hero budget are tokens, not magic
-/// numbers.
+/// presentation files as literals; the fixed column width and hero budget are
+/// tokens, not magic numbers.
 abstract final class PersonalizationLayout {
-  /// Fixed center-column width (spec §3): `min(600px, 100%)`.
+  /// Fixed center-column width: `min(600px, 100%)`.
   static const double columnMaxWidth = 600;
 
-  /// Design-to-minimum column width (spec §3): the 320px phone floor.
+  /// Design-to-minimum column width: the phone floor everything is designed to.
   static const double columnMinWidth = 320;
 
-  /// Column side padding (spec §3).
+  /// Column side padding.
   static const double columnSidePadding = 14;
 
   /// Vertical gap between column rows (mockup `.column gap`).
   static const double rowGap = 14;
 
-  /// Header first-paint budget (spec §4) so header + full hero fit together.
-  static const double headerMaxHeight = 140;
-
-  /// Header avatar edge length (mockup `.avatar`).
+  /// Header avatar edge length, ramping with the column: the identity sits over
+  /// the header art with the name and marks below it, and a fixed 68 leaves that
+  /// stack no room to breathe on a phone.
+  static const double avatarMinSize = 48;
   static const double avatarSize = 68;
 
   /// Hairline border width (mockup 1px card/chip borders).
   static const double borderWidth = 1;
 
-  /// Hero viewport budget factor (spec §4: `78svh`).
+  /// Header art viewport budget factor.
   static const double heroViewportFactor = 0.78;
 
-  /// Hero 4:5 aspect factor (spec §4: `height = width * 1.25`).
+  /// Header art aspect factor: `height = width * 1.25`.
   static const double heroAspectFactor = 1.25;
 
-  /// Hero art aspect ratio (spec §4: 4:5 portrait, width / height).
+  /// Header art aspect ratio: 4:5 portrait, width / height.
   static const double heroArtAspect = 4 / 5;
 
   /// Blur-extend fill overhang (mockup `inset:-30px`).
@@ -331,8 +330,8 @@ abstract final class PersonalizationLayout {
   /// so this is an upper bound on work, not on what a reader sees.
   static const int statCapFull = 1 + supportingCapFull;
 
-  /// Width of a centered orphan half relative to the column (spec §9: a pair
-  /// with one card renders as a single centered half).
+  /// Width of a centered orphan half relative to the column: a pair with one
+  /// card renders as a single centered half.
   static const double orphanWidthFactor = 0.5;
 
   /// Uppercase tracking for platform tags and stat labels.
@@ -352,7 +351,7 @@ abstract final class PersonalizationLayout {
   static const double editorGhostOpacity = 0.85;
 }
 
-/// The hero conditional-fit budget (spec §4): the frame is the natural 4:5
+/// The header art's conditional-fit budget: the frame is the natural 4:5
 /// height at the column width unless that exceeds the viewport budget, in which
 /// case it shortens and the art shows fully contained with a blurred side-fill.
 /// Pure and testable — the frame height alone decides fit vs contain.
@@ -363,7 +362,7 @@ double heroFrameHeight(double screenHeight, double columnWidth) => math.min(
 
 /// A fluid size that ramps with the column width between [min] and [max],
 /// mirroring the mockup's `clamp()` type scale so the column looks identical in
-/// composition and only its global scale changes across devices (spec §6).
+/// composition and only its global scale changes across devices.
 double fluidByWidth(double width, {required double min, required double max}) {
   const span =
       PersonalizationLayout.columnMaxWidth -
