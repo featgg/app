@@ -403,12 +403,13 @@ LibraryShowcaseEntry goldenLibraryEntry({
   heroImage: heroImage,
 );
 
-/// The profile every whole-profile golden renders.
+/// The profile every whole-profile golden renders. It carries an avatar so the
+/// reference captures the shipped header rather than its monogram fallback.
 Profile goldenProfile(List<ProfileLayoutRow> layout) => Profile(
   id: goldenUserId,
   username: 'nico',
   displayName: 'Nico',
-  avatarUrl: null,
+  avatarUrl: goldenArtUrlA,
   bio: 'Chasing perfect runs and unreasonable backlogs.',
   theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,

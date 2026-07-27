@@ -10,17 +10,16 @@ import '../domain/profile_archetype.dart';
 import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
 import 'personalization_archetype_cards.dart';
-import 'personalization_hero_canvas.dart';
 import 'personalization_theme_palette.dart';
+import 'profile_header.dart';
 import 'profile_owner_cards_provider.dart';
 import 'public_profile_widgets_provider.dart';
 
-/// The read-only personalization profile renderer (`docs/personalization/spec.md` §3/§9):
-/// a fixed 600px center column over theme-derived background art, painting a
-/// header, a conditional-fit hero, and the `profile.layout` rows in order
-/// through the profile's theme palette. Every color routes through
-/// [PersonalizationTheme], so the palette chosen for this profile re-tints
-/// everything without touching a card.
+/// The read-only personalization profile renderer: a fixed 600px center column
+/// over theme-derived background art, painting the header and the
+/// `profile.layout` rows in order through the profile's theme palette. Every
+/// color routes through [PersonalizationTheme], so the palette chosen for this
+/// profile re-tints everything without touching a card.
 class PersonalizationProfileView extends ConsumerWidget {
   const PersonalizationProfileView({
     super.key,
@@ -90,13 +89,10 @@ class PersonalizationProfileView extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  _Header(profile: profile),
-                                  const SizedBox(
-                                    height: PersonalizationLayout.rowGap,
-                                  ),
-                                  PersonalizationHeroCanvas(
-                                    word: _heroWord(profile),
+                                  ProfileHeader(
+                                    profile: profile,
                                     columnWidth: columnWidth,
+                                    cardSource: cardSource,
                                   ),
                                   const SizedBox(
                                     height: PersonalizationLayout.rowGap,
@@ -128,11 +124,7 @@ class PersonalizationProfileView extends ConsumerWidget {
   }
 }
 
-/// The hero word: the display name, falling back to the handle when it is empty.
-String _heroWord(Profile profile) =>
-    profile.displayName.isNotEmpty ? profile.displayName : profile.username;
-
-/// Theme-derived background art (spec §3): two corner glows over the base, so
+/// Theme-derived background art: two corner glows over the base, so
 /// the desktop side space around the fixed column is never bare. Painted from
 /// tokens — no bundled asset, keeping the public repo binary-free.
 class _BackgroundArt extends StatelessWidget {
@@ -166,113 +158,7 @@ class _BackgroundArt extends StatelessWidget {
   }
 }
 
-/// The profile header (spec §4): avatar + identity, capped at [headerMaxHeight]
-/// so header + full hero fit the first paint.
-class _Header extends StatelessWidget {
-  const _Header({required this.profile});
-
-  final Profile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = PersonalizationTheme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    final bio = profile.bio;
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        maxHeight: PersonalizationLayout.headerMaxHeight,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          border: Border.all(
-            color: palette.line,
-            width: PersonalizationLayout.borderWidth,
-          ),
-          borderRadius: BorderRadius.circular(palette.radius),
-        ),
-        child: Row(
-          children: [
-            _AvatarMonogram(word: _heroWord(profile), palette: palette),
-            const SizedBox(width: PersonalizationLayout.rowGap),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    profile.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(color: palette.text),
-                  ),
-                  Text(
-                    l10n.profileHandle(profile.username),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.labelMedium?.copyWith(
-                      color: palette.accent,
-                      fontWeight: AppTypography.semiBold,
-                    ),
-                  ),
-                  if (bio != null && bio.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      bio,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: palette.muted,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A monogram avatar (mockup): a token-gradient rounded square with the first
-/// letter, so the header needs no network image.
-class _AvatarMonogram extends StatelessWidget {
-  const _AvatarMonogram({required this.word, required this.palette});
-
-  final String word;
-  final PersonalizationPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final initial = word.isEmpty ? '?' : word.substring(0, 1).toUpperCase();
-
-    return Container(
-      width: PersonalizationLayout.avatarSize,
-      height: PersonalizationLayout.avatarSize,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [palette.artA, palette.artC]),
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: palette.accent, width: AppSpacing.hairline),
-      ),
-      child: Text(
-        initial,
-        style: textTheme.headlineSmall?.copyWith(
-          color: PersonalizationArtColors.onArt,
-          fontWeight: AppTypography.bold,
-        ),
-      ),
-    );
-  }
-}
-
-/// Renders `profile.layout` in order (spec §9): each [FullRow] is one full card;
+/// Renders `profile.layout` in order: each [FullRow] is one full card;
 /// each [PairRow] is two half cards, or a single centered orphan when one slot
 /// is null/unresolved. A row never inspects another row — no auto re-flow.
 class _LayoutRows extends ConsumerWidget {

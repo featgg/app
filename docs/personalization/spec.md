@@ -54,7 +54,8 @@ These are the values the profile is designed to; the narrowest supported width (
 
 The header opens the profile and is the answer to "who I am": it carries chosen art, the avatar, the display name, and the marks of the platforms the owner has linked.
 
-- The art is the owner's to choose and change, and it defaults to the best real art already on the profile, so the header is never an empty gradient. Uploading your own art is deferred (§10).
+- The art is the owner's to choose and change, and it defaults to the best real art already on the profile, so the header is never an empty gradient. Best means the platform the owner features — a choice they have already made about what represents them — and otherwise the first linked platform that publishes any art. A profile with nothing linked has no real art to show and falls back to the theme's own fill. Uploading your own art is deferred (§10).
+- The marks are **text, never logos or brand colors**: they say which accounts stand behind the profile without turning the header into a sponsor wall.
 - The header is a **visual surface, not a data card** (§6): it carries no datum.
 - It is not part of the row model (§9): it cannot be moved, paired or removed.
 - It reads as one designed block at the narrow and wide ends of §3.
