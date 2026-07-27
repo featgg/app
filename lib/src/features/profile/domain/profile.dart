@@ -105,6 +105,10 @@ final class Profile extends Equatable {
     deletionRequestedAt: deletionRequestedAt != null
         ? deletionRequestedAt()
         : this.deletionRequestedAt,
+    // Carried, not editable: both are server-managed, and a copy that dropped
+    // the layout would silently move the profile off its composed render.
+    layout: layout,
+    createdAt: createdAt,
   );
 
   @override
