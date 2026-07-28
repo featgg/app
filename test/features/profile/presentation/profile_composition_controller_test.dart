@@ -149,7 +149,56 @@ void main() {
     notifier.startComposing(const [rank, main]);
     final state = container.read(profileCompositionProvider);
 
-    expect(state.working, const [FullRow('r'), FullRow('m')]);
+    // Category order, not add order: what-I-play (Main) reads before
+    // how-good-I-am (Rank) even though the rank was added first.
+    expect(state.working, const [FullRow('m'), FullRow('r')]);
+  });
+
+  test('startComposing seeds in the catalog category order, position breaking '
+      'ties, kinds outside the model last', () {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
+
+    ProfileWidget kindAt(
+      String id,
+      ProfileWidgetKind kind,
+      int position, {
+      Platform? platform,
+    }) => ProfileWidget(
+      id: id,
+      kind: kind,
+      platform: platform,
+      position: position,
+      isEnabled: true,
+      size: ProfileWidgetSize.small,
+    );
+
+    // Add order is deliberately the reverse of the category order.
+    notifier.startComposing([
+      kindAt('v', ProfileWidgetKind.art, 0),
+      kindAt('r', ProfileWidgetKind.rank, 1, platform: Platform.chess),
+      kindAt('p', ProfileWidgetKind.passport, 2),
+      kindAt('m', ProfileWidgetKind.main, 3, platform: Platform.steam),
+      kindAt('s', ProfileWidgetKind.showcase, 4, platform: Platform.steam),
+      kindAt('g', ProfileWidgetKind.gameCollector, 5, platform: Platform.steam),
+      kindAt('t', ProfileWidgetKind.template, 6),
+      kindAt('c', ProfileWidgetKind.completionist, 7, platform: Platform.steam),
+    ]);
+    final state = container.read(profileCompositionProvider);
+
+    // who I am → what I play → how good I am → what I achieved (showcase
+    // before completionist by position) → what I own → art; the legacy
+    // template trails everything the category model places.
+    expect(state.working, const [
+      FullRow('p'),
+      FullRow('m'),
+      FullRow('r'),
+      FullRow('s'),
+      FullRow('c'),
+      FullRow('g'),
+      FullRow('v'),
+      FullRow('t'),
+    ]);
   });
 
   test(

@@ -214,6 +214,55 @@ void main() {
     });
   });
 
+  group('cardCategory (spec §7)', () {
+    test('every catalog kind lands in its question-category', () {
+      expect(
+        cardCategory(ProfileWidgetKind.passport),
+        ProfileCardCategory.whoIAm,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.main),
+        ProfileCardCategory.whatIPlay,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.rank),
+        ProfileCardCategory.howGoodIAm,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.showcase),
+        ProfileCardCategory.whatIAchieved,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.completionist),
+        ProfileCardCategory.whatIAchieved,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.collection),
+        ProfileCardCategory.whatIOwn,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.gameCollector),
+        ProfileCardCategory.whatIOwn,
+      );
+      expect(cardCategory(ProfileWidgetKind.art), ProfileCardCategory.art);
+    });
+
+    test('the kinds outside the model resolve to no category', () {
+      for (final kind in const [
+        ProfileWidgetKind.platform,
+        ProfileWidgetKind.template,
+        ProfileWidgetKind.composed,
+        ProfileWidgetKind.dataMenu,
+      ]) {
+        expect(cardCategory(kind), isNull, reason: kind.name);
+      }
+    });
+
+    test('the visual family closes the declared order', () {
+      expect(ProfileCardCategory.values.last, ProfileCardCategory.art);
+    });
+  });
+
   group('hasDatumZone', () {
     test('art is the only archetype without one', () {
       expect(hasDatumZone(ProfileArchetype.art), isFalse);

@@ -112,10 +112,11 @@ void main() {
     expect(find.byKey(const Key('compositionSizeToggle_r')), findsOneWidget);
     expect(find.byKey(const Key('compositionSizeToggle_m')), findsOneWidget);
 
-    // The dual-size Rank bootstraps as a full row.
+    // The dual-size Rank bootstraps as a full row; the seed reads in category
+    // order, so what-I-play (Main) lands before how-good-I-am (Rank).
     expect(container.read(profileCompositionProvider).working, const [
-      FullRow('r'),
       FullRow('m'),
+      FullRow('r'),
     ]);
   });
 }
