@@ -86,8 +86,11 @@ class ProfileEditController extends _$ProfileEditController {
       displayName: profile.displayName.trim(),
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: profile.theme,
-      // Privacy is not edited here. Carrying the opened value through is what
-      // keeps an edit-save from overwriting a privacy change made in Settings.
+      // Privacy and the feed preview are not edited here — both live in
+      // Settings — but an update writes every field, so this form carries them
+      // through unchanged. What keeps a save from reverting a Settings change
+      // is that the profile screen refetches whenever Settings is dismissed,
+      // so this form always opens on the current values.
       privacy: profile.privacy,
       featuredPlatform: profile.featuredPlatform,
       headerPlatform: profile.headerPlatform,
@@ -107,9 +110,6 @@ class ProfileEditController extends _$ProfileEditController {
 
   void selectTheme(ProfileTheme theme) =>
       _amend((draft) => draft.copyWith(theme: theme));
-
-  void selectFeaturedPlatform(Platform? platform) =>
-      _amend((draft) => draft.copyWith(featuredPlatform: () => platform));
 
   void selectHeaderPlatform(Platform? platform) =>
       _amend((draft) => draft.copyWith(headerPlatform: () => platform));

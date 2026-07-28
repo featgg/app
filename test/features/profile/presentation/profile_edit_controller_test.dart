@@ -117,7 +117,6 @@ void main() {
         (c) => c.editDisplayName('Renamed'),
         (c) => c.editBio('A different bio'),
         (c) => c.selectTheme(ProfileTheme.frost),
-        (c) => c.selectFeaturedPlatform(Platform.steam),
         (c) => c.selectHeaderPlatform(Platform.wowRetail),
       ]) {
         final repo = _RecordingRepository(updateResult: () => right(_profile));

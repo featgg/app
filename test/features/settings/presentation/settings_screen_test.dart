@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:featgg/src/core/core.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/auth/domain/auth_domain.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/settings/domain/account_deletion.dart';
 import 'package:featgg/src/features/settings/domain/account_deletion_repository.dart';
@@ -227,16 +230,42 @@ final class _PendingSignOutAuthRepository implements AuthRepository {
       right(unit);
 }
 
+/// A connections repo whose linked set is the injected [platforms]. The feed
+/// preview reads it to decide which platforms it can offer.
+final class _FakeConnectionsRepository implements ConnectionsRepository {
+  _FakeConnectionsRepository([this.platforms = const []]);
+
+  final List<Platform> platforms;
+
+  @override
+  Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
+      right([
+        for (final platform in platforms)
+          Connection(
+            platform: platform,
+            status: ConnectionStatus.active,
+            createdAt: DateTime.utc(2024),
+          ),
+      ]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 Widget _screen(
   ProfileRepository profileRepo,
   AuthRepository authRepo, {
   AccountDeletionRepository? deletionRepo,
+  List<Platform> linked = const [],
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
       profileRepositoryProvider.overrideWithValue(profileRepo),
       authRepositoryProvider.overrideWithValue(authRepo),
+      connectionsRepositoryProvider.overrideWithValue(
+        _FakeConnectionsRepository(linked),
+      ),
       accountDeletionRepositoryProvider.overrideWithValue(
         deletionRepo ?? _RecordingAccountDeletionRepository(),
       ),
@@ -513,4 +542,104 @@ void main() {
       expect(find.byKey(const Key('accountDeletionBanner')), findsOneWidget);
     },
   );
+
+  testWidgets('feed preview: the tile shows the automatic choice when nothing '
+      'is pinned', (tester) async {
+    await tester.pumpWidget(
+      _screen(
+        _RecordingProfileRepository(),
+        _RecordingAuthRepository(),
+        linked: const [Platform.steam],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tile = tester.widget<ListTile>(
+      find.byKey(const Key('settingsFeedPreviewTile')),
+    );
+    // The tile names the current choice, mirroring the privacy control: the
+    // value is the title, what the control is is the subtitle.
+    expect(
+      (tile.title! as Text).data,
+      _l10n(tester).profileFeaturedCardDefault,
+    );
+    expect(
+      (tile.subtitle! as Text).data,
+      _l10n(tester).settingsFeedPreviewLabel,
+    );
+  });
+
+  testWidgets('feed preview: picking a platform writes it, preserving every '
+      'other field', (tester) async {
+    final repo = _RecordingProfileRepository();
+    await tester.pumpWidget(
+      _screen(
+        repo,
+        _RecordingAuthRepository(),
+        linked: const [Platform.steam, Platform.chess],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settingsFeedPreviewTile')));
+    await tester.pumpAndSettle();
+
+    // Automatic plus one row per linked platform.
+    expect(find.byKey(const Key('feedPreviewOption_default')), findsOneWidget);
+    expect(find.byKey(const Key('feedPreviewOption_steam')), findsOneWidget);
+    expect(find.byKey(const Key('feedPreviewOption_chess')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('feedPreviewOption_chess')));
+    await tester.pumpAndSettle();
+
+    expect(repo.updateCalls, 1);
+    expect(repo.lastEdit!.featuredPlatform, Platform.chess);
+    // Only the feed preview changes; the write carries the rest untouched.
+    expect(repo.lastEdit!.displayName, _publicProfile.displayName);
+    expect(repo.lastEdit!.privacy, _publicProfile.privacy);
+    expect(repo.lastEdit!.theme, _publicProfile.theme);
+    expect(repo.lastEdit!.headerPlatform, _publicProfile.headerPlatform);
+  });
+
+  testWidgets('feed preview: re-picking the current choice writes nothing', (
+    tester,
+  ) async {
+    final repo = _RecordingProfileRepository();
+    await tester.pumpWidget(
+      _screen(repo, _RecordingAuthRepository(), linked: const [Platform.steam]),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settingsFeedPreviewTile')));
+    await tester.pumpAndSettle();
+    // The profile pins nothing, so Automatic is the current choice.
+    await tester.tap(find.byKey(const Key('feedPreviewOption_default')));
+    await tester.pumpAndSettle();
+
+    expect(repo.updateCalls, 0);
+  });
+
+  testWidgets('feed preview: dismissing the sheet writes nothing', (
+    tester,
+  ) async {
+    final repo = _RecordingProfileRepository();
+    await tester.pumpWidget(
+      _screen(repo, _RecordingAuthRepository(), linked: const [Platform.steam]),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settingsFeedPreviewTile')));
+    await tester.pumpAndSettle();
+    // A dismissal and an Automatic pick both resolve to a null platform; only
+    // the pick may reach the write path.
+    Navigator.of(
+      tester.element(find.byKey(const Key('feedPreviewOption_steam'))),
+    ).pop();
+    await tester.pumpAndSettle();
+
+    expect(repo.updateCalls, 0);
+  });
 }
+
+AppLocalizations _l10n(WidgetTester tester) =>
+    AppLocalizations.of(tester.element(find.byType(SettingsScreen)));
