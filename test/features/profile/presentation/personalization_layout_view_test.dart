@@ -1,6 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/core/theme/personalization_tokens.dart';
+import 'package:featgg/src/features/connections/domain/cards_repository.dart';
+import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/connections/domain/connections_providers.dart';
+import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -9,6 +14,7 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_repository.da
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_profile_view.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
+import 'package:featgg/src/features/profile/presentation/profile_header.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -78,10 +84,44 @@ final _widgets = [
   _widget('d', ProfileWidgetKind.template),
 ];
 
+/// Serves the owner's own cards, so the header and the art card resolve from
+/// the same fixture the way they do on a real profile.
+final class _FakeCardsRepository implements CardsRepository {
+  _FakeCardsRepository(this._cards);
+
+  final Map<Platform, GameCard?> _cards;
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async =>
+      right(_cards[platform]);
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(_cards[platform]);
+}
+
+GameCard _heroCard(Platform platform, String heroImage) => GameCard(
+  schemaVersion: 1,
+  platform: platform,
+  title: '${platform.name}-card',
+  subtitle: null,
+  iconImage: null,
+  heroImage: heroImage,
+  profileUrl: null,
+  stats: const [],
+  lastUpdated: DateTime.utc(2026, 6, 1),
+);
+
+Finder _imageFor(String url) =>
+    find.byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url);
+
 Widget _harness({
   Profile profile = _profile,
   List<ProfileWidget>? widgets,
   ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider,
+  Map<Platform, GameCard?> cards = const {},
 }) {
   final container = ProviderContainer(
     retry: (count, error) => null,
@@ -89,6 +129,7 @@ Widget _harness({
       profileWidgetsRepositoryProvider.overrideWithValue(
         _FakeWidgetsRepository(widgets ?? _widgets),
       ),
+      cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository(cards)),
     ],
   );
   addTearDown(container.dispose);
@@ -120,6 +161,7 @@ Future<void> _pumpAt(
   Profile profile = _profile,
   List<ProfileWidget>? widgets,
   ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider,
+  Map<Platform, GameCard?> cards = const {},
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -130,6 +172,7 @@ Future<void> _pumpAt(
       profile: profile,
       widgets: widgets,
       widgetsProvider: widgetsProvider,
+      cards: cards,
     ),
   );
   await tester.pumpAndSettle();
@@ -322,5 +365,54 @@ void main() {
         reason: 'card $id resolves through the owner widgets read',
       );
     }
+  });
+
+  testWidgets('pinning the cover to a platform leaves the art card where it '
+      'was — two surfaces, two pictures', (tester) async {
+    // They share the rule that an image surface resolves something or falls
+    // back to the ground. They do not share a choice: changing the cover is a
+    // statement about the cover, and a card that moved with it would be a
+    // second edit the owner never asked for.
+    const steamArt = 'https://cdn.test/steam-hero.jpg';
+    const chessArt = 'https://cdn.test/chess-hero.jpg';
+    const pinnedToChess = Profile(
+      id: _userId,
+      username: 'nico',
+      displayName: 'Nico',
+      avatarUrl: null,
+      bio: null,
+      theme: ProfileTheme.crimson,
+      privacy: ProfilePrivacy.public,
+      featuredPlatform: null,
+      headerPlatform: Platform.chess,
+      layout: [FullRow('art')],
+    );
+
+    await _pumpAt(
+      tester,
+      600,
+      profile: pinnedToChess,
+      widgets: [_widget('art', ProfileWidgetKind.art)],
+      cards: {
+        // Steam leads in enum order; the cover is pinned past it.
+        Platform.steam: _heroCard(Platform.steam, steamArt),
+        Platform.chess: _heroCard(Platform.chess, chessArt),
+      },
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(kProfileHeaderCoverKey),
+        matching: _imageFor(chessArt),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(personalizationCardKey('art')),
+        matching: _imageFor(steamArt),
+      ),
+      findsOneWidget,
+    );
   });
 }

@@ -463,6 +463,37 @@ void main() {
       expect(tapped, ['cover', 'avatar', 'identity']);
     });
 
+    testWidgets('the pencil badge itself is tappable', (tester) async {
+      // The badge is the pixel everyone aims at, so it is the pixel that must
+      // work. It sits above the target and a painted glyph takes a hit like
+      // any other, which is exactly how it ends up swallowing the tap it
+      // advertises.
+      final tapped = <String>[];
+      await _pump(
+        tester,
+        profile: _profile(avatarUrl: _avatarUrl),
+        editing: ProfileHeaderEditing(
+          onEditAvatar: () => tapped.add('avatar'),
+          onEditCover: () => tapped.add('cover'),
+          onEditIdentity: () => tapped.add('identity'),
+        ),
+      );
+
+      for (final entry in const {
+        'profileHeaderCoverEditTarget': 'cover',
+        'profileHeaderAvatarEditTarget': 'avatar',
+        'profileHeaderIdentityEditTarget': 'identity',
+      }.entries) {
+        final badge = find.descendant(
+          of: find.byKey(Key(entry.key)),
+          matching: find.byIcon(Icons.edit_outlined),
+        );
+        await tester.tapAt(tester.getCenter(badge));
+        await tester.pump();
+        expect(tapped, contains(entry.value), reason: entry.key);
+      }
+    });
+
     testWidgets('the avatar takes no further taps while its photo uploads', (
       tester,
     ) async {

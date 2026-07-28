@@ -153,11 +153,7 @@ class OwnerProfilePersonalization extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const ProfileThemeStrip(),
-                CompositionEditorRows(
-                  columnWidth: columnWidth,
-                  headerPlatform: shown.headerPlatform,
-                  featuredPlatform: shown.featuredPlatform,
-                ),
+                CompositionEditorRows(columnWidth: columnWidth),
               ],
             )
           : null,

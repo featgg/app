@@ -77,9 +77,11 @@ Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (on
 
 ## 6. Card formats and anatomy
 
-Most cards in the catalog are **data cards**: they answer a question with a number. A second family — **visual cards**, which carry imagery and no datum — opens with **Art** (§7), added in one tap with nothing to choose: it resolves the best artwork the profile carries, by the same rule the cover uses. Visual cards are placed, paired and moved exactly like data cards; the distinction surfaces only in the add catalog (§7), where the visual group sits last. User-uploaded imagery is a source the family will gain, not a second family (§10).
+Most cards in the catalog are **data cards**: they answer a question with a number. A second family — **visual cards**, which carry imagery and no datum — opens with **Art** (§7), added in one tap with nothing to choose: it falls back to the first linked platform that publishes artwork. Visual cards are placed, paired and moved exactly like data cards; the distinction surfaces only in the add catalog (§7), where the visual group sits last. User-uploaded imagery is a source the family will gain, not a second family (§10).
 
 **The image rule**, shared by every surface that wants a picture (the cover §4, the avatar, the Art card): resolve a meaningful image if one exists; failing that, render the theme's own ground. No image surface is ever blocked, empty, or a broken-image tile — the fallback is the answer to having nothing to show.
+
+The surfaces share the rule, **never a choice**. Each one's picture is its own: pinning the cover to a platform is a statement about the cover, and a card that moved with it would be a second edit its owner never made. Where a surface has no picture of its own yet, it falls back on its own terms and reads no other surface's preference.
 
 The profile header (§4) is not a card of either family. It is a fixed surface outside the row model.
 
@@ -132,7 +134,7 @@ Card by card:
 | Rarest Achievement | the hardest thing I have done | set by the registry when the card lands (#231) | auto | the achievement, its game and how rare it is |
 | Collection | what I own or chase | full | curated | a chosen set of games with progress states |
 | Collector | how big my library is | full | auto | one platform's whole library aggregated |
-| Art | none — it is a picture | full, half | auto art, curation later | added in one tap, unpointed; it resolves the best art the profile carries (§6's image rule) with no datum over it. Pointing it at a specific picture arrives with the image picker (§10). Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
+| Art | none — it is a picture | full, half | auto art, curation later | added in one tap, unpointed; it falls back to the first linked platform publishing art (§6's image rule) with no datum over it, and reads no other surface's preference. Pointing it at a specific picture arrives with the image picker (§10). Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
 
 Not every platform gets every card: a card is offered only where the data genuinely supports it. Per-card availability is declared in the registry (§7.1) and enforced by the add catalog's availability rules. This document does not enumerate a card × platform matrix — the registry owns it, and an enumeration in prose would be stale within a story.
 

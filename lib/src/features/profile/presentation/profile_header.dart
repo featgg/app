@@ -193,6 +193,7 @@ class _EditTarget extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = PersonalizationTheme.of(context);
     return Stack(
+      key: targetKey,
       children: [
         // Dimmed while busy so the progress indicator reads against it.
         Opacity(opacity: busy ? 0.5 : 1, child: child),
@@ -201,35 +202,41 @@ class _EditTarget extends StatelessWidget {
             type: MaterialType.transparency,
             child: Tooltip(
               message: busy ? (busyLabel ?? label) : label,
-              child: InkWell(key: targetKey, onTap: onTap),
+              child: InkWell(onTap: onTap),
             ),
           ),
         ),
+        // The badge says where to tap; it must never be what catches the tap.
+        // It sits above the target, and a glyph takes a hit like any other
+        // painted text, so without this the one pixel everyone aims at is the
+        // one pixel that does nothing.
         Positioned.fill(
-          child: Align(
-            alignment: alignment,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  shape: BoxShape.circle,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  child: busy
-                      ? SizedBox.square(
-                          dimension: AppSpacing.md,
-                          child: CircularProgressIndicator(
-                            strokeWidth: AppSpacing.hairline,
+          child: IgnorePointer(
+            child: Align(
+              alignment: alignment,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: palette.surface,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    child: busy
+                        ? SizedBox.square(
+                            dimension: AppSpacing.md,
+                            child: CircularProgressIndicator(
+                              strokeWidth: AppSpacing.hairline,
+                              color: palette.text,
+                            ),
+                          )
+                        : Icon(
+                            Icons.edit_outlined,
+                            size: AppSpacing.md,
                             color: palette.text,
                           ),
-                        )
-                      : Icon(
-                          Icons.edit_outlined,
-                          size: AppSpacing.md,
-                          color: palette.text,
-                        ),
+                  ),
                 ),
               ),
             ),
