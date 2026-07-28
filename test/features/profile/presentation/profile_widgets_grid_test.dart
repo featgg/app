@@ -123,6 +123,13 @@ final class _StubWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addArtWidget({
+    Platform? source,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
     required ProfileWidgetSize size,
@@ -234,6 +241,13 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addArtWidget({
+    Platform? source,
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();

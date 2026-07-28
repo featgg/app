@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
+import '../../connections/domain/connection.dart';
 import '../domain/profile_archetype.dart';
 import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
@@ -19,9 +20,19 @@ import 'profile_widgets_provider.dart';
 /// card that supports both sizes. Disabled cards stay visible and draggable so
 /// their slot is preserved through the save.
 class CompositionEditorRows extends ConsumerStatefulWidget {
-  const CompositionEditorRows({super.key, required this.columnWidth});
+  const CompositionEditorRows({
+    super.key,
+    required this.columnWidth,
+    this.headerPlatform,
+    this.featuredPlatform,
+  });
 
   final double columnWidth;
+
+  /// The profile's art preferences, forwarded so an unpointed Art card shows
+  /// the same picture in the editor as in the read view.
+  final Platform? headerPlatform;
+  final Platform? featuredPlatform;
 
   @override
   ConsumerState<CompositionEditorRows> createState() =>
@@ -230,7 +241,12 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     return Stack(
       children: [
         // Owner cards (cardSource null); member-since is unused in edit mode.
-        personalizationCardFor(widget, size: size),
+        personalizationCardFor(
+          widget,
+          size: size,
+          headerPlatform: this.widget.headerPlatform,
+          featuredPlatform: this.widget.featuredPlatform,
+        ),
         Positioned.fill(
           child: Row(
             children: [

@@ -66,8 +66,11 @@ class OwnerProfilePersonalization extends ConsumerWidget {
       userId: profile.id,
       widgetsProvider: ownerProfileWidgetsProvider,
       rowsBuilder: editing
-          ? (context, columnWidth) =>
-                CompositionEditorRows(columnWidth: columnWidth)
+          ? (context, columnWidth) => CompositionEditorRows(
+              columnWidth: columnWidth,
+              headerPlatform: profile.headerPlatform,
+              featuredPlatform: profile.featuredPlatform,
+            )
           : null,
     );
   }

@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -574,6 +575,62 @@ void main() {
       await expectLater(
         find.byKey(goldenSubjectKey),
         matchesGoldenFile('goldens/fallback_half.png'),
+      );
+    });
+  });
+
+  group('Art', () {
+    final widget = goldenWidget(
+      id: 'art',
+      kind: ProfileWidgetKind.art,
+      artSelection: const ArtSelection(source: Platform.steam),
+    );
+    final cards = _steam(heroImage: goldenArtUrlA);
+
+    goldenTest('full is the picture and nothing else — no scrim, no band', (
+      tester,
+    ) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards,
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/art_full.png'),
+      );
+    });
+
+    goldenTest('half is the same picture at the pair aspect', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.half),
+        width: goldenHalfWidth,
+        cards: cards,
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/art_half.png'),
+      );
+    });
+
+    goldenTest('a source that publishes no picture is the theme ground, still '
+        'no band', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: _steam(),
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/art_full_no_picture.png'),
       );
     });
   });

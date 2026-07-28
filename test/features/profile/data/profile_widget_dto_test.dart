@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/composed_card.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
@@ -22,6 +23,7 @@ Map<String, dynamic> _row({
   Object? composed,
   Object? showcase,
   Object? collection,
+  Object? art,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
@@ -31,6 +33,7 @@ Map<String, dynamic> _row({
   if (composed != null) settings['composed'] = composed;
   if (showcase != null) settings['showcase'] = showcase;
   if (collection != null) settings['collection'] = collection;
+  if (art != null) settings['art'] = art;
   return {
     'id': id,
     'platform': platform,
@@ -1079,6 +1082,94 @@ void main() {
       // A passport has no per-widget choice; the empty defaults hold.
       expect(widget!.showcaseSelection, ShowcaseSelection.empty);
       expect(widget.collectionSelection, CollectionSelection.empty);
+    });
+  });
+
+  group('art selection round-trip (platform-NULL, source in the envelope)', () {
+    test('a null-platform art row round-trips to the kind with its '
+        'source', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(
+            type: 'art',
+            platform: null,
+            size: 'wide',
+            art: {'source': 'league_of_legends'},
+          ),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.art);
+      // An art card reads no account data, so its row carries no binding; the
+      // picture it points at is the envelope's business.
+      expect(widget.platform, isNull);
+      expect(widget.size, ProfileWidgetSize.wide);
+      expect(widget.artSelection.source, Platform.leagueOfLegends);
+    });
+
+    test('an art row with no source maps to the empty selection', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'art', platform: null)),
+      );
+
+      expect(widget!.kind, ProfileWidgetKind.art);
+      expect(widget.artSelection, ArtSelection.empty);
+    });
+
+    test('artSelectionFromSettings is lenient on a null, non-map, missing, '
+        'non-string, or unknown source', () {
+      expect(artSelectionFromSettings(null), ArtSelection.empty);
+      expect(artSelectionFromSettings({'art': 'oops'}), ArtSelection.empty);
+      expect(
+        artSelectionFromSettings({'art': <String, dynamic>{}}),
+        ArtSelection.empty,
+      );
+      expect(
+        artSelectionFromSettings({
+          'art': {'source': 42},
+        }),
+        ArtSelection.empty,
+      );
+      expect(
+        artSelectionFromSettings({
+          'art': {'source': 'nintendo'},
+        }),
+        ArtSelection.empty,
+      );
+    });
+
+    test('mergeArtSelectionIntoSettings writes the v1 envelope with the wire '
+        'source', () {
+      final merged = mergeArtSelectionIntoSettings(
+        ProfileWidgetSize.wide,
+        const ArtSelection(source: Platform.wowRetail),
+      );
+
+      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
+      expect(merged['size'], 'wide');
+      expect((merged['art']! as Map)['source'], 'wow_retail');
+    });
+
+    test('an empty selection writes no art sub-object', () {
+      final merged = mergeArtSelectionIntoSettings(
+        ProfileWidgetSize.wide,
+        ArtSelection.empty,
+      );
+
+      expect(merged['size'], 'wide');
+      expect(merged.containsKey('art'), isFalse);
+    });
+
+    test('serialize → parse preserves the source', () {
+      const selection = ArtSelection(source: Platform.steam);
+
+      expect(
+        artSelectionFromSettings(
+          mergeArtSelectionIntoSettings(ProfileWidgetSize.wide, selection),
+        ),
+        selection,
+      );
     });
   });
 }

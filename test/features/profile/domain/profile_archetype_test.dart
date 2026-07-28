@@ -203,4 +203,24 @@ void main() {
       );
     });
   });
+
+  group('rendersPortraitFull', () {
+    test('art is the only archetype whose full variant is portrait', () {
+      expect(rendersPortraitFull(ProfileArchetype.art), isTrue);
+      for (final archetype in ProfileArchetype.values) {
+        if (archetype == ProfileArchetype.art) continue;
+        expect(rendersPortraitFull(archetype), isFalse, reason: archetype.name);
+      }
+    });
+  });
+
+  group('hasDatumZone', () {
+    test('art is the only archetype without one', () {
+      expect(hasDatumZone(ProfileArchetype.art), isFalse);
+      for (final archetype in ProfileArchetype.values) {
+        if (archetype == ProfileArchetype.art) continue;
+        expect(hasDatumZone(archetype), isTrue, reason: archetype.name);
+      }
+    });
+  });
 }

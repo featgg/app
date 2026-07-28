@@ -174,6 +174,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     final achievementRows = [
       if (steamLinked) _completionistRow(l10n, steamCard, nextPosition),
     ];
+    final artRows = [_artRow(l10n, nextPosition)];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -214,6 +215,9 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           l10n.addCatalogGroupAchievements,
           achievementRows,
         ),
+        // Last: every group above answers a question with data, this one answers
+        // with a picture.
+        _group(const Key('catalogGroupArt'), l10n.addCatalogGroupArt, artRows),
         if (_catalogUniverse.any((platform) => !linked.contains(platform)))
           _footer(l10n),
       ],
@@ -299,6 +303,25 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
               position: nextPosition,
               size: ProfileWidgetSize.small,
             ),
+    );
+  }
+
+  /// The single Art row. One tap adds the card unpointed; it resolves its own
+  /// picture at render time (best available art, else the theme's ground), so
+  /// the row never asks the owner to choose between platforms and is never
+  /// disabled — the fallback is the answer to having nothing to show.
+  Widget _artRow(AppLocalizations l10n, int nextPosition) {
+    if (widget.existing.any((w) => w.kind == ProfileWidgetKind.art)) {
+      return _addedRow(const Key('artAddedRow'), l10n.addCatalogRowArt);
+    }
+    return _AddRow(
+      rowKey: const Key('artAddRow'),
+      label: l10n.addCatalogRowArt,
+      onAcquire: (controller) => controller.addArt(
+        position: nextPosition,
+        // A picture is the point, so it lands as a full-width card.
+        size: ProfileWidgetSize.wide,
+      ),
     );
   }
 

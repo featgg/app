@@ -111,9 +111,12 @@ class PersonalizationCardShell extends StatelessWidget {
       // known without loading an image; under a tight height (a stretched pair
       // slot) it takes that height instead and the fill covers it.
       child: AspectRatio(
-        aspectRatio: size == ProfileCardSize.full
-            ? PersonalizationLayout.cardFullAspect
-            : PersonalizationLayout.cardHalfAspect,
+        aspectRatio: switch (size) {
+          ProfileCardSize.half => PersonalizationLayout.cardHalfAspect,
+          ProfileCardSize.full when rendersPortraitFull(archetype) =>
+            PersonalizationLayout.cardArtFullAspect,
+          ProfileCardSize.full => PersonalizationLayout.cardFullAspect,
+        },
         // The datum's type is a function of the card's real height, so the band
         // keeps its share of the card at every width instead of carrying
         // page-level sizes onto a card a fraction of that size.
@@ -143,6 +146,13 @@ class PersonalizationCardShell extends StatelessWidget {
                   )
                   .toList(),
             );
+            // A card with nothing to say draws nothing over its art. The
+            // gradient exists to keep a datum legible; with no datum it is a
+            // shadow across a picture for no reason.
+            final datumZone = hasDatumZone(archetype);
+            final hasDatum =
+                datumZone &&
+                (heroStat != null || (degraded && subject != null));
             return format == ProfileCardFormat.bleed
                 ? Stack(
                     fit: StackFit.expand,
@@ -151,19 +161,21 @@ class PersonalizationCardShell extends StatelessWidget {
                         imageUrl: art,
                         placeholder: const PersonalizationCardGround(),
                       ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.center,
-                            colors: [
-                              PersonalizationArtColors.heroScrim,
-                              PersonalizationArtColors.transparent,
-                            ],
+                      if (hasDatum) ...[
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.center,
+                              colors: [
+                                PersonalizationArtColors.heroScrim,
+                                PersonalizationArtColors.transparent,
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(left: 0, right: 0, bottom: 0, child: datum),
+                        Positioned(left: 0, right: 0, bottom: 0, child: datum),
+                      ],
                     ],
                   )
                 : Stack(
@@ -183,7 +195,7 @@ class PersonalizationCardShell extends StatelessWidget {
                                     child: content,
                                   ),
                           ),
-                          datum,
+                          if (datumZone) datum,
                         ],
                       ),
                     ],

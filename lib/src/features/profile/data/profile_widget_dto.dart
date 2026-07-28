@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/art_selection.dart';
 import '../domain/collection_selection.dart';
 import '../domain/composed_card.dart';
 import '../domain/data_menu_catalog.dart';
@@ -92,6 +93,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     composedFill: composedFillFromSettings(settings),
     showcaseSelection: showcaseSelectionFromSettings(settings),
     collectionSelection: collectionSelectionFromSettings(settings),
+    artSelection: artSelectionFromSettings(settings),
   );
 }
 
@@ -239,6 +241,34 @@ ShowcaseSelection showcaseSelectionFromSettings(
   );
 }
 
+/// Stable `settings` key the art source is stored under. Additive beside `size`
+/// in the same `schema_version: 1` envelope.
+const String _artKey = 'art';
+
+/// Reads the art source leniently. An absent key, a malformed sub-object, or a
+/// platform token this build does not know all read as "not pointed anywhere
+/// yet" — the card renders the theme ground rather than failing the profile.
+ArtSelection artSelectionFromSettings(Map<String, dynamic>? settings) {
+  final raw = settings?[_artKey];
+  if (raw is! Map) return ArtSelection.empty;
+  final source = raw['source'];
+  if (source is! String) return ArtSelection.empty;
+  return ArtSelection(source: _platformFromWire(source));
+}
+
+/// Builds the full `settings` envelope to write for an art change: preserves
+/// `schema_version` and `size` and sets the `art` sub-object from [sel]. An
+/// empty selection omits the key.
+Map<String, dynamic> mergeArtSelectionIntoSettings(
+  ProfileWidgetSize size,
+  ArtSelection sel,
+) => {
+  'schema_version': kProfileWidgetSettingsVersion,
+  'size': profileWidgetSizeToWire(size),
+  if (sel.source case final source?)
+    _artKey: {'source': platformDescriptors[source]!.wireValue},
+};
+
 /// Builds the full `settings` envelope to write for a showcase change: preserves
 /// `schema_version` and `size` and sets the `showcase` sub-object from [sel].
 /// Additive — never bumps the version. An empty selection omits the key; `meta`
@@ -342,6 +372,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.passport => 'passport',
   ProfileWidgetKind.rank => 'rank',
   ProfileWidgetKind.main => 'main',
+  ProfileWidgetKind.art => 'art',
 };
 
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
@@ -355,6 +386,7 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'passport' => ProfileWidgetKind.passport,
   'rank' => ProfileWidgetKind.rank,
   'main' => ProfileWidgetKind.main,
+  'art' => ProfileWidgetKind.art,
   _ => null,
 };
 

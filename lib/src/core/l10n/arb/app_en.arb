@@ -1580,6 +1580,10 @@
   "@addCatalogGroupAchievements": {
     "description": "Header of the add-card catalog's Achievement Grid group (the whole-library completionist variant)."
   },
+  "addCatalogGroupArt": "Art",
+  "@addCatalogGroupArt": {
+    "description": "Header of the add-card catalog's Art group (a card that shows a linked platform's artwork and no data)."
+  },
   "addCatalogActionAdd": "Add",
   "@addCatalogActionAdd": {
     "description": "Trailing affordance on an offerable add-card catalog row; tapping adds the card in one step."
@@ -1607,6 +1611,10 @@
   "addCatalogReasonMainNoData": "No main data yet.",
   "@addCatalogReasonMainNoData": {
     "description": "Reason on a disabled add-card catalog Main row when the linked platform's card carries no main data."
+  },
+  "addCatalogRowArt": "Art card",
+  "@addCatalogRowArt": {
+    "description": "Label of the add-card catalog's single Art row; one tap adds the card and it picks its own picture."
   },
   "addCatalogConnectMore": "Connect more accounts",
   "@addCatalogConnectMore": {

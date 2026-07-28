@@ -89,6 +89,18 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
+  /// Inserts an art widget at [position] with [size], enabled. Left without a
+  /// [source] — the normal add — the card resolves its picture at render time
+  /// (best available art, else the theme's ground). A source pins it to one
+  /// platform's art; it rides in the settings envelope, not the platform
+  /// column, because an art card reads no account data — the seam through
+  /// which non-platform sources (an uploaded image) arrive later.
+  Future<Either<Failure, ProfileWidget>> addArtWidget({
+    Platform? source,
+    required int position,
+    required ProfileWidgetSize size,
+  });
+
   /// Inserts a rank widget bound to [platform] at [position] with [size],
   /// enabled. Platform-bound (the competitive rank/rating it surfaces); the
   /// settings envelope carries only the size (no per-widget selection sub-object).

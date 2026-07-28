@@ -201,6 +201,16 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
         repo.addMainWidget(platform: platform, position: position, size: size),
   );
 
+  /// Adds an art widget at [position] with [size]. Without [source] the card
+  /// resolves its own picture at render time; with one it pins that platform.
+  Future<void> addArt({
+    Platform? source,
+    required int position,
+    required ProfileWidgetSize size,
+  }) => _run(
+    (repo) => repo.addArtWidget(source: source, position: position, size: size),
+  );
+
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 

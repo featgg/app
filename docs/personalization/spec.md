@@ -77,7 +77,9 @@ Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (on
 
 ## 6. Card formats and anatomy
 
-Every card in the catalog is a **data card**: it answers a question with a number. A second family — **visual cards**, which carry imagery and no datum — is deferred until there is something to put in it (screenshots, §10); when it lands, visual cards are placed, paired and moved exactly like data cards, and the distinction surfaces only in the add catalog (§7).
+Most cards in the catalog are **data cards**: they answer a question with a number. A second family — **visual cards**, which carry imagery and no datum — opens with **Art** (§7), added in one tap with nothing to choose: it resolves the best artwork the profile carries, by the same rule the cover uses. Visual cards are placed, paired and moved exactly like data cards; the distinction surfaces only in the add catalog (§7), where the visual group sits last. User-uploaded imagery is a source the family will gain, not a second family (§10).
+
+**The image rule**, shared by every surface that wants a picture (the cover §4, the avatar, the Art card): resolve a meaningful image if one exists; failing that, render the theme's own ground. No image surface is ever blocked, empty, or a broken-image tile — the fallback is the answer to having nothing to show.
 
 The profile header (§4) is not a card of either family. It is a fixed surface outside the row model.
 
@@ -115,6 +117,7 @@ Cards are grouped by the question they answer, never by platform. The category o
 | How good I am | How good are you? | Rank · Personal Best |
 | What I achieved | What did you accomplish? | Milestone · Achievement shelf · Rarest Achievement |
 | What I own | What did you build up? | Collection · Collector |
+| Art | — | Art (a visual card, §6: it answers nothing) |
 
 Card by card:
 
@@ -129,6 +132,7 @@ Card by card:
 | Rarest Achievement | the hardest thing I have done | set by the registry when the card lands (#231) | auto | the achievement, its game and how rare it is |
 | Collection | what I own or chase | full | curated | a chosen set of games with progress states |
 | Collector | how big my library is | full | auto | one platform's whole library aggregated |
+| Art | none — it is a picture | full, half | auto art, curation later | added in one tap, unpointed; it resolves the best art the profile carries (§6's image rule) with no datum over it. Pointing it at a specific picture arrives with the image picker (§10). Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
 
 Not every platform gets every card: a card is offered only where the data genuinely supports it. Per-card availability is declared in the registry (§7.1) and enforced by the add catalog's availability rules. This document does not enumerate a card × platform matrix — the registry owns it, and an enumeration in prose would be stale within a story.
 
@@ -253,7 +257,7 @@ Single-gesture model: **size and position are one decision** — where you drop 
 
 Out of v1 — deferred, not rejected, except where a line says otherwise.
 
-- **Media** — a visual-card family (user-uploaded screenshot galleries, 1 big + 3 small): requires a multi-image upload/moderation/storage pipeline no story covers (#198).
+- **Media** — user-uploaded imagery as a source for the visual family (screenshot galleries, 1 big + 3 small): requires a multi-image upload/moderation/storage pipeline no story covers (#198). The family itself ships with Art (§6); what is deferred is where its pictures may come from.
 - **Recap / "Feat Replay"** (monthly wrapped card): requires historical aggregation (monthly stat snapshots) that does not exist. Own epic post-V1; high retention value, not a launch blocker.
 - **Public-text moderation** — unblocks Text Note *editing*; one policy for note + display_name + bio, reusing the existing moderation provider seam with text input (#199).
 - Uploading your own header art (choosing among the art the profile already carries is part of the header, §4).

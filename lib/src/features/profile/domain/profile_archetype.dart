@@ -12,6 +12,7 @@ enum ProfileArchetype {
   main,
   collection,
   achievementGrid,
+  art,
   fallback,
 }
 
@@ -35,6 +36,7 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.collection ||
   ProfileWidgetKind.gameCollector => ProfileArchetype.collection,
   ProfileWidgetKind.completionist => ProfileArchetype.achievementGrid,
+  ProfileWidgetKind.art => ProfileArchetype.art,
   _ => ProfileArchetype.fallback,
 };
 
@@ -60,6 +62,9 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   ProfileArchetype.collection => ProfileCardFormat.framed,
   // A shelf of many entries.
   ProfileArchetype.achievementGrid => ProfileCardFormat.framed,
+  // The picture is the whole card — this is the one archetype whose art is not
+  // illustrating a number, because it has none.
+  ProfileArchetype.art => ProfileCardFormat.bleed,
   // Falls back to the card envelope's hero image when the kind carries one.
   ProfileArchetype.fallback => ProfileCardFormat.bleed,
 };
@@ -73,6 +78,19 @@ ProfileCardFormat renderedCardFormat(
 }) => cardFormat(a) == ProfileCardFormat.bleed && hasArt
     ? ProfileCardFormat.bleed
     : ProfileCardFormat.framed;
+
+/// Whether [a]'s full variant renders portrait rather than the standard
+/// landscape full card (spec §6.1: the designed variant accommodates the
+/// art's orientation). Art only: the picture is the whole card, so its full
+/// variant is a tall plate spanning the column, not a wide strip.
+bool rendersPortraitFull(ProfileArchetype a) => a == ProfileArchetype.art;
+
+/// Whether [a] has a datum zone at all. Every archetype does except
+/// [ProfileArchetype.art], whose content is the picture: a band under it —
+/// empty, or a shadow over nothing — would be the card claiming to answer
+/// something. This is not the same as an archetype whose datum resolved empty;
+/// that band is a real no-data state and stays.
+bool hasDatumZone(ProfileArchetype a) => a != ProfileArchetype.art;
 
 /// The sizes an archetype can render (spec §5). A full-only archetype dropped
 /// into a pair slot renders full within that column (the seed never does this,
@@ -95,6 +113,8 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   // offers them no side-drop and no size toggle.
   ProfileArchetype.collection => const {ProfileCardSize.full},
   ProfileArchetype.achievementGrid => const {ProfileCardSize.full},
+  // Both sizes: a picture is worth placing wide or beside something.
+  ProfileArchetype.art => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.fallback => const {
     ProfileCardSize.full,
     ProfileCardSize.half,

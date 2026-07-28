@@ -252,6 +252,12 @@ abstract final class PersonalizationLayout {
   static const double cardFullAspect = 3 / 2;
   static const double cardHalfAspect = 4 / 5;
 
+  /// The art card's full variant keeps the 4:5 portrait at column width
+  /// instead of the landscape full aspect: the picture is the card's whole
+  /// content, and a landscape strip would crop most game art — drawn tall —
+  /// to a sliver. Same proportions as a half, at double the width.
+  static const double cardArtFullAspect = 4 / 5;
+
   /// Datum type sizes, each a fraction of the card's rendered height. A card is
   /// a fraction of the page it sits on, so its band is sized from the card
   /// rather than from the page's own type scale.

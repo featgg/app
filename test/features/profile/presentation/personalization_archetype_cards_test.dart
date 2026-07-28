@@ -7,6 +7,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/domain/platform_descriptor.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -152,6 +153,17 @@ ProfileWidget _collectionWidget(
     gameRefs: gameRefs,
     titleKey: titleKey,
   ),
+);
+
+ProfileWidget _artWidget(String id, {Platform? source}) => ProfileWidget(
+  id: id,
+  kind: ProfileWidgetKind.art,
+  // Platform-less row: the picture's source is the selection, not a binding.
+  platform: null,
+  position: 0,
+  isEnabled: true,
+  size: ProfileWidgetSize.wide,
+  artSelection: ArtSelection(source: source),
 );
 
 ProfileWidget _widget({
@@ -1621,5 +1633,192 @@ void main() {
     // Owner fetch is always null in the split repo, so a hit proves the art
     // binds to the injected public source — visitor parity is inherent.
     expect(_artFor(_coverA), findsOneWidget);
+  });
+
+  testWidgets('ArtCard fills the card with its source art and says nothing '
+      'over it', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a', source: Platform.steam),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverA)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+    // The one archetype with no datum: a scrim or a stat band over the picture
+    // would be the shell failing to notice this card has nothing to say.
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('ArtCard whose source publishes no art renders the theme ground, '
+      'not an error tile', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a', source: Platform.gw2),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.gw2: _card(Platform.gw2)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('an unpointed art card resolves the best available art, the '
+      'same way the cover does', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverA)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The normal add stores no source; the card is still born with a picture
+    // whenever the profile carries one anywhere.
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('an unpointed art card honors the featured platform over enum '
+      'order, like the cover', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+          featuredPlatform: Platform.chess,
+        ),
+        cards: {
+          // Steam comes first in enum order; featured points later.
+          Platform.steam: _heroCard(Platform.steam, _coverA),
+          Platform.chess: _heroCard(Platform.chess, _coverB),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverB), findsOneWidget);
+    expect(_artFor(_coverA), findsNothing);
+  });
+
+  testWidgets('an unpointed art card honors the chosen header platform over '
+      'the featured one — the cover chain, in the cover order', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+          headerPlatform: Platform.chess,
+          featuredPlatform: Platform.steam,
+        ),
+        cards: {
+          Platform.steam: _heroCard(Platform.steam, _coverA),
+          Platform.chess: _heroCard(Platform.chess, _coverB),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverB), findsOneWidget);
+  });
+
+  testWidgets('personalizationCardFor forwards the profile preferences to the '
+      'art card', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+          featuredPlatform: Platform.chess,
+        ),
+        cards: {
+          Platform.steam: _heroCard(Platform.steam, _coverA),
+          Platform.chess: _heroCard(Platform.chess, _coverB),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverB), findsOneWidget);
+  });
+
+  testWidgets('an unpointed art card with no art anywhere renders the theme '
+      'ground — never empty, never an error tile', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.gw2: _card(Platform.gw2)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('ArtCard full renders at the tall portrait aspect, not the '
+      'landscape full', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a', source: Platform.steam),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverA)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The picture is the card, so full-width means a tall plate — the same
+    // 4:5 the half cards use, at column width — never a landscape strip that
+    // crops tall game art to a sliver.
+    expect(_cardAspect(tester, 'a'), PersonalizationLayout.cardArtFullAspect);
+    expect(
+      _cardAspect(tester, 'a'),
+      isNot(PersonalizationLayout.cardFullAspect),
+    );
+  });
+
+  testWidgets('personalizationCardFor builds an ArtCard for an art widget', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _artWidget('a', source: Platform.steam),
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.steam: _heroCard(Platform.steam, _coverB)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ArtCard), findsOneWidget);
+    expect(_artFor(_coverB), findsOneWidget);
   });
 }

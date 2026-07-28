@@ -11,6 +11,7 @@ import '../../connections/domain/platform_descriptor.dart';
 import '../domain/collection_selection.dart';
 import '../domain/composed_card.dart';
 import '../domain/data_menu_selection.dart';
+import '../domain/art_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_repository.dart';
 import '../domain/showcase_selection.dart';
@@ -302,6 +303,37 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
         // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addArtWidget({
+    Platform? source,
+    required int position,
+    required ProfileWidgetSize size,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final dto = await _source.insertWidget({
+        // Platform-less on the row; a pinned source lives in the envelope,
+        // and the usual unpinned add writes a size-only envelope.
+        'platform': null,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.art),
+        'position': position,
+        'is_enabled': true,
+        'settings': mergeArtSelectionIntoSettings(
+          size,
+          ArtSelection(source: source),
+        ),
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
         throw const FormatException('inserted widget row did not map');
       }
       return right(widget);
