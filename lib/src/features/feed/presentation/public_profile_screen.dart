@@ -11,6 +11,13 @@ import 'public_profile_provider.dart';
 typedef PersonalizationBuilder =
     Widget Function(Profile profile, String userId);
 
+/// The chrome colors a profile's own theme calls for. Injected the same way
+/// and for the same reason: the palette belongs to the profile feature, but
+/// the app bar above the render is this screen's to build, and a default-themed
+/// bar over a themed page reads as two pages stitched together.
+typedef ProfileChromeBuilder =
+    ({Color background, Color foreground}) Function(Profile profile);
+
 /// Displays any user's public profile in read-only visitor mode.
 /// No edit affordance and no privacy indicator — the data is public by
 /// definition (RLS returns no row to a non-owner for private profiles).
@@ -19,6 +26,7 @@ class PublicProfileScreen extends ConsumerWidget {
     super.key,
     required this.userId,
     required this.personalizationBuilder,
+    required this.chromeBuilder,
   });
 
   final String userId;
@@ -27,13 +35,26 @@ class PublicProfileScreen extends ConsumerWidget {
   /// decoupled from the profile feature's presentation.
   final PersonalizationBuilder personalizationBuilder;
 
+  /// Supplies the app bar's colors from the rendered profile's theme.
+  final ProfileChromeBuilder chromeBuilder;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(publicProfileProvider(userId));
 
+    // Null until the profile resolves, and for a profile that resolves to
+    // nothing: neither has a theme to take colors from, so the bar keeps the
+    // app's own until there is a page under it to match.
+    final profile = state.hasValue ? state.value : null;
+    final chrome = profile == null ? null : chromeBuilder(profile);
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.publicProfileTitle)),
+      appBar: AppBar(
+        title: Text(l10n.publicProfileTitle),
+        backgroundColor: chrome?.background,
+        foregroundColor: chrome?.foreground,
+      ),
       body: SafeArea(
         child: AsyncValueWidget<Profile?>(
           value: state,

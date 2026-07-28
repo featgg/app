@@ -68,6 +68,10 @@ GoRouter router(Ref ref) {
               userId: id,
               cardSource: (platform) => publicOwnerCardProvider(id, platform),
             ),
+            chromeBuilder: (profile) {
+              final palette = paletteForTheme(profile.theme);
+              return (background: palette.bg, foreground: palette.text);
+            },
           );
         },
       ),

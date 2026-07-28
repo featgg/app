@@ -84,10 +84,17 @@ Widget _screen(ProfileRepository profileRepo, {String userId = _userId}) {
       home: PublicProfileScreen(
         userId: userId,
         personalizationBuilder: _personalizationSentinel,
+        chromeBuilder: (_) =>
+            (background: _chromeBackground, foreground: _chromeForeground),
       ),
     ),
   );
 }
+
+/// Stand-ins for the composition-root-injected theme colors, distinct from any
+/// default so a bar that ignored them is visible in the assertion.
+const _chromeBackground = Color(0xFF123456);
+const _chromeForeground = Color(0xFFFEDCBA);
 
 /// A keyed sentinel standing in for the composition-root-injected personalization view.
 Widget _personalizationSentinel(Profile profile, String userId) =>
@@ -186,5 +193,36 @@ void main() {
       find.byKey(const Key('personalizationSentinel_$_userId')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the app bar takes its colors from the rendered profile theme, '
+      'so the chrome does not read as a different page than what is under it', (
+    tester,
+  ) async {
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(_publicProfile),
+    );
+    await tester.pumpWidget(_screen(profileRepo));
+    await tester.pumpAndSettle();
+
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.backgroundColor, _chromeBackground);
+    expect(appBar.foregroundColor, _chromeForeground);
+  });
+
+  testWidgets('a profile that resolves to nothing keeps the default chrome', (
+    tester,
+  ) async {
+    // No profile means no theme to take colors from; borrowing the last one
+    // would tint the unavailable state after somebody else's profile.
+    final profileRepo = _FakeProfileRepository(
+      publicResult: (_) async => right(null),
+    );
+    await tester.pumpWidget(_screen(profileRepo));
+    await tester.pumpAndSettle();
+
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.backgroundColor, isNull);
+    expect(appBar.foregroundColor, isNull);
   });
 }
