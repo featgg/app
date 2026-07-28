@@ -43,15 +43,7 @@ GoRouter router(Ref ref) {
     routes: <RouteBase>[
       GoRoute(path: '/', builder: (_, _) => const FeedScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
-      GoRoute(
-        path: '/profile',
-        // The card renderer lives in the connections feature; the router is the
-        // composition root that may import both presentations, so it injects the
-        // builder to keep the features decoupled.
-        builder: (_, _) => ProfileScreen(
-          cardBuilder: (card) => GameCardView(card: card, isOwner: true),
-        ),
-      ),
+      GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(
         path: '/profile/edit',
         redirect: (context, state) =>
@@ -70,17 +62,16 @@ GoRouter router(Ref ref) {
           final userId = state.pathParameters['id']!;
           return PublicProfileScreen(
             userId: userId,
-            widgetsBuilder: (id) => PublicProfileWidgetsView(
-              userId: id,
-              cardBuilder: (card) => GameCardView(card: card),
-            ),
-            // A composed layout routes to the personalization render, reading each platform's
-            // public card through the visitor source.
+            // Reads each platform's public card through the visitor source.
             personalizationBuilder: (profile, id) => PersonalizationProfileView(
               profile: profile,
               userId: id,
               cardSource: (platform) => publicOwnerCardProvider(id, platform),
             ),
+            chromeBuilder: (profile) {
+              final palette = paletteForTheme(profile.theme);
+              return (background: palette.bg, foreground: palette.text);
+            },
           );
         },
       ),

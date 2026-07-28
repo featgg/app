@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/profile/domain/profile_composition.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
+import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Card ids used across the transitions, with a fixed size registry:
@@ -341,5 +342,50 @@ void main() {
     pairBeside(rows, 'ms', 'main', DropSide.left);
     normalizeLayout(rows, {'main'});
     expect(rows, before);
+  });
+
+  group('defaultLayoutFor', () {
+    ProfileWidget widget(
+      String id,
+      ProfileWidgetKind kind, {
+      int position = 0,
+      bool enabled = true,
+    }) => ProfileWidget(
+      id: id,
+      kind: kind,
+      platform: null,
+      position: position,
+      isEnabled: enabled,
+      size: ProfileWidgetSize.small,
+    );
+
+    test('orders by question-category, position breaking ties', () {
+      final rows = defaultLayoutFor([
+        widget('art', ProfileWidgetKind.art, position: 0),
+        widget('rank', ProfileWidgetKind.rank, position: 1),
+        widget('who', ProfileWidgetKind.passport, position: 2),
+      ]);
+
+      expect(rows, const [FullRow('who'), FullRow('rank'), FullRow('art')]);
+    });
+
+    test('keeps a hidden widget, so the editor can still reach it', () {
+      // Dropping it here would strand it: the add catalog counts it as
+      // already added, while no surface would offer a way to remove it.
+      final rows = defaultLayoutFor([
+        widget('shown', ProfileWidgetKind.passport),
+        widget('hidden', ProfileWidgetKind.rank, enabled: false),
+      ]);
+
+      expect(rows, const [FullRow('shown'), FullRow('hidden')]);
+    });
+
+    test('a half-only card seeds as a single-slot pair', () {
+      final rows = defaultLayoutFor([
+        widget('rankA', ProfileWidgetKind.rank),
+      ], supportsFull: _supportsFull);
+
+      expect(rows, const [PairRow(left: 'rankA')]);
+    });
   });
 }

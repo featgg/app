@@ -639,6 +639,57 @@ void main() {
 
     expect(repo.updateCalls, 0);
   });
+
+  testWidgets('a profile write in flight disables every profile control, so '
+      'two full-profile writes can never race', (tester) async {
+    // Both controls write the WHOLE profile from their own snapshot. If the
+    // second one's snapshot predates the first one's write, whichever lands
+    // last silently reverts the other — privacy included.
+    final repo = _PendingUpdateProfileRepository();
+    await tester.pumpWidget(
+      _screen(repo, _RecordingAuthRepository(), linked: const [Platform.steam]),
+    );
+    await tester.pumpAndSettle();
+
+    // Start a privacy write and leave it hanging.
+    await tester.tap(find.byKey(const Key('settingsPrivacyToggle')));
+    await tester.pump();
+
+    final toggle = tester.widget<SwitchListTile>(
+      find.byKey(const Key('settingsPrivacyToggle')),
+    );
+    expect(toggle.onChanged, isNull);
+    final tile = tester.widget<ListTile>(
+      find.byKey(const Key('settingsFeedPreviewTile')),
+    );
+    expect(tile.enabled, isFalse);
+
+    repo.updateGate.complete(right(_publicProfile));
+    await tester.pumpAndSettle();
+  });
+}
+
+/// A profile repo whose update never resolves until the test opens the gate,
+/// so the in-flight window is observable.
+final class _PendingUpdateProfileRepository implements ProfileRepository {
+  final updateGate = Completer<Either<Failure, Profile>>();
+
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() async =>
+      right(_publicProfile);
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) =>
+      updateGate.future;
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(null);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
 }
 
 AppLocalizations _l10n(WidgetTester tester) =>

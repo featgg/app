@@ -269,7 +269,7 @@ GameCard _chessCard() => GameCard(
       supportedLocales: AppLocalizations.supportedLocales,
       // The compose controls now live in ProfileScreen's app bar, so the harness
       // mounts the real screen; the composed `_profile` routes to the surface.
-      home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+      home: const ProfileScreen(),
     ),
   );
   return (widget: widget, container: container);
@@ -400,7 +400,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           navigatorObservers: observers,
-          home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+          home: const ProfileScreen(),
         ),
       ),
     );
@@ -633,7 +633,7 @@ void main() {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+        home: const ProfileScreen(),
       ),
     );
 
@@ -673,7 +673,7 @@ void main() {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+        home: const ProfileScreen(),
       ),
     );
 
@@ -714,7 +714,7 @@ void main() {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ProfileScreen(cardBuilder: (_) => const SizedBox.shrink()),
+        home: const ProfileScreen(),
       ),
     );
 

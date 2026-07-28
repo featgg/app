@@ -100,106 +100,128 @@ void main() {
     expect(state.isDirty, isFalse);
   });
 
-  test('startComposing bootstraps enabled widgets as full rows in position '
-      'order, excluding disabled, with an empty saved base', () {
+  test('startEditing on an unarranged profile bootstraps every widget as a full '
+      'row in position order, with an empty saved base', () {
     final container = _container(_FakeRepository());
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    // Deliberately unordered input with one disabled widget.
+    // Deliberately unordered input with one hidden widget.
     final widgets = [
       _widgetAt('c', 2),
       _widgetAt('a', 0),
       _widgetAt('b', 1, enabled: false),
       _widgetAt('d', 3),
     ];
-    notifier.startComposing(widgets);
+    notifier.startEditing(const [], widgets);
     final state = container.read(profileCompositionProvider);
 
     expect(state.editing, isTrue);
-    // Enabled widgets only, sorted by position, each a full row.
-    expect(state.working, const [FullRow('a'), FullRow('c'), FullRow('d')]);
+    // Sorted by position, each a full row — the hidden one included, since
+    // the editor is the only place its owner can reach it.
+    expect(state.working, const [
+      FullRow('a'),
+      FullRow('b'),
+      FullRow('c'),
+      FullRow('d'),
+    ]);
     // Nothing is persisted yet, so a plain Save is dirty (persists the bootstrap).
     expect(state.saved, isEmpty);
     expect(state.isDirty, isTrue);
   });
 
-  test('startComposing seeds a Rank and a Main both as full rows (both are '
-      'dual-size)', () {
-    final container = _container(_FakeRepository());
-    final notifier = container.read(profileCompositionProvider.notifier);
+  test(
+    'startEditing on an unarranged profile seeds a Rank and a Main both as full rows (both are '
+    'dual-size)',
+    () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
 
-    // Rank and Main both support a full row, so each bootstraps as a FullRow.
-    const rank = ProfileWidget(
-      id: 'r',
-      kind: ProfileWidgetKind.rank,
-      platform: Platform.leagueOfLegends,
-      position: 0,
-      isEnabled: true,
-      size: ProfileWidgetSize.small,
-    );
-    const main = ProfileWidget(
-      id: 'm',
-      kind: ProfileWidgetKind.main,
-      platform: Platform.steam,
-      position: 1,
-      isEnabled: true,
-      size: ProfileWidgetSize.small,
-    );
+      // Rank and Main both support a full row, so each bootstraps as a FullRow.
+      const rank = ProfileWidget(
+        id: 'r',
+        kind: ProfileWidgetKind.rank,
+        platform: Platform.leagueOfLegends,
+        position: 0,
+        isEnabled: true,
+        size: ProfileWidgetSize.small,
+      );
+      const main = ProfileWidget(
+        id: 'm',
+        kind: ProfileWidgetKind.main,
+        platform: Platform.steam,
+        position: 1,
+        isEnabled: true,
+        size: ProfileWidgetSize.small,
+      );
 
-    notifier.startComposing(const [rank, main]);
-    final state = container.read(profileCompositionProvider);
+      notifier.startEditing(const [], const [rank, main]);
+      final state = container.read(profileCompositionProvider);
 
-    // Category order, not add order: what-I-play (Main) reads before
-    // how-good-I-am (Rank) even though the rank was added first.
-    expect(state.working, const [FullRow('m'), FullRow('r')]);
-  });
+      // Category order, not add order: what-I-play (Main) reads before
+      // how-good-I-am (Rank) even though the rank was added first.
+      expect(state.working, const [FullRow('m'), FullRow('r')]);
+    },
+  );
 
-  test('startComposing seeds in the catalog category order, position breaking '
-      'ties, kinds outside the model last', () {
-    final container = _container(_FakeRepository());
-    final notifier = container.read(profileCompositionProvider.notifier);
+  test(
+    'startEditing on an unarranged profile seeds in the catalog category order, position breaking '
+    'ties, kinds outside the model last',
+    () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
 
-    ProfileWidget kindAt(
-      String id,
-      ProfileWidgetKind kind,
-      int position, {
-      Platform? platform,
-    }) => ProfileWidget(
-      id: id,
-      kind: kind,
-      platform: platform,
-      position: position,
-      isEnabled: true,
-      size: ProfileWidgetSize.small,
-    );
+      ProfileWidget kindAt(
+        String id,
+        ProfileWidgetKind kind,
+        int position, {
+        Platform? platform,
+      }) => ProfileWidget(
+        id: id,
+        kind: kind,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+        size: ProfileWidgetSize.small,
+      );
 
-    // Add order is deliberately the reverse of the category order.
-    notifier.startComposing([
-      kindAt('v', ProfileWidgetKind.art, 0),
-      kindAt('r', ProfileWidgetKind.rank, 1, platform: Platform.chess),
-      kindAt('p', ProfileWidgetKind.passport, 2),
-      kindAt('m', ProfileWidgetKind.main, 3, platform: Platform.steam),
-      kindAt('s', ProfileWidgetKind.showcase, 4, platform: Platform.steam),
-      kindAt('g', ProfileWidgetKind.gameCollector, 5, platform: Platform.steam),
-      kindAt('t', ProfileWidgetKind.template, 6),
-      kindAt('c', ProfileWidgetKind.completionist, 7, platform: Platform.steam),
-    ]);
-    final state = container.read(profileCompositionProvider);
+      // Add order is deliberately the reverse of the category order.
+      notifier.startEditing(const [], [
+        kindAt('v', ProfileWidgetKind.art, 0),
+        kindAt('r', ProfileWidgetKind.rank, 1, platform: Platform.chess),
+        kindAt('p', ProfileWidgetKind.passport, 2),
+        kindAt('m', ProfileWidgetKind.main, 3, platform: Platform.steam),
+        kindAt('s', ProfileWidgetKind.showcase, 4, platform: Platform.steam),
+        kindAt(
+          'g',
+          ProfileWidgetKind.gameCollector,
+          5,
+          platform: Platform.steam,
+        ),
+        kindAt('t', ProfileWidgetKind.template, 6),
+        kindAt(
+          'c',
+          ProfileWidgetKind.completionist,
+          7,
+          platform: Platform.steam,
+        ),
+      ]);
+      final state = container.read(profileCompositionProvider);
 
-    // who I am → what I play → how good I am → what I achieved (showcase
-    // before completionist by position) → what I own → art; the legacy
-    // template trails everything the category model places.
-    expect(state.working, const [
-      FullRow('p'),
-      FullRow('m'),
-      FullRow('r'),
-      FullRow('s'),
-      FullRow('c'),
-      FullRow('g'),
-      FullRow('v'),
-      FullRow('t'),
-    ]);
-  });
+      // who I am → what I play → how good I am → what I achieved (showcase
+      // before completionist by position) → what I own → art; the legacy
+      // template trails everything the category model places.
+      expect(state.working, const [
+        FullRow('p'),
+        FullRow('m'),
+        FullRow('r'),
+        FullRow('s'),
+        FullRow('c'),
+        FullRow('g'),
+        FullRow('v'),
+        FullRow('t'),
+      ]);
+    },
+  );
 
   test(
     'cancelling a bootstrap composition keeps nothing (saved stays empty)',
@@ -207,7 +229,7 @@ void main() {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startComposing([_widget('a'), _widget('b')]);
+      notifier.startEditing(const [], [_widget('a'), _widget('b')]);
       notifier.cancelEditing();
       final state = container.read(profileCompositionProvider);
 
@@ -223,7 +245,7 @@ void main() {
     final notifier = container.read(profileCompositionProvider.notifier);
 
     // Compose and persist a first layout. Success commits it to `saved`.
-    notifier.startComposing(_widgets);
+    notifier.startEditing(const [], _widgets);
     final composed = container.read(profileCompositionProvider).working;
     await notifier.save();
     expect(container.read(profileCompositionProvider).saved, composed);
@@ -256,7 +278,7 @@ void main() {
 
       // Fresh, and an un-saved bootstrap, both report no persisted knowledge.
       expect(container.read(profileCompositionProvider).hasPersisted, isFalse);
-      notifier.startComposing(_widgets);
+      notifier.startEditing(const [], _widgets);
       expect(container.read(profileCompositionProvider).hasPersisted, isFalse);
 
       // A committed save flips it — the authoritative "controller knows the
