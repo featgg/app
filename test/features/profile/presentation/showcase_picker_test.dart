@@ -628,7 +628,7 @@ void main() {
     await _open(tester);
 
     // Every question-category renders its header (built widgets are found
-    // even when scrolled off-screen), in the spec §7 order, and no
+    // even when scrolled off-screen), in the declared category order, and no
     // archetype-named group remains.
     double lastTop = double.negativeInfinity;
     for (final key in const [

@@ -214,7 +214,7 @@ void main() {
     });
   });
 
-  group('cardCategory (spec §7)', () {
+  group('cardCategory (the question-category model)', () {
     test('every catalog kind lands in its question-category', () {
       expect(
         cardCategory(ProfileWidgetKind.passport),

@@ -79,10 +79,9 @@ ProfileCardFormat renderedCardFormat(
     ? ProfileCardFormat.bleed
     : ProfileCardFormat.framed;
 
-/// The question-category a card belongs to (spec §7). Declaration order is
-/// the canon: it drives the add catalog's group order and a fresh
-/// composition's default order — the visual family last, because it answers
-/// no question.
+/// The question-category a card belongs to. Declaration order is the canon:
+/// it drives the add catalog's group order and a fresh composition's default
+/// order — the visual family last, because it answers no question.
 enum ProfileCardCategory {
   whoIAm,
   whatIPlay,
@@ -93,8 +92,8 @@ enum ProfileCardCategory {
 }
 
 /// The category for [kind], or null for the kinds outside the category model
-/// (the legacy platform/template/composed/dataMenu rows #173 retires); a
-/// fresh composition seeds those after every categorized card.
+/// — the legacy row kinds on their way out of the catalog; a fresh
+/// composition seeds those after every categorized card.
 ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.passport => ProfileCardCategory.whoIAm,
   ProfileWidgetKind.main => ProfileCardCategory.whatIPlay,

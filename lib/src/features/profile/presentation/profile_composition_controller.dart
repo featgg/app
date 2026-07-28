@@ -114,8 +114,8 @@ class ProfileComposition extends _$ProfileComposition {
 
   /// Enter edit mode from a not-yet-composed profile, seeding a bootstrap working
   /// layout of every enabled widget as a full row (disabled widgets are
-  /// excluded; no auto-pairing). The seed order is the category order (spec
-  /// §7): a fresh composition reads top to bottom the way the catalog does,
+  /// excluded; no auto-pairing). The seed order is the question-category
+  /// order: a fresh composition reads top to bottom the way the catalog does,
   /// with position breaking ties inside a category and the kinds outside the
   /// category model trailing. `saved` stays empty — the persisted state — so a
   /// plain Save persists the bootstrap and Cancel keeps nothing.

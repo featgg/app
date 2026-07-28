@@ -141,8 +141,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     final steamCard = steamLinked ? cardFor(Platform.steam) : null;
     final steamLibrary = _steamLibrary(steamCard);
 
-    // Grouped by the question a card answers (spec §7), never by archetype:
-    // the same order drives a fresh composition's default order.
+    // Grouped by the question a card answers, never by archetype: the same
+    // order drives a fresh composition's default order.
     final whoIAmRows = [_identityRow(l10n, linked, nextPosition)];
     final whatIPlayRows = [
       for (final platform in kMainPlatforms)
