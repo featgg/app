@@ -141,20 +141,10 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     final steamCard = steamLinked ? cardFor(Platform.steam) : null;
     final steamLibrary = _steamLibrary(steamCard);
 
-    final identityRows = [_identityRow(l10n, linked, nextPosition)];
-    final rankRows = [
-      for (final platform in kRankPlatforms)
-        if (linked.contains(platform))
-          _kindRow(
-            l10n: l10n,
-            kind: ProfileWidgetKind.rank,
-            platform: platform,
-            hasData: resolveRank(cardFor(platform)) != null,
-            reason: l10n.addCatalogReasonRankNoData,
-            nextPosition: nextPosition,
-          ),
-    ];
-    final mainRows = [
+    // Grouped by the question a card answers (spec §7), never by archetype:
+    // the same order drives a fresh composition's default order.
+    final whoIAmRows = [_identityRow(l10n, linked, nextPosition)];
+    final whatIPlayRows = [
       for (final platform in kMainPlatforms)
         if (linked.contains(platform))
           _kindRow(
@@ -166,14 +156,28 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
             nextPosition: nextPosition,
           ),
     ];
-    // The Steam-derived groups render only when Steam is linked.
-    final milestoneRows = [if (steamLinked) _milestoneRow(l10n, steamLibrary)];
-    final collectionRows = steamLinked
+    final howGoodIAmRows = [
+      for (final platform in kRankPlatforms)
+        if (linked.contains(platform))
+          _kindRow(
+            l10n: l10n,
+            kind: ProfileWidgetKind.rank,
+            platform: platform,
+            hasData: resolveRank(cardFor(platform)) != null,
+            reason: l10n.addCatalogReasonRankNoData,
+            nextPosition: nextPosition,
+          ),
+    ];
+    // The Steam-derived rows render only when Steam is linked.
+    final whatIAchievedRows = [
+      if (steamLinked) ...[
+        _milestoneRow(l10n, steamLibrary),
+        _completionistRow(l10n, steamCard, nextPosition),
+      ],
+    ];
+    final whatIOwnRows = steamLinked
         ? _collectionRows(l10n, steamCard, steamLibrary, nextPosition)
         : const <Widget>[];
-    final achievementRows = [
-      if (steamLinked) _completionistRow(l10n, steamCard, nextPosition),
-    ];
     final artRows = [_artRow(l10n, nextPosition)];
 
     return Column(
@@ -186,37 +190,32 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           style: textTheme.titleLarge,
         ),
         _group(
-          const Key('catalogGroupIdentity'),
-          l10n.addCatalogGroupIdentity,
-          identityRows,
+          const Key('catalogGroupWhoIAm'),
+          l10n.addCatalogGroupWhoIAm,
+          whoIAmRows,
         ),
         _group(
-          const Key('catalogGroupRank'),
-          l10n.addCatalogGroupRank,
-          rankRows,
+          const Key('catalogGroupWhatIPlay'),
+          l10n.addCatalogGroupWhatIPlay,
+          whatIPlayRows,
         ),
         _group(
-          const Key('catalogGroupMain'),
-          l10n.addCatalogGroupMain,
-          mainRows,
+          const Key('catalogGroupHowGoodIAm'),
+          l10n.addCatalogGroupHowGoodIAm,
+          howGoodIAmRows,
         ),
         _group(
-          const Key('catalogGroupMilestone'),
-          l10n.addCatalogGroupMilestone,
-          milestoneRows,
+          const Key('catalogGroupWhatIAchieved'),
+          l10n.addCatalogGroupWhatIAchieved,
+          whatIAchievedRows,
         ),
         _group(
-          const Key('catalogGroupCollection'),
-          l10n.addCatalogGroupCollection,
-          collectionRows,
+          const Key('catalogGroupWhatIOwn'),
+          l10n.addCatalogGroupWhatIOwn,
+          whatIOwnRows,
         ),
-        _group(
-          const Key('catalogGroupAchievements'),
-          l10n.addCatalogGroupAchievements,
-          achievementRows,
-        ),
-        // Last: every group above answers a question with data, this one answers
-        // with a picture.
+        // Last: every category above answers a question with data; the visual
+        // family answers with a picture.
         _group(const Key('catalogGroupArt'), l10n.addCatalogGroupArt, artRows),
         if (_catalogUniverse.any((platform) => !linked.contains(platform)))
           _footer(l10n),
@@ -334,13 +333,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     if (library.isEmpty) {
       return _disabledRow(
         const Key('milestoneDisabledRow'),
-        l10n.showcasePickerTitle,
+        l10n.addCatalogRowMilestone,
         l10n.showcasePickerEmpty,
       );
     }
     return _stepRow(
       const Key('milestoneStepRow'),
-      l10n.showcasePickerTitle,
+      l10n.addCatalogRowMilestone,
       () => setState(() => _step = _Step.milestone),
     );
   }
