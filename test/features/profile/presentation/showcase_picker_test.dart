@@ -51,7 +51,7 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
-    required Platform source,
+    Platform? source,
     required int position,
     required ProfileWidgetSize size,
   }) async {
@@ -1229,8 +1229,8 @@ void main() {
     expect(widgetsRepo.lastMainPlatform, isNull);
   });
 
-  testWidgets('Art row: single-tap adds a wide art card at max+1 pointing at '
-      'the row platform, and closes', (tester) async {
+  testWidgets('Art row: single tap adds a wide, unpointed art card at max+1 '
+      'and closes — the owner chooses nothing', (tester) async {
     final widgetsRepo = _RecordingWidgetsRepository();
     await tester.pumpWidget(
       _harness(
@@ -1245,28 +1245,30 @@ void main() {
     await tester.pumpAndSettle();
     await _open(tester);
 
-    final row = find.byKey(const Key('artAddRow_leagueOfLegends'));
+    final row = find.byKey(const Key('artAddRow'));
     await tester.ensureVisible(row);
     await tester.tap(row);
     await tester.pumpAndSettle();
 
-    expect(widgetsRepo.lastArtSource, Platform.leagueOfLegends);
+    // Unpointed: the card resolves its own picture at render time, so the add
+    // records no source even though a platform with art is linked.
     expect(widgetsRepo.lastArtPosition, 4);
+    expect(widgetsRepo.lastArtSource, isNull);
     // A picture is the point, so it is born full-width.
     expect(widgetsRepo.lastArtSize, ProfileWidgetSize.wide);
     expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
   });
 
-  testWidgets('Art row: a linked platform that publishes no artwork is '
-      'disabled, and adding it is impossible', (tester) async {
-    final widgetsRepo = _RecordingWidgetsRepository();
+  testWidgets('Art row: exactly one, never per platform, and never disabled — '
+      'even when no linked platform publishes artwork', (tester) async {
     await tester.pumpWidget(
       _harness(
         cardsRepo: _MapCardsRepository({
-          // Rank data but no image: the Rank group offers it, Art cannot.
+          // Rank data but no image anywhere: the fallback ground is the
+          // answer, so the row still offers.
           Platform.leagueOfLegends: _leagueCard(),
         }),
-        widgetsRepo: widgetsRepo,
+        widgetsRepo: _RecordingWidgetsRepository(),
         connected: const [Platform.leagueOfLegends],
         existing: const [],
       ),
@@ -1274,66 +1276,32 @@ void main() {
     await tester.pumpAndSettle();
     await _open(tester);
 
-    expect(
-      find.byKey(const Key('artDisabledRow_leagueOfLegends')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('artAddRow_leagueOfLegends')), findsNothing);
-    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsOneWidget);
-    expect(widgetsRepo.lastArtSource, isNull);
+    expect(find.byKey(const Key('artAddRow')), findsOneWidget);
+    for (final key in const [
+      'artAddRow_leagueOfLegends',
+      'artDisabledRow_leagueOfLegends',
+      'artDisabledRow',
+    ]) {
+      expect(find.byKey(Key(key)), findsNothing, reason: key);
+    }
   });
 
-  testWidgets('Art row: an art card already pointing at a source reads as '
-      'added; another source with art still offers', (tester) async {
+  testWidgets('Art row: an existing art card reads as added, whatever it '
+      'points at', (tester) async {
     await tester.pumpWidget(
       _harness(
         cardsRepo: _MapCardsRepository({
           Platform.leagueOfLegends: _leagueCardWithArt(),
-          Platform.chess: _card(
-            Platform.chess,
-            _chessCard().data!,
-            heroImage: _artUrl,
-          ),
         }),
         widgetsRepo: _RecordingWidgetsRepository(),
-        connected: const [Platform.leagueOfLegends, Platform.chess],
+        connected: const [Platform.leagueOfLegends],
         existing: [_artWidget(Platform.leagueOfLegends, position: 0)],
       ),
     );
     await tester.pumpAndSettle();
     await _open(tester);
 
-    // "Already added" is asked of the selection, not of a platform binding the
-    // row does not carry.
-    expect(
-      find.byKey(const Key('artAddedRow_leagueOfLegends')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('artAddRow_leagueOfLegends')), findsNothing);
-    expect(find.byKey(const Key('artAddRow_chess')), findsOneWidget);
-  });
-
-  testWidgets('Art row: an unlinked platform is never offered', (tester) async {
-    await tester.pumpWidget(
-      _harness(
-        cardsRepo: _MapCardsRepository({
-          Platform.leagueOfLegends: _leagueCardWithArt(),
-        }),
-        widgetsRepo: _RecordingWidgetsRepository(),
-        connected: const [Platform.leagueOfLegends],
-        existing: const [],
-      ),
-    );
-    await tester.pumpAndSettle();
-    await _open(tester);
-
-    expect(find.byKey(const Key('artAddRow_leagueOfLegends')), findsOneWidget);
-    for (final key in const [
-      'artAddRow_chess',
-      'artDisabledRow_chess',
-      'artAddedRow_chess',
-    ]) {
-      expect(find.byKey(Key(key)), findsNothing, reason: key);
-    }
+    expect(find.byKey(const Key('artAddedRow')), findsOneWidget);
+    expect(find.byKey(const Key('artAddRow')), findsNothing);
   });
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../connections/domain/connection.dart';
 import '../../../connections/domain/game_card.dart';
 import '../../domain/profile_archetype.dart';
+import '../../domain/profile_header_resolver.dart';
 import '../../domain/profile_widget.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
@@ -16,10 +18,12 @@ import 'card_key.dart';
 /// only their statement of record, and because the owner should be able to
 /// decide that the first thing a visitor meets is an image.
 ///
-/// Its subject is the art of a platform the owner picked, resolved the same way
-/// every other card resolves art. A source that publishes none renders the
-/// theme's ground: a card that lost its picture is a quiet card, never an error
-/// tile and never a broken-image glyph.
+/// The owner adds it without choosing anything: left unpointed, it resolves
+/// the best art the profile carries through the same rule the cover uses, so
+/// it is born with a picture whenever one exists anywhere. A stored source
+/// pins it to one platform's art instead (the seam the image picker fills
+/// later). With no picture from either path it renders the theme's ground: a
+/// quiet card, never an error tile and never a broken-image glyph.
 class ArtCard extends ConsumerWidget {
   const ArtCard({
     super.key,
@@ -35,13 +39,24 @@ class ArtCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final source = widget.artSelection.source;
-    final card = source == null ? null : resolveCard(ref, cardSource, source);
+    final String? art;
+    if (source != null) {
+      art = artOf(resolveCard(ref, cardSource, source));
+    } else {
+      // Unpointed: the first platform that publishes art, in the cover's
+      // resolution order, so the card and the cover agree on what "your best
+      // art" means.
+      art = resolveProfileHeader({
+        for (final platform in Platform.values)
+          platform: resolveCard(ref, cardSource, platform),
+      }).art;
+    }
 
     return PersonalizationCardShell(
       key: personalizationCardKey(widget.id),
       archetype: ProfileArchetype.art,
       size: size,
-      art: artOf(card),
+      art: art,
     );
   }
 }

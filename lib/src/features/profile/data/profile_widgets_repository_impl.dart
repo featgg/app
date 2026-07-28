@@ -313,7 +313,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
-    required Platform source,
+    Platform? source,
     required int position,
     required ProfileWidgetSize size,
   }) async {
@@ -321,7 +321,8 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
       final dto = await _source.insertWidget({
-        // Platform-less on the row; the source lives in the envelope.
+        // Platform-less on the row; a pinned source lives in the envelope,
+        // and the usual unpinned add writes a size-only envelope.
         'platform': null,
         'type': profileWidgetKindToWire(ProfileWidgetKind.art),
         'position': position,

@@ -5,6 +5,7 @@ import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/core/observability/observability.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_data_source.dart';
@@ -818,8 +819,41 @@ void main() {
   });
 
   group('addArtWidget', () {
-    test('writes type art, a null platform, and the source in the '
-        'envelope', () async {
+    test('the normal add writes type art, a null platform, and a size-only '
+        'envelope (no source: the render resolves the picture)', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'ar',
+          'platform': null,
+          'type': 'art',
+          'position': 2,
+          'is_enabled': true,
+          'settings': {
+            'schema_version': kProfileWidgetSettingsVersion,
+            'size': 'wide',
+          },
+        }),
+      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addArtWidget(position: 2, size: ProfileWidgetSize.wide);
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.kind, ProfileWidgetKind.art);
+        expect(widget.platform, isNull);
+        expect(widget.artSelection, ArtSelection.empty);
+      });
+
+      expect(source.lastInsert!['type'], 'art');
+      expect(source.lastInsert!['platform'], isNull);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['size'], 'wide');
+      // Unpointed is the wire default: no art sub-object at all.
+      expect(settings.containsKey('art'), isFalse);
+    });
+
+    test('a pinned source rides in the envelope (the picker seam)', () async {
       final source = _FakeDataSource(
         onInsert: (row) async => _dto({
           'id': 'ar',

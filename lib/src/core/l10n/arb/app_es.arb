@@ -383,7 +383,7 @@
   "addCatalogReasonNoPlatforms": "Vincula una cuenta para agregar esto.",
   "addCatalogReasonRankNoData": "Todavía no hay datos de rank.",
   "addCatalogReasonMainNoData": "Todavía no hay datos de main.",
-  "addCatalogReasonArtNoImage": "Todavía no hay arte para mostrar.",
+  "addCatalogRowArt": "Card de arte",
   "addCatalogConnectMore": "Conectar más cuentas",
   "profilePersonalize": "Personalizar",
   "profileComposeEdit": "Editar diseño",

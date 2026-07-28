@@ -13,7 +13,6 @@ import '../domain/main_value_resolver.dart';
 import '../domain/profile_widget.dart';
 import '../domain/rank_value_resolver.dart';
 import '../domain/showcase_selection.dart';
-import 'cards/art_card.dart';
 import 'collection_picker.dart';
 import 'featured_platform_provider.dart';
 import 'profile_owner_cards_provider.dart';
@@ -175,18 +174,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     final achievementRows = [
       if (steamLinked) _completionistRow(l10n, steamCard, nextPosition),
     ];
-    // Art draws from any linked platform that publishes a picture, so its rows
-    // follow the enum's own order rather than an archetype's platform set.
-    final artRows = [
-      for (final platform in Platform.values)
-        if (_catalogUniverse.contains(platform) && linked.contains(platform))
-          _artRow(
-            l10n: l10n,
-            platform: platform,
-            art: artOf(cardFor(platform)),
-            nextPosition: nextPosition,
-          ),
-    ];
+    final artRows = [_artRow(l10n, nextPosition)];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -318,35 +306,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     );
   }
 
-  /// A per-platform Art row. An art card's row carries no platform binding —
-  /// the source rides in its settings — so "already added" is asked of the
-  /// selection. A platform that publishes no picture is disabled rather than
-  /// offered, because choosing it would add a card with nothing in it.
-  Widget _artRow({
-    required AppLocalizations l10n,
-    required Platform platform,
-    required String? art,
-    required int nextPosition,
-  }) {
-    final label = _brand(platform);
-    if (widget.existing.any(
-      (w) =>
-          w.kind == ProfileWidgetKind.art && w.artSelection.source == platform,
-    )) {
-      return _addedRow(Key('artAddedRow_${platform.name}'), label);
-    }
-    if (art == null) {
-      return _disabledRow(
-        Key('artDisabledRow_${platform.name}'),
-        label,
-        l10n.addCatalogReasonArtNoImage,
-      );
+  /// The single Art row. One tap adds the card unpointed; it resolves its own
+  /// picture at render time (best available art, else the theme's ground), so
+  /// the row never asks the owner to choose between platforms and is never
+  /// disabled — the fallback is the answer to having nothing to show.
+  Widget _artRow(AppLocalizations l10n, int nextPosition) {
+    if (widget.existing.any((w) => w.kind == ProfileWidgetKind.art)) {
+      return _addedRow(const Key('artAddedRow'), l10n.addCatalogRowArt);
     }
     return _AddRow(
-      rowKey: Key('artAddRow_${platform.name}'),
-      label: label,
+      rowKey: const Key('artAddRow'),
+      label: l10n.addCatalogRowArt,
       onAcquire: (controller) => controller.addArt(
-        source: platform,
         position: nextPosition,
         // A picture is the point, so it lands as a full-width card.
         size: ProfileWidgetSize.wide,

@@ -1612,9 +1612,9 @@
   "@addCatalogReasonMainNoData": {
     "description": "Reason on a disabled add-card catalog Main row when the linked platform's card carries no main data."
   },
-  "addCatalogReasonArtNoImage": "No artwork to show yet.",
-  "@addCatalogReasonArtNoImage": {
-    "description": "Reason on a disabled add-card catalog Art row when the linked platform publishes no artwork for the card."
+  "addCatalogRowArt": "Art card",
+  "@addCatalogRowArt": {
+    "description": "Label of the add-card catalog's single Art row; one tap adds the card and it picks its own picture."
   },
   "addCatalogConnectMore": "Connect more accounts",
   "@addCatalogConnectMore": {

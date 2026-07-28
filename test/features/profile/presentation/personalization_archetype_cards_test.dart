@@ -1674,8 +1674,8 @@ void main() {
     expect(find.byType(PersonalizationDatum), findsNothing);
   });
 
-  testWidgets('an art card pointing nowhere renders the ground and reads no '
-      'card at all', (tester) async {
+  testWidgets('an unpointed art card resolves the best available art, the '
+      'same way the cover does', (tester) async {
     await tester.pumpWidget(
       _harness(
         card: ArtCard(
@@ -1688,10 +1688,29 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // No source means no platform is read, so the Steam art on offer is not
-    // borrowed — an unpointed card is quiet, not opportunistic.
+    // The normal add stores no source; the card is still born with a picture
+    // whenever the profile carries one anywhere.
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(find.byType(PersonalizationDatum), findsNothing);
+  });
+
+  testWidgets('an unpointed art card with no art anywhere renders the theme '
+      'ground — never empty, never an error tile', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {Platform.gw2: _card(Platform.gw2)},
+      ),
+    );
+    await tester.pumpAndSettle();
+
     expect(find.byType(CachedNetworkImage), findsNothing);
     expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(find.byType(PersonalizationDatum), findsNothing);
   });
 
   testWidgets('ArtCard full renders at the tall portrait aspect, not the '

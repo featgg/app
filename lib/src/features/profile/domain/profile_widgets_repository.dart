@@ -89,12 +89,14 @@ abstract interface class ProfileWidgetsRepository {
     required ProfileWidgetSize size,
   });
 
-  /// Inserts an art widget at [position] with [size], enabled, pointing at
-  /// [source]. Platform-less: an art card reads no account data, it shows a
-  /// picture, and which picture rides in the settings envelope — so the source
-  /// can one day be something with no platform behind it.
+  /// Inserts an art widget at [position] with [size], enabled. Left without a
+  /// [source] — the normal add — the card resolves its picture at render time
+  /// (best available art, else the theme's ground). A source pins it to one
+  /// platform's art; it rides in the settings envelope, not the platform
+  /// column, because an art card reads no account data — the seam through
+  /// which non-platform sources (an uploaded image) arrive later.
   Future<Either<Failure, ProfileWidget>> addArtWidget({
-    required Platform source,
+    Platform? source,
     required int position,
     required ProfileWidgetSize size,
   });

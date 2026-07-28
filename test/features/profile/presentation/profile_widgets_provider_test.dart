@@ -84,7 +84,7 @@ final class _FakeRepository implements ProfileWidgetsRepository {
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
-    required Platform source,
+    Platform? source,
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
