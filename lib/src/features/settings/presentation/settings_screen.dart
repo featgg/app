@@ -7,13 +7,64 @@ import '../../../core/l10n/failure_l10n.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/async_value_widget.dart';
+import '../../connections/domain/connection.dart';
+import '../../connections/domain/platform_descriptor.dart';
 import '../../profile/domain/profile.dart';
 import 'account_section.dart';
 import 'account_section_cancel_controller.dart';
+import 'feed_preview_controller.dart';
 import 'privacy_controller.dart';
 import 'settings_current_privacy_provider.dart';
 import 'settings_deletion_status_provider.dart';
+import 'settings_feed_preview_provider.dart';
 import 'sign_out_controller.dart';
+
+/// A made choice, so "the owner picked Automatic" (a null platform) stays
+/// distinguishable from "the owner dismissed the sheet" (no choice at all).
+class _FeedPreviewChoice {
+  const _FeedPreviewChoice(this.value);
+
+  final Platform? value;
+}
+
+/// Offers Automatic plus every platform the owner can pin, and resolves to the
+/// tapped option — or null when the sheet is dismissed. Plain tiles with a
+/// check on the current choice rather than radios: every row must close the
+/// sheet, including the one already selected, and a radio ignores that tap.
+Future<_FeedPreviewChoice?> _pickFeedPreview(
+  BuildContext context,
+  AppLocalizations l10n,
+  FeedPreviewOptions options,
+) => showModalBottomSheet<_FeedPreviewChoice>(
+  context: context,
+  builder: (sheetContext) {
+    Widget option(Key key, String label, Platform? value) => ListTile(
+      key: key,
+      title: Text(label),
+      trailing: value == options.selected ? const Icon(Icons.check) : null,
+      onTap: () => Navigator.of(sheetContext).pop(_FeedPreviewChoice(value)),
+    );
+
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          option(
+            const Key('feedPreviewOption_default'),
+            l10n.profileFeaturedCardDefault,
+            null,
+          ),
+          for (final platform in options.selectable)
+            option(
+              Key('feedPreviewOption_${platform.name}'),
+              platformDescriptors[platform]?.displayName ?? platform.name,
+              platform,
+            ),
+        ],
+      ),
+    );
+  },
+);
 
 /// Settings screen: privacy toggle and sign-out, reached from the profile
 /// gear action. The profile refreshes its own read whenever this screen is
@@ -88,8 +139,31 @@ class SettingsScreen extends ConsumerWidget {
       }
     });
 
+    ref.listen<AsyncValue<void>>(feedPreviewControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (!context.mounted || !next.hasError) return;
+      final error = next.error!;
+      final msg = error is Failure
+          ? error.localizedMessage(l10n)
+          : l10n.errorUnexpected;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const Key('settingsFeedPreviewErrorSnackBar'),
+            content: Text(msg),
+          ),
+        );
+    });
+
     final privacyAsync = ref.watch(settingsCurrentPrivacyProvider);
+    final feedPreviewAsync = ref.watch(settingsFeedPreviewProvider);
     final isWriting = ref.watch(privacyControllerProvider).isLoading;
+    final isWritingFeedPreview = ref
+        .watch(feedPreviewControllerProvider)
+        .isLoading;
     final isSigningOut = ref.watch(signOutControllerProvider).isLoading;
     // Fail-open: a loading or errored status read leaves the tile enabled, so a
     // transient read never locks the user out of the delete flow.
@@ -127,6 +201,36 @@ class SettingsScreen extends ConsumerWidget {
                                   : ProfilePrivacy.public,
                             );
                       },
+              ),
+            ),
+            const Divider(height: AppSpacing.xs),
+            // The feed preview lives here, not on the profile: it decides how
+            // the profile reads in discovery, which is the one surface the
+            // owner cannot see from their own page.
+            AsyncValueWidget<FeedPreviewOptions>(
+              value: feedPreviewAsync,
+              onRetry: () => ref.invalidate(settingsFeedPreviewProvider),
+              data: (options) => ListTile(
+                key: const Key('settingsFeedPreviewTile'),
+                enabled: !isWritingFeedPreview,
+                title: Text(
+                  options.selected == null
+                      ? l10n.profileFeaturedCardDefault
+                      : platformDescriptors[options.selected]?.displayName ??
+                            options.selected!.name,
+                ),
+                subtitle: Text(l10n.settingsFeedPreviewLabel),
+                onTap: () async {
+                  final picked = await _pickFeedPreview(context, l10n, options);
+                  // A dismissed sheet yields no choice; re-picking the current
+                  // value is not an edit and costs no write.
+                  if (picked == null || picked.value == options.selected) {
+                    return;
+                  }
+                  await ref
+                      .read(feedPreviewControllerProvider.notifier)
+                      .setFeaturedPlatform(picked.value);
+                },
               ),
             ),
             const Divider(height: AppSpacing.xs),

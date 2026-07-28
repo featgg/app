@@ -243,35 +243,18 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         l10n: l10n,
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      // Both platform preferences read the same connections
-                      // list, so they share one async section: a failed read is
-                      // one message with one retry, not the same error twice.
+                      // The header art stays here because it is visible on the
+                      // profile; the feed preview moved to settings, which is
+                      // where the choices about surfaces the owner cannot see
+                      // from their own page belong.
                       AsyncValueWidget<List<Platform>>(
-                        key: const Key('featuredCardAsyncSection'),
+                        key: const Key('headerArtAsyncSection'),
                         value: ref.watch(connectedPlatformsProvider),
                         onRetry: () =>
                             ref.invalidate(connectedPlatformsProvider),
                         data: (platforms) => Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              l10n.profileFeaturedCardLabel,
-                              style: Theme.of(context).textTheme.labelMedium,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            _PlatformPreferenceSelector(
-                              key: const Key('featuredCardSelector'),
-                              dropdownKey: const Key('featuredCardDropdown'),
-                              selected: draft.featuredPlatform,
-                              platforms: _selectableWith(
-                                platforms,
-                                draft.featuredPlatform,
-                              ),
-                              enabled: !editState.submitting,
-                              defaultLabel: l10n.profileFeaturedCardDefault,
-                              onChanged: controller.selectFeaturedPlatform,
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
                             Text(
                               l10n.profileHeaderArtLabel,
                               style: Theme.of(context).textTheme.labelMedium,

@@ -582,41 +582,6 @@ void main() {
     expect(saveButton().onPressed, isNotNull);
   });
 
-  // ── Featured-card selector tests ──────────────────────────────────────────
-
-  testWidgets(
-    'featured-card selector shows connected platforms and the default option',
-    (tester) async {
-      final connectionsRepo = _FakeConnectionsRepository(
-        connectionsResult: () => right([
-          Connection(
-            platform: Platform.steam,
-            status: ConnectionStatus.active,
-            createdAt: DateTime.utc(2024),
-          ),
-        ]),
-      );
-      await tester.pumpWidget(
-        _screen(
-          _FakeRepository(updateResult: () => right(_profile)),
-          connectionsRepo: connectionsRepo,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // The selector widget is present.
-      expect(find.byKey(const Key('featuredCardSelector')), findsOneWidget);
-
-      // Open the dropdown.
-      await tester.tap(find.byKey(const Key('featuredCardDropdown')));
-      await tester.pumpAndSettle();
-
-      // Both the default option and the Steam platform option are listed.
-      // Assertions key off widget keys / structural behavior, not literal copy.
-      expect(find.byType(DropdownMenuItem<Platform?>), findsWidgets);
-    },
-  );
-
   testWidgets('a connections-read failure renders the retry affordance', (
     tester,
   ) async {
@@ -633,71 +598,8 @@ void main() {
   });
 
   testWidgets(
-    'picking a platform makes the form dirty and submit carries that featuredPlatform',
-    (tester) async {
-      ProfileEdit? capturedEdit;
-
-      // Profile with a Steam connection available.
-      final connectionsRepo = _FakeConnectionsRepository(
-        connectionsResult: () => right([
-          Connection(
-            platform: Platform.steam,
-            status: ConnectionStatus.active,
-            createdAt: DateTime.utc(2024),
-          ),
-        ]),
-      );
-
-      // Use a recording repo to capture the submitted ProfileEdit.
-      final recordingRepo = _RecordingFeaturedRepo(
-        onUpdate: (edit) {
-          capturedEdit = edit;
-          return right(_profile);
-        },
-      );
-
-      await tester.pumpWidget(
-        _screen(recordingRepo, connectionsRepo: connectionsRepo),
-      );
-      await tester.pumpAndSettle();
-
-      // Scroll the dropdown into view before tapping — the form is taller than
-      // the 800×600 test viewport.
-      await tester.ensureVisible(find.byKey(const Key('featuredCardDropdown')));
-      await tester.pumpAndSettle();
-
-      // Open the featured-card dropdown and pick Steam.
-      await tester.tap(find.byKey(const Key('featuredCardDropdown')));
-      await tester.pumpAndSettle();
-
-      // After the dropdown opens, items appear in an overlay.  The Steam entry
-      // is the only DropdownMenuItem whose value equals Platform.steam.
-      final steamItems = find.byWidgetPredicate(
-        (w) => w is DropdownMenuItem<Platform?> && w.value == Platform.steam,
-      );
-      await tester.tap(steamItems.last);
-      await tester.pumpAndSettle();
-
-      // Form is now dirty — Save button is enabled.
-      final saveButton = tester.widget<TextButton>(
-        find.descendant(
-          of: find.byKey(const Key('profileSaveButton')),
-          matching: find.byType(TextButton),
-        ),
-      );
-      expect(saveButton.onPressed, isNotNull);
-
-      // Tap Save.
-      await tester.tap(find.byKey(const Key('profileSaveButton')));
-      await tester.pumpAndSettle();
-
-      expect(capturedEdit, isNotNull);
-      expect(capturedEdit!.featuredPlatform, Platform.steam);
-    },
-  );
-
-  testWidgets(
-    'picking header art carries it on submit without touching the featured card',
+    'picking header art carries it on submit, and the feed preview this form '
+    'no longer edits rides through unchanged',
     (tester) async {
       ProfileEdit? capturedEdit;
 
