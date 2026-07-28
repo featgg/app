@@ -30,11 +30,19 @@ class ArtCard extends ConsumerWidget {
     required this.widget,
     required this.size,
     this.cardSource,
+    this.headerPlatform,
+    this.featuredPlatform,
   });
 
   final ProfileWidget widget;
   final ProfileCardSize size;
   final CardSource? cardSource;
+
+  /// The profile's own art preferences, forwarded so an unpointed card
+  /// resolves through the cover's full chain — chosen, then featured, then the
+  /// first platform publishing any — not a preference-blind version of it.
+  final Platform? headerPlatform;
+  final Platform? featuredPlatform;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,13 +51,16 @@ class ArtCard extends ConsumerWidget {
     if (source != null) {
       art = artOf(resolveCard(ref, cardSource, source));
     } else {
-      // Unpointed: the first platform that publishes art, in the cover's
-      // resolution order, so the card and the cover agree on what "your best
-      // art" means.
-      art = resolveProfileHeader({
-        for (final platform in Platform.values)
-          platform: resolveCard(ref, cardSource, platform),
-      }).art;
+      // Unpointed: the same resolution the cover runs, preferences included,
+      // so the card and the cover agree on what "your best art" means.
+      art = resolveProfileHeader(
+        {
+          for (final platform in Platform.values)
+            platform: resolveCard(ref, cardSource, platform),
+        },
+        chosen: headerPlatform,
+        featured: featuredPlatform,
+      ).art;
     }
 
     return PersonalizationCardShell(

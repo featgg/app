@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/core.dart';
+import '../../connections/domain/connection.dart';
 import '../domain/profile_archetype.dart';
 import '../domain/profile_widget.dart';
 import 'profile_owner_cards_provider.dart';
@@ -33,6 +34,8 @@ Widget personalizationCardFor(
   required ProfileCardSize size,
   CardSource? cardSource,
   DateTime? memberSince,
+  Platform? headerPlatform,
+  Platform? featuredPlatform,
 }) {
   final archetype = archetypeForWidget(widget);
   final effectiveSize = supportedSizes(archetype).contains(size)
@@ -77,6 +80,8 @@ Widget personalizationCardFor(
       widget: widget,
       size: effectiveSize,
       cardSource: cardSource,
+      headerPlatform: headerPlatform,
+      featuredPlatform: featuredPlatform,
     ),
     ProfileArchetype.fallback => FallbackCard(
       widget: widget,

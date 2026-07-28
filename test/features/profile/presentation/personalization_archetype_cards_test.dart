@@ -1694,6 +1694,72 @@ void main() {
     expect(find.byType(PersonalizationDatum), findsNothing);
   });
 
+  testWidgets('an unpointed art card honors the featured platform over enum '
+      'order, like the cover', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+          featuredPlatform: Platform.chess,
+        ),
+        cards: {
+          // Steam comes first in enum order; featured points later.
+          Platform.steam: _heroCard(Platform.steam, _coverA),
+          Platform.chess: _heroCard(Platform.chess, _coverB),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverB), findsOneWidget);
+    expect(_artFor(_coverA), findsNothing);
+  });
+
+  testWidgets('an unpointed art card honors the chosen header platform over '
+      'the featured one — the cover chain, in the cover order', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: ArtCard(
+          widget: _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+          headerPlatform: Platform.chess,
+          featuredPlatform: Platform.steam,
+        ),
+        cards: {
+          Platform.steam: _heroCard(Platform.steam, _coverA),
+          Platform.chess: _heroCard(Platform.chess, _coverB),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverB), findsOneWidget);
+  });
+
+  testWidgets('personalizationCardFor forwards the profile preferences to the '
+      'art card', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          _artWidget('a'),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+          featuredPlatform: Platform.chess,
+        ),
+        cards: {
+          Platform.steam: _heroCard(Platform.steam, _coverA),
+          Platform.chess: _heroCard(Platform.chess, _coverB),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverB), findsOneWidget);
+  });
+
   testWidgets('an unpointed art card with no art anywhere renders the theme '
       'ground — never empty, never an error tile', (tester) async {
     await tester.pumpWidget(

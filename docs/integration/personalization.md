@@ -61,10 +61,14 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `main` — a platform-bound card showing the owner's primary game / character /
   mode on one connected platform (Steam top game, WoW character, GW2 main, League
   top mastery, Chess primary mode). Reads only already-published card data.
+- `art` — a visual card carrying a picture and no data. It is not
+  platform-bound: which picture it shows is a client-side choice carried in
+  `settings` (see below), defaulting to a client-resolved best available image
+  when absent.
 
 `platform`, `template`, `composed_card`, `showcase`, `collection`,
-`game_collector`, `completionist`, `passport`, `rank`, and `main` are the kinds
-the client writes today; `data_menu` is reserved for a later phase.
+`game_collector`, `completionist`, `passport`, `rank`, `main`, and `art` are
+the kinds the client writes today; `data_menu` is reserved for a later phase.
 (Data-menu curation already ships, but as the `data_menu_items` setting on a
 `platform` widget — see below — not as a `data_menu`-typed row.)
 
@@ -94,6 +98,8 @@ Whether `platform` is required or must be null depends on `type`:
   (the platform whose competitive standing it renders).
 - `type = main` → `platform` **must be a non-null** value from the list above
   (the platform whose primary game/character/mode it renders).
+- `type = art` → `platform` **must be null** (the card reads no account data;
+  its picture source is a `settings` choice, not a binding).
 
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
@@ -112,6 +118,10 @@ client-enforced, not server-validated — the client offers only legal sizes.
     field — `"data_menu_items": ["<platform>.<stat_or_field>", ...]`, the
     stable pointers a `platform` widget surfaces. It is additive, ignored when
     absent (an un-customized widget behaves as before), and never bumps the
+    version. An `art` widget may carry its picture source under another such
+    field — `"art": { "source": "<platform>" }` — the platform whose artwork it
+    shows. It is likewise additive and optional: absent means the client
+    resolves the best available image at render time, and it never bumps the
     version. A `template` widget carries its choice under another such field —
     `"template": { "id": "<templateId>", "slots": { "<slotId>":
     "<data_menu_item_id>" } }` — the chosen template and its per-slot fills. It
