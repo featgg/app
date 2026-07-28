@@ -103,48 +103,18 @@ class ProfileComposition extends _$ProfileComposition {
     // either direction — reviving a cleared layout or wiping a saved one). On a
     // fresh mount nothing has persisted and [layout] is authoritative.
     final seed = state.hasPersisted ? state.saved : layout;
-    final normalized = normalizeLayout(seed, byId.keys.toSet());
+    // A profile whose owner never arranged one opens on what the read view is
+    // already showing. Seeding empty here would open an empty editor over a
+    // profile full of cards.
+    final normalized = seed.isEmpty && !state.hasPersisted
+        ? defaultLayoutFor(widgets, supportsFull: _supportsFull)
+        : normalizeLayout(seed, byId.keys.toSet());
     state = state.copyWith(
       editing: true,
       working: normalized,
-      saved: normalized,
-      saveFailed: false,
-    );
-  }
-
-  /// Enter edit mode from a not-yet-composed profile, seeding a bootstrap working
-  /// layout of every enabled widget as a full row (disabled widgets are
-  /// excluded; no auto-pairing). The seed order is the question-category
-  /// order: a fresh composition reads top to bottom the way the catalog does,
-  /// with position breaking ties inside a category and the kinds outside the
-  /// category model trailing. `saved` stays empty — the persisted state — so a
-  /// plain Save persists the bootstrap and Cancel keeps nothing.
-  void startComposing(List<ProfileWidget> widgets) {
-    final byId = {for (final w in widgets) w.id: w};
-    _captureSupport(byId);
-    final enabled =
-        [
-          for (final w in widgets)
-            if (w.isEnabled) w,
-        ]..sort((a, b) {
-          final categoryA =
-              cardCategory(a.kind)?.index ?? ProfileCardCategory.values.length;
-          final categoryB =
-              cardCategory(b.kind)?.index ?? ProfileCardCategory.values.length;
-          if (categoryA != categoryB) return categoryA - categoryB;
-          return a.position.compareTo(b.position);
-        });
-    state = state.copyWith(
-      editing: true,
-      // A half-only archetype can't seed as a full row; it bootstraps as a
-      // single-slot pair (centered orphan) so its slot is legal from the start,
-      // matching the moveToGap rule. Defensive: no current archetype is half-only,
-      // so today every widget takes the FullRow path.
-      working: [
-        for (final w in enabled)
-          _supportsFull(w.id) ? FullRow(w.id) : PairRow(left: w.id),
-      ],
-      saved: const [],
+      // Unarranged opens dirty on purpose: the arrangement it shows is derived,
+      // not persisted, so Save has something to write.
+      saved: seed.isEmpty && !state.hasPersisted ? const [] : normalized,
       saveFailed: false,
     );
   }

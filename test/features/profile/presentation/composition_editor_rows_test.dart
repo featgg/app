@@ -100,10 +100,10 @@ void main() {
 
     // Materialize the owner widgets the editor rows read, then seed the editor.
     await container.read(ownerProfileWidgetsProvider.future);
-    container.read(profileCompositionProvider.notifier).startComposing(const [
-      _rank,
-      _main,
-    ]);
+    container.read(profileCompositionProvider.notifier).startEditing(
+      const [],
+      const [_rank, _main],
+    );
 
     await tester.pumpWidget(_harness(container));
     await tester.pumpAndSettle();

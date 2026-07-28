@@ -1,7 +1,44 @@
+import 'profile_archetype.dart';
 import 'profile_layout.dart';
+import 'profile_widget.dart';
 
 /// Which side of a target card a paired half lands on.
 enum DropSide { left, right }
+
+/// The arrangement a profile reads in when its owner has never arranged one:
+/// every enabled widget as a full row, ordered by the question-category the
+/// add catalog groups by, position breaking ties inside a category and the
+/// kinds outside the category model trailing.
+///
+/// One function rather than one per surface, because the read view, the
+/// visitor render and the editor's bootstrap must all show the same profile —
+/// a second ordering written anywhere would silently disagree with this one.
+List<ProfileLayoutRow> defaultLayoutFor(
+  List<ProfileWidget> widgets, {
+  CardSizeSupport? supportsFull,
+}) {
+  final ordered =
+      [
+        for (final w in widgets)
+          if (w.isEnabled) w,
+      ]..sort((a, b) {
+        final categoryA =
+            cardCategory(a.kind)?.index ?? ProfileCardCategory.values.length;
+        final categoryB =
+            cardCategory(b.kind)?.index ?? ProfileCardCategory.values.length;
+        if (categoryA != categoryB) return categoryA - categoryB;
+        return a.position.compareTo(b.position);
+      });
+  // A half-only archetype cannot seed as a full row; it starts as a
+  // single-slot pair (a centered orphan) so its slot is legal from the start.
+  // Defensive: no current archetype is half-only.
+  return [
+    for (final w in ordered)
+      supportsFull == null || supportsFull(w.id)
+          ? FullRow(w.id)
+          : PairRow(left: w.id),
+  ];
+}
 
 /// Answers whether the card behind [cardId] supports a given size. The controller
 /// builds one of these per profile from the archetype registry so these pure

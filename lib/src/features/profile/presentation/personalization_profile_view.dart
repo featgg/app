@@ -8,6 +8,7 @@ import '../../../core/core.dart';
 import '../../connections/domain/connection.dart';
 import '../domain/profile.dart';
 import '../domain/profile_archetype.dart';
+import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
 import 'personalization_archetype_cards.dart';
@@ -214,8 +215,12 @@ class _LayoutRows extends ConsumerWidget {
           for (final w in widgets)
             if (w.isEnabled) w.id: w,
         };
+        // A profile whose owner never arranged one still shows its cards, in
+        // the order the editor would seed — arranging is a refinement, not a
+        // precondition for being rendered.
+        final effective = layout.isEmpty ? defaultLayoutFor(widgets) : layout;
         final rows = <Widget>[];
-        for (final row in layout) {
+        for (final row in effective) {
           final built = _buildRow(row, byId);
           if (built == null) continue;
           if (rows.isNotEmpty) {

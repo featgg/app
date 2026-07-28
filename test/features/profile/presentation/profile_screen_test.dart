@@ -11,6 +11,8 @@ import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
+import 'package:featgg/src/features/profile/presentation/profile_header.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:flutter/material.dart';
@@ -360,146 +362,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 }
 
-/// Holds the widgets future open so the cards-region loading state is
-/// observable.
-final class _PendingWidgetsRepository implements ProfileWidgetsRepository {
-  final _completer = Completer<Either<Failure, List<ProfileWidget>>>();
-
-  @override
-  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() =>
-      _completer.future;
-
-  @override
-  Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
-    String userId,
-  ) async => right(const []);
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addPlatformWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addComposedWidget({
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addShowcaseWidget({
-    required Platform platform,
-    required ShowcaseSelection selection,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addCollectionWidget({
-    required CollectionSelection selection,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addArtWidget({
-    Platform? source,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addPassportWidget({
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addRankWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addMainWidget({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setCollectionSize(
-    String id,
-    ProfileWidgetSize size,
-    CollectionSelection selection,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setTemplateFill(
-    String id,
-    ProfileWidgetSize size,
-    TemplateFill fill,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setComposedFill(
-    String id,
-    ProfileWidgetSize size,
-    ComposedFill fill,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> removeWidget(String id) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setSize(
-    String id,
-    ProfileWidgetSize size,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setShowcaseSize(
-    String id,
-    ProfileWidgetSize size,
-    ShowcaseSelection selection,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setDataMenuSelection(
-    String id,
-    ProfileWidgetSize size,
-    DataMenuSelection selection,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
-      throw UnimplementedError();
-}
-
 /// Returns a fixed card for any platform.
 final class _FakeCardsRepository implements CardsRepository {
   _FakeCardsRepository(this._card);
@@ -603,15 +465,6 @@ ProfileWidget _steamWidget() => const ProfileWidget(
   size: ProfileWidgetSize.small,
 );
 
-ProfileWidget _hiddenSteamWidget() => const ProfileWidget(
-  id: 'w-1',
-  kind: ProfileWidgetKind.platform,
-  platform: Platform.steam,
-  position: 0,
-  isEnabled: false,
-  size: ProfileWidgetSize.small,
-);
-
 const _profile = Profile(
   id: 'user-1',
   username: 'testuser',
@@ -623,19 +476,7 @@ const _profile = Profile(
   featuredPlatform: null,
 );
 
-const _privateProfile = Profile(
-  id: 'user-2',
-  username: 'private',
-  displayName: 'Private User',
-  avatarUrl: null,
-  bio: null,
-  theme: ProfileTheme.crimson,
-  privacy: ProfilePrivacy.private,
-  featuredPlatform: null,
-);
-
-// A profile with a composed layout routes to the personalization editor rather
-// than the legacy grid.
+// A profile that already carries a saved arrangement.
 const _composedProfile = Profile(
   id: 'user-1',
   username: 'testuser',
@@ -681,10 +522,7 @@ Widget _screen(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: ProfileScreen(
-        // Mirrors the router's composition-root wiring with a fake renderer.
-        cardBuilder: (card) => Text(card.title),
-      ),
+      home: const ProfileScreen(),
     ),
   );
 }
@@ -727,8 +565,7 @@ Widget _profileToSettingsRouter(ProfileRepository repo) {
     routes: [
       GoRoute(
         path: '/profile',
-        builder: (context, state) =>
-            ProfileScreen(cardBuilder: (card) => Text(card.title)),
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/settings',
@@ -800,8 +637,7 @@ Widget _profileToSettingsRouter(ProfileRepository repo) {
                 key: const Key('goToProfile'),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) =>
-                        ProfileScreen(cardBuilder: (card) => Text(card.title)),
+                    builder: (_) => const ProfileScreen(),
                   ),
                 ),
                 child: const Text('open'),
@@ -859,16 +695,13 @@ void main() {
     await tester.pumpWidget(_screen(repo));
     await tester.pumpAndSettle();
 
-    // Display name, handle, and bio are present as text nodes. The handle
-    // assertion matches the username data value only — the surrounding ARB
-    // template (the '@' prefix) is localized copy and must not be reproduced
-    // here, so a copy edit to it cannot break this test.
+    // Identity renders through the profile header, the one place it lives now.
+    // The handle assertion matches the username data value only — the '@'
+    // prefix is localized copy, so a copy edit cannot break this test.
+    expect(find.byKey(kProfileHeaderNameKey), findsOneWidget);
     expect(find.text(_profile.displayName), findsOneWidget);
     expect(find.textContaining(_profile.username), findsOneWidget);
     expect(find.text(_profile.bio!), findsOneWidget);
-
-    // Avatar widget is present (icon placeholder when avatarUrl is null).
-    expect(find.byIcon(Icons.person), findsOneWidget);
 
     // The screen body is wrapped in SafeArea (architecture convention).
     expect(
@@ -899,43 +732,7 @@ void main() {
     expect(repo.calls, greaterThan(callsBefore));
   });
 
-  testWidgets('renders the widget grid when the owner has widgets', (
-    tester,
-  ) async {
-    final repo = _FakeRepository(result: () async => right(_profile));
-    final widgetsRepo = _FakeWidgetsRepository(
-      fetchResult: right([_steamWidget()]),
-    );
-    final cardsRepo = _FakeCardsRepository(_steamCard());
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
-    expect(find.byKey(const Key('profileWidgetsEmpty')), findsNothing);
-    // The card renders through the injected builder.
-    expect(find.text(_steamCard().title), findsOneWidget);
-  });
-
-  testWidgets('shows the empty state when the owner has no widgets', (
-    tester,
-  ) async {
-    final repo = _FakeRepository(result: () async => right(_profile));
-
-    await tester.pumpWidget(_screen(repo));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profileWidgetsEmpty')), findsOneWidget);
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
-  });
-
-  testWidgets('a composed-layout profile mounts the personalization editor', (
-    tester,
-  ) async {
-    // A non-empty layout routes to the personalization render (its edit entry in
-    // the app bar) instead of the legacy grid.
+  testWidgets('an arranged profile renders its cards', (tester) async {
     final repo = _FakeRepository(result: () async => right(_composedProfile));
     final widgetsRepo = _FakeWidgetsRepository(
       fetchResult: right([_steamWidget()]),
@@ -947,8 +744,29 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(personalizationCardKey('w-1')), findsOneWidget);
     expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+  });
+
+  testWidgets('an UNarranged profile renders the same cards, on the same '
+      'surface', (tester) async {
+    // The heart of the single render path: a profile whose owner never saved
+    // an arrangement is not a different kind of profile. Before this, it fell
+    // to a second, differently-shaped page.
+    final repo = _FakeRepository(result: () async => right(_profile));
+    final widgetsRepo = _FakeWidgetsRepository(
+      fetchResult: right([_steamWidget()]),
+    );
+    final cardsRepo = _FakeCardsRepository(_steamCard());
+
+    await tester.pumpWidget(
+      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_profile.layout, isEmpty);
+    expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
+    expect(find.byKey(personalizationCardKey('w-1')), findsOneWidget);
   });
 
   testWidgets('composed surface app bar is themed to the palette', (
@@ -1037,89 +855,6 @@ void main() {
     expect(tester.takeException(), isNull, reason: 'edit mode');
   });
 
-  testWidgets('an empty-layout profile keeps the legacy grid', (tester) async {
-    final repo = _FakeRepository(result: () async => right(_profile));
-    final widgetsRepo = _FakeWidgetsRepository(
-      fetchResult: right([_steamWidget()]),
-    );
-    final cardsRepo = _FakeCardsRepository(_steamCard());
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
-    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
-  });
-
-  testWidgets('the personalize entry appears with an enabled widget and an '
-      'empty layout', (tester) async {
-    final repo = _FakeRepository(result: () async => right(_profile));
-    final widgetsRepo = _FakeWidgetsRepository(
-      fetchResult: right([_steamWidget()]),
-    );
-    final cardsRepo = _FakeCardsRepository(_steamCard());
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profilePersonalizeButton')), findsOneWidget);
-  });
-
-  testWidgets('the personalize entry is absent when no widget is enabled', (
-    tester,
-  ) async {
-    // A single disabled widget → nothing to compose → no entry, legacy grid
-    // still renders (the widget shown dimmed).
-    final repo = _FakeRepository(result: () async => right(_profile));
-    final widgetsRepo = _FakeWidgetsRepository(
-      fetchResult: right([_hiddenSteamWidget()]),
-    );
-    final cardsRepo = _FakeCardsRepository(_steamCard());
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profilePersonalizeButton')), findsNothing);
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
-  });
-
-  testWidgets(
-    'personalize then cancel returns to the grid without persisting',
-    (tester) async {
-      final repo = _FakeRepository(result: () async => right(_profile));
-      final widgetsRepo = _FakeWidgetsRepository(
-        fetchResult: right([_steamWidget()]),
-      );
-      final cardsRepo = _FakeCardsRepository(_steamCard());
-
-      await tester.pumpWidget(
-        _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
-      await tester.pumpAndSettle();
-      // The composition editor is now mounted.
-      expect(
-        find.byKey(const Key('profileComposeCancelButton')),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.byKey(const Key('profileComposeCancelButton')));
-      await tester.pumpAndSettle();
-
-      // Back on the legacy grid; nothing was persisted.
-      expect(find.byKey(const Key('profilePersonalizeButton')), findsOneWidget);
-      expect(repo.setLayoutCalls, equals(0));
-    },
-  );
-
   testWidgets('personalize then done persists the bootstrap layout', (
     tester,
   ) async {
@@ -1134,7 +869,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
@@ -1146,7 +881,7 @@ void main() {
   });
 
   testWidgets('after a successful first-composition save the composed render '
-      'stays (never reverts to the legacy grid)', (tester) async {
+      'stays (it does not revert)', (tester) async {
     // The repository now reports the saved layout on the next read, so the
     // settled end state is the composed surface.
     final repo = _ComposingRepository();
@@ -1160,17 +895,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
     await tester.pumpAndSettle();
 
+    // Back in view mode on the same render, with the arrangement persisted.
     expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
-    expect(find.byKey(const Key('profilePersonalizeButton')), findsNothing);
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileComposeDoneButton')), findsNothing);
+    expect(repo.setLayoutCalls, 1);
   });
 
-  testWidgets('a first-composition save does not blink back to the legacy grid '
+  testWidgets('a first-composition save does not blink '
       'while the profile refetch is in flight', (tester) async {
     // The post-save refetch is held pending; the personalization surface must
     // hold through the window (saved is non-empty before the fresh layout lands).
@@ -1185,16 +922,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
     // Process the save (editing→false + invalidate) with the refetch held open.
     await tester.pump();
     await tester.pump();
 
-    // Mid-refetch: still on the personalization surface, not the legacy grid.
-    expect(find.byKey(const Key('profilePersonalizeButton')), findsNothing);
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
+    // Mid-refetch the render holds: the owner never sees the page change
+    // shape between the save landing and the fresh profile arriving.
+    expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
 
     // Let the refetch land; the composed render settles.
     repo.refetchGate.complete();
@@ -1216,7 +953,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // First composition: Personalize → Done, with the refetch held pending.
-    await tester.tap(find.byKey(const Key('profilePersonalizeButton')));
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
     await tester.pump();
@@ -1236,76 +973,6 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('all-hidden widgets show the grid, not the empty-add hint', (
-    tester,
-  ) async {
-    // A widget that exists with is_enabled=false must not be reported as "no
-    // widgets yet" — the grid renders it normally instead.
-    final repo = _FakeRepository(result: () async => right(_profile));
-    final widgetsRepo = _FakeWidgetsRepository(
-      fetchResult: right([_hiddenSteamWidget()]),
-    );
-    final cardsRepo = _FakeCardsRepository(_steamCard());
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: widgetsRepo, cardsRepo: cardsRepo),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsOneWidget);
-    expect(find.byKey(const Key('profileWidgetsEmpty')), findsNothing);
-  });
-
-  testWidgets('shows a section loader while the widgets read is in flight', (
-    tester,
-  ) async {
-    // Profile resolves immediately; the widgets read is held pending so only
-    // the cards region is loading.
-    final repo = _FakeRepository(result: () async => right(_profile));
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: _PendingWidgetsRepository()),
-    );
-    // Pump frames for the profile future while the widgets future stays
-    // pending. pumpAndSettle cannot be used — the pending future never quiesces.
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byKey(const Key('profileCardsSkeleton')), findsOneWidget);
-    expect(find.byKey(const Key('profileWidgetsGrid')), findsNothing);
-    expect(find.byKey(const Key('profileWidgetsEmpty')), findsNothing);
-  });
-
-  testWidgets('hides the add affordance while the widgets read is in flight', (
-    tester,
-  ) async {
-    // While the widgets read has no value, Add must be absent so the picker
-    // cannot assign a position against stale/empty data and collide on the
-    // unique column.
-    final repo = _FakeRepository(result: () async => right(_profile));
-
-    await tester.pumpWidget(
-      _screen(repo, widgetsRepo: _PendingWidgetsRepository()),
-    );
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byKey(const Key('profileAddCardButton')), findsNothing);
-  });
-
-  testWidgets('exposes the add-card affordance once the widgets read loads', (
-    tester,
-  ) async {
-    // The single add entry point renders once the widgets read has a value (it
-    // supplies the insert position); connection state no longer gates it.
-    final repo = _FakeRepository(result: () async => right(_profile));
-
-    await tester.pumpWidget(_screen(repo));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('profileAddCardButton')), findsOneWidget);
-  });
-
   testWidgets('the add-card picker offers a tile for a library game', (
     tester,
   ) async {
@@ -1323,7 +990,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profileAddCardButton')));
+    // Add lives inside edit mode: enter it, then use the app-bar action.
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
     // The showcase tiles now live behind the Milestone catalog row.
     await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
@@ -1363,7 +1033,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profileAddCardButton')));
+    // Add lives inside edit mode: enter it, then use the app-bar action.
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
     await tester.tap(find.byKey(const Key('milestoneStepRow')));
@@ -1406,7 +1079,10 @@ void main() {
     await tester.pumpAndSettle();
     final fetchesBefore = widgetsRepo.fetchCalls;
 
-    await tester.tap(find.byKey(const Key('profileAddCardButton')));
+    // Add lives inside edit mode: enter it, then use the app-bar action.
+    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('milestoneStepRow')));
     await tester.tap(find.byKey(const Key('milestoneStepRow')));
@@ -1417,17 +1093,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(widgetsRepo.fetchCalls, greaterThan(fetchesBefore));
-  });
-
-  testWidgets('private profile shows the private indicator', (tester) async {
-    final repo = _FakeRepository(result: () async => right(_privateProfile));
-
-    await tester.pumpWidget(_screen(repo));
-    await tester.pumpAndSettle();
-
-    // The private icon is keyed; the public icon must not be present.
-    expect(find.byKey(const Key('privacyPrivateIcon')), findsOneWidget);
-    expect(find.byKey(const Key('privacyPublicIcon')), findsNothing);
   });
 
   testWidgets('shows the settings gear in the app bar', (tester) async {
