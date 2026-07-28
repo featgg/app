@@ -627,8 +627,24 @@ void main() {
     await tester.pumpAndSettle();
     await _open(tester);
 
-    // Every archetype group renders its header (built widgets are found even
-    // when scrolled off-screen), and the dead mode toggle is gone.
+    // Every question-category renders its header (built widgets are found
+    // even when scrolled off-screen), in the declared category order, and no
+    // archetype-named group remains.
+    double lastTop = double.negativeInfinity;
+    for (final key in const [
+      'catalogGroupWhoIAm',
+      'catalogGroupWhatIPlay',
+      'catalogGroupHowGoodIAm',
+      'catalogGroupWhatIAchieved',
+      'catalogGroupWhatIOwn',
+      'catalogGroupArt',
+    ]) {
+      final finder = find.byKey(Key(key));
+      expect(finder, findsOneWidget, reason: key);
+      final top = tester.getTopLeft(finder).dy;
+      expect(top, greaterThan(lastTop), reason: '$key out of order');
+      lastTop = top;
+    }
     for (final key in const [
       'catalogGroupIdentity',
       'catalogGroupRank',
@@ -636,11 +652,31 @@ void main() {
       'catalogGroupMilestone',
       'catalogGroupCollection',
       'catalogGroupAchievements',
-      'catalogGroupArt',
     ]) {
-      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      expect(find.byKey(Key(key)), findsNothing, reason: key);
     }
     expect(find.byKey(const Key('addCardModeToggle')), findsNothing);
+
+    // The merged accomplishment category holds both its rows (the milestone
+    // step and the completionist, disabled here for lack of stats): the
+    // nearest Column above the header is the group itself, so a row matching
+    // under it proves membership rather than mere presence in the sheet.
+    final achievedGroup = find
+        .ancestor(
+          of: find.byKey(const Key('catalogGroupWhatIAchieved')),
+          matching: find.byType(Column),
+        )
+        .first;
+    for (final row in const [
+      'milestoneStepRow',
+      'completionistDisabledRow_steam',
+    ]) {
+      expect(
+        find.descendant(of: achievedGroup, matching: find.byKey(Key(row))),
+        findsOneWidget,
+        reason: row,
+      );
+    }
   });
 
   testWidgets('Identity row: single-tap adds a wide passport at max+1 and '
@@ -702,7 +738,7 @@ void main() {
     await _open(tester);
 
     expect(find.byKey(const Key('passportAddRow')), findsOneWidget);
-    expect(find.byKey(const Key('catalogGroupMilestone')), findsNothing);
+    expect(find.byKey(const Key('catalogGroupWhatIAchieved')), findsNothing);
   });
 
   testWidgets(
@@ -1122,14 +1158,13 @@ void main() {
     await _open(tester);
 
     expect(tester.takeException(), isNull);
-    // Every group is present in the one scroll surface.
+    // Every category is present in the one scroll surface.
     for (final key in const [
-      'catalogGroupIdentity',
-      'catalogGroupRank',
-      'catalogGroupMain',
-      'catalogGroupMilestone',
-      'catalogGroupCollection',
-      'catalogGroupAchievements',
+      'catalogGroupWhoIAm',
+      'catalogGroupWhatIPlay',
+      'catalogGroupHowGoodIAm',
+      'catalogGroupWhatIAchieved',
+      'catalogGroupWhatIOwn',
       'catalogGroupArt',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget, reason: key);
@@ -1195,7 +1230,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('catalogStepBack')));
     await tester.tap(find.byKey(const Key('catalogStepBack')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('catalogGroupIdentity')), findsOneWidget);
+    expect(find.byKey(const Key('catalogGroupWhoIAm')), findsOneWidget);
     expect(find.byKey(const Key('showcasePickerTile_1')), findsNothing);
 
     // Collection step-2 → select a tile → back → the catalog is shown again.

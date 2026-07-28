@@ -113,16 +113,27 @@ class ProfileComposition extends _$ProfileComposition {
   }
 
   /// Enter edit mode from a not-yet-composed profile, seeding a bootstrap working
-  /// layout of every enabled widget as a full row in display order (disabled
-  /// widgets are excluded; no auto-pairing). `saved` stays empty — the persisted
-  /// state — so a plain Save persists the bootstrap and Cancel keeps nothing.
+  /// layout of every enabled widget as a full row (disabled widgets are
+  /// excluded; no auto-pairing). The seed order is the question-category
+  /// order: a fresh composition reads top to bottom the way the catalog does,
+  /// with position breaking ties inside a category and the kinds outside the
+  /// category model trailing. `saved` stays empty — the persisted state — so a
+  /// plain Save persists the bootstrap and Cancel keeps nothing.
   void startComposing(List<ProfileWidget> widgets) {
     final byId = {for (final w in widgets) w.id: w};
     _captureSupport(byId);
-    final enabled = [
-      for (final w in widgets)
-        if (w.isEnabled) w,
-    ]..sort((a, b) => a.position.compareTo(b.position));
+    final enabled =
+        [
+          for (final w in widgets)
+            if (w.isEnabled) w,
+        ]..sort((a, b) {
+          final categoryA =
+              cardCategory(a.kind)?.index ?? ProfileCardCategory.values.length;
+          final categoryB =
+              cardCategory(b.kind)?.index ?? ProfileCardCategory.values.length;
+          if (categoryA != categoryB) return categoryA - categoryB;
+          return a.position.compareTo(b.position);
+        });
     state = state.copyWith(
       editing: true,
       // A half-only archetype can't seed as a full row; it bootstraps as a

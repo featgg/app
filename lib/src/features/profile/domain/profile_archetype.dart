@@ -79,6 +79,33 @@ ProfileCardFormat renderedCardFormat(
     ? ProfileCardFormat.bleed
     : ProfileCardFormat.framed;
 
+/// The question-category a card belongs to. Declaration order is the canon:
+/// it drives the add catalog's group order and a fresh composition's default
+/// order — the visual family last, because it answers no question.
+enum ProfileCardCategory {
+  whoIAm,
+  whatIPlay,
+  howGoodIAm,
+  whatIAchieved,
+  whatIOwn,
+  art,
+}
+
+/// The category for [kind], or null for the kinds outside the category model
+/// — the legacy row kinds on their way out of the catalog; a fresh
+/// composition seeds those after every categorized card.
+ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
+  ProfileWidgetKind.passport => ProfileCardCategory.whoIAm,
+  ProfileWidgetKind.main => ProfileCardCategory.whatIPlay,
+  ProfileWidgetKind.rank => ProfileCardCategory.howGoodIAm,
+  ProfileWidgetKind.showcase ||
+  ProfileWidgetKind.completionist => ProfileCardCategory.whatIAchieved,
+  ProfileWidgetKind.collection ||
+  ProfileWidgetKind.gameCollector => ProfileCardCategory.whatIOwn,
+  ProfileWidgetKind.art => ProfileCardCategory.art,
+  _ => null,
+};
+
 /// Whether [a]'s full variant renders portrait rather than the standard
 /// landscape full card (spec §6.1: the designed variant accommodates the
 /// art's orientation). Art only: the picture is the whole card, so its full

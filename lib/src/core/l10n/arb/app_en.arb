@@ -1554,31 +1554,31 @@
   },
   "addCatalogTitle": "Add a card",
   "@addCatalogTitle": {
-    "description": "Title of the add-card sheet, a flat archetype-grouped catalog of the cards the owner can add."
+    "description": "Title of the add-card sheet, a catalog grouped by the question each card answers."
   },
-  "addCatalogGroupIdentity": "Identity",
-  "@addCatalogGroupIdentity": {
-    "description": "Header of the add-card catalog's Identity group (the cross-platform Passport card)."
+  "addCatalogGroupWhoIAm": "Who I am",
+  "@addCatalogGroupWhoIAm": {
+    "description": "Header of the add-card catalog's identity category (the cross-platform Passport card)."
   },
-  "addCatalogGroupRank": "Rank",
-  "@addCatalogGroupRank": {
-    "description": "Header of the add-card catalog's Rank group (per-platform competitive standing cards)."
+  "addCatalogGroupWhatIPlay": "What I play",
+  "@addCatalogGroupWhatIPlay": {
+    "description": "Header of the add-card catalog's play category (per-platform primary game/character/mode cards)."
   },
-  "addCatalogGroupMain": "Main",
-  "@addCatalogGroupMain": {
-    "description": "Header of the add-card catalog's Main group (per-platform primary game/character/mode cards)."
+  "addCatalogGroupHowGoodIAm": "How good I am",
+  "@addCatalogGroupHowGoodIAm": {
+    "description": "Header of the add-card catalog's skill category (per-platform competitive standing cards)."
   },
-  "addCatalogGroupMilestone": "Milestone",
-  "@addCatalogGroupMilestone": {
-    "description": "Header of the add-card catalog's Milestone group (a single-game showcase from the Steam library)."
+  "addCatalogGroupWhatIAchieved": "What I achieved",
+  "@addCatalogGroupWhatIAchieved": {
+    "description": "Header of the add-card catalog's accomplishment category (single-game milestone and whole-library completionist cards)."
   },
-  "addCatalogGroupCollection": "Collection",
-  "@addCatalogGroupCollection": {
-    "description": "Header of the add-card catalog's Collection group (a curated set and the whole-library collector variant)."
+  "addCatalogGroupWhatIOwn": "What I own",
+  "@addCatalogGroupWhatIOwn": {
+    "description": "Header of the add-card catalog's collection category (a curated set and the whole-library collector variant)."
   },
-  "addCatalogGroupAchievements": "Achievement Grid",
-  "@addCatalogGroupAchievements": {
-    "description": "Header of the add-card catalog's Achievement Grid group (the whole-library completionist variant)."
+  "addCatalogRowMilestone": "Milestone",
+  "@addCatalogRowMilestone": {
+    "description": "Label of the add-card catalog row that opens the single-game milestone picker; its category header no longer names the card."
   },
   "addCatalogGroupArt": "Art",
   "@addCatalogGroupArt": {

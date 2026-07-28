@@ -142,7 +142,7 @@ The registry is the extensibility seam. Each entry declares: the category and qu
 
 Adding a card is one registry entry plus its designed variants; the layout, editor and persistence do not change.
 
-Its seam today is `lib/src/features/profile/domain/profile_archetype.dart`, which carries the archetype set, the wire-kind mapping and the supported sizes. The remaining fields above — category, question, format, origin, scope and availability — are declared there as the catalog work lands; until then they live in each card's own code and in the add catalog.
+Its seam today is `lib/src/features/profile/domain/profile_archetype.dart`, which carries the archetype set, the wire-kind mapping, the supported sizes, the format and the category. The remaining fields above — question, origin, scope and availability — are declared there as the catalog work lands; until then they live in each card's own code and in the add catalog.
 
 ### 7.2 Platform data and art sources
 
