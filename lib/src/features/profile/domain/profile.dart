@@ -59,7 +59,7 @@ final class Profile extends Equatable {
   final DateTime? deletionRequestedAt;
 
   /// The composed profile layout: an ordered list of rows referencing this
-  /// profile's own widget ids (see `docs/personalization/spec.md` §9).
+  /// profile's own widget ids.
   /// Server-managed and read-only to the client; empty for every profile that
   /// has no composed layout, in which case the legacy render path is used.
   final List<ProfileLayoutRow> layout;

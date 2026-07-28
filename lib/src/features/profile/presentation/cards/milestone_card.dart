@@ -10,7 +10,7 @@ import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
 import 'card_key.dart';
 
-/// Milestone archetype (spec §7, evolves the Showcase card): the showcased
+/// Milestone archetype, which the Showcase card evolves into: the showcased
 /// game's cover fills the card with its progress in the datum. Resolves the game
 /// through the pure [resolveShowcase]; a game with no cover — or none resolved —
 /// degrades to the archetype's motif with whatever the datum still names.

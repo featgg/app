@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 /// One row of the profile composition. The *row* — not the card — is the
-/// persisted layout object (see `docs/personalization/spec.md` §9): a [FullRow]
+/// persisted layout object: a [FullRow]
 /// spans the column, a [PairRow] holds up to two side-by-side halves. Rendering
 /// a row never inspects another row (no auto re-flow, no auto-pairing).
 sealed class ProfileLayoutRow extends Equatable {
@@ -20,7 +20,7 @@ final class FullRow extends ProfileLayoutRow {
 
 /// A pair row of up to two half cards. At least one slot is non-null (the
 /// parser guarantees it); a single non-null slot renders a centered orphan
-/// (spec §9), never an empty artifact.
+/// never an empty artifact.
 final class PairRow extends ProfileLayoutRow {
   const PairRow({this.left, this.right});
 
