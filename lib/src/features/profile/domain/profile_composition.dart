@@ -6,29 +6,32 @@ import 'profile_widget.dart';
 enum DropSide { left, right }
 
 /// The arrangement a profile reads in when its owner has never arranged one:
-/// every enabled widget as a full row, ordered by the question-category the
-/// add catalog groups by, position breaking ties inside a category and the
-/// kinds outside the category model trailing.
+/// every widget as a full row, ordered by the question-category the add
+/// catalog groups by, position breaking ties inside a category and the kinds
+/// outside the category model trailing.
 ///
 /// One function rather than one per surface, because the read view, the
 /// visitor render and the editor's bootstrap must all show the same profile —
 /// a second ordering written anywhere would silently disagree with this one.
+///
+/// A hidden widget gets a row here too. The read views drop it when they
+/// resolve the row's card, so it stays hidden; the editor keeps the row, which
+/// is the only place its owner can reach it to move or remove it. Filtering it
+/// out here would strand it instead — present enough for the add catalog to
+/// call it already added, absent everywhere it could be managed.
 List<ProfileLayoutRow> defaultLayoutFor(
   List<ProfileWidget> widgets, {
   CardSizeSupport? supportsFull,
 }) {
-  final ordered =
-      [
-        for (final w in widgets)
-          if (w.isEnabled) w,
-      ]..sort((a, b) {
-        final categoryA =
-            cardCategory(a.kind)?.index ?? ProfileCardCategory.values.length;
-        final categoryB =
-            cardCategory(b.kind)?.index ?? ProfileCardCategory.values.length;
-        if (categoryA != categoryB) return categoryA - categoryB;
-        return a.position.compareTo(b.position);
-      });
+  final ordered = [...widgets]
+    ..sort((a, b) {
+      final categoryA =
+          cardCategory(a.kind)?.index ?? ProfileCardCategory.values.length;
+      final categoryB =
+          cardCategory(b.kind)?.index ?? ProfileCardCategory.values.length;
+      if (categoryA != categoryB) return categoryA - categoryB;
+      return a.position.compareTo(b.position);
+    });
   // A half-only archetype cannot seed as a full row; it starts as a
   // single-slot pair (a centered orphan) so its slot is legal from the start.
   // Defensive: no current archetype is half-only.

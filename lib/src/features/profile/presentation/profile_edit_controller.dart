@@ -87,10 +87,11 @@ class ProfileEditController extends _$ProfileEditController {
       bio: bioRaw.isEmpty ? null : bioRaw,
       theme: profile.theme,
       // Privacy and the feed preview are not edited here — both live in
-      // Settings — but an update writes every field, so this form carries them
-      // through unchanged. What keeps a save from reverting a Settings change
-      // is that the profile screen refetches whenever Settings is dismissed,
-      // so this form always opens on the current values.
+      // Settings — but an update writes every field, so this form carries
+      // through whatever it was opened with. That makes the value it opens on
+      // load-bearing: the profile screen refetches whenever Settings is
+      // dismissed and holds the edit action closed until that lands, so this
+      // form never opens on a value Settings has already changed.
       privacy: profile.privacy,
       featuredPlatform: profile.featuredPlatform,
       headerPlatform: profile.headerPlatform,

@@ -100,31 +100,34 @@ void main() {
     expect(state.isDirty, isFalse);
   });
 
-  test(
-    'startEditing on an unarranged profile bootstraps enabled widgets as full rows in position '
-    'order, excluding disabled, with an empty saved base',
-    () {
-      final container = _container(_FakeRepository());
-      final notifier = container.read(profileCompositionProvider.notifier);
+  test('startEditing on an unarranged profile bootstraps every widget as a full '
+      'row in position order, with an empty saved base', () {
+    final container = _container(_FakeRepository());
+    final notifier = container.read(profileCompositionProvider.notifier);
 
-      // Deliberately unordered input with one disabled widget.
-      final widgets = [
-        _widgetAt('c', 2),
-        _widgetAt('a', 0),
-        _widgetAt('b', 1, enabled: false),
-        _widgetAt('d', 3),
-      ];
-      notifier.startEditing(const [], widgets);
-      final state = container.read(profileCompositionProvider);
+    // Deliberately unordered input with one hidden widget.
+    final widgets = [
+      _widgetAt('c', 2),
+      _widgetAt('a', 0),
+      _widgetAt('b', 1, enabled: false),
+      _widgetAt('d', 3),
+    ];
+    notifier.startEditing(const [], widgets);
+    final state = container.read(profileCompositionProvider);
 
-      expect(state.editing, isTrue);
-      // Enabled widgets only, sorted by position, each a full row.
-      expect(state.working, const [FullRow('a'), FullRow('c'), FullRow('d')]);
-      // Nothing is persisted yet, so a plain Save is dirty (persists the bootstrap).
-      expect(state.saved, isEmpty);
-      expect(state.isDirty, isTrue);
-    },
-  );
+    expect(state.editing, isTrue);
+    // Sorted by position, each a full row — the hidden one included, since
+    // the editor is the only place its owner can reach it.
+    expect(state.working, const [
+      FullRow('a'),
+      FullRow('b'),
+      FullRow('c'),
+      FullRow('d'),
+    ]);
+    // Nothing is persisted yet, so a plain Save is dirty (persists the bootstrap).
+    expect(state.saved, isEmpty);
+    expect(state.isDirty, isTrue);
+  });
 
   test(
     'startEditing on an unarranged profile seeds a Rank and a Main both as full rows (both are '

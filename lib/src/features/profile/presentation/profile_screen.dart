@@ -76,11 +76,17 @@ class ProfileScreen extends ConsumerWidget {
       },
     );
 
+    // Disabled while the read is refreshing. The form is seeded from the
+    // profile handed to it and writes every field back, so opening it on a
+    // value known to be stale — the window right after Settings is dismissed —
+    // would let a save revert what was just changed there.
     IconButton editProfileAction(Profile p) => IconButton(
       key: const Key('profileEditButton'),
       icon: const Icon(Icons.edit_outlined),
       tooltip: l10n.profileEdit,
-      onPressed: () => context.push('/profile/edit', extra: p),
+      onPressed: state.isRefreshing
+          ? null
+          : () => context.push('/profile/edit', extra: p),
     );
 
     // The composed surface hosts its compose controls in the app bar so nothing

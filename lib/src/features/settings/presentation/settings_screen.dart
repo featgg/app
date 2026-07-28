@@ -160,10 +160,14 @@ class SettingsScreen extends ConsumerWidget {
 
     final privacyAsync = ref.watch(settingsCurrentPrivacyProvider);
     final feedPreviewAsync = ref.watch(settingsFeedPreviewProvider);
-    final isWriting = ref.watch(privacyControllerProvider).isLoading;
-    final isWritingFeedPreview = ref
-        .watch(feedPreviewControllerProvider)
-        .isLoading;
+    // Every profile setting writes the whole profile, each from its own
+    // freshly-read snapshot. Two in flight at once means the second one's
+    // snapshot predates the first one's write, and whichever lands last
+    // silently reverts the other — including privacy. So one at a time: any
+    // profile write disables every profile control.
+    final isWritingProfile =
+        ref.watch(privacyControllerProvider).isLoading ||
+        ref.watch(feedPreviewControllerProvider).isLoading;
     final isSigningOut = ref.watch(signOutControllerProvider).isLoading;
     // Fail-open: a loading or errored status read leaves the tile enabled, so a
     // transient read never locks the user out of the delete flow.
@@ -190,7 +194,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 subtitle: Text(l10n.profilePrivacyLabel),
                 value: privacy == ProfilePrivacy.private,
-                onChanged: isWriting
+                onChanged: isWritingProfile
                     ? null
                     : (isPrivate) {
                         ref
@@ -212,7 +216,7 @@ class SettingsScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(settingsFeedPreviewProvider),
               data: (options) => ListTile(
                 key: const Key('settingsFeedPreviewTile'),
-                enabled: !isWritingFeedPreview,
+                enabled: !isWritingProfile,
                 title: Text(
                   options.selected == null
                       ? l10n.profileFeaturedCardDefault
