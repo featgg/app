@@ -12,7 +12,6 @@ import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_archetype_cards.dart';
-import 'package:featgg/src/features/profile/presentation/profile_header.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +27,7 @@ final class _FakeRepository implements ProfileRepository {
   final Future<Either<Failure, Profile>> Function() result;
   int calls = 0;
   int setLayoutCalls = 0;
+  int updateCalls = 0;
   List<ProfileLayoutRow>? lastLayout;
 
   @override
@@ -37,8 +37,10 @@ final class _FakeRepository implements ProfileRepository {
   }
 
   @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_profile);
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async {
+    updateCalls++;
+    return right(_profile);
+  }
 
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
@@ -745,7 +747,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(personalizationCardKey('w-1')), findsOneWidget);
-    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileEditButton')), findsOneWidget);
   });
 
   testWidgets('an UNarranged profile renders the same cards, on the same '
@@ -803,14 +805,14 @@ void main() {
     // View-mode edit entry is an app-bar action, and no floating bar remains.
     expect(
       find.ancestor(
-        of: find.byKey(const Key('profileComposeEditButton')),
+        of: find.byKey(const Key('profileEditButton')),
         matching: find.byType(AppBar),
       ),
       findsOneWidget,
     );
     expect(find.byKey(const Key('profileComposeControlBar')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
 
     // Entering edit rehomes Add/Cancel/Done into the app bar (not over content).
@@ -849,7 +851,7 @@ void main() {
 
     expect(tester.takeException(), isNull, reason: 'view mode');
 
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull, reason: 'edit mode');
@@ -869,7 +871,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
@@ -895,14 +897,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
     await tester.pumpAndSettle();
 
     // Back in view mode on the same render, with the arrangement persisted.
     expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
-    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileEditButton')), findsOneWidget);
     expect(find.byKey(const Key('profileComposeDoneButton')), findsNothing);
     expect(repo.setLayoutCalls, 1);
   });
@@ -922,7 +924,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
     // Process the save (editing→false + invalidate) with the refetch held open.
@@ -939,8 +941,8 @@ void main() {
     expect(find.byType(OwnerProfilePersonalization), findsOneWidget);
   });
 
-  testWidgets('re-entering edit during the post-save refetch keeps the '
-      'just-saved composition (does not wipe the editor)', (tester) async {
+  testWidgets('the edit entry stays closed until the profile refetch lands, '
+      'then opens on the just-saved composition', (tester) async {
     final repo = _ComposingRepository(gateRefetch: true);
     final widgetsRepo = _FakeWidgetsRepository(
       fetchResult: right([_steamWidget()]),
@@ -952,25 +954,30 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // First composition: Personalize → Done, with the refetch held pending.
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    // First composition: edit → Done, with the refetch held pending.
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
     await tester.pump();
     await tester.pump();
 
-    // In view mode over the still-stale (empty) profile, re-enter edit. The seed
-    // must come from the saved composition, not the stale empty layout.
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
-    await tester.pump();
-    await tester.pump();
-
-    // The just-saved card is present and draggable in the editor (a stale-[] seed
-    // would leave a blank editor with no handle).
-    expect(find.byKey(const Key('compositionDragHandle_w-1')), findsOneWidget);
+    // A session writes every profile field back, so it may only open on a
+    // profile known to be current. Mid-refetch there is no such value.
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('profileEditButton')))
+          .onPressed,
+      isNull,
+    );
 
     repo.refetchGate.complete();
     await tester.pumpAndSettle();
+
+    // Once it lands the entry reopens, seeded on the composition just saved —
+    // the card is present and draggable (an empty seed leaves no handle).
+    await tester.tap(find.byKey(const Key('profileEditButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('compositionDragHandle_w-1')), findsOneWidget);
   });
 
   testWidgets('the add-card picker offers a tile for a library game', (
@@ -991,7 +998,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Add lives inside edit mode: enter it, then use the app-bar action.
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
@@ -1034,7 +1041,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Add lives inside edit mode: enter it, then use the app-bar action.
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
@@ -1080,7 +1087,7 @@ void main() {
     final fetchesBefore = widgetsRepo.fetchCalls;
 
     // Add lives inside edit mode: enter it, then use the app-bar action.
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
@@ -1141,7 +1148,7 @@ void main() {
     expect(find.byType(ProfileScreen), findsOneWidget);
 
     // Enter edit mode.
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('profileComposeCancelButton')), findsOneWidget);
 
@@ -1152,7 +1159,7 @@ void main() {
     // The profile route stays; edit mode is exited (the view-mode edit entry is
     // back). Without the PopScope the pop removes ProfileScreen and editing stays.
     expect(find.byType(ProfileScreen), findsOneWidget);
-    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileEditButton')), findsOneWidget);
   });
 
   testWidgets(
@@ -1187,7 +1194,7 @@ void main() {
     await tester.tap(find.byKey(const Key('goToProfile')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
 
     // Make the layout dirty through the controller (no reliance on an in-card
@@ -1206,10 +1213,118 @@ void main() {
 
     expect(find.byType(ProfileScreen), findsOneWidget);
     // Still editing (the view-mode edit entry is absent while saving).
-    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
+    expect(find.byKey(const Key('profileEditButton')), findsNothing);
 
     // Resolve the save so no pending future leaks past the test.
     repo.setGate.complete(right(unit));
     await tester.pumpAndSettle();
+  });
+
+  group('one edit mode', () {
+    Widget host(_FakeRepository repo) => _screen(
+      repo,
+      widgetsRepo: _FakeWidgetsRepository(fetchResult: right([_steamWidget()])),
+      cardsRepo: _FakeCardsRepository(_steamCard()),
+    );
+
+    testWidgets('the profile offers exactly two ways in', (tester) async {
+      // Edit and settings. A third action was the split this closes: a pencil
+      // that reached the top block and a separate button for the cards.
+      await tester.pumpWidget(
+        host(_FakeRepository(result: () async => right(_composedProfile))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<AppBar>(find.byType(AppBar)).actions, hasLength(2));
+      expect(find.byKey(const Key('settingsEntryButton')), findsOne);
+      expect(find.byKey(const Key('profileEditButton')), findsOne);
+    });
+
+    testWidgets('editing turns what the profile shows into editors, and '
+        'leaving puts it back', (tester) async {
+      await tester.pumpWidget(
+        host(_FakeRepository(result: () async => right(_composedProfile))),
+      );
+      await tester.pumpAndSettle();
+
+      const inPlace = [
+        'profileHeaderCoverEditTarget',
+        'profileHeaderAvatarEditTarget',
+        'profileHeaderIdentityEditTarget',
+        'profileEditThemeStrip',
+      ];
+      for (final key in inPlace) {
+        expect(find.byKey(Key(key)), findsNothing, reason: key);
+      }
+
+      await tester.tap(find.byKey(const Key('profileEditButton')));
+      await tester.pumpAndSettle();
+      for (final key in inPlace) {
+        expect(find.byKey(Key(key)), findsOne, reason: key);
+      }
+
+      await tester.tap(find.byKey(const Key('profileComposeCancelButton')));
+      await tester.pumpAndSettle();
+      for (final key in inPlace) {
+        expect(find.byKey(Key(key)), findsNothing, reason: key);
+      }
+    });
+
+    testWidgets('a theme pick re-tints the profile on the spot and writes '
+        'nothing until Done', (tester) async {
+      // The whole reason the picker sits on the render: the owner judges a
+      // color against the profile wearing it, not against a swatch in a form.
+      final repo = _FakeRepository(result: () async => right(_composedProfile));
+      await tester.pumpWidget(host(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('profileEditButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('profileEditThemeSwatch_abyss')),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<PersonalizationTheme>(find.byType(PersonalizationTheme))
+            .palette,
+        paletteForTheme(ProfileTheme.abyss),
+      );
+      expect(repo.updateCalls, 0);
+      expect(repo.setLayoutCalls, 0);
+    });
+
+    testWidgets('a name edited in place shows in the header before it is '
+        'saved', (tester) async {
+      final repo = _FakeRepository(result: () async => right(_composedProfile));
+      await tester.pumpWidget(host(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('profileEditButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('profileHeaderIdentityEditTarget')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('profileDisplayNameField')),
+        'Renamed',
+      );
+      await tester.tap(find.byKey(const Key('profileEditIdentityDoneButton')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<Text>(find.byKey(kProfileHeaderNameKey)).data,
+        'Renamed',
+      );
+      expect(repo.updateCalls, 0);
+
+      // Done is what writes it.
+      await tester.tap(find.byKey(const Key('profileComposeDoneButton')));
+      await tester.pumpAndSettle();
+      expect(repo.updateCalls, 1);
+    });
   });
 }

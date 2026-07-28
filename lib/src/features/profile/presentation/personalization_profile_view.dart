@@ -30,6 +30,7 @@ class PersonalizationProfileView extends ConsumerWidget {
     this.cardSource,
     this.widgetsProvider,
     this.rowsBuilder,
+    this.headerEditing,
   });
 
   /// Carries the layout and the theme that selects this view's palette.
@@ -49,6 +50,10 @@ class PersonalizationProfileView extends ConsumerWidget {
   /// Builds the rows region given the resolved column width. Null → the
   /// read-only rows; the owner injects the editor rows while editing.
   final Widget Function(BuildContext context, double columnWidth)? rowsBuilder;
+
+  /// The header's edit affordances. Null → a header that is only read; the owner
+  /// injects them while editing.
+  final ProfileHeaderEditing? headerEditing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,6 +100,7 @@ class PersonalizationProfileView extends ConsumerWidget {
                                     profile: profile,
                                     columnWidth: columnWidth,
                                     cardSource: cardSource,
+                                    editing: headerEditing,
                                   ),
                                   const SizedBox(
                                     height: PersonalizationLayout.rowGap,

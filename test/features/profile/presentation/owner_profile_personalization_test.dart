@@ -288,7 +288,7 @@ Future<void> _pump(WidgetTester tester, Widget widget) async {
 }
 
 Future<void> _enterEdit(WidgetTester tester) async {
-  await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+  await tester.tap(find.byKey(const Key('profileEditButton')));
   await tester.pumpAndSettle();
 }
 
@@ -411,7 +411,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.tap(find.byKey(const Key('profileComposeEditButton')));
+    await tester.tap(find.byKey(const Key('profileEditButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('profileComposeAddButton')));
     await tester.pumpAndSettle();
@@ -584,7 +584,7 @@ void main() {
 
     expect(find.byKey(const Key('compositionDragHandle_card')), findsNothing);
     expect(find.byKey(personalizationCardKey('card')), findsOneWidget);
-    expect(find.byKey(const Key('profileComposeEditButton')), findsOneWidget);
+    expect(find.byKey(const Key('profileEditButton')), findsOneWidget);
   });
 
   testWidgets('dragging a card handle into a gap reorders the layout '

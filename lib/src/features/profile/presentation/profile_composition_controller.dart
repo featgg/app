@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../connections/domain/connection.dart';
+import '../domain/profile.dart';
 import '../domain/profile_archetype.dart';
 import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
@@ -11,17 +13,23 @@ import 'profile_provider.dart';
 
 part 'profile_composition_controller.g.dart';
 
-/// The composition editor's working state. [working] is the layout being edited;
-/// [saved] is the last-persisted layout the editor rolls back to on failure or
-/// cancel. [saveFailed] is a one-shot flag the owner wrapper listens on to show
-/// a failure snackbar. [hasPersisted] records whether this session has committed
-/// a save — the authoritative "the controller knows the persisted layout" signal,
-/// true even when that layout is empty (a cleared composition).
+/// The edit session's working state — one session over the whole profile, not
+/// just its cards. [working] is the layout being edited and [draft] the identity
+/// being edited; [saved] and [savedDraft] are what each was last known to be
+/// persisted as. [saveFailed] is a one-shot flag the owner wrapper listens on to
+/// show a failure snackbar. [hasPersisted] records whether this session has
+/// committed a save — the authoritative "the controller knows the persisted
+/// layout" signal, true even when that layout is empty (a cleared composition).
+///
+/// [draft] and [savedDraft] are null until a session opens, since there is
+/// nothing to edit against outside one.
 final class ProfileCompositionState extends Equatable {
   const ProfileCompositionState({
     this.editing = false,
     this.working = const [],
     this.saved = const [],
+    this.draft,
+    this.savedDraft,
     this.saving = false,
     this.saveFailed = false,
     this.hasPersisted = false,
@@ -30,17 +38,27 @@ final class ProfileCompositionState extends Equatable {
   final bool editing;
   final List<ProfileLayoutRow> working;
   final List<ProfileLayoutRow> saved;
+  final ProfileEdit? draft;
+  final ProfileEdit? savedDraft;
   final bool saving;
   final bool saveFailed;
   final bool hasPersisted;
 
-  /// Whether the working layout diverges from the saved one — gates the save.
-  bool get isDirty => !listEquals(working, saved);
+  /// Whether the arrangement diverges from what was last persisted.
+  bool get layoutIsDirty => !listEquals(working, saved);
+
+  /// Whether the identity diverges from what was last persisted.
+  bool get draftIsDirty => draft != null && draft != savedDraft;
+
+  /// Whether the session has anything to write — gates the save.
+  bool get isDirty => layoutIsDirty || draftIsDirty;
 
   ProfileCompositionState copyWith({
     bool? editing,
     List<ProfileLayoutRow>? working,
     List<ProfileLayoutRow>? saved,
+    ProfileEdit? draft,
+    ProfileEdit? savedDraft,
     bool? saving,
     bool? saveFailed,
     bool? hasPersisted,
@@ -48,6 +66,8 @@ final class ProfileCompositionState extends Equatable {
     editing: editing ?? this.editing,
     working: working ?? this.working,
     saved: saved ?? this.saved,
+    draft: draft ?? this.draft,
+    savedDraft: savedDraft ?? this.savedDraft,
     saving: saving ?? this.saving,
     saveFailed: saveFailed ?? this.saveFailed,
     hasPersisted: hasPersisted ?? this.hasPersisted,
@@ -58,6 +78,8 @@ final class ProfileCompositionState extends Equatable {
     editing,
     working,
     saved,
+    draft,
+    savedDraft,
     saving,
     saveFailed,
     hasPersisted,
@@ -78,8 +100,8 @@ bool showsCompositionSurface({
   required bool profileHasLayout,
 }) => editing || (hasPersisted ? savedIsNotEmpty : profileHasLayout);
 
-/// Drives the in-place composition editor: edit on/off, the working vs saved
-/// layout, dirty tracking, and an optimistic save with rollback.
+/// Drives the in-place edit session: edit on/off, the working vs saved layout
+/// and identity, dirty tracking, and a save with rollback.
 @riverpod
 class ProfileComposition extends _$ProfileComposition {
   // Whether a card supports a full row; rebuilt on each edit-mode entry.
@@ -88,35 +110,78 @@ class ProfileComposition extends _$ProfileComposition {
   @override
   ProfileCompositionState build() => const ProfileCompositionState();
 
-  /// Enter edit mode seeded from the current [layout] and the owner's [widgets].
-  /// Normalizes the seed against the known ids so a deleted-widget id can never
-  /// reach the save, and captures the full-size predicate for the mutations.
-  void startEditing(
-    List<ProfileLayoutRow> layout,
-    List<ProfileWidget> widgets,
-  ) {
+  /// Enter edit mode seeded from [profile] and the owner's [widgets].
+  /// Normalizes the layout seed against the known ids so a deleted-widget id can
+  /// never reach the save, and captures the full-size predicate for the
+  /// mutations.
+  void startEditing(Profile profile, List<ProfileWidget> widgets) {
     final byId = {for (final w in widgets) w.id: w};
     _captureSupport(byId);
     // Once this session has persisted, its own `saved` is authoritative — right
     // after a save it holds the just-persisted layout while the profile refetch
-    // is still in flight, so a stale passed [layout] must not override it (in
+    // is still in flight, so a stale passed layout must not override it (in
     // either direction — reviving a cleared layout or wiping a saved one). On a
-    // fresh mount nothing has persisted and [layout] is authoritative.
-    final seed = state.hasPersisted ? state.saved : layout;
+    // fresh mount nothing has persisted and the profile is authoritative.
+    final seed = state.hasPersisted ? state.saved : profile.layout;
     // A profile whose owner never arranged one opens on what the read view is
     // already showing. Seeding empty here would open an empty editor over a
     // profile full of cards.
     final normalized = seed.isEmpty && !state.hasPersisted
         ? defaultLayoutFor(widgets, supportsFull: _supportsFull)
         : normalizeLayout(seed, byId.keys.toSet());
+    final draft = _draftOf(profile);
     state = state.copyWith(
       editing: true,
       working: normalized,
       // Unarranged opens dirty on purpose: the arrangement it shows is derived,
       // not persisted, so Save has something to write.
       saved: seed.isEmpty && !state.hasPersisted ? const [] : normalized,
+      // The identity always seeds from the live profile, including the two
+      // fields edited in settings rather than here. An update writes every
+      // field, so a session opened on a stale value would write it back —
+      // which is why the entry point stays closed while the profile refetches.
+      draft: draft,
+      savedDraft: draft,
       saveFailed: false,
     );
+  }
+
+  /// The writable fields of [profile], trimmed the way the editors produce them
+  /// so an untouched session never reads as dirty.
+  ProfileEdit _draftOf(Profile profile) {
+    final bio = (profile.bio ?? '').trim();
+    return ProfileEdit(
+      displayName: profile.displayName.trim(),
+      bio: bio.isEmpty ? null : bio,
+      theme: profile.theme,
+      privacy: profile.privacy,
+      featuredPlatform: profile.featuredPlatform,
+      headerPlatform: profile.headerPlatform,
+    );
+  }
+
+  /// Replace the name and bio from the identity sheet. The sheet validates
+  /// before applying, so the draft only ever holds a submittable edit.
+  void editIdentity({required String displayName, required String? bio}) =>
+      _amend(
+        (draft) => draft.copyWith(displayName: displayName, bio: () => bio),
+      );
+
+  /// Pick the profile's theme. Applies to the draft only, so the render
+  /// re-tints on the spot and nothing is written until the session is saved.
+  void selectTheme(ProfileTheme theme) =>
+      _amend((draft) => draft.copyWith(theme: theme));
+
+  /// Pick which platform's art the cover shows, or null for automatic.
+  void selectHeaderPlatform(Platform? platform) =>
+      _amend((draft) => draft.copyWith(headerPlatform: () => platform));
+
+  // Saving-gated like the layout mutations: a save has snapshotted the draft and
+  // must persist exactly that.
+  void _amend(ProfileEdit Function(ProfileEdit draft) change) {
+    final draft = state.draft;
+    if (state.saving || draft == null) return;
+    state = state.copyWith(draft: change(draft));
   }
 
   /// Folds any enabled [widgets] not already referenced by the working layout in
@@ -173,8 +238,11 @@ class ProfileComposition extends _$ProfileComposition {
   }
 
   /// Leave edit mode discarding any working changes.
-  void cancelEditing() =>
-      state = state.copyWith(editing: false, working: state.saved);
+  void cancelEditing() => state = state.copyWith(
+    editing: false,
+    working: state.saved,
+    draft: state.savedDraft,
+  );
 
   void onGapDrop(String id, int gapIndex) {
     // A save snapshots the working layout; ignore edits until it resolves so a
@@ -212,39 +280,63 @@ class ProfileComposition extends _$ProfileComposition {
     state = state.copyWith(working: removeCard(state.working, id));
   }
 
-  /// Persist the working layout. Nothing to save (not dirty) just exits edit
-  /// mode. On any failure the working layout rolls back to the saved one, edit
-  /// mode stays open, and [saveFailed] flips so the wrapper surfaces the error.
+  /// Persist whatever the session changed — the identity, the arrangement, or
+  /// both. Nothing to save (not dirty) just exits edit mode. On any failure edit
+  /// mode stays open and [saveFailed] flips so the wrapper surfaces the error.
+  ///
+  /// The identity goes first because it is the cheaper thing to lose: a failed
+  /// arrangement is redone with a few drags, whereas the layout rolling back
+  /// after the identity was already written would leave the two halves of one
+  /// Done disagreeing about what happened. A failed identity write keeps the
+  /// draft rather than rolling it back — typed text has no other copy.
   Future<void> save() async {
     if (!state.isDirty) {
       state = state.copyWith(editing: false);
       return;
     }
+    final draft = state.draft;
+    final savingDraft = state.draftIsDirty && draft != null;
+    final savingLayout = state.layoutIsDirty;
     state = state.copyWith(saving: true, saveFailed: false);
-    final result = await ref
-        .read(profileRepositoryProvider)
-        .setMyLayout(state.working);
-    // autoDispose: never write state or invalidate after the notifier has been
-    // disposed (the owner may leave the screen while the save is in flight).
-    if (!ref.mounted) return;
-    result.fold(
-      (_) => state = state.copyWith(
-        saving: false,
-        saveFailed: true,
-        working: state.saved,
-      ),
-      (_) {
-        // The profile read reconciles to the persisted layout. `hasPersisted`
-        // marks that this session now knows the persisted state (save or clear),
-        // so the gate/seed trust `saved` over the still-stale profile refetch.
-        ref.invalidate(profileProvider);
+    final repo = ref.read(profileRepositoryProvider);
+
+    if (savingDraft) {
+      final result = await repo.updateMyProfile(draft);
+      // autoDispose: never write state or invalidate after the notifier has been
+      // disposed (the owner may leave the screen while the save is in flight).
+      if (!ref.mounted) return;
+      if (result.isLeft()) {
+        state = state.copyWith(saving: false, saveFailed: true);
+        return;
+      }
+      state = state.copyWith(savedDraft: draft);
+    }
+
+    if (savingLayout) {
+      final result = await repo.setMyLayout(state.working);
+      if (!ref.mounted) return;
+      if (result.isLeft()) {
+        // The identity may already be written; reconcile the render to it rather
+        // than leaving the screen showing a value the server no longer holds.
+        if (savingDraft) ref.invalidate(profileProvider);
         state = state.copyWith(
           saving: false,
-          editing: false,
-          saved: state.working,
-          hasPersisted: true,
+          saveFailed: true,
+          working: state.saved,
         );
-      },
+        return;
+      }
+    }
+
+    // The profile read reconciles to what was persisted. `hasPersisted` marks
+    // that this session now knows the persisted state (save or clear), so the
+    // gate/seed trust `saved` over the still-stale profile refetch.
+    ref.invalidate(profileProvider);
+    state = state.copyWith(
+      saving: false,
+      editing: false,
+      saved: state.working,
+      hasPersisted: true,
     );
   }
 

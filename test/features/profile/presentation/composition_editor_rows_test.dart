@@ -5,6 +5,7 @@ import 'package:featgg/src/features/connections/domain/cards_repository.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
@@ -68,6 +69,18 @@ const _main = ProfileWidget(
   size: ProfileWidgetSize.small,
 );
 
+/// A profile with no saved arrangement, so the session bootstraps one.
+const _unarrangedProfile = Profile(
+  id: 'owner-1',
+  username: 'nico',
+  displayName: 'Nico',
+  avatarUrl: null,
+  bio: null,
+  theme: ProfileTheme.crimson,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+);
+
 Widget _harness(ProviderContainer container) => UncontrolledProviderScope(
   container: container,
   child: MaterialApp(
@@ -101,7 +114,7 @@ void main() {
     // Materialize the owner widgets the editor rows read, then seed the editor.
     await container.read(ownerProfileWidgetsProvider.future);
     container.read(profileCompositionProvider.notifier).startEditing(
-      const [],
+      _unarrangedProfile,
       const [_rank, _main],
     );
 

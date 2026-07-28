@@ -174,7 +174,6 @@ void main() {
     await tester.pumpWidget(_screen(profileRepo));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('profileComposeEditButton')), findsNothing);
     expect(find.byKey(const Key('profileEditButton')), findsNothing);
   });
 

@@ -6,7 +6,6 @@ import 'package:featgg/src/features/auth/domain/auth_repository.dart';
 import 'package:featgg/src/features/auth/presentation/auth_presentation.dart';
 import 'package:featgg/src/features/connections/presentation/connections_presentation.dart';
 import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
-import 'package:featgg/src/features/profile/domain/profile_domain.dart';
 import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:go_router/go_router.dart';
@@ -44,13 +43,6 @@ GoRouter router(Ref ref) {
       GoRoute(path: '/', builder: (_, _) => const FeedScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
-      GoRoute(
-        path: '/profile/edit',
-        redirect: (context, state) =>
-            state.extra is Profile ? null : '/profile',
-        builder: (_, state) =>
-            ProfileEditScreen(profile: state.extra! as Profile),
-      ),
       GoRoute(
         path: '/profile/:id',
         // The visitor widgets view and the card renderer live in the profile and

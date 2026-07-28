@@ -146,17 +146,9 @@
   "@profilePrivacyPrivate": {
     "description": "Privacy indicator label when the profile is private."
   },
-  "profileAvatarLabel": "Profile photo",
-  "@profileAvatarLabel": {
-    "description": "Semantics label for the profile avatar image."
-  },
   "profileEdit": "Edit",
   "@profileEdit": {
     "description": "Tooltip and button label for the Edit profile action on the profile screen."
-  },
-  "profileEditTitle": "Edit profile",
-  "@profileEditTitle": {
-    "description": "App bar title for the profile-edit screen."
   },
   "profileDisplayNameLabel": "Display name",
   "@profileDisplayNameLabel": {
@@ -217,14 +209,6 @@
   "profilePrivacyLabel": "Privacy",
   "@profilePrivacyLabel": {
     "description": "Section label above the privacy selector on the profile-edit screen."
-  },
-  "profileSave": "Save",
-  "@profileSave": {
-    "description": "Label for the Save action on the profile-edit screen."
-  },
-  "profileSaved": "Profile saved.",
-  "@profileSaved": {
-    "description": "Transient snackbar confirmation shown after a profile update succeeds."
   },
   "profileDisplayNameInvalid": "Display name must be 1–50 characters.",
   "@profileDisplayNameInvalid": {
@@ -890,10 +874,6 @@
   "profileFeaturedCardDefault": "Default — most recent card",
   "@profileFeaturedCardDefault": {
     "description": "Option in the featured-card dropdown that clears the preference, letting the backend fall back to the most-recently-updated card."
-  },
-  "profileHeaderArtLabel": "Header art",
-  "@profileHeaderArtLabel": {
-    "description": "Section label above the header-art selector on the profile-edit screen."
   },
   "profileHeaderArtDefault": "Automatic",
   "@profileHeaderArtDefault": {
@@ -1624,9 +1604,13 @@
   "@profilePersonalize": {
     "description": "Entry action on the owner's legacy profile grid that opens the composition editor to arrange a first layout."
   },
-  "profileComposeEdit": "Edit layout",
-  "@profileComposeEdit": {
-    "description": "Control-bar action that enters the composition editor on the owner's own composed profile."
+  "profileEditIdentity": "Name and bio",
+  "@profileEditIdentity": {
+    "description": "Label on the header's name/bio region while editing the profile, and title of the sheet that tapping it opens."
+  },
+  "profileEditCover": "Cover image",
+  "@profileEditCover": {
+    "description": "Label on the header's cover while editing the profile, and title of the sheet that tapping it opens to choose which platform's art the cover shows."
   },
   "profileComposeAdd": "Add card",
   "@profileComposeAdd": {
@@ -1640,9 +1624,9 @@
   "@profileComposeCancel": {
     "description": "Control-bar action that discards edits and leaves the composition editor."
   },
-  "profileComposeSaveFailed": "Couldn't save your layout. Please try again.",
-  "@profileComposeSaveFailed": {
-    "description": "Snackbar shown when persisting the edited layout fails; the edit is rolled back and the owner can retry."
+  "profileEditSaveFailed": "Couldn't save your changes. Please try again.",
+  "@profileEditSaveFailed": {
+    "description": "Snackbar shown when saving the profile edit session fails; edit mode stays open and the owner can retry."
   },
   "profileComposeHint": "Drag a card between rows for full width, or next to another to pair them.",
   "@profileComposeHint": {

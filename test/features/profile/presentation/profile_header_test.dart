@@ -88,6 +88,10 @@ Future<void> _pump(
   Map<Platform, GameCard?> cards = const {},
   double columnWidth = PersonalizationLayout.columnMaxWidth,
   double screenHeight = 2000,
+  ProfileHeaderEditing? editing,
+  // An in-flight upload spins forever by design, so its frames are pumped
+  // rather than settled.
+  bool settle = true,
 }) async {
   tester.view.physicalSize = Size(columnWidth, screenHeight);
   tester.view.devicePixelRatio = 1;
@@ -124,6 +128,7 @@ Future<void> _pump(
                   columnWidth: columnWidth,
                   cardSource: (platform) =>
                       publicOwnerCardProvider(_userId, platform),
+                  editing: editing,
                 ),
               ),
             ),
@@ -131,7 +136,11 @@ Future<void> _pump(
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
   });
 }
 
@@ -409,5 +418,74 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
+  });
+
+  group('editing in place', () {
+    testWidgets('a header that is only read offers nothing to tap', (
+      tester,
+    ) async {
+      // The same header renders for a visitor. Edit affordances appearing there
+      // would offer to change somebody else's profile.
+      await _pump(tester, profile: _profile(avatarUrl: _avatarUrl));
+
+      for (final key in const [
+        'profileHeaderCoverEditTarget',
+        'profileHeaderAvatarEditTarget',
+        'profileHeaderIdentityEditTarget',
+      ]) {
+        expect(find.byKey(Key(key)), findsNothing, reason: key);
+      }
+    });
+
+    testWidgets('each part the header shows opens its own editor', (
+      tester,
+    ) async {
+      final tapped = <String>[];
+      await _pump(
+        tester,
+        profile: _profile(avatarUrl: _avatarUrl),
+        editing: ProfileHeaderEditing(
+          onEditAvatar: () => tapped.add('avatar'),
+          onEditCover: () => tapped.add('cover'),
+          onEditIdentity: () => tapped.add('identity'),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('profileHeaderCoverEditTarget')));
+      await tester.tap(find.byKey(const Key('profileHeaderAvatarEditTarget')));
+      await tester.tap(
+        find.byKey(const Key('profileHeaderIdentityEditTarget')),
+      );
+      await tester.pump();
+
+      // Three separate things to change, three separate targets — not one
+      // "edit the header" tap that then asks which part was meant.
+      expect(tapped, ['cover', 'avatar', 'identity']);
+    });
+
+    testWidgets('the avatar takes no further taps while its photo uploads', (
+      tester,
+    ) async {
+      final tapped = <String>[];
+      await _pump(
+        tester,
+        profile: _profile(avatarUrl: _avatarUrl),
+        editing: ProfileHeaderEditing(
+          avatarBusy: true,
+          onEditAvatar: () => tapped.add('avatar'),
+          onEditCover: () {},
+          onEditIdentity: () {},
+        ),
+        settle: false,
+      );
+
+      await tester.tap(find.byKey(const Key('profileHeaderAvatarEditTarget')));
+      await tester.pump();
+
+      expect(tapped, isEmpty);
+      // Progress replaces the pencil on the avatar's own badge, so the owner
+      // sees where the wait belongs rather than a header that just went inert.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
   });
 }
