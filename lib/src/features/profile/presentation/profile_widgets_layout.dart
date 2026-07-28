@@ -14,7 +14,7 @@ class ProfileWidgetTile {
 }
 
 /// Columns in a [WindowSizeClass]'s grid: single column on phone, two on
-/// tablet, three centered on desktop (design-system §9 / §13).
+/// tablet, three centered on desktop.
 int columnsFor(WindowSizeClass c) => switch (c) {
   WindowSizeClass.compact => 1,
   WindowSizeClass.medium => 2,

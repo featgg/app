@@ -12,7 +12,7 @@ import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
 import 'card_key.dart';
 
-/// Identity archetype (spec §7, evolves the Passport card): cross-platform
+/// Identity archetype, which the Passport card evolves into: cross-platform
 /// *membership* — a chip per linked platform plus the linked-platform count.
 /// Full only. Folds every platform's card through the pure [resolvePassport];
 /// an errored or still-loading platform reads as absent and never errors the

@@ -11,7 +11,8 @@ import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
 import 'card_key.dart';
 
-/// Achievement Grid archetype (spec §7, "Completionist" variant): the bound
+/// Achievement Grid archetype, in its whole-library "Completionist" variant:
+/// the bound
 /// platform's perfect-games count as a letter shelf. Full only. Folds the card
 /// through the pure [resolveCompletionist]: a leading and trailing muted diamond
 /// bracket one accent letter tile per perfect-game shelf entry (capped), with the

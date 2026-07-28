@@ -1,7 +1,7 @@
 import 'profile_widget.dart';
 
 /// Which card archetype a widget renders as
-/// (`docs/personalization/spec.md` §7). Kept as a small enum + switch so adding
+/// Kept as a small enum + switch so adding
 /// an archetype is one enum value plus two switch arms — extensibility is a
 /// stated priority and this is the cheapest seam for the catalog.
 enum ProfileArchetype {
@@ -16,12 +16,12 @@ enum ProfileArchetype {
   fallback,
 }
 
-/// The two rendered card sizes (spec §5). Size is a consequence of placement,
+/// The two rendered card sizes. Size is a consequence of placement,
 /// not a stored field: a card in a full row is [full], a card in a pair row is
 /// [half].
 enum ProfileCardSize { full, half }
 
-/// Maps a widget to its archetype via the spec §7 legacy mapping: passport →
+/// Maps a widget to its archetype via the legacy kind mapping: passport →
 /// identity, showcase → milestone, platform → platform, rank → rank, main →
 /// main, collection + game_collector → collection (the "Collector" variant),
 /// completionist → achievement grid (the "Completionist" variant). Kinds without
@@ -107,8 +107,8 @@ ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
 };
 
 /// Whether [a]'s full variant renders portrait rather than the standard
-/// landscape full card (spec §6.1: the designed variant accommodates the
-/// art's orientation). Art only: the picture is the whole card, so its full
+/// landscape full card, so a designed variant can accommodate its art's
+/// orientation. Art only: the picture is the whole card, so its full
 /// variant is a tall plate spanning the column, not a wide strip.
 bool rendersPortraitFull(ProfileArchetype a) => a == ProfileArchetype.art;
 
@@ -119,7 +119,7 @@ bool rendersPortraitFull(ProfileArchetype a) => a == ProfileArchetype.art;
 /// that band is a real no-data state and stays.
 bool hasDatumZone(ProfileArchetype a) => a != ProfileArchetype.art;
 
-/// The sizes an archetype can render (spec §5). A full-only archetype dropped
+/// The sizes an archetype can render. A full-only archetype dropped
 /// into a pair slot renders full within that column (the seed never does this,
 /// so it is a defensive branch).
 Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
@@ -132,11 +132,11 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
     ProfileCardSize.full,
     ProfileCardSize.half,
   },
-  // Rank supports both sizes (spec §7): a compact crest as a half, or a larger
+  // Rank supports both sizes: a compact crest as a half, or a larger
   // crest as a full — size follows placement, not the archetype.
   ProfileArchetype.rank => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.main => const {ProfileCardSize.full, ProfileCardSize.half},
-  // Collection and Achievement Grid are full-only (spec §7 catalog): the editor
+  // Collection and Achievement Grid are full-only: the editor
   // offers them no side-drop and no size toggle.
   ProfileArchetype.collection => const {ProfileCardSize.full},
   ProfileArchetype.achievementGrid => const {ProfileCardSize.full},

@@ -9,7 +9,7 @@ import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
 import 'card_key.dart';
 
-/// Main archetype (spec §7): "what defines me" — the primary game / character /
+/// Main archetype: "what defines me" — the primary game / character /
 /// mode's cover fills the card, with its name and 2–3 headline numbers in the
 /// datum. Folds the bound platform's card through the pure [resolveMain]; a
 /// payload with no main renders a neutral no-data card over the archetype's

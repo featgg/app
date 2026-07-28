@@ -9,7 +9,7 @@ import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
 import 'card_key.dart';
 
-/// Rank archetype (spec §7): "how good am I" — no platform publishes rank-crest
+/// Rank archetype: "how good am I" — no platform publishes rank-crest
 /// art, so the card always renders framed over its crest motif, with the tier
 /// line and headline numbers in the datum. Folds the bound platform's card
 /// through the pure [resolveRank]; a payload with no rank/rating renders a

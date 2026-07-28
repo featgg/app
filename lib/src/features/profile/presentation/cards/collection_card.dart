@@ -13,7 +13,7 @@ import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
 import 'card_key.dart';
 
-/// Collection archetype (spec §7): a curated multi-game shelf or the whole-library
+/// Collection archetype: a curated multi-game shelf or the whole-library
 /// "Collector" variant, branched on [ProfileWidget.kind]. Full only.
 ///
 /// - Curated (`collection`): Steam-first (the kind carries no platform), one orb
@@ -116,7 +116,7 @@ class CollectionCard extends ConsumerWidget {
 
 /// A Collection orb (mockup `.leg .orb`): a token-gradient circle with an accent
 /// border and an optional 1-line caption bounded to the cell width. The gradient's
-/// bottom paint is the solid mid-tone [PersonalizationPalette.artB] (spec §8), so
+/// bottom paint is the solid mid-tone [PersonalizationPalette.artB], so
 /// a theme swap re-tints it live; the art is procedural, never a bundled asset.
 class _CollectionOrb extends StatelessWidget {
   const _CollectionOrb({

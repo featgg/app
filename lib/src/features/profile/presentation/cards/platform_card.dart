@@ -10,7 +10,7 @@ import 'card_key.dart';
 
 /// Platform archetype: the generic single-platform card (the common denominator
 /// of Rank / Main / Milestone). Full and half differ visibly — the full card
-/// shows a taller art band and up to one more headline stat (spec §5). Reads the
+/// shows a taller art band and up to one more headline stat. Reads the
 /// platform's card through the injected [CardSource]; loading/errored → the
 /// neutral art placeholder with whatever stats resolve.
 class PlatformCard extends ConsumerWidget {
