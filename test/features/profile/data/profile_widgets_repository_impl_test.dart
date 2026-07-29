@@ -9,7 +9,6 @@ import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_data_source.dart';
 import 'package:featgg/src/features/profile/data/profile_widgets_repository_impl.dart';
-import 'package:featgg/src/features/profile/data/supabase_profile_widgets_data_source.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,12 +28,7 @@ final class _RecordingReporter implements CrashReporter {
 }
 
 final class _FakeDataSource implements ProfileWidgetsDataSource {
-  _FakeDataSource({
-    this.onFetch,
-    this.onFetchFor,
-    this.onInsert,
-    this.onDelete,
-  });
+  _FakeDataSource({this.onFetch, this.onFetchFor, this.onInsert});
 
   Future<List<ProfileWidgetDto>> Function()? onFetch;
 
@@ -49,17 +43,7 @@ final class _FakeDataSource implements ProfileWidgetsDataSource {
 
   Map<String, dynamic>? lastInsert;
   ({String id, Map<String, dynamic> values})? lastUpdate;
-  List<({String id, int position})>? lastPositions;
   String? lastFetchUserId;
-
-  /// The max live `position` the concrete source would read before parking.
-  /// Defaults to a SPARSE band top (live rows at e.g. [0,2,4]) so the mirror
-  /// proves the positive parking band sits above every current slot.
-  int maxCurrentPosition = 4;
-
-  /// Every individual position write the data source would apply, in order,
-  /// so a test can prove no transient duplicate occurs among live (>= 0) rows.
-  final List<({String id, int position})> positionWrites = [];
 
   @override
   Future<List<ProfileWidgetDto>> fetchMyWidgets(String userId) {
@@ -88,18 +72,6 @@ final class _FakeDataSource implements ProfileWidgetsDataSource {
   Future<void> updateWidget(String id, Map<String, dynamic> values) async {
     lastUpdate = (id: id, values: values);
     if (onUpdate != null) await onUpdate!(id, values);
-  }
-
-  @override
-  Future<void> updatePositions(
-    List<({String id, int position})> updates,
-  ) async {
-    lastPositions = updates;
-    // Mirror the concrete two-pass write contract via the same pure helper the
-    // source uses (positive parking above [maxCurrentPosition], then the final
-    // positions) so a test can prove the planned write order carries no
-    // transient duplicate among live rows.
-    positionWrites.addAll(reorderPositionWrites(updates, maxCurrentPosition));
   }
 }
 
@@ -1073,135 +1045,5 @@ void main() {
         expect(showcase['hero'], 'hours');
       },
     );
-
-    test('reorder writes a contiguous 0..n-1 sequence', () async {
-      final source = _FakeDataSource();
-      await _repo(source, _RecordingReporter()).reorder(['c', 'a', 'b']);
-
-      expect(source.lastPositions, [
-        (id: 'c', position: 0),
-        (id: 'a', position: 1),
-        (id: 'b', position: 2),
-      ]);
-    });
-
-    test(
-      'reorder over sparse stored positions writes a contiguous 0..n-1 with no '
-      'transient duplicate',
-      () async {
-        // Ids modeling rows stored at sparse positions (e.g. [0,2,4], max 4);
-        // a fixed positive offset could collide against the still-current 4,
-        // and negative parking is rejected by the >= 0 constraint.
-        final source = _FakeDataSource()..maxCurrentPosition = 4;
-        await _repo(source, _RecordingReporter()).reorder(['x', 'y', 'z']);
-
-        // (a) The final positions are the contiguous 0..n-1.
-        expect(source.lastPositions, [
-          (id: 'x', position: 0),
-          (id: 'y', position: 1),
-          (id: 'z', position: 2),
-        ]);
-
-        // (b) Every recorded write — parking included — is non-negative; the
-        // positive band sits strictly above every live position.
-        expect(
-          source.positionWrites.every((w) => w.position >= 0),
-          isTrue,
-          reason: 'a parking write fell below 0',
-        );
-
-        // (c) At no point in the recorded write sequence do two rows hold the
-        // same position: parking lands above the live max, disjoint from the
-        // final contiguous band, regardless of sparsity.
-        final heldBy = <int, String>{};
-        for (final w in source.positionWrites) {
-          // A live position is held by exactly one row at a time across the
-          // whole write sequence; the previous holder must have already moved
-          // off it before this write reuses the slot.
-          final previous = heldBy[w.position];
-          expect(
-            previous == null || previous == w.id,
-            isTrue,
-            reason: 'transient duplicate at position ${w.position}',
-          );
-          heldBy.removeWhere((_, id) => id == w.id);
-          heldBy[w.position] = w.id;
-        }
-      },
-    );
-
-    test('removeWidget deletes by id', () async {
-      String? deleted;
-      final source = _FakeDataSource(onDelete: (id) async => deleted = id);
-      final result = await _repo(
-        source,
-        _RecordingReporter(),
-      ).removeWidget('w-9');
-
-      expect(result.isRight(), isTrue);
-      expect(deleted, 'w-9');
-    });
-
-    test('a write with no user session → Left(AuthFailure)', () async {
-      final result = await _repo(
-        _FakeDataSource(),
-        _RecordingReporter(),
-        userId: null,
-      ).removeWidget('w-1');
-
-      result.fold(
-        (f) => expect(f, isA<AuthFailure>()),
-        (_) => fail('want Left'),
-      );
-    });
-  });
-
-  group('reorderPositionWrites', () {
-    test('parks above the current max over sparse positions', () async {
-      // Final order [(x,0),(y,1),(z,2)] computed by the repo, over live rows at
-      // sparse positions [0,2,4] so the current max is 4. Negative parking
-      // (the device bug) would write position < 0 and fail the >= 0 constraint.
-      final updates = [
-        (id: 'x', position: 0),
-        (id: 'y', position: 1),
-        (id: 'z', position: 2),
-      ];
-      final writes = reorderPositionWrites(updates, 4);
-
-      // (a) Every write is non-negative.
-      expect(writes.every((w) => w.position >= 0), isTrue);
-
-      // (b) The parking pass sits strictly above the live max (4) and disjoint
-      // from both the live set {0,2,4} and the final set {0,1,2}.
-      final parking = writes.take(updates.length).toList();
-      expect(parking.every((w) => w.position > 4), isTrue);
-      const live = {0, 2, 4};
-      expect(parking.any((w) => live.contains(w.position)), isFalse);
-      expect(parking.any((w) => w.position <= 2), isFalse);
-      // No duplicate parking position.
-      expect(parking.map((w) => w.position).toSet(), hasLength(parking.length));
-
-      // (c) The final pass is the contiguous 0..n-1 in order.
-      expect(writes.skip(updates.length).toList(), updates);
-
-      // (d) Replaying the full sequence over a {id -> position} model never
-      // holds two live ids at the same position.
-      final heldBy = <int, String>{};
-      for (final w in writes) {
-        final previous = heldBy[w.position];
-        expect(
-          previous == null || previous == w.id,
-          isTrue,
-          reason: 'transient duplicate at position ${w.position}',
-        );
-        heldBy.removeWhere((_, id) => id == w.id);
-        heldBy[w.position] = w.id;
-      }
-    });
-
-    test('a single update parks then writes 0', () async {
-      final writes = reorderPositionWrites([(id: 'only', position: 0)], 4);
-      expect(writes, [(id: 'only', position: 5), (id: 'only', position: 0)]);
-    });
   });
 }

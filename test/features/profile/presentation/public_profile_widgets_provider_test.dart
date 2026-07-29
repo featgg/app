@@ -115,10 +115,6 @@ final class _FakeRepository implements ProfileWidgetsRepository {
     ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
-      throw UnimplementedError();
 }
 
 ProfileWidget _widget(String id, int position) => ProfileWidget(

@@ -24,7 +24,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
 
   int fetchCalls = 0;
   final List<String> mutations = [];
-  List<String>? lastReorder;
   ProfileWidgetSize? lastShowcaseSize;
   ShowcaseSelection? lastShowcaseSelection;
   ProfileWidgetSize? lastCollectionSize;
@@ -255,13 +254,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
     mutations.add('resizeShowcase');
     lastShowcaseSize = size;
     lastShowcaseSelection = selection;
-    return _result(unit);
-  }
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async {
-    mutations.add('reorder');
-    lastReorder = orderedIds;
     return _result(unit);
   }
 }
@@ -500,10 +492,8 @@ void main() {
 
       await notifier.remove('a');
       await notifier.resize('a', ProfileWidgetSize.large);
-      await notifier.reorder(['b', 'a']);
 
-      expect(repo.mutations, ['remove', 'resize', 'reorder']);
-      expect(repo.lastReorder, ['b', 'a']);
+      expect(repo.mutations, ['remove', 'resize']);
     });
   });
 

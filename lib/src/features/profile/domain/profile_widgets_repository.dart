@@ -124,7 +124,4 @@ abstract interface class ProfileWidgetsRepository {
     ProfileWidgetSize size,
     CollectionSelection selection,
   );
-
-  /// Persists a new ordering: [orderedIds] in target position order.
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds);
 }

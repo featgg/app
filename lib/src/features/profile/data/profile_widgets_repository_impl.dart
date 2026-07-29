@@ -419,22 +419,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      final updates = [
-        for (var i = 0; i < orderedIds.length; i++)
-          (id: orderedIds[i], position: i),
-      ];
-      await _source.updatePositions(updates);
-      return right(unit);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
   Failure _handleError(Object error, StackTrace st) {
     final failure = _mapError(error);
     if (!failure.isExpected) _crashReporter.reportError(error, st);

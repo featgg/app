@@ -297,10 +297,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
     ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
-      throw UnimplementedError();
 }
 
 /// Returns a fixed card for any platform.

@@ -162,10 +162,6 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ShowcaseSelection selection,
   ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
 
-  /// Persists a new ordering of widget ids.
-  Future<void> reorder(List<String> orderedIds) =>
-      _run((repo) => repo.reorder(orderedIds));
-
   Future<void> _run(
     Future<Either<Failure, Object?>> Function(ProfileWidgetsRepository repo) op,
   ) async {
