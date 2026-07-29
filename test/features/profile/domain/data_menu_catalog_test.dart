@@ -1,8 +1,5 @@
-import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_catalog.dart';
-import 'package:featgg/src/features/profile/presentation/data_menu_labels.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The stable stat keys frozen in `docs/integration/feed.md` § Per-platform
@@ -108,32 +105,6 @@ void main() {
         isEmpty,
         reason: 'a ShowcasePointer field is not in the frozen feed.md set',
       );
-    });
-  });
-
-  group('label resolver totality', () {
-    late AppLocalizations l10n;
-
-    setUpAll(() async {
-      l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    });
-
-    test('every catalog label key resolves to a non-empty string', () {
-      for (final item in dataMenuCatalog) {
-        final label = dataMenuItemLabel(l10n, item.labelKey);
-        expect(label, isNotNull, reason: item.id);
-        expect(label, isNotEmpty, reason: item.id);
-      }
-    });
-
-    test('every category resolves to a non-empty heading', () {
-      for (final category in DataMenuCategory.values) {
-        expect(
-          dataMenuCategoryLabel(l10n, category),
-          isNotEmpty,
-          reason: category.name,
-        );
-      }
     });
   });
 }

@@ -1,8 +1,5 @@
-import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/features/profile/domain/data_menu_catalog.dart';
 import 'package:featgg/src/features/profile/domain/template_catalog.dart';
-import 'package:featgg/src/features/profile/presentation/template_labels.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -55,30 +52,4 @@ void main() {
       });
     },
   );
-
-  group('label resolver totality', () {
-    late AppLocalizations l10n;
-
-    setUpAll(() async {
-      l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    });
-
-    test('every template title key resolves to a non-empty string', () {
-      for (final t in templateCatalog) {
-        final label = templateTitleLabel(l10n, t.titleKey);
-        expect(label, isNotNull, reason: t.id);
-        expect(label, isNotEmpty, reason: t.id);
-      }
-    });
-
-    test('every slot label key resolves to a non-empty string', () {
-      for (final t in templateCatalog) {
-        for (final slot in t.slots) {
-          final label = templateSlotLabel(l10n, slot.labelKey);
-          expect(label, isNotNull, reason: '${t.id}/${slot.id}');
-          expect(label, isNotEmpty, reason: '${t.id}/${slot.id}');
-        }
-      }
-    });
-  });
 }

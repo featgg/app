@@ -134,10 +134,6 @@
       }
     }
   },
-  "profileBioEmpty": "No bio yet.",
-  "@profileBioEmpty": {
-    "description": "Shown on the profile screen when the user has no bio set."
-  },
   "profilePrivacyPublic": "Public profile",
   "@profilePrivacyPublic": {
     "description": "Privacy indicator label when the profile is public."
@@ -855,18 +851,6 @@
   "@publicProfileUnavailable": {
     "description": "Neutral state shown on the public profile screen when the profile is private or the user id does not exist. The two cases are indistinguishable to the client."
   },
-  "publicProfileNoCards": "No public cards yet.",
-  "@publicProfileNoCards": {
-    "description": "Shown on the public profile screen when the profile is public but the user has no visible game cards."
-  },
-  "profileCardsSectionTitle": "Your cards",
-  "@profileCardsSectionTitle": {
-    "description": "Section header above the owner's game cards on the profile screen."
-  },
-  "profileNoCardsYet": "No cards yet. Connect a platform to get your first card.",
-  "@profileNoCardsYet": {
-    "description": "Shown on the owner's profile screen when no platform has produced a card yet."
-  },
   "settingsFeedPreviewLabel": "Featured card in discovery",
   "@settingsFeedPreviewLabel": {
     "description": "Subtitle on the settings tile that picks which card represents the profile in the discovery feed; the tile's title is the current choice."
@@ -1022,103 +1006,6 @@
   "@accountDeletionCancelled": {
     "description": "Transient snackbar confirmation shown after the banner's cancel succeeds."
   },
-  "profileWidgetsEmpty": "No widgets yet. Add one to arrange your profile.",
-  "@profileWidgetsEmpty": {
-    "description": "Shown on the owner's profile when the widget arrangement is empty."
-  },
-  "profileWidgetAdd": "Add widget",
-  "@profileWidgetAdd": {
-    "description": "Label for the action that adds a new widget to the profile arrangement."
-  },
-  "profileWidgetAddPlatform": "Add {platform} widget",
-  "@profileWidgetAddPlatform": {
-    "description": "Menu option that adds a platform widget for the named connected platform. {platform} is the brand-correct platform name and is not translated.",
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
-  "profileWidgetOptions": "Widget options",
-  "@profileWidgetOptions": {
-    "description": "Tooltip/label for the per-widget options menu opened from a grid tile."
-  },
-  "profileWidgetRemove": "Remove widget",
-  "@profileWidgetRemove": {
-    "description": "Per-widget menu option that removes the widget from the arrangement."
-  },
-  "profileWidgetMoveUp": "Move up",
-  "@profileWidgetMoveUp": {
-    "description": "Per-widget menu option that moves the widget earlier in the arrangement order."
-  },
-  "profileWidgetMoveDown": "Move down",
-  "@profileWidgetMoveDown": {
-    "description": "Per-widget menu option that moves the widget later in the arrangement order."
-  },
-  "profileWidgetResize": "Resize",
-  "@profileWidgetResize": {
-    "description": "Per-widget menu label for the size submenu."
-  },
-  "profileWidgetSizeSmall": "Small",
-  "@profileWidgetSizeSmall": {
-    "description": "Size option that sets a widget to a 1x1 grid footprint."
-  },
-  "profileWidgetSizeWide": "Wide",
-  "@profileWidgetSizeWide": {
-    "description": "Size option that sets a widget to a 2x1 grid footprint."
-  },
-  "profileWidgetSizeLarge": "Large",
-  "@profileWidgetSizeLarge": {
-    "description": "Size option that sets a widget to a 2x2 grid footprint."
-  },
-  "profileWidgetCardUnavailable": "Card unavailable",
-  "@profileWidgetCardUnavailable": {
-    "description": "Placeholder label shown in a profile widget tile when its card data is not available; the widget stays manageable via its options menu."
-  },
-  "profileWidgetAddConnectFirst": "Connect an account first to add a widget.",
-  "@profileWidgetAddConnectFirst": {
-    "description": "Hint shown in place of the Add-widget action when the owner has no connected platforms to add."
-  },
-  "profileWidgetAddAllAdded": "All your connected platforms are already on your profile.",
-  "@profileWidgetAddAllAdded": {
-    "description": "Hint shown in place of the Add-widget action when every connected platform is already placed as a widget."
-  },
-  "profileWidgetCustomizeData": "Customize data",
-  "@profileWidgetCustomizeData": {
-    "description": "Widget options-menu action that opens the data menu to choose which stats the card surfaces."
-  },
-  "dataMenuTitle": "Customize data",
-  "@dataMenuTitle": {
-    "description": "Title of the data menu sheet where the owner picks which stats and showcases a card surfaces."
-  },
-  "dataMenuFilterAll": "All",
-  "@dataMenuFilterAll": {
-    "description": "Platform filter chip in the data menu that clears the per-platform filter and shows every connected platform's items."
-  },
-  "dataMenuConnectFirst": "Connect an account first to choose data.",
-  "@dataMenuConnectFirst": {
-    "description": "Hint shown in the data menu when the owner has no connected platforms, so nothing is selectable."
-  },
-  "dataMenuCategoryRanksCompetitive": "Ranks & competitive",
-  "@dataMenuCategoryRanksCompetitive": {
-    "description": "Data menu category heading for ranks and competitive ratings."
-  },
-  "dataMenuCategoryHoursDedication": "Hours & dedication",
-  "@dataMenuCategoryHoursDedication": {
-    "description": "Data menu category heading for time-played and dedication stats."
-  },
-  "dataMenuCategoryAchievements": "Achievements",
-  "@dataMenuCategoryAchievements": {
-    "description": "Data menu category heading for achievement and points stats."
-  },
-  "dataMenuCategoryGamesCharacters": "Games & characters",
-  "@dataMenuCategoryGamesCharacters": {
-    "description": "Data menu category heading for game libraries and character showcases."
-  },
-  "dataMenuCategoryLevelsIdentity": "Levels & identity",
-  "@dataMenuCategoryLevelsIdentity": {
-    "description": "Data menu category heading for levels and identity stats."
-  },
   "dataMenuItemLeagueRank": "Rank",
   "@dataMenuItemLeagueRank": {
     "description": "Data menu label for the League of Legends ranked tier/division/LP composed entry."
@@ -1134,14 +1021,6 @@
   "dataMenuItemWowClassRace": "Class & race",
   "@dataMenuItemWowClassRace": {
     "description": "Data menu label for the World of Warcraft character class and race identity entry."
-  },
-  "templateAdd": "Add template",
-  "@templateAdd": {
-    "description": "Button that opens the template picker to add a composed template card to the profile."
-  },
-  "templateChooseTitle": "Choose a template",
-  "@templateChooseTitle": {
-    "description": "Title of the sheet where the owner picks which template card to add."
   },
   "templateMyRanksTitle": "My ranks",
   "@templateMyRanksTitle": {
@@ -1191,62 +1070,9 @@
   "@templateSlotLevel3": {
     "description": "Label for the third level slot in the My Levels template card."
   },
-  "templateFillSlots": "Fill slots",
-  "@templateFillSlots": {
-    "description": "Template card options-menu action that opens the slot-fill flow to pick a value for each slot."
-  },
-  "templateEmpty": "No data yet. Fill a slot to show a value.",
-  "@templateEmpty": {
-    "description": "Placeholder shown inside a template card when none of its slots resolve to a value yet."
-  },
-  "templateSlotNoData": "No data yet",
-  "@templateSlotNoData": {
-    "description": "Muted annotation on a pickable slot-fill item whose platform card currently yields no value for that slot; the item stays selectable because the platform may sync later."
-  },
-  "templateSlotEmpty": "Not set",
-  "@templateSlotEmpty": {
-    "description": "Shown in the slot-fill flow for a slot that has not been filled with a value."
-  },
-  "composedAdd": "Add composed card",
-  "@composedAdd": {
-    "description": "Button that adds a composed card to the profile; the owner freely picks which data-menu items it surfaces."
-  },
-  "composedEmpty": "No data yet. Pick an item to show a value.",
-  "@composedEmpty": {
-    "description": "Placeholder shown inside a composed card when none of its picked items resolve to a value yet."
-  },
-  "composedChooseTitle": "Choose items",
-  "@composedChooseTitle": {
-    "description": "Title of the sheet where the owner picks which data-menu items a composed card surfaces."
-  },
-  "composedEditItems": "Edit items",
-  "@composedEditItems": {
-    "description": "Composed card options-menu action that opens the item picker to add or remove the items the card surfaces."
-  },
-  "showcaseGameUnavailable": "Game unavailable",
-  "@showcaseGameUnavailable": {
-    "description": "Placeholder shown in place of a showcase card when the selected game is not available — the platform is unlinked, its card is still loading, or the game rotated out of the current library."
-  },
-  "showcaseHeroHoursCompact": "{value} h",
-  "@showcaseHeroHoursCompact": {
-    "description": "Hero stat on the small and wide showcase cards, where the meta descriptor line does not fit: the hours value carries its unit so the number never renders context-free.",
-    "placeholders": {
-      "value": {
-        "type": "String"
-      }
-    }
-  },
-  "showcaseHeroHours": "Hours",
-  "@showcaseHeroHours": {
-    "description": "Menu option that sets the showcase hero stat to hours played."
-  },
   "showcaseHeroAchievements": "Achievements",
   "@showcaseHeroAchievements": {
     "description": "Menu option that sets the showcase hero stat to the game's achievement count; also the meta descriptor for the achievements hero on the large card."
-  },
-  "profileAddCard": "Add card",
-  "@profileAddCard": {
-    "description": "Label for the single add-card entry point on the owner's profile that opens the visual game picker."
   },
   "showcasePickerTitle": "Choose a game",
   "@showcasePickerTitle": {
@@ -1304,27 +1130,6 @@
   "@collectionPickerAdd": {
     "description": "Confirm button that adds the assembled collection card to the profile."
   },
-  "collectionUnavailable": "Collection unavailable",
-  "@collectionUnavailable": {
-    "description": "Placeholder shown in place of a collection card when none of its games are available — the platform is unlinked, its card is still loading, or the games rotated out of the current library."
-  },
-  "collectionMetaGames": "{count, plural, =1{1 game} other{{count} games}}",
-  "@collectionMetaGames": {
-    "description": "Meta line on a collection card naming how many games it currently renders.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "gameCollectorLabel": "Game Collector",
-  "@gameCollectorLabel": {
-    "description": "Fixed label rendered (uppercased) on the game collector card, naming the card type; the hero number below it is the games-owned count."
-  },
-  "gameCollectorUnavailable": "Game Collector unavailable",
-  "@gameCollectorUnavailable": {
-    "description": "Placeholder shown in place of a game collector card when the platform library is not available — the platform is unlinked or its card is still loading."
-  },
   "gameCollectorPickerEmpty": "Your game library looks empty right now.",
   "@gameCollectorPickerEmpty": {
     "description": "Shown in the collector picker when the Steam library resolves as absent or with 0 games owned, so the Add action is disabled — the card would read as empty."
@@ -1332,19 +1137,6 @@
   "completionistLabel": "Completionist",
   "@completionistLabel": {
     "description": "Fixed label rendered (uppercased) on the completionist card, naming the card type; the hero number below it is the perfect-games (100% completed) count."
-  },
-  "completionistUnavailable": "Completionist unavailable",
-  "@completionistUnavailable": {
-    "description": "Placeholder shown in place of a completionist card when the platform library is not available — the platform is unlinked, its card is still loading, or the perfect-games count has not been published yet."
-  },
-  "completionistMetaOfOwned": "of {count}",
-  "@completionistMetaOfOwned": {
-    "description": "Meta line on the large completionist card: the completion denominator read after the hero count (perfect games) as \"42 / of 312\", naming how many games are owned.",
-    "placeholders": {
-      "count": {
-        "type": "String"
-      }
-    }
   },
   "completionistPickerEmpty": "You don't have any 100%-completed games yet.",
   "@completionistPickerEmpty": {
@@ -1354,32 +1146,6 @@
   "@passportLabel": {
     "description": "Fixed label rendered (uppercased) on the passport card, naming the card type; the hero number below it is the count of linked platforms."
   },
-  "passportWorlds": "{count, plural, =1{1 world} other{{count} worlds}}",
-  "@passportWorlds": {
-    "description": "Meta line under the passport hero, naming the unit of the linked-platform count; uses ICU plural for 1 vs many.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "passportMore": "+{count}",
-  "@passportMore": {
-    "description": "Overflow pill on the passport card when there are more linked platforms than the card's chip cap; count is how many are not shown.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "passportUnavailable": "Passport unavailable",
-  "@passportUnavailable": {
-    "description": "Placeholder shown in place of a passport card when no linked platform resolves — none linked yet, or every card is still loading."
-  },
-  "personalizationIdentityTag": "Feat.gg",
-  "@personalizationIdentityTag": {
-    "description": "Accent platform tag on the Identity card. Brand proper noun; intentionally not translated."
-  },
   "personalizationStatPlatforms": "Platforms",
   "@personalizationStatPlatforms": {
     "description": "Stat-footer label on the Identity card; the value is the count of linked platforms."
@@ -1387,30 +1153,6 @@
   "personalizationStatMemberSince": "Member since",
   "@personalizationStatMemberSince": {
     "description": "Stat-footer label on the Identity card; the value is the year the profile was created."
-  },
-  "personalizationPlatformTitle": "Highlights",
-  "@personalizationPlatformTitle": {
-    "description": "Title of the generic single-platform card in the personalization profile; the platform name shows as the accent tag."
-  },
-  "personalizationMilestoneTitle": "Milestone",
-  "@personalizationMilestoneTitle": {
-    "description": "Title of the Milestone card, showing a game capsule with progress."
-  },
-  "personalizationFallbackTitle": "Card",
-  "@personalizationFallbackTitle": {
-    "description": "Neutral title of a personalization card whose archetype has no built variant."
-  },
-  "personalizationProfileTag": "Profile",
-  "@personalizationProfileTag": {
-    "description": "Generic accent tag on a personalization card that has no source platform."
-  },
-  "personalizationRankTitle": "Rank",
-  "@personalizationRankTitle": {
-    "description": "Title of the Rank card, showing the owner's competitive standing on one platform."
-  },
-  "personalizationMainTitle": "Main",
-  "@personalizationMainTitle": {
-    "description": "Title of the Main card, showing the owner's primary game, character, or mode on one platform."
   },
   "personalizationMainTopChampion": "Top champion",
   "@personalizationMainTopChampion": {
@@ -1599,10 +1341,6 @@
   "addCatalogConnectMore": "Connect more accounts",
   "@addCatalogConnectMore": {
     "description": "Footer link in the add-card catalog that navigates to the connections screen to link more platforms."
-  },
-  "profilePersonalize": "Personalize",
-  "@profilePersonalize": {
-    "description": "Entry action on the owner's legacy profile grid that opens the composition editor to arrange a first layout."
   },
   "profileEditIdentity": "Name and bio",
   "@profileEditIdentity": {
