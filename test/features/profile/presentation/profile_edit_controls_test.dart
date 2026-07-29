@@ -211,6 +211,36 @@ void main() {
       expect(find.byKey(const Key('profileEditCoverOption_chess')), findsOne);
     });
 
+    testWidgets('every option stays reachable on a short screen', (
+      tester,
+    ) async {
+      // The list grows with the platforms the owner has linked, and a landscape
+      // phone leaves the sheet very little height. An option that cannot be
+      // scrolled to is not an option — it is a choice the owner cannot make.
+      tester.view.physicalSize = const Size(720, 360);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final withArt = {
+        for (final platform in Platform.values)
+          platform: _card(platform, heroImage: 'https://cdn.test/hero.jpg'),
+      };
+      final container = await _host(tester, cards: withArt);
+
+      await tester.tap(find.byKey(const Key('openCover')));
+      await tester.pumpAndSettle();
+
+      final last = find.byKey(
+        Key('profileEditCoverOption_${Platform.values.last.name}'),
+      );
+      await tester.scrollUntilVisible(last, 120);
+      await tester.tap(last);
+      await tester.pumpAndSettle();
+
+      expect(_draft(container)?.headerPlatform, Platform.values.last);
+    });
+
     testWidgets('a pick lands in the draft and closes the sheet', (
       tester,
     ) async {

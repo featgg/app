@@ -23,9 +23,15 @@ Future<void> showProfileIdentitySheet(BuildContext context) =>
     );
 
 /// Opens the cover chooser: automatic, or one linked platform's art.
+///
+/// Scroll-controlled because the list grows with the platforms the owner has
+/// linked: the default sheet caps at a fraction of the screen, which a landscape
+/// phone can put below even a short list, and the options past the cap would be
+/// unreachable rather than merely off-screen.
 Future<void> showProfileCoverSheet(BuildContext context) =>
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (_) => const _CoverSheet(),
     );
 
@@ -274,36 +280,39 @@ class _CoverSheet extends ConsumerWidget {
 
     return SafeArea(
       key: const Key('profileEditCoverSheet'),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.sm,
+      // Sized to the options when they fit, scrolled when they do not.
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
+              child: Text(
+                l10n.profileEditCover,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
-            child: Text(
-              l10n.profileEditCover,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          ListTile(
-            key: const Key('profileEditCoverOption_auto'),
-            title: Text(l10n.profileHeaderArtDefault),
-            trailing: selected == null ? const Icon(Icons.check) : null,
-            onTap: () => choose(null),
-          ),
-          for (final platform in offered)
             ListTile(
-              key: Key('profileEditCoverOption_${platform.name}'),
-              title: Text(platformDescriptors[platform]!.displayName),
-              trailing: selected == platform ? const Icon(Icons.check) : null,
-              onTap: () => choose(platform),
+              key: const Key('profileEditCoverOption_auto'),
+              title: Text(l10n.profileHeaderArtDefault),
+              trailing: selected == null ? const Icon(Icons.check) : null,
+              onTap: () => choose(null),
             ),
-        ],
+            for (final platform in offered)
+              ListTile(
+                key: Key('profileEditCoverOption_${platform.name}'),
+                title: Text(platformDescriptors[platform]!.displayName),
+                trailing: selected == platform ? const Icon(Icons.check) : null,
+                onTap: () => choose(platform),
+              ),
+          ],
+        ),
       ),
     );
   }
