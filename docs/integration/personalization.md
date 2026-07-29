@@ -37,6 +37,10 @@ snake_case). Any other value is rejected as an invalid value for the field.
 
 - `platform` — a single-platform card. No longer offered when adding a card;
   existing rows still render.
+- `template` — a pre-designed, slot-filled card. **Client-retired** (see below).
+- `composed_card` — a user-assembled, cross-platform composed card.
+  **Client-retired** (see below).
+- `data_menu` — a curated stat/showcase widget. **Client-retired** (see below).
 - `showcase` — a single-game art showcase card. *(client rendering is
   Steam-first: a showcase row bound to another platform is accepted and stored,
   but the client renders it as unavailable — owner placeholder, hidden from
@@ -67,11 +71,13 @@ snake_case). Any other value is rejected as an invalid value for the field.
 `showcase`, `collection`, `game_collector`, `completionist`, `passport`,
 `rank`, `main`, and `art` are the kinds the client writes today.
 
-`template`, `composed_card` and `data_menu` are **retired**. The client no
-longer writes them and no longer reads them: a row carrying one of those tokens
-resolves to nothing and is omitted, so it renders as absent without needing to
-be removed. They remain listed here only so the token space is unambiguous
-until they are dropped from the accepted values.
+`template`, `composed_card` and `data_menu` are **client-retired**: the client
+no longer writes them and no longer reads them — a row carrying one of those
+tokens resolves to nothing and is omitted, so it renders as absent without
+needing to be removed. They stay documented above, with their binding rule,
+because the service still accepts them: a consumer must be able to tell a valid
+row from an invalid one for as long as that is true. They leave this document
+when they leave the accepted values.
 
 ### `platform` — valid values and binding rule
 
@@ -85,6 +91,8 @@ Whether `platform` is required or must be null depends on `type`:
   **must be a non-null** value from the list above.
 - `type = showcase` → `platform` **must be a non-null** value from the list
   above (the single source platform the showcase draws from).
+- `type` in {`composed_card`, `data_menu`, `template`} → `platform`
+  **must be null** (client-retired, still accepted).
 - `type = collection` → `platform` **must be null** (a collection spans multiple
   games).
 - `type = game_collector` → `platform` **must be a non-null** value from the

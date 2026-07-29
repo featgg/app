@@ -388,6 +388,29 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
     });
 
+    test('inserts above a row the read hides, not onto its position', (() async {
+      // A row that fails to resolve — a retired kind here — is omitted from the
+      // read but still holds its position, which is unique per user. The caller
+      // computes its next position from what it can see, so honoring that guess
+      // verbatim would collide with the hidden row and be rejected.
+      final source = _FakeDataSource(
+        onFetch: () async => [
+          _dto(_rowMap(id: 'visible', position: 0)),
+          _dto(_rowMap(id: 'hidden', type: 'template', position: 7)),
+        ],
+        onInsert: (row) async => _dto(_rowMap(id: 'new')),
+      );
+      final result = await _repo(source, _RecordingReporter())
+          .addPlatformWidget(
+            platform: Platform.steam,
+            position: 1,
+            size: ProfileWidgetSize.small,
+          );
+
+      expect(result.isRight(), isTrue);
+      expect(source.lastInsert!['position'], 8);
+    }));
+
     test(
       'constraint violation (23505) → Left(InputFailure), not reported',
       () async {

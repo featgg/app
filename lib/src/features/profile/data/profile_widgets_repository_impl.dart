@@ -78,7 +78,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': wireValue,
         'type': profileWidgetKindToWire(ProfileWidgetKind.platform),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         'settings': {
           'schema_version': kProfileWidgetSettingsVersion,
@@ -111,7 +111,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': wireValue,
         'type': profileWidgetKindToWire(ProfileWidgetKind.showcase),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         'settings': mergeShowcaseSelectionIntoSettings(size, selection),
       });
@@ -138,7 +138,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': null,
         'type': profileWidgetKindToWire(ProfileWidgetKind.collection),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         'settings': mergeCollectionSelectionIntoSettings(size, selection),
       });
@@ -167,7 +167,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': wireValue,
         'type': profileWidgetKindToWire(ProfileWidgetKind.gameCollector),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         // Size-only envelope: the collector aggregates the whole library, so it
         // carries no per-widget selection sub-object beyond size.
@@ -201,7 +201,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': wireValue,
         'type': profileWidgetKindToWire(ProfileWidgetKind.completionist),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         // Size-only envelope: the completionist surfaces a whole-library count,
         // so it carries no per-widget selection sub-object beyond size.
@@ -232,7 +232,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': null,
         'type': profileWidgetKindToWire(ProfileWidgetKind.passport),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         // Size-only envelope: the passport aggregates every linked platform, so
         // it carries no per-widget selection sub-object beyond size.
@@ -266,7 +266,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         // and the usual unpinned add writes a size-only envelope.
         'platform': null,
         'type': profileWidgetKindToWire(ProfileWidgetKind.art),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         'settings': mergeArtSelectionIntoSettings(
           size,
@@ -297,7 +297,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': wireValue,
         'type': profileWidgetKindToWire(ProfileWidgetKind.rank),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         // Size-only envelope: the rank card renders the platform's competitive
         // standing, so it carries no per-widget selection sub-object beyond size.
@@ -331,7 +331,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final dto = await _source.insertWidget({
         'platform': wireValue,
         'type': profileWidgetKindToWire(ProfileWidgetKind.main),
-        'position': position,
+        'position': await _freePosition(userId, position),
         'is_enabled': true,
         // Size-only envelope: the main card renders the platform's primary
         // game/character/mode, so it carries no selection sub-object beyond size.
@@ -417,6 +417,22 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
     } catch (e, st) {
       return left(_handleError(e, st));
     }
+  }
+
+  /// The position to insert at. [requested] is the caller's guess from the
+  /// widgets it can see, but the read hides every row that failed to resolve —
+  /// a retired kind, an unknown platform, an envelope from a future version.
+  /// Those rows still hold their `position`, which is unique per user, so
+  /// inserting at the visible maximum + 1 can land on one of them and be
+  /// rejected. Allocating from the raw rows closes that whatever the reason a
+  /// row is hidden.
+  Future<int> _freePosition(String userId, int requested) async {
+    final rows = await _source.fetchMyWidgets(userId);
+    var highest = -1;
+    for (final row in rows) {
+      if (row.position > highest) highest = row.position;
+    }
+    return requested > highest ? requested : highest + 1;
   }
 
   Failure _handleError(Object error, StackTrace st) {
