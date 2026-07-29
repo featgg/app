@@ -13,7 +13,6 @@ import 'package:featgg/src/features/feed/domain/feed_providers.dart';
 import 'package:featgg/src/features/feed/domain/feed_repository.dart';
 import 'package:featgg/src/features/feed/presentation/feed_presentation.dart';
 import 'package:featgg/src/features/profile/domain/profile_domain.dart';
-import 'package:featgg/src/features/profile/presentation/profile_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -216,24 +215,20 @@ void main() {
       },
     );
 
-    testWidgets('/profile/edit without a Profile extra redirects to /profile', (
-      tester,
-    ) async {
+    testWidgets('the profile has no separate edit destination', (tester) async {
+      // Everything the profile shows is edited on the profile. A second
+      // destination reachable by URL would be a second way to change the same
+      // things, which is the split this render exists to close.
       await tester.pumpWidget(_signedInAppWithProfile());
       await tester.pumpAndSettle();
 
-      // Navigate to /profile/edit with no extra — the route-level redirect
-      // must send to /profile instead of crashing on the missing Profile.
       final context = tester.element(find.byType(FeedScreen));
-      GoRouter.of(context).go('/profile/edit');
-      // The redirect lands on /profile, which stays in a perpetual loading
-      // state here (the pending repo never completes), so pump frames rather
-      // than settling the spinner, which would never settle.
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
+      final paths = GoRouter.of(
+        context,
+      ).configuration.routes.whereType<GoRoute>().map((route) => route.path);
 
-      expect(find.byType(ProfileScreen), findsOneWidget);
-      expect(find.byType(ProfileEditScreen), findsNothing);
+      expect(paths, contains('/profile'));
+      expect(paths, isNot(contains('/profile/edit')));
     });
   });
 }

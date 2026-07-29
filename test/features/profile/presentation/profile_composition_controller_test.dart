@@ -44,16 +44,34 @@ ProfileWidget _widgetAt(String id, int position, {bool enabled = true}) =>
 final _widgets = [_widget('a'), _widget('b'), _widget('c')];
 const _layout = [FullRow('a'), PairRow(left: 'b', right: 'c')];
 
+/// The fixture profile carrying [layout]. A session seeds from the whole
+/// profile — its identity as well as its rows — so the entry point takes one.
+Profile _profileWith(List<ProfileLayoutRow> layout) => Profile(
+  id: _profile.id,
+  username: _profile.username,
+  displayName: _profile.displayName,
+  avatarUrl: null,
+  bio: null,
+  theme: _profile.theme,
+  privacy: _profile.privacy,
+  featuredPlatform: null,
+  layout: layout,
+);
+
 /// Fake repository whose layout-write outcome is injected; records the fetch
 /// count so a post-save profile re-read is observable. [setFuture] holds the
 /// write pending so the disposal / concurrency windows are testable.
 final class _FakeRepository implements ProfileRepository {
-  _FakeRepository({this.setResult, this.setFuture});
+  _FakeRepository({this.setResult, this.setFuture, this.updateResult});
 
   final Either<Failure, Unit> Function()? setResult;
   final Future<Either<Failure, Unit>> Function()? setFuture;
+  final Either<Failure, Profile> Function()? updateResult;
   int fetchCalls = 0;
+  int setCalls = 0;
+  int updateCalls = 0;
   List<ProfileLayoutRow>? lastSaved;
+  ProfileEdit? lastEdit;
 
   @override
   Future<Either<Failure, Profile>> fetchMyProfile() async {
@@ -63,14 +81,18 @@ final class _FakeRepository implements ProfileRepository {
 
   @override
   Future<Either<Failure, Unit>> setMyLayout(List<ProfileLayoutRow> rows) {
+    setCalls++;
     lastSaved = rows;
     if (setFuture != null) return setFuture!();
     return Future.value(setResult?.call() ?? right(unit));
   }
 
   @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_profile);
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async {
+    updateCalls++;
+    lastEdit = edit;
+    return updateResult?.call() ?? right(_profile);
+  }
 
   @override
   Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
@@ -91,7 +113,7 @@ void main() {
     final container = _container(_FakeRepository());
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     final state = container.read(profileCompositionProvider);
 
     expect(state.editing, isTrue);
@@ -112,7 +134,7 @@ void main() {
       _widgetAt('b', 1, enabled: false),
       _widgetAt('d', 3),
     ];
-    notifier.startEditing(const [], widgets);
+    notifier.startEditing(_profileWith(const []), widgets);
     final state = container.read(profileCompositionProvider);
 
     expect(state.editing, isTrue);
@@ -154,7 +176,7 @@ void main() {
         size: ProfileWidgetSize.small,
       );
 
-      notifier.startEditing(const [], const [rank, main]);
+      notifier.startEditing(_profileWith(const []), const [rank, main]);
       final state = container.read(profileCompositionProvider);
 
       // Category order, not add order: what-I-play (Main) reads before
@@ -185,7 +207,7 @@ void main() {
       );
 
       // Add order is deliberately the reverse of the category order.
-      notifier.startEditing(const [], [
+      notifier.startEditing(_profileWith(const []), [
         kindAt('v', ProfileWidgetKind.art, 0),
         kindAt('r', ProfileWidgetKind.rank, 1, platform: Platform.chess),
         kindAt('p', ProfileWidgetKind.passport, 2),
@@ -229,7 +251,10 @@ void main() {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startEditing(const [], [_widget('a'), _widget('b')]);
+      notifier.startEditing(_profileWith(const []), [
+        _widget('a'),
+        _widget('b'),
+      ]);
       notifier.cancelEditing();
       final state = container.read(profileCompositionProvider);
 
@@ -245,7 +270,7 @@ void main() {
     final notifier = container.read(profileCompositionProvider.notifier);
 
     // Compose and persist a first layout. Success commits it to `saved`.
-    notifier.startEditing(const [], _widgets);
+    notifier.startEditing(_profileWith(const []), _widgets);
     final composed = container.read(profileCompositionProvider).working;
     await notifier.save();
     expect(container.read(profileCompositionProvider).saved, composed);
@@ -253,7 +278,7 @@ void main() {
     // The profile read is still stale while the refetch is in flight, so the Edit
     // button passes an empty layout — startEditing must keep the saved
     // composition rather than wipe the editor blank.
-    notifier.startEditing(const [], _widgets);
+    notifier.startEditing(_profileWith(const []), _widgets);
     final state = container.read(profileCompositionProvider);
     expect(state.working, composed);
     expect(state.saved, composed);
@@ -264,7 +289,7 @@ void main() {
     final notifier = container.read(profileCompositionProvider.notifier);
 
     // No prior composition in the controller → the passed layout is authoritative.
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     final state = container.read(profileCompositionProvider);
     expect(state.working, _layout);
     expect(state.saved, _layout);
@@ -278,7 +303,7 @@ void main() {
 
       // Fresh, and an un-saved bootstrap, both report no persisted knowledge.
       expect(container.read(profileCompositionProvider).hasPersisted, isFalse);
-      notifier.startEditing(const [], _widgets);
+      notifier.startEditing(_profileWith(const []), _widgets);
       expect(container.read(profileCompositionProvider).hasPersisted, isFalse);
 
       // A committed save flips it — the authoritative "controller knows the
@@ -369,7 +394,7 @@ void main() {
     final container = _container(_FakeRepository());
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     notifier.onToggleSize('a'); // full → orphan half
     final state = container.read(profileCompositionProvider);
 
@@ -383,7 +408,7 @@ void main() {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
       notifier.removeCardFromLayout('a'); // the full 'a' row
 
       final state = container.read(profileCompositionProvider);
@@ -398,7 +423,7 @@ void main() {
       final container = _container(repo);
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
       notifier.onToggleSize('a'); // make dirty so save persists
       final sent = container.read(profileCompositionProvider).working;
       final saveFuture = notifier.save(); // saving := true, then awaits
@@ -425,7 +450,7 @@ void main() {
     expect(repo.fetchCalls, 1);
 
     final notifier = container.read(profileCompositionProvider.notifier);
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     notifier.onToggleSize('a');
     final working = container.read(profileCompositionProvider).working;
 
@@ -450,7 +475,7 @@ void main() {
       final container = _container(repo);
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
       notifier.onToggleSize('a');
       await notifier.save();
 
@@ -468,7 +493,7 @@ void main() {
     final container = _container(repo);
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     notifier.onToggleSize('a');
     await notifier.save();
     expect(container.read(profileCompositionProvider).saveFailed, isTrue);
@@ -481,7 +506,7 @@ void main() {
     final container = _container(_FakeRepository());
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     notifier.onToggleSize('a');
     notifier.cancelEditing();
 
@@ -495,7 +520,7 @@ void main() {
     final container = _container(repo);
     final notifier = container.read(profileCompositionProvider.notifier);
 
-    notifier.startEditing(_layout, _widgets);
+    notifier.startEditing(_profileWith(_layout), _widgets);
     await notifier.save();
 
     expect(container.read(profileCompositionProvider).editing, isFalse);
@@ -514,7 +539,7 @@ void main() {
       );
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
       notifier.onToggleSize('a');
       final saveFuture = notifier.save(); // suspends on the pending write
 
@@ -535,7 +560,7 @@ void main() {
       final container = _container(repo);
       final notifier = container.read(profileCompositionProvider.notifier);
 
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
       notifier.onToggleSize('a');
       final sent = container.read(profileCompositionProvider).working;
 
@@ -558,7 +583,7 @@ void main() {
       () {
         final container = _container(_FakeRepository());
         final notifier = container.read(profileCompositionProvider.notifier);
-        notifier.startEditing(_layout, _widgets);
+        notifier.startEditing(_profileWith(_layout), _widgets);
 
         // The owner acquired 'd' mid-edit; the refreshed list is the superset.
         notifier.appendUnplacedWidgets([..._widgets, _widgetAt('d', 3)]);
@@ -576,7 +601,7 @@ void main() {
     test('appends a Rank (now dual-size) as a full row', () {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
 
       // Rank supports a full row, so an acquired Rank folds in as a FullRow.
       const rank = ProfileWidget(
@@ -598,7 +623,7 @@ void main() {
     test('does not append a disabled widget', () {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
 
       notifier.appendUnplacedWidgets([
         ..._widgets,
@@ -613,7 +638,7 @@ void main() {
     test('does not append an already-placed widget (no-op, stays clean)', () {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
 
       notifier.appendUnplacedWidgets(_widgets);
 
@@ -630,7 +655,7 @@ void main() {
         final container = _container(repo);
         final notifier = container.read(profileCompositionProvider.notifier);
 
-        notifier.startEditing(_layout, _widgets);
+        notifier.startEditing(_profileWith(_layout), _widgets);
         notifier.onToggleSize('a'); // make it dirty so save actually persists
         final sent = container.read(profileCompositionProvider).working;
         final saveFuture = notifier.save(); // saving := true, then awaits
@@ -652,7 +677,7 @@ void main() {
         '(idempotent)', () {
       final container = _container(_FakeRepository());
       final notifier = container.read(profileCompositionProvider.notifier);
-      notifier.startEditing(_layout, _widgets);
+      notifier.startEditing(_profileWith(_layout), _widgets);
 
       final refreshed = [..._widgets, _widgetAt('d', 3)];
       notifier.appendUnplacedWidgets(refreshed);
@@ -676,6 +701,188 @@ void main() {
       final state = container.read(profileCompositionProvider);
       expect(state.editing, isFalse);
       expect(state.working, isEmpty);
+    });
+  });
+
+  group('the identity the session carries alongside the arrangement', () {
+    test('opens seeded from the profile and clean', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      final state = container.read(profileCompositionProvider);
+
+      expect(state.draft?.displayName, 'Nico');
+      expect(state.draft?.theme, ProfileTheme.crimson);
+      expect(state.isDirty, isFalse);
+    });
+
+    test('opens clean over a profile whose stored bio is only whitespace', () {
+      // The editors produce a trimmed, empty-as-null bio. Seeding the raw value
+      // would open every such profile dirty and offer a Done that writes
+      // nothing the owner asked for.
+      const padded = Profile(
+        id: 'owner-1',
+        username: 'nico',
+        displayName: '  Nico  ',
+        avatarUrl: null,
+        bio: '   ',
+        theme: ProfileTheme.crimson,
+        privacy: ProfilePrivacy.public,
+        featuredPlatform: null,
+        layout: _layout,
+      );
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+
+      notifier.startEditing(padded, _widgets);
+      final state = container.read(profileCompositionProvider);
+
+      expect(state.draft?.displayName, 'Nico');
+      expect(state.draft?.bio, isNull);
+      expect(state.isDirty, isFalse);
+    });
+
+    test('an identity edit is dirty and is what Done writes', () async {
+      final repo = _FakeRepository();
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.editIdentity(displayName: 'Nico F', bio: 'gg');
+      expect(container.read(profileCompositionProvider).isDirty, isTrue);
+
+      await notifier.save();
+
+      expect(repo.updateCalls, 1);
+      expect(repo.lastEdit?.displayName, 'Nico F');
+      expect(repo.lastEdit?.bio, 'gg');
+      // Nothing moved, so the arrangement is not rewritten.
+      expect(repo.setCalls, 0);
+      expect(container.read(profileCompositionProvider).editing, isFalse);
+    });
+
+    test('a theme pick lands in the draft and writes nothing on its own', () {
+      final repo = _FakeRepository();
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.selectTheme(ProfileTheme.abyss);
+      final state = container.read(profileCompositionProvider);
+
+      // The render re-tints off the draft; the write waits for Done.
+      expect(state.draft?.theme, ProfileTheme.abyss);
+      expect(state.isDirty, isTrue);
+      expect(repo.updateCalls, 0);
+    });
+
+    test('a cover pick lands in the draft', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.selectHeaderPlatform(Platform.steam);
+      expect(
+        container.read(profileCompositionProvider).draft?.headerPlatform,
+        Platform.steam,
+      );
+    });
+
+    test('cancel restores the identity, not just the arrangement', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.editIdentity(displayName: 'Someone else', bio: 'oops');
+      notifier.selectTheme(ProfileTheme.abyss);
+      notifier.cancelEditing();
+      final state = container.read(profileCompositionProvider);
+
+      expect(state.editing, isFalse);
+      expect(state.draft?.displayName, 'Nico');
+      expect(state.draft?.bio, isNull);
+      expect(state.draft?.theme, ProfileTheme.crimson);
+    });
+
+    test('an arrangement-only change does not rewrite the identity', () async {
+      final repo = _FakeRepository();
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.onToggleSize('a');
+      await notifier.save();
+
+      expect(repo.setCalls, 1);
+      expect(repo.updateCalls, 0);
+    });
+
+    test('a failed identity write keeps what was typed and holds the session '
+        'open', () async {
+      final repo = _FakeRepository(
+        updateResult: () => left(const NetworkFailure()),
+      );
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.editIdentity(displayName: 'Nico F', bio: 'gg');
+      notifier.onToggleSize('a');
+      await notifier.save();
+      final state = container.read(profileCompositionProvider);
+
+      expect(state.saveFailed, isTrue);
+      expect(state.editing, isTrue);
+      // Typed text has no other copy — rolling it back would lose it.
+      expect(state.draft?.displayName, 'Nico F');
+      expect(state.draft?.bio, 'gg');
+      // Fails fast: the arrangement is not written over a half-failed save.
+      expect(repo.setCalls, 0);
+    });
+
+    test('an arrangement that fails after the identity landed does not rewrite '
+        'the identity on the next Done', () async {
+      final repo = _FakeRepository(
+        setResult: () => left(const NetworkFailure()),
+      );
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.editIdentity(displayName: 'Nico F', bio: null);
+      notifier.onToggleSize('a');
+      await notifier.save();
+
+      expect(repo.updateCalls, 1);
+      expect(container.read(profileCompositionProvider).saveFailed, isTrue);
+      expect(container.read(profileCompositionProvider).editing, isTrue);
+
+      // The identity is persisted; only the arrangement rolled back. A second
+      // Done must not send the same name again.
+      await notifier.save();
+      expect(repo.updateCalls, 1);
+    });
+
+    test('the identity editors are inert while a save is in flight', () async {
+      final gate = Completer<Either<Failure, Unit>>();
+      final repo = _FakeRepository(setFuture: () => gate.future);
+      final container = _container(repo);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.onToggleSize('a');
+      final saving = notifier.save();
+
+      // A save has snapshotted the draft and must persist exactly that.
+      notifier.selectTheme(ProfileTheme.abyss);
+      notifier.editIdentity(displayName: 'Nico F', bio: null);
+      final midSave = container.read(profileCompositionProvider);
+      expect(midSave.draft?.theme, ProfileTheme.crimson);
+      expect(midSave.draft?.displayName, 'Nico');
+
+      gate.complete(right(unit));
+      await saving;
     });
   });
 }

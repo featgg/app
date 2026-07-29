@@ -19,6 +19,26 @@ const Key kProfileHeaderNameKey = Key('profileHeaderName');
 const Key kProfileHeaderHandleKey = Key('profileHeaderHandle');
 const Key kProfileHeaderMarksKey = Key('profileHeaderMarks');
 
+/// What the header offers while its owner is editing the profile in place: the
+/// three things it shows that are theirs to change. Null in read mode, which is
+/// what keeps the header inert for a visitor and outside edit mode.
+final class ProfileHeaderEditing {
+  const ProfileHeaderEditing({
+    required this.onEditAvatar,
+    required this.onEditCover,
+    required this.onEditIdentity,
+    this.avatarBusy = false,
+  });
+
+  final VoidCallback onEditAvatar;
+  final VoidCallback onEditCover;
+  final VoidCallback onEditIdentity;
+
+  /// True while a photo is being picked or uploaded: the avatar shows progress
+  /// and takes no further taps until the pipeline settles.
+  final bool avatarBusy;
+}
+
 /// The profile header — the answer to "who am I", and the one surface on the
 /// profile that is not a card: it carries no number, and it cannot be moved,
 /// paired or removed.
@@ -35,6 +55,7 @@ class ProfileHeader extends ConsumerWidget {
     required this.profile,
     required this.columnWidth,
     this.cardSource,
+    this.editing,
   });
 
   final Profile profile;
@@ -46,6 +67,9 @@ class ProfileHeader extends ConsumerWidget {
   /// Where each platform's card resolves from. Null → the owner's own card; the
   /// router injects the public source for the visitor render.
   final CardSource? cardSource;
+
+  /// The edit affordances, or null when the header is only being read.
+  final ProfileHeaderEditing? editing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,6 +90,46 @@ class ProfileHeader extends ConsumerWidget {
     );
     final rise = avatarSize * PersonalizationLayout.avatarOverlap;
 
+    final l10n = AppLocalizations.of(context);
+    final edit = editing;
+
+    Widget cover = _Cover(imageUrl: header.art);
+    Widget identity = _Identity(
+      profile: profile,
+      platforms: header.platforms,
+      columnWidth: columnWidth,
+    );
+    Widget avatar = _Avatar(
+      url: profile.avatarUrl,
+      word: profileHeaderName(profile),
+      size: avatarSize,
+    );
+    if (edit != null) {
+      cover = _EditTarget(
+        targetKey: const Key('profileHeaderCoverEditTarget'),
+        label: l10n.profileEditCover,
+        alignment: Alignment.topRight,
+        onTap: edit.onEditCover,
+        child: cover,
+      );
+      identity = _EditTarget(
+        targetKey: const Key('profileHeaderIdentityEditTarget'),
+        label: l10n.profileEditIdentity,
+        alignment: Alignment.topRight,
+        onTap: edit.onEditIdentity,
+        child: identity,
+      );
+      avatar = _EditTarget(
+        targetKey: const Key('profileHeaderAvatarEditTarget'),
+        label: l10n.profileAvatarChange,
+        alignment: Alignment.bottomRight,
+        busy: edit.avatarBusy,
+        busyLabel: l10n.profileAvatarUploading,
+        onTap: edit.avatarBusy ? null : edit.onEditAvatar,
+        child: avatar,
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(palette.radius),
       child: Stack(
@@ -73,7 +137,7 @@ class ProfileHeader extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Cover(imageUrl: header.art),
+              cover,
               ColoredBox(
                 color: palette.surface,
                 // The identity clears the part of the avatar hanging into it.
@@ -84,11 +148,7 @@ class ProfileHeader extends ConsumerWidget {
                     AppSpacing.md,
                     AppSpacing.md,
                   ),
-                  child: _Identity(
-                    profile: profile,
-                    platforms: header.platforms,
-                    columnWidth: columnWidth,
-                  ),
+                  child: identity,
                 ),
               ),
             ],
@@ -98,14 +158,91 @@ class ProfileHeader extends ConsumerWidget {
             // Straddles the seam rather than sitting under it, which is what
             // ties the two halves into one block.
             top: columnWidth / PersonalizationLayout.coverAspect - rise,
-            child: _Avatar(
-              url: profile.avatarUrl,
-              word: profileHeaderName(profile),
-              size: avatarSize,
-            ),
+            child: avatar,
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Makes one part of the header tappable while editing, marked by a pencil badge
+/// so an editable region reads as editable without a caption telling the owner
+/// to tap it. The badge sits inside the region it belongs to — a header of three
+/// separate targets needs three separate marks to be unambiguous.
+class _EditTarget extends StatelessWidget {
+  const _EditTarget({
+    required this.targetKey,
+    required this.label,
+    required this.alignment,
+    required this.onTap,
+    required this.child,
+    this.busy = false,
+    this.busyLabel,
+  });
+
+  final Key targetKey;
+  final String label;
+  final Alignment alignment;
+  final VoidCallback? onTap;
+  final Widget child;
+  final bool busy;
+  final String? busyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = PersonalizationTheme.of(context);
+    return Stack(
+      key: targetKey,
+      children: [
+        // Dimmed while busy so the progress indicator reads against it.
+        Opacity(opacity: busy ? 0.5 : 1, child: child),
+        Positioned.fill(
+          child: Material(
+            type: MaterialType.transparency,
+            child: Tooltip(
+              message: busy ? (busyLabel ?? label) : label,
+              child: InkWell(onTap: onTap),
+            ),
+          ),
+        ),
+        // The badge says where to tap; it must never be what catches the tap.
+        // It sits above the target, and a glyph takes a hit like any other
+        // painted text, so without this the one pixel everyone aims at is the
+        // one pixel that does nothing.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Align(
+              alignment: alignment,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: palette.surface,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    child: busy
+                        ? SizedBox.square(
+                            dimension: AppSpacing.md,
+                            child: CircularProgressIndicator(
+                              strokeWidth: AppSpacing.hairline,
+                              color: palette.text,
+                            ),
+                          )
+                        : Icon(
+                            Icons.edit_outlined,
+                            size: AppSpacing.md,
+                            color: palette.text,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

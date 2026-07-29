@@ -21,22 +21,16 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(profileProvider);
-    // The composition-side inputs to the mount gate and the compose app bar.
-    // Selecting the fields (not the whole state) keeps the screen from rebuilding
-    // on every drag; saving/isDirty gate the edit-mode Done action.
+    // The session-side inputs to the app bar. Selecting the fields (not the
+    // whole state) keeps the screen from rebuilding on every drag and every
+    // keystroke; saving/isDirty gate the edit-mode Done action.
     final compose = ref.watch(
       profileCompositionProvider.select(
-        (s) => (
-          editing: s.editing,
-          hasPersisted: s.hasPersisted,
-          savedIsNotEmpty: s.saved.isNotEmpty,
-          saving: s.saving,
-          isDirty: s.isDirty,
-        ),
+        (s) => (editing: s.editing, saving: s.saving, isDirty: s.isDirty),
       ),
     );
-    // Backs the edit-layout gate (canEdit) and supplies the add sheet's widget
-    // list; the compose app bar lives on this Scaffold, so the read is here.
+    // Seeds the session's arrangement and supplies the add sheet's widget list;
+    // both controls live in this Scaffold's app bar, so the read is here.
     final widgetsState = ref.watch(ownerProfileWidgetsProvider);
     // Observe the widget-mutation controller here: the screen outlives every
     // grid tile and the add button, so this listener keeps the autoDispose
@@ -76,21 +70,24 @@ class ProfileScreen extends ConsumerWidget {
       },
     );
 
-    // Disabled while the read is refreshing. The form is seeded from the
-    // profile handed to it and writes every field back, so opening it on a
-    // value known to be stale — the window right after Settings is dismissed —
-    // would let a save revert what was just changed there.
+    // The one way in: everything the profile shows is edited on the profile.
+    // Disabled while the read is refreshing or the widgets have not settled —
+    // the session seeds from both, and an edit writes every profile field back,
+    // so opening on a value known to be stale (the window right after Settings
+    // is dismissed) would let Done revert what was just changed there.
     IconButton editProfileAction(Profile p) => IconButton(
       key: const Key('profileEditButton'),
       icon: const Icon(Icons.edit_outlined),
       tooltip: l10n.profileEdit,
-      onPressed: state.isRefreshing
+      onPressed: state.isRefreshing || !widgetsState.hasValue
           ? null
-          : () => context.push('/profile/edit', extra: p),
+          : () => ref
+                .read(profileCompositionProvider.notifier)
+                .startEditing(p, widgetsState.value!),
     );
 
-    // The composed surface hosts its compose controls in the app bar so nothing
-    // floats over the render.
+    // The profile hosts its edit controls in the app bar so nothing floats over
+    // the render.
     final profile = state.hasValue ? state.value : null;
 
     final PreferredSizeWidget appBar;
@@ -112,22 +109,7 @@ class ProfileScreen extends ConsumerWidget {
           backgroundColor: palette.bg,
           foregroundColor: palette.text,
           title: Text(l10n.profileTitle),
-          actions: [
-            settingsAction(),
-            editProfileAction(profile),
-            IconButton(
-              key: const Key('profileComposeEditButton'),
-              icon: const Icon(Icons.dashboard_customize_outlined),
-              tooltip: l10n.profileComposeEdit,
-              // Disabled until the owner widgets read settles (the seed needs it).
-              onPressed: widgetsState.hasValue
-                  ? () => notifier.startEditing(
-                      profile.layout,
-                      widgetsState.value!,
-                    )
-                  : null,
-            ),
-          ],
+          actions: [settingsAction(), editProfileAction(profile)],
         );
       } else {
         appBar = AppBar(

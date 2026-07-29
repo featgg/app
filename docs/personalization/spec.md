@@ -4,7 +4,7 @@
 > design. The card model, formats, anatomy and catalog are the decision of
 > record on #220.
 > **Mockups.** `mockups/layout-editor.html` is normative for editor
-> interaction only (§9.1). `mockups/profile-view.html` is a non-normative
+> interaction only (§9.2). `mockups/profile-view.html` is a non-normative
 > visual reference, kept for the background/theme treatment. Neither is
 > normative for card anatomy. Where
 > prose and a mockup disagree, the prose wins.
@@ -77,9 +77,11 @@ Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (on
 
 ## 6. Card formats and anatomy
 
-Most cards in the catalog are **data cards**: they answer a question with a number. A second family — **visual cards**, which carry imagery and no datum — opens with **Art** (§7), added in one tap with nothing to choose: it resolves the best artwork the profile carries, by the same rule the cover uses. Visual cards are placed, paired and moved exactly like data cards; the distinction surfaces only in the add catalog (§7), where the visual group sits last. User-uploaded imagery is a source the family will gain, not a second family (§10).
+Most cards in the catalog are **data cards**: they answer a question with a number. A second family — **visual cards**, which carry imagery and no datum — opens with **Art** (§7), added in one tap with nothing to choose: it falls back to the first linked platform that publishes artwork. Visual cards are placed, paired and moved exactly like data cards; the distinction surfaces only in the add catalog (§7), where the visual group sits last. User-uploaded imagery is a source the family will gain, not a second family (§10).
 
 **The image rule**, shared by every surface that wants a picture (the cover §4, the avatar, the Art card): resolve a meaningful image if one exists; failing that, render the theme's own ground. No image surface is ever blocked, empty, or a broken-image tile — the fallback is the answer to having nothing to show.
+
+The surfaces share the rule, **never a choice**. Each one's picture is its own: pinning the cover to a platform is a statement about the cover, and a card that moved with it would be a second edit its owner never made. Where a surface has no picture of its own yet, it falls back on its own terms and reads no other surface's preference.
 
 The profile header (§4) is not a card of either family. It is a fixed surface outside the row model.
 
@@ -132,7 +134,7 @@ Card by card:
 | Rarest Achievement | the hardest thing I have done | set by the registry when the card lands (#231) | auto | the achievement, its game and how rare it is |
 | Collection | what I own or chase | full | curated | a chosen set of games with progress states |
 | Collector | how big my library is | full | auto | one platform's whole library aggregated |
-| Art | none — it is a picture | full, half | auto art, curation later | added in one tap, unpointed; it resolves the best art the profile carries (§6's image rule) with no datum over it. Pointing it at a specific picture arrives with the image picker (§10). Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
+| Art | none — it is a picture | full, half | auto art, curation later | added in one tap, unpointed; it falls back to the first linked platform publishing art (§6's image rule) with no datum over it, and reads no other surface's preference. Pointing it at a specific picture arrives with the image picker (§10). Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
 
 Not every platform gets every card: a card is offered only where the data genuinely supports it. Per-card availability is declared in the registry (§7.1) and enforced by the add catalog's availability rules. This document does not enumerate a card × platform matrix — the registry owns it, and an enumeration in prose would be stale within a story.
 
@@ -239,7 +241,23 @@ Invariants (these delete the legacy layout bugs by construction):
 - Size is a consequence of placement (§5); the editor only offers legal placements per the archetype registry.
 - The layout is written through the owner-scoped layout write operation documented in `docs/integration/personalization.md` § Layout write (composition editor), which validates row shape, cell counts, ownership and uniqueness. Per-archetype size support is **not** server-validated — the client offers only legal placements (§7.1).
 
-### 9.1 Editor interaction (edit mode)
+### 9.1 One edit mode
+
+**What is visible on the profile is edited on the profile, by touching it. What the profile does not show lives in settings.** The profile offers exactly two entry points — Edit and Settings — and there is no separate edit-profile destination.
+
+Edit mode is the same render with affordances over it, never another page:
+
+- the avatar, the cover and the name/bio each open their own editor where they sit;
+- the theme is picked on the render and re-tints it live — a color decision belongs where the colors are;
+- the cards are arranged (§9.2).
+
+Everything in a session is a draft: one Done writes the identity and the arrangement together, one Cancel discards both. The identity is written first, because a failed arrangement is redone with a few drags while typed text has no other copy. A photo upload is the exception and commits on its own — it is a file leaving the device, not a value in a form.
+
+The entry point stays closed while the profile read is in flight: a session writes every profile field back, so opening it on a value known to be stale would let Done revert what settings just changed.
+
+Settings keeps what the profile page does not show: privacy, account, language, and the discovery-feed preview.
+
+### 9.2 Editor interaction (arranging cards)
 
 Single-gesture model: **size and position are one decision** — where you drop determines the size.
 

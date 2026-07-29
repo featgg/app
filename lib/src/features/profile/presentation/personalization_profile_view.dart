@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/core.dart';
-import '../../connections/domain/connection.dart';
 import '../domain/profile.dart';
 import '../domain/profile_archetype.dart';
 import '../domain/profile_composition.dart';
@@ -30,6 +29,7 @@ class PersonalizationProfileView extends ConsumerWidget {
     this.cardSource,
     this.widgetsProvider,
     this.rowsBuilder,
+    this.headerEditing,
   });
 
   /// Carries the layout and the theme that selects this view's palette.
@@ -49,6 +49,10 @@ class PersonalizationProfileView extends ConsumerWidget {
   /// Builds the rows region given the resolved column width. Null → the
   /// read-only rows; the owner injects the editor rows while editing.
   final Widget Function(BuildContext context, double columnWidth)? rowsBuilder;
+
+  /// The header's edit affordances. Null → a header that is only read; the owner
+  /// injects them while editing.
+  final ProfileHeaderEditing? headerEditing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,6 +99,7 @@ class PersonalizationProfileView extends ConsumerWidget {
                                     profile: profile,
                                     columnWidth: columnWidth,
                                     cardSource: cardSource,
+                                    editing: headerEditing,
                                   ),
                                   const SizedBox(
                                     height: PersonalizationLayout.rowGap,
@@ -106,10 +111,6 @@ class PersonalizationProfileView extends ConsumerWidget {
                                           userId: userId,
                                           cardSource: cardSource,
                                           memberSince: profile.createdAt,
-                                          headerPlatform:
-                                              profile.headerPlatform,
-                                          featuredPlatform:
-                                              profile.featuredPlatform,
                                           widgetsProvider: widgetsProvider,
                                         ),
                                 ],
@@ -173,8 +174,6 @@ class _LayoutRows extends ConsumerWidget {
     required this.userId,
     required this.cardSource,
     this.memberSince,
-    this.headerPlatform,
-    this.featuredPlatform,
     this.widgetsProvider,
   });
 
@@ -184,11 +183,6 @@ class _LayoutRows extends ConsumerWidget {
 
   /// Profile creation date, forwarded to the Identity card's footer.
   final DateTime? memberSince;
-
-  /// The profile's art preferences, forwarded to the Art card so an unpointed
-  /// card resolves through the cover's full chain.
-  final Platform? headerPlatform;
-  final Platform? featuredPlatform;
 
   /// Which widgets read backs the rows; null → the visitor's public read.
   final ProviderListenable<AsyncValue<List<ProfileWidget>>>? widgetsProvider;
@@ -258,7 +252,5 @@ class _LayoutRows extends ConsumerWidget {
           size: size,
           cardSource: cardSource,
           memberSince: memberSince,
-          headerPlatform: headerPlatform,
-          featuredPlatform: featuredPlatform,
         );
 }
