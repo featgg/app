@@ -531,54 +531,6 @@ void main() {
     });
   });
 
-  group('Fallback', () {
-    final widget = goldenWidget(
-      id: 'fallback',
-      kind: ProfileWidgetKind.template,
-      platform: Platform.steam,
-    );
-    final cards = _steam(
-      heroImage: goldenArtUrlA,
-      stats: const [
-        CardStat(key: 'games_owned', value: 300),
-        CardStat(key: 'hours_played', value: 1200),
-        CardStat(key: 'rating', value: 4242),
-      ],
-    );
-
-    goldenTest('full renders a never-blank card for an unbuilt widget kind', (
-      tester,
-    ) async {
-      await pumpCardGolden(
-        tester,
-        card: _card(widget, ProfileCardSize.full),
-        width: goldenFullWidth,
-        cards: cards,
-        art: const {goldenArtUrlA: goldenArtColorA},
-      );
-
-      await expectLater(
-        find.byKey(goldenSubjectKey),
-        matchesGoldenFile('goldens/fallback_full.png'),
-      );
-    });
-
-    goldenTest('half keeps the same card at the pair width', (tester) async {
-      await pumpCardGolden(
-        tester,
-        card: _card(widget, ProfileCardSize.half),
-        width: goldenHalfWidth,
-        cards: cards,
-        art: const {goldenArtUrlA: goldenArtColorA},
-      );
-
-      await expectLater(
-        find.byKey(goldenSubjectKey),
-        matchesGoldenFile('goldens/fallback_half.png'),
-      );
-    });
-  });
-
   group('Art', () {
     final widget = goldenWidget(
       id: 'art',

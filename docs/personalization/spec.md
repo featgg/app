@@ -172,8 +172,10 @@ The table lists sources, not per-card guarantees; per-card availability is the r
 | `completionist` | Achievement shelf |
 | `rank` | Rank |
 | `main` | Main |
+| `passport` | Identity |
+| `art` | Art |
 
-`platform`, `template`, `composed_card`, `data_menu` and `passport` map to no card and are retired by #173 (identity is the profile header, §4).
+`template`, `composed_card` and `data_menu` are retired: the client neither writes nor reads them, so a row still carrying one resolves to nothing and renders as absent. `platform` is no longer offered when adding a card, but its existing rows still render.
 
 A new card lands with its own kind, added to the personalization brief; `docs/integration/personalization.md` is the only place a wire contract is written.
 

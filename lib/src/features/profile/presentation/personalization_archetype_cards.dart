@@ -6,7 +6,6 @@ import 'profile_owner_cards_provider.dart';
 import 'cards/achievement_grid_card.dart';
 import 'cards/art_card.dart';
 import 'cards/collection_card.dart';
-import 'cards/fallback_card.dart';
 import 'cards/identity_card.dart';
 import 'cards/main_card.dart';
 import 'cards/milestone_card.dart';
@@ -18,7 +17,6 @@ export 'cards/art_card.dart';
 export 'cards/card_data.dart';
 export 'cards/card_key.dart';
 export 'cards/collection_card.dart';
-export 'cards/fallback_card.dart';
 export 'cards/identity_card.dart';
 export 'cards/main_card.dart';
 export 'cards/milestone_card.dart';
@@ -74,11 +72,6 @@ Widget personalizationCardFor(
       cardSource: cardSource,
     ),
     ProfileArchetype.art => ArtCard(
-      widget: widget,
-      size: effectiveSize,
-      cardSource: cardSource,
-    ),
-    ProfileArchetype.fallback => FallbackCard(
       widget: widget,
       size: effectiveSize,
       cardSource: cardSource,

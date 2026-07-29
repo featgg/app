@@ -9,13 +9,10 @@ import '../../../core/observability/observability.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
 import '../domain/collection_selection.dart';
-import '../domain/composed_card.dart';
-import '../domain/data_menu_selection.dart';
 import '../domain/art_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_repository.dart';
 import '../domain/showcase_selection.dart';
-import '../domain/template_catalog.dart';
 import 'profile_widget_dto.dart';
 import 'profile_widgets_data_source.dart';
 
@@ -87,62 +84,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
           'schema_version': kProfileWidgetSettingsVersion,
           'size': profileWidgetSizeToWire(size),
         },
-      });
-      final widget = profileWidgetFromDto(dto);
-      if (widget == null) {
-        // The just-written row failed to map — a fault, not control flow.
-        throw const FormatException('inserted widget row did not map');
-      }
-      return right(widget);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      final dto = await _source.insertWidget({
-        'platform': null,
-        'type': profileWidgetKindToWire(ProfileWidgetKind.template),
-        'position': position,
-        'is_enabled': true,
-        'settings': mergeTemplateFillIntoSettings(
-          size,
-          TemplateFill(templateId, const {}),
-        ),
-      });
-      final widget = profileWidgetFromDto(dto);
-      if (widget == null) {
-        // The just-written row failed to map — a fault, not control flow.
-        throw const FormatException('inserted widget row did not map');
-      }
-      return right(widget);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addComposedWidget({
-    required int position,
-    required ProfileWidgetSize size,
-  }) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      final dto = await _source.insertWidget({
-        'platform': null,
-        'type': profileWidgetKindToWire(ProfileWidgetKind.composed),
-        'position': position,
-        'is_enabled': true,
-        'settings': mergeComposedFillIntoSettings(size, ComposedFill.empty),
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -471,60 +412,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(id, {
         'settings': mergeCollectionSelectionIntoSettings(size, selection),
-      });
-      return right(unit);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setDataMenuSelection(
-    String id,
-    ProfileWidgetSize size,
-    DataMenuSelection selection,
-  ) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      await _source.updateWidget(id, {
-        'settings': mergeDataMenuSelectionIntoSettings(size, selection),
-      });
-      return right(unit);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setTemplateFill(
-    String id,
-    ProfileWidgetSize size,
-    TemplateFill fill,
-  ) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      await _source.updateWidget(id, {
-        'settings': mergeTemplateFillIntoSettings(size, fill),
-      });
-      return right(unit);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setComposedFill(
-    String id,
-    ProfileWidgetSize size,
-    ComposedFill fill,
-  ) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      await _source.updateWidget(id, {
-        'settings': mergeComposedFillIntoSettings(size, fill),
       });
       return right(unit);
     } catch (e, st) {

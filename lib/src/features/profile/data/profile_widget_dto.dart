@@ -4,12 +4,8 @@ import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
 import '../domain/art_selection.dart';
 import '../domain/collection_selection.dart';
-import '../domain/composed_card.dart';
-import '../domain/data_menu_catalog.dart';
-import '../domain/data_menu_selection.dart';
 import '../domain/profile_widget.dart';
 import '../domain/showcase_selection.dart';
-import '../domain/template_catalog.dart';
 
 part 'profile_widget_dto.g.dart';
 
@@ -88,134 +84,11 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     position: dto.position,
     isEnabled: dto.isEnabled,
     size: size,
-    selection: dataMenuSelectionFromSettings(settings),
-    templateFill: templateFillFromSettings(settings),
-    composedFill: composedFillFromSettings(settings),
     showcaseSelection: showcaseSelectionFromSettings(settings),
     collectionSelection: collectionSelectionFromSettings(settings),
     artSelection: artSelectionFromSettings(settings),
   );
 }
-
-/// Stable `settings` key the data-menu selection is stored under. Additive
-/// beside `size` in the same `schema_version: 1` envelope.
-const String _dataMenuItemsKey = 'data_menu_items';
-
-/// The set of known catalog ids, for dropping unknown/stale tokens on read.
-final Set<String> _knownCatalogIds = {
-  for (final item in dataMenuCatalog) item.id,
-};
-
-/// Reads the data-menu selection leniently from a `settings` envelope. An
-/// absent key, a non-list value, non-string entries, and ids not in the
-/// current catalog are all dropped (soft resolution, mirroring the feed
-/// compatibility rule); the result defaults to [DataMenuSelection.empty].
-DataMenuSelection dataMenuSelectionFromSettings(
-  Map<String, dynamic>? settings,
-) {
-  final raw = settings?[_dataMenuItemsKey];
-  if (raw is! List) return DataMenuSelection.empty;
-  final ids = <String>{
-    for (final entry in raw)
-      if (entry is String && _knownCatalogIds.contains(entry)) entry,
-  };
-  return ids.isEmpty ? DataMenuSelection.empty : DataMenuSelection(ids);
-}
-
-/// Builds the full `settings` envelope to write for a selection change:
-/// preserves `schema_version` and `size` and sets `data_menu_items` to the
-/// selected ids (an empty selection omits the key). Additive — never bumps the
-/// version.
-Map<String, dynamic> mergeDataMenuSelectionIntoSettings(
-  ProfileWidgetSize size,
-  DataMenuSelection selection,
-) => {
-  'schema_version': kProfileWidgetSettingsVersion,
-  'size': profileWidgetSizeToWire(size),
-  if (!selection.isDefault) _dataMenuItemsKey: selection.selectedIds.toList(),
-};
-
-/// Stable `settings` key the template fill is stored under. Additive beside
-/// `size` and `data_menu_items` in the same `schema_version: 1` envelope. Shape:
-/// `{ "id": "<templateId>", "slots": { "<slotId>": "<dataMenuItemId>" } }`.
-const String _templateKey = 'template';
-
-/// Reads the template fill leniently from a `settings` envelope. A non-object
-/// value, a non-string `id`, or a non-map `slots` all yield [TemplateFill.empty].
-/// Slot entries whose value is not a known catalog item id are dropped on read
-/// (mirrors [dataMenuSelectionFromSettings]); an `id` not in the current catalog
-/// is kept raw so a stale token soft-resolves at render.
-TemplateFill templateFillFromSettings(Map<String, dynamic>? settings) {
-  final raw = settings?[_templateKey];
-  if (raw is! Map) return TemplateFill.empty;
-  final id = raw['id'];
-  if (id is! String) return TemplateFill.empty;
-  final rawSlots = raw['slots'];
-  final slots = <String, String>{
-    if (rawSlots is Map)
-      for (final entry in rawSlots.entries)
-        if (entry.key is String &&
-            entry.value is String &&
-            _knownCatalogIds.contains(entry.value))
-          entry.key as String: entry.value as String,
-  };
-  return TemplateFill(id, slots);
-}
-
-/// Builds the full `settings` envelope to write for a template change: preserves
-/// `schema_version` and `size` and sets the `template` sub-object from [fill].
-/// Additive — never bumps the version. A fill with a null `templateId` omits the
-/// key (an un-chosen template carries nothing).
-Map<String, dynamic> mergeTemplateFillIntoSettings(
-  ProfileWidgetSize size,
-  TemplateFill fill,
-) => {
-  'schema_version': kProfileWidgetSettingsVersion,
-  'size': profileWidgetSizeToWire(size),
-  if (fill.templateId != null)
-    _templateKey: {
-      'id': fill.templateId,
-      if (fill.slotItemIds.isNotEmpty) 'slots': fill.slotItemIds,
-    },
-};
-
-/// Stable `settings` key the composed-card fill is stored under. Additive
-/// beside `size`, `data_menu_items`, and `template` in the same
-/// `schema_version: 1` envelope. Shape: `{ "items": ["<dataMenuItemId>", ...] }`.
-const String _composedKey = 'composed';
-
-/// Reads the composed-card fill leniently from a `settings` envelope. A
-/// non-object value, a missing/non-list `items`, non-string entries, ids not in
-/// the current catalog, and duplicates are all dropped (mirrors
-/// [dataMenuSelectionFromSettings] and [templateFillFromSettings]); the result
-/// defaults to [ComposedFill.empty]. Order is preserved from the stored list.
-ComposedFill composedFillFromSettings(Map<String, dynamic>? settings) {
-  final raw = settings?[_composedKey];
-  if (raw is! Map) return ComposedFill.empty;
-  final items = raw['items'];
-  if (items is! List) return ComposedFill.empty;
-  final ids = <String>[];
-  for (final entry in items) {
-    if (entry is String &&
-        _knownCatalogIds.contains(entry) &&
-        !ids.contains(entry)) {
-      ids.add(entry);
-    }
-  }
-  return ids.isEmpty ? ComposedFill.empty : ComposedFill(ids);
-}
-
-/// Builds the full `settings` envelope to write for a composed-card change:
-/// preserves `schema_version` and `size` and sets the `composed` sub-object from
-/// [fill]. Additive — never bumps the version. An empty fill omits the key.
-Map<String, dynamic> mergeComposedFillIntoSettings(
-  ProfileWidgetSize size,
-  ComposedFill fill,
-) => {
-  'schema_version': kProfileWidgetSettingsVersion,
-  'size': profileWidgetSizeToWire(size),
-  if (!fill.isEmpty) _composedKey: {'items': fill.itemIds},
-};
 
 /// Stable `settings` key the showcase selection is stored under. Additive
 /// beside `size` in the same `schema_version: 1` envelope. Shape:
@@ -357,14 +230,9 @@ String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {
   ProfileWidgetSize.large => 'large',
 };
 
-/// Serializes [kind] to its stable wire token. [ProfileWidgetKind.platform] and
-/// [ProfileWidgetKind.template] are written today; the other kinds are reserved
-/// for later phases.
+/// Serializes [kind] to its stable wire token.
 String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.platform => 'platform',
-  ProfileWidgetKind.dataMenu => 'data_menu',
-  ProfileWidgetKind.template => 'template',
-  ProfileWidgetKind.composed => 'composed_card',
   ProfileWidgetKind.showcase => 'showcase',
   ProfileWidgetKind.collection => 'collection',
   ProfileWidgetKind.gameCollector => 'game_collector',
@@ -375,10 +243,11 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.art => 'art',
 };
 
+/// The retired tokens (`template`, `composed_card`, `data_menu`) are absent on
+/// purpose: an unrecognized token yields null and the row is omitted, which is
+/// how a profile still holding one renders without it and without a migration.
 ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'platform' => ProfileWidgetKind.platform,
-  'template' => ProfileWidgetKind.template,
-  'composed_card' => ProfileWidgetKind.composed,
   'showcase' => ProfileWidgetKind.showcase,
   'collection' => ProfileWidgetKind.collection,
   'game_collector' => ProfileWidgetKind.gameCollector,

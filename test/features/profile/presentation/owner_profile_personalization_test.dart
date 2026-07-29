@@ -47,7 +47,7 @@ ProfileWidget _widget(String id, ProfileWidgetKind kind) => ProfileWidget(
 
 final _widgets = [
   _widget('idc', ProfileWidgetKind.passport), // identity → full only
-  _widget('card', ProfileWidgetKind.template), // fallback → both sizes
+  _widget('card', ProfileWidgetKind.art), // fallback → both sizes
 ];
 
 final class _FakeProfileRepo implements ProfileRepository {
@@ -422,7 +422,7 @@ void main() {
     // The write is genuinely asynchronous; the append is driven by the widgets
     // read settling (the reactive listener), not by the sheet closing.
     final repo = _AcquireWidgetsRepo([
-      _widget('card', ProfileWidgetKind.template),
+      _widget('card', ProfileWidgetKind.art),
     ], delay: const Duration(milliseconds: 50));
     final harness = acquireHarness(repo);
 
@@ -445,7 +445,7 @@ void main() {
     // by the widgets read settling, not by how or when the sheet closed.
     final gate = Completer<void>();
     final repo = _AcquireWidgetsRepo([
-      _widget('card', ProfileWidgetKind.template),
+      _widget('card', ProfileWidgetKind.art),
     ], gate: gate);
     final harness = acquireHarness(repo);
 
@@ -474,7 +474,7 @@ void main() {
     (tester) async {
       final gate = Completer<void>();
       final repo = _AcquireWidgetsRepo([
-        _widget('card', ProfileWidgetKind.template),
+        _widget('card', ProfileWidgetKind.art),
       ], gate: gate);
       final harness = acquireHarness(repo);
 
@@ -499,7 +499,7 @@ void main() {
   testWidgets('a write failure during acquire surfaces through the controller '
       'and appends nothing', (tester) async {
     final repo = _AcquireWidgetsRepo(
-      [_widget('card', ProfileWidgetKind.template)],
+      [_widget('card', ProfileWidgetKind.art)],
       delay: const Duration(milliseconds: 10),
       writeFailure: const NetworkFailure(),
     );
@@ -536,7 +536,7 @@ void main() {
     final observer = _PopCountingObserver();
     final gate = Completer<void>();
     final repo = _AcquireWidgetsRepo([
-      _widget('card', ProfileWidgetKind.template),
+      _widget('card', ProfileWidgetKind.art),
     ], gate: gate);
     final harness = acquireHarness(repo, observers: [observer]);
 
@@ -614,8 +614,8 @@ void main() {
     // the widget is deleted AND dropped from the working layout. The reactive
     // unplaced-fold then sees the reduced read and never re-adds it.
     final widgetsRepo = _DeletableWidgetsRepo([
-      _widget('card', ProfileWidgetKind.template),
-      _widget('extra', ProfileWidgetKind.template),
+      _widget('card', ProfileWidgetKind.art),
+      _widget('extra', ProfileWidgetKind.art),
     ]);
     final container = ProviderContainer(
       retry: (count, error) => null,
@@ -654,8 +654,8 @@ void main() {
   testWidgets('a double-tap on a card delete affordance dispatches the removal '
       'exactly once (A5)', (tester) async {
     final widgetsRepo = _DeletableWidgetsRepo([
-      _widget('card', ProfileWidgetKind.template),
-      _widget('extra', ProfileWidgetKind.template),
+      _widget('card', ProfileWidgetKind.art),
+      _widget('extra', ProfileWidgetKind.art),
     ]);
     final container = ProviderContainer(
       retry: (count, error) => null,
@@ -695,8 +695,8 @@ void main() {
   testWidgets('deleting the first card leaves the successor delete live on its '
       'first tap (A6)', (tester) async {
     final widgetsRepo = _DeletableWidgetsRepo([
-      _widget('card', ProfileWidgetKind.template),
-      _widget('extra', ProfileWidgetKind.template),
+      _widget('card', ProfileWidgetKind.art),
+      _widget('extra', ProfileWidgetKind.art),
     ]);
     final container = ProviderContainer(
       retry: (count, error) => null,
