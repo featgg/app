@@ -332,5 +332,6 @@
   "profileComposeHint": "Arrastra una tarjeta entre filas para el ancho completo, o junto a otra para emparejarlas.",
   "profileComposeDragHandleLabel": "Arrastra para mover la tarjeta",
   "profileComposeSizeToggleLabel": "Cambiar el tamaño de la tarjeta",
-  "profileComposeDeleteLabel": "Eliminar tarjeta"
+  "profileComposeDeleteLabel": "Eliminar tarjeta",
+  "profileArtFramingLabel": "Arrastra la imagen para encuadrarla"
 }

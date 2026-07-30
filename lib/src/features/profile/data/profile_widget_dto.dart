@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/art_framing.dart';
 import '../domain/art_selection.dart';
 import '../domain/collection_selection.dart';
 import '../domain/profile_widget.dart';
@@ -82,8 +83,44 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     showcaseSelection: showcaseSelectionFromSettings(settings),
     collectionSelection: collectionSelectionFromSettings(settings),
     artSelection: artSelectionFromSettings(settings),
+    framing: artFramingFromSettings(settings),
   );
 }
+
+/// Stable `settings` key the art framing is stored under. Additive in the
+/// `schema_version: 1` envelope. Shape: `{ "x": <0..1>, "y": <0..1> }`.
+///
+/// Top-level rather than inside a kind's sub-object because framing is not a
+/// property of where the picture came from: every kind that renders art can
+/// carry one, including the ones whose envelope holds nothing else.
+const String _framingKey = 'framing';
+
+/// Reads the framing leniently. An absent key, a malformed sub-object or a
+/// non-numeric coordinate all read as the centre — which is what the renderer
+/// has always done — so a bad value costs the owner their framing, never the
+/// card. Out-of-range coordinates are pulled back into the picture rather than
+/// discarded: they still name a direction the owner moved in.
+ArtFraming artFramingFromSettings(Map<String, dynamic>? settings) {
+  final raw = settings?[_framingKey];
+  if (raw is! Map) return ArtFraming.center;
+  final x = raw['x'];
+  final y = raw['y'];
+  if (x is! num || y is! num) return ArtFraming.center;
+  return ArtFraming.clamped(x.toDouble(), y.toDouble());
+}
+
+/// The full `settings` envelope for [widget].
+///
+/// Rebuilt from the whole widget, not from the one concern being changed:
+/// framing sits beside a kind's own sub-object rather than inside it, so a
+/// write that emitted only its own key would drop the other.
+Map<String, dynamic> profileWidgetSettings(ProfileWidget widget) => {
+  ...mergeArtSelectionIntoSettings(widget.artSelection),
+  ...mergeShowcaseSelectionIntoSettings(widget.showcaseSelection),
+  ...mergeCollectionSelectionIntoSettings(widget.collectionSelection),
+  if (!widget.framing.isCenter)
+    _framingKey: {'x': widget.framing.x, 'y': widget.framing.y},
+};
 
 /// Stable `settings` key the showcase selection is stored under. Additive
 /// in the `schema_version: 1` envelope. Shape:

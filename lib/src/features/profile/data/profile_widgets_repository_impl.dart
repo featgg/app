@@ -8,6 +8,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/observability/observability.dart';
 import '../../connections/domain/connection.dart';
 import '../../connections/domain/platform_descriptor.dart';
+import '../domain/art_framing.dart';
 import '../domain/collection_selection.dart';
 import '../domain/art_selection.dart';
 import '../domain/profile_widget.dart';
@@ -360,6 +361,23 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(id, {
         'settings': mergeCollectionSelectionIntoSettings(selection),
+      });
+      return right(unit);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setArtFraming(
+    ProfileWidget widget,
+    ArtFraming framing,
+  ) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      await _source.updateWidget(widget.id, {
+        'settings': profileWidgetSettings(widget.copyWith(framing: framing)),
       });
       return right(unit);
     } catch (e, st) {

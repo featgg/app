@@ -2,7 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
+import '../domain/art_framing.dart';
 import '../domain/profile_archetype.dart';
+import 'art_framing_control.dart';
 
 /// The ground a framed card sits on: the theme's own vertical fill, nothing
 /// drawn over it. The bottom paint is the solid mid-tone, never a gradient that
@@ -34,12 +36,17 @@ class PersonalizationCardGround extends StatelessWidget {
 Widget personalizationArtOrPlaceholder({
   required String? imageUrl,
   required Widget placeholder,
+  ArtFraming framing = ArtFraming.center,
 }) {
   final url = imageUrl;
   if (url == null) return placeholder;
   return CachedNetworkImage(
     imageUrl: url,
     fit: BoxFit.cover,
+    // The framing decides which part of an oversized picture survives the crop.
+    // The fit never changes with it, so panning can never shrink the art below
+    // its frame and expose the ground behind it.
+    alignment: Alignment(framing.x * 2 - 1, framing.y * 2 - 1),
     placeholder: (_, _) => placeholder,
     errorWidget: (_, _, _) => placeholder,
   );
@@ -66,6 +73,7 @@ class PersonalizationCardShell extends StatelessWidget {
     required this.archetype,
     required this.size,
     this.art,
+    this.framing,
     this.framedContent,
     this.hero,
     this.subject,
@@ -81,6 +89,10 @@ class PersonalizationCardShell extends StatelessWidget {
   /// The subject's real art. Null — or a url that fails to load — renders the
   /// framed format over the theme's ground.
   final String? art;
+
+  /// How the owner framed [art], and which widget to write a new framing back
+  /// to. Null on a surface whose art is not the owner's to reframe.
+  final ArtFramingTarget? framing;
 
   /// The archetype's designed content, drawn over the ground (the orb shelf,
   /// the letter shelf, the platform chips). Framed cards only.
@@ -98,6 +110,31 @@ class PersonalizationCardShell extends StatelessWidget {
   /// Everything the card has to say in numbers. The shell decides how many of
   /// them the card's size can answer for; a card never caps its own.
   final List<PersonalizationStat> stats;
+
+  /// The card's picture, reframeable where the owner is editing one that is
+  /// theirs. A card with no art has nothing to move, so the drag is not offered
+  /// over the theme's ground.
+  Widget _art(BuildContext context) {
+    final target = framing;
+    final scope = ArtFramingScope.maybeOf(context);
+    if (target == null || scope == null || art == null) {
+      return personalizationArtOrPlaceholder(
+        imageUrl: art,
+        placeholder: const PersonalizationCardGround(),
+        framing: target?.framing ?? ArtFraming.center,
+      );
+    }
+    return ArtFramingGesture(
+      framing: target.framing,
+      semanticsLabel: AppLocalizations.of(context).profileArtFramingLabel,
+      onChanged: (next) => scope.onChanged(target.widgetId, next),
+      builder: (context, framing) => personalizationArtOrPlaceholder(
+        imageUrl: art,
+        placeholder: const PersonalizationCardGround(),
+        framing: framing,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -157,10 +194,7 @@ class PersonalizationCardShell extends StatelessWidget {
                 ? Stack(
                     fit: StackFit.expand,
                     children: [
-                      personalizationArtOrPlaceholder(
-                        imageUrl: art,
-                        placeholder: const PersonalizationCardGround(),
-                      ),
+                      _art(context),
                       if (hasDatum) ...[
                         const DecoratedBox(
                           decoration: BoxDecoration(

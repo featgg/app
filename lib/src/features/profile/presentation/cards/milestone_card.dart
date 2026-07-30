@@ -5,6 +5,7 @@ import '../../../connections/domain/game_card.dart';
 import '../../domain/profile_archetype.dart';
 import '../../domain/profile_widget.dart';
 import '../../domain/showcase_value_resolver.dart';
+import '../art_framing_control.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
@@ -44,6 +45,7 @@ class MilestoneCard extends ConsumerWidget {
       archetype: ProfileArchetype.milestone,
       size: size,
       art: resolved?.heroImage,
+      framing: ArtFramingTarget(widgetId: widget.id, framing: widget.framing),
       subject: resolved?.title,
       stats: milestoneStats(resolved, l10n),
     );

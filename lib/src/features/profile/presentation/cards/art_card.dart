@@ -6,6 +6,7 @@ import '../../../connections/domain/game_card.dart';
 import '../../domain/profile_archetype.dart';
 import '../../domain/profile_header_resolver.dart';
 import '../../domain/profile_widget.dart';
+import '../art_framing_control.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
@@ -60,6 +61,7 @@ class ArtCard extends ConsumerWidget {
       archetype: ProfileArchetype.art,
       size: size,
       art: art,
+      framing: ArtFramingTarget(widgetId: widget.id, framing: widget.framing),
     );
   }
 }

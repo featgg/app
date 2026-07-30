@@ -1,6 +1,7 @@
 /// Domain layer of the profile feature: entity, repository interface, and DI seam.
 library;
 
+export 'art_framing.dart';
 export 'avatar_providers.dart';
 export 'avatar_repository.dart';
 export 'profile.dart';

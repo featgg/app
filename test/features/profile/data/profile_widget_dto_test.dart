@@ -1,5 +1,6 @@
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
+import 'package:featgg/src/features/profile/domain/art_framing.dart';
 import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
@@ -21,6 +22,7 @@ Map<String, dynamic> _row({
   Object? showcase,
   Object? collection,
   Object? art,
+  Object? framing,
 }) {
   final settings = <String, dynamic>{};
   if (schemaVersion != null) settings['schema_version'] = schemaVersion;
@@ -31,6 +33,7 @@ Map<String, dynamic> _row({
   if (showcase != null) settings['showcase'] = showcase;
   if (collection != null) settings['collection'] = collection;
   if (art != null) settings['art'] = art;
+  if (framing != null) settings['framing'] = framing;
   return {
     'id': id,
     'platform': platform,
@@ -739,6 +742,102 @@ void main() {
         artSelectionFromSettings(mergeArtSelectionIntoSettings(selection)),
         selection,
       );
+    });
+  });
+
+  group('art framing', () {
+    test('a row with no framing key reads as the centre', () {
+      final w = profileWidgetFromDto(ProfileWidgetDto.fromJson(_row()));
+
+      expect(w!.framing, ArtFraming.center);
+    });
+
+    test('a stored point is read back', () {
+      final w = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(framing: {'x': 0.25, 'y': 0.75})),
+      );
+
+      expect(w!.framing, const ArtFraming(x: 0.25, y: 0.75));
+    });
+
+    test('an integer coordinate is read, not rejected', () {
+      // JSON carries 0 and 1 as ints; a framing pushed to an edge is exactly
+      // where those turn up, so a num-blind read would silently drop the
+      // framings most likely to matter.
+      final w = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(framing: {'x': 0, 'y': 1})),
+      );
+
+      expect(w!.framing, const ArtFraming(x: 0, y: 1));
+    });
+
+    test('a coordinate outside the picture is pulled back into it', () {
+      final w = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(framing: {'x': -3.0, 'y': 9.0})),
+      );
+
+      expect(w!.framing, const ArtFraming(x: 0, y: 1));
+    });
+
+    for (final bad in <Object>[
+      'middle',
+      <Object>[0.5, 0.5],
+      {'x': 'left', 'y': 0.5},
+      {'y': 0.5},
+    ]) {
+      test('a malformed framing ($bad) costs the framing, not the card', () {
+        final w = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(_row(framing: bad)),
+        );
+
+        expect(w, isNotNull);
+        expect(w!.framing, ArtFraming.center);
+      });
+    }
+
+    test('the centre writes no framing key', () {
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+      );
+
+      expect(profileWidgetSettings(w).containsKey('framing'), isFalse);
+    });
+
+    test('a framing write keeps the kind sub-object beside it', () {
+      // The two live in one envelope. A write that emitted only its own key
+      // would take the card's picture with it.
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        artSelection: ArtSelection(source: Platform.steam),
+        framing: ArtFraming(x: 0.1, y: 0.9),
+      );
+
+      final written = profileWidgetSettings(w);
+
+      expect((written['art']! as Map)['source'], 'steam');
+      expect(written['framing'], {'x': 0.1, 'y': 0.9});
+      expect(written['schema_version'], kProfileWidgetSettingsVersion);
+    });
+
+    test('serialize -> parse preserves the point', () {
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        framing: ArtFraming(x: 0.2, y: 0.4),
+      );
+
+      expect(artFramingFromSettings(profileWidgetSettings(w)), w.framing);
     });
   });
 }

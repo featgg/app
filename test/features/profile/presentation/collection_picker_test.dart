@@ -5,6 +5,7 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/connections/domain/connections_providers.dart';
 import 'package:featgg/src/features/connections/domain/connections_repository.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
+import 'package:featgg/src/features/profile/domain/art_framing.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
@@ -103,6 +104,12 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
     CollectionSelection selection,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, Unit>> setArtFraming(
+    ProfileWidget widget,
+    ArtFraming framing,
   ) async => throw UnimplementedError();
 
   @override

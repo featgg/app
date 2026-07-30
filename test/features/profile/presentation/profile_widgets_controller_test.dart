@@ -1,5 +1,6 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/profile/domain/art_framing.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
@@ -25,6 +26,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   int fetchCalls = 0;
   final List<String> mutations = [];
   ShowcaseSelection? lastShowcaseSelection;
+  ArtFraming? lastFraming;
   CollectionSelection? lastCollectionSelection;
   Platform? lastCollectorPlatform;
   Platform? lastCompletionistPlatform;
@@ -221,6 +223,16 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   ) async {
     mutations.add('setShowcaseSelection');
     lastShowcaseSelection = selection;
+    return _result(unit);
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setArtFraming(
+    ProfileWidget widget,
+    ArtFraming framing,
+  ) async {
+    mutations.add('setArtFraming');
+    lastFraming = framing;
     return _result(unit);
   }
 }

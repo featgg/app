@@ -1,6 +1,7 @@
 /// Presentation layer of the profile feature.
 library;
 
+export 'art_framing_control.dart';
 export 'avatar_crop_screen.dart';
 export 'avatar_picker.dart';
 export 'avatar_upload_controller.dart';

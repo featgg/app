@@ -8,6 +8,7 @@ import '../domain/profile_archetype.dart';
 import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
+import 'art_framing_control.dart';
 import 'personalization_archetype_cards.dart';
 import 'profile_composition_controller.dart';
 import 'profile_widgets_controller.dart';
@@ -115,9 +116,21 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       children.add(_gap(i + 1, palette));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
+    // Marks every card below as the owner's to reframe. The read view builds
+    // the same cards from the same builder and does not provide this, which is
+    // what makes a visitor's copy of the card inert.
+    return ArtFramingScope(
+      onChanged: (id, framing) {
+        final target = byId[id];
+        if (target == null) return;
+        ref
+            .read(profileWidgetsControllerProvider.notifier)
+            .setArtFraming(target, framing);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 
