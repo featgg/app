@@ -70,6 +70,8 @@ Widget _page({
   String? art = _artUrl,
   ScrollController? controller,
   int cards = 4,
+  ProfileArchetype archetype = ProfileArchetype.art,
+  List<PersonalizationStat> stats = const [],
 }) {
   // Bounded here rather than per card: a sliver hands its children the
   // viewport's width whatever they ask for, so a card sized from the inside
@@ -81,9 +83,10 @@ Widget _page({
       children: [
         for (var i = 0; i < cards; i++)
           PersonalizationCardShell(
-            archetype: ProfileArchetype.art,
+            archetype: archetype,
             size: size,
             art: art,
+            stats: stats,
             framing: ArtFramingTarget(widgetId: 'w-$i', framing: framing),
           ),
       ],
@@ -409,6 +412,97 @@ void main() {
       await _swipe(tester, const Offset(60, 0), hold: true);
 
       expect(_paintedAlignment(tester).x, lessThan(0));
+    });
+  });
+
+  group('a card that also answers with a number', () {
+    // Every picture card except Art draws a number over its own art, behind a
+    // gradient that keeps the number legible. Framing reached only Art because
+    // both were stacked above the control: the gradient washed the mark out and
+    // the number took the press. The harness had only ever mounted Art.
+    const stats = [PersonalizationStat(value: '412', label: 'STEAM HOURS')];
+
+    Future<void> pumpCard(
+      WidgetTester tester,
+      String url, {
+      void Function(String, ArtFraming)? onChanged,
+    }) async {
+      await tester.pumpWidget(
+        _page(
+          art: url,
+          archetype: ProfileArchetype.platform,
+          stats: stats,
+          onChanged: onChanged,
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('draws its number', (tester) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await pumpCard(tester, url, onChanged: (_, _) {});
+
+      expect(find.text('412'), findsWidgets);
+    });
+
+    testWidgets('offers the control', (tester) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await pumpCard(tester, url, onChanged: (_, _) {});
+
+      expect(find.byType(ArtFramingBadge), findsWidgets);
+    });
+
+    testWidgets('shows the mark above what is drawn over the picture', (
+      tester,
+    ) async {
+      // Painted under the gradient the mark is still found, just unreadable —
+      // so being present proves nothing. What proves it is being last.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await pumpCard(tester, url, onChanged: (_, _) {});
+
+      final painted = find
+          .descendant(
+            of: find.byType(PersonalizationCardShell).first,
+            matching: find.byWidgetPredicate((w) => true),
+          )
+          .evaluate()
+          .toList();
+      final badge = painted.indexWhere((e) => e.widget is ArtFramingBadge);
+      final scrim = painted.indexWhere((e) => e.widget is DecoratedBox);
+
+      expect(badge, greaterThan(scrim));
+    });
+
+    testWidgets('takes a hold over the number, not just over the art', (
+      tester,
+    ) async {
+      // The corner the number occupies is the one a finger reaches for on a
+      // card whose top half is the picture.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await pumpCard(tester, url, onChanged: (_, f) => moved.add(f));
+
+      final card = tester.getRect(find.byType(PersonalizationCardShell).first);
+      final overTheNumber = Offset(card.left + 40, card.bottom - 20);
+      final gesture = await tester.startGesture(overTheNumber);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 20));
+      for (var i = 0; i < 20; i++) {
+        await gesture.moveBy(const Offset(4, 0));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(moved, hasLength(1));
+      expect(moved.single.x, lessThan(0.5));
+    });
+
+    testWidgets('a visitor gets no mark on it either', (tester) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await pumpCard(tester, url);
+
+      expect(find.byType(ArtFramingBadge), findsNothing);
+      expect(find.text('412'), findsWidgets);
     });
   });
 }

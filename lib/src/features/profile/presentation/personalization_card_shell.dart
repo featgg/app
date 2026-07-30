@@ -111,29 +111,30 @@ class PersonalizationCardShell extends StatelessWidget {
   /// them the card's size can answer for; a card never caps its own.
   final List<PersonalizationStat> stats;
 
-  /// The card's picture, reframeable where the owner is editing one that is
-  /// theirs. A card with no art has nothing to move, so the drag is not offered
-  /// over the theme's ground.
-  Widget _art(BuildContext context) {
+  /// A bleed card whole: its picture, and whatever it draws over it.
+  ///
+  /// The overlay is built inside the framing control rather than stacked on top
+  /// of it. A card that answers with a number draws that number over its own
+  /// picture, and anything drawn above the control both hides the mark that
+  /// advertises it and takes the press that would start it — which is why
+  /// framing reached only the one card that draws nothing over its art.
+  Widget _bleed(BuildContext context, Widget Function(Widget picture) over) {
     final target = framing;
     final scope = ArtFramingScope.maybeOf(context);
     final url = art;
+    Widget picture(ArtFraming framing) => personalizationArtOrPlaceholder(
+      imageUrl: art,
+      placeholder: const PersonalizationCardGround(),
+      framing: framing,
+    );
     if (target == null || scope == null || url == null) {
-      return personalizationArtOrPlaceholder(
-        imageUrl: art,
-        placeholder: const PersonalizationCardGround(),
-        framing: target?.framing ?? ArtFraming.center,
-      );
+      return over(picture(target?.framing ?? ArtFraming.center));
     }
     return ArtFramingGesture(
       imageUrl: url,
       framing: target.framing,
       onChanged: (next) => scope.onChanged(target.widgetId, next),
-      builder: (context, framing) => personalizationArtOrPlaceholder(
-        imageUrl: url,
-        placeholder: const PersonalizationCardGround(),
-        framing: framing,
-      ),
+      builder: (context, framing) => over(picture(framing)),
     );
   }
 
@@ -192,26 +193,34 @@ class PersonalizationCardShell extends StatelessWidget {
                 datumZone &&
                 (heroStat != null || (degraded && subject != null));
             return format == ProfileCardFormat.bleed
-                ? Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _art(context),
-                      if (hasDatum) ...[
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.center,
-                              colors: [
-                                PersonalizationArtColors.heroScrim,
-                                PersonalizationArtColors.transparent,
-                              ],
+                ? _bleed(
+                    context,
+                    (picture) => Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        picture,
+                        if (hasDatum) ...[
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.center,
+                                colors: [
+                                  PersonalizationArtColors.heroScrim,
+                                  PersonalizationArtColors.transparent,
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        Positioned(left: 0, right: 0, bottom: 0, child: datum),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: datum,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   )
                 : Stack(
                     fit: StackFit.expand,
