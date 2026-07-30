@@ -40,6 +40,26 @@ void main() {
           reason: 'accent must clear the UI/large-text bar',
         );
       });
+
+      test('${theme.name} accent text clears AA-normal on every ground it '
+          'lands on', () {
+        final palette = paletteForTheme(theme);
+        // Every ground the palette puts text on, worst case included: a lighter
+        // ground is the harder one for light text, so passing on all three is
+        // what makes the tone safe wherever a label is placed.
+        final grounds = {
+          'bg': palette.bg,
+          'surface': Color.alphaBlend(palette.surface, palette.bg),
+          'surface2': palette.surface2,
+        };
+        for (final ground in grounds.entries) {
+          expect(
+            _contrastRatio(palette.accentText, ground.value),
+            greaterThanOrEqualTo(4.5),
+            reason: 'accent text on ${ground.key}',
+          );
+        }
+      });
     }
   });
 }

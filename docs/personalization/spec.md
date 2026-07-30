@@ -184,7 +184,7 @@ A new card lands with its own kind, added to the personalization brief; `docs/in
 
 ```css
 :root[data-theme="crimson"] {
-  --accent:#BC3B4E; --accent-soft:rgba(188,59,78,.16);
+  --accent:#BC3B4E; --accent-text:#CF6574; --accent-soft:rgba(188,59,78,.16);
   --art-a:#BC3B4E; --art-b:#5A1D2A; --art-c:#2A1016;
 }
 /* theme-independent base: --bg:#0A0A0D; --surface:rgba(21,21,27,.92);
@@ -205,7 +205,7 @@ A new card lands with its own kind, added to the personalization brief; `docs/in
   | arcane | `#8E5CE8` | `#3E2775` | `#221540` |
   | rose | `#E85C9E` | `#6F2C4C` | `#351524` |
 
-- **Contrast.** The theme-independent tokens carry body copy and stats, so those ratios hold for every theme: body text (`--text` on `--surface` over `--bg`) ≈ 16:1 and muted text (`--muted`) ≈ 6.4:1 both clear AA-normal (≥4.5); stat numbers (bold `--text`) ≈ 16:1 clear AA-large (≥3.0). The accent is an emphasis/UI and large-text color (tags, chip outlines) rather than body copy, so it is held to the ≥3.0 bar — the level the default accent meets:
+- **Contrast.** The theme-independent tokens carry body copy and stats, so those ratios hold for every theme: body text (`--text` on `--surface` over `--bg`) ≈ 16:1 and muted text (`--muted`) ≈ 6.4:1 both clear AA-normal (≥4.5); stat numbers (bold `--text`) ≈ 16:1 clear AA-large (≥3.0). `--accent` is an emphasis/UI and large-text color (tags, chip outlines, grounds, borders, graphics) rather than body copy, so it is held to the ≥3.0 bar — the level the default accent meets:
 
   | id | accent : surface | ≥3.0 (UI/large) | ≥4.5 (normal) |
   |---|---|---|---|
@@ -217,6 +217,21 @@ A new card lands with its own kind, added to the personalization brief; `docs/in
   | abyss | ≈ 5.1:1 | pass | pass |
   | arcane | ≈ 4.3:1 | pass | brand baseline |
   | rose | ≈ 5.7:1 | pass | pass |
+
+- **`--accent-text`: the accent as small text.** A label that wants to carry its theme rather than fall back to `--muted` reads in this token, which is held to AA-normal (≥4.5) on every ground the palette puts text on — `--bg`, `--surface` over `--bg`, and `--surface2`. The lightest of the three is the hard case for light text, so the table below reports both ends. Most accents already clear the bar and pass their own value through; where one does not, the tone is lifted in **lightness only**, leaving the hue and saturation that make the theme recognizable untouched. `--accent` itself never changes: grounds, borders and graphics do not need the lift and would lose the theme's character to it.
+
+  | id | `--accent-text` | : surface | : surface2 | |
+  |---|---|---|---|---|
+  | crimson (default) | `#CF6574` | ≈ 5.0:1 | ≈ 4.7:1 | lifted from `#BC3B4E` |
+  | ember | `#E8763B` | ≈ 6.2:1 | ≈ 5.7:1 | = accent |
+  | solar | `#E0A82E` | ≈ 8.6:1 | ≈ 7.9:1 | = accent |
+  | chak | `#3BBC8E` | ≈ 7.7:1 | ≈ 7.1:1 | = accent |
+  | frost | `#3BC7E8` | ≈ 9.2:1 | ≈ 8.5:1 | = accent |
+  | abyss | `#4C82EA` | ≈ 5.0:1 | ≈ 4.6:1 | = accent |
+  | arcane | `#9A6DEA` | ≈ 5.0:1 | ≈ 4.6:1 | lifted from `#8E5CE8` |
+  | rose | `#E85C9E` | ≈ 5.6:1 | ≈ 5.2:1 | = accent |
+
+  Its first consumer is the profile handle (§4), which read in `--muted` until this token existed.
 
 - **Legacy theme values:** an earlier profile theme field carried a different closed list (`classic|immersive|retro|analyst`, stored but visually inert). Those rows remap to `crimson`; unknown values fall back to `crimson` on read.
 - Typography: Space Grotesk (display/numbers) + Inter (body/labels). Dark-first only in v1.

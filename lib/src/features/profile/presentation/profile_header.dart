@@ -335,10 +335,10 @@ class _Identity extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: textTheme.labelMedium?.copyWith(
-            // Not the accent: at this size the brand red on the surface lands
-            // near 3.4:1, under the 4.5:1 small text needs. The weight carries
-            // the handle instead of the colour.
-            color: palette.muted,
+            // The one place the accent reaches the identity block. It reads in
+            // the theme's text-safe tone rather than the raw accent, which at
+            // this size lands under what small text needs in some themes.
+            color: palette.accentText,
             fontWeight: AppTypography.semiBold,
           ),
         ),
