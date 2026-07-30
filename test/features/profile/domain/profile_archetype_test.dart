@@ -68,23 +68,9 @@ void main() {
         ProfileWidgetKind.completionist,
       ]) {
         expect(
-          archetypeForWidget(_widget(kind)),
-          isNot(ProfileArchetype.fallback),
-          reason: '$kind should map to a designed archetype, not fallback',
-        );
-      }
-    });
-
-    test('every other kind falls through to fallback', () {
-      for (final kind in const [
-        ProfileWidgetKind.template,
-        ProfileWidgetKind.composed,
-        ProfileWidgetKind.dataMenu,
-      ]) {
-        expect(
-          archetypeForWidget(_widget(kind)),
-          ProfileArchetype.fallback,
-          reason: '$kind should map to the fallback archetype',
+          () => archetypeForWidget(_widget(kind)),
+          returnsNormally,
+          reason: '$kind should map to a designed archetype',
         );
       }
     });
@@ -95,24 +81,20 @@ void main() {
       expect(supportedSizes(ProfileArchetype.identity), {ProfileCardSize.full});
     });
 
-    test(
-      'platform, milestone, rank, main, and fallback support both sizes',
-      () {
-        for (final archetype in const [
-          ProfileArchetype.platform,
-          ProfileArchetype.milestone,
-          ProfileArchetype.rank,
-          ProfileArchetype.main,
-          ProfileArchetype.fallback,
-        ]) {
-          expect(
-            supportedSizes(archetype),
-            {ProfileCardSize.full, ProfileCardSize.half},
-            reason: '$archetype should support full and half',
-          );
-        }
-      },
-    );
+    test('platform, milestone, rank, and main support both sizes', () {
+      for (final archetype in const [
+        ProfileArchetype.platform,
+        ProfileArchetype.milestone,
+        ProfileArchetype.rank,
+        ProfileArchetype.main,
+      ]) {
+        expect(
+          supportedSizes(archetype),
+          {ProfileCardSize.full, ProfileCardSize.half},
+          reason: '$archetype should support full and half',
+        );
+      }
+    });
 
     test('rank supports both full and half (not half-only)', () {
       expect(supportedSizes(ProfileArchetype.rank), {
@@ -138,7 +120,6 @@ void main() {
         ProfileArchetype.platform,
         ProfileArchetype.milestone,
         ProfileArchetype.main,
-        ProfileArchetype.fallback,
       ]) {
         expect(
           cardFormat(archetype),
@@ -247,13 +228,8 @@ void main() {
       expect(cardCategory(ProfileWidgetKind.art), ProfileCardCategory.art);
     });
 
-    test('the kinds outside the model resolve to no category', () {
-      for (final kind in const [
-        ProfileWidgetKind.platform,
-        ProfileWidgetKind.template,
-        ProfileWidgetKind.composed,
-        ProfileWidgetKind.dataMenu,
-      ]) {
+    test('the kind outside the model resolves to no category', () {
+      for (final kind in const [ProfileWidgetKind.platform]) {
         expect(cardCategory(kind), isNull, reason: kind.name);
       }
     });

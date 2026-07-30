@@ -78,10 +78,10 @@ ProfileWidget _widget(
 );
 
 final _widgets = [
-  _widget('a', ProfileWidgetKind.template),
-  _widget('b', ProfileWidgetKind.composed),
-  _widget('c', ProfileWidgetKind.dataMenu),
-  _widget('d', ProfileWidgetKind.template),
+  _widget('a', ProfileWidgetKind.art),
+  _widget('b', ProfileWidgetKind.art),
+  _widget('c', ProfileWidgetKind.art),
+  _widget('d', ProfileWidgetKind.art),
 ];
 
 /// Serves the owner's own cards, so the header and the art card resolve from
@@ -286,9 +286,9 @@ void main() {
     // 'b' is disabled → its full row disappears and the (a, b) pair collapses to
     // a centered 'a'.
     final widgets = [
-      _widget('a', ProfileWidgetKind.template),
-      _widget('b', ProfileWidgetKind.composed, isEnabled: false),
-      _widget('c', ProfileWidgetKind.dataMenu),
+      _widget('a', ProfileWidgetKind.art),
+      _widget('b', ProfileWidgetKind.art, isEnabled: false),
+      _widget('c', ProfileWidgetKind.art),
     ];
     const profile = Profile(
       id: _userId,
@@ -331,7 +331,7 @@ void main() {
     // where a pair's two cards would end on different lines.
     final widgets = [
       _widget('short', ProfileWidgetKind.completionist),
-      _widget('tall', ProfileWidgetKind.template),
+      _widget('tall', ProfileWidgetKind.art),
     ];
     const profile = Profile(
       id: _userId,

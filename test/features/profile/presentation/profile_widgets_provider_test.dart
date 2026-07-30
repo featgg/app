@@ -1,13 +1,10 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
-import 'package:featgg/src/features/profile/domain/composed_card.dart';
-import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
-import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,26 +26,6 @@ final class _FakeRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setTemplateFill(
-    String id,
-    ProfileWidgetSize size,
-    TemplateFill fill,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addComposedWidget({
     required int position,
     required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
@@ -117,13 +94,6 @@ final class _FakeRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setComposedFill(
-    String id,
-    ProfileWidgetSize size,
-    ComposedFill fill,
-  ) async => throw UnimplementedError();
-
-  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>
       throw UnimplementedError();
 
@@ -139,17 +109,6 @@ final class _FakeRepository implements ProfileWidgetsRepository {
     ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setDataMenuSelection(
-    String id,
-    ProfileWidgetSize size,
-    DataMenuSelection selection,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async =>
-      throw UnimplementedError();
 }
 
 ProfileWidget _widget(String id, int position) => ProfileWidget(

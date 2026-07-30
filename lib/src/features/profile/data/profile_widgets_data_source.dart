@@ -25,7 +25,4 @@ abstract interface class ProfileWidgetsDataSource {
 
   /// Updates writable [values] on the owner's widget [id].
   Future<void> updateWidget(String id, Map<String, dynamic> values);
-
-  /// Persists a new contiguous ordering for the given widget ids.
-  Future<void> updatePositions(List<({String id, int position})> updates);
 }

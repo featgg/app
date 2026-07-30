@@ -35,10 +35,12 @@ SDK's public key.
 `type` is required and must be one of the following tokens (lowercase,
 snake_case). Any other value is rejected as an invalid value for the field.
 
-- `platform` — a single-platform card.
-- `template` — a pre-designed, slot-filled card.
-- `data_menu` — a curated stat/showcase widget. *(upcoming)*
+- `platform` — a single-platform card. No longer offered when adding a card;
+  existing rows still render.
+- `template` — a pre-designed, slot-filled card. **Client-retired** (see below).
 - `composed_card` — a user-assembled, cross-platform composed card.
+  **Client-retired** (see below).
+- `data_menu` — a curated stat/showcase widget. **Client-retired** (see below).
 - `showcase` — a single-game art showcase card. *(client rendering is
   Steam-first: a showcase row bound to another platform is accepted and stored,
   but the client renders it as unavailable — owner placeholder, hidden from
@@ -66,11 +68,16 @@ snake_case). Any other value is rejected as an invalid value for the field.
   `settings` (see below), defaulting to a client-resolved best available image
   when absent.
 
-`platform`, `template`, `composed_card`, `showcase`, `collection`,
-`game_collector`, `completionist`, `passport`, `rank`, `main`, and `art` are
-the kinds the client writes today; `data_menu` is reserved for a later phase.
-(Data-menu curation already ships, but as the `data_menu_items` setting on a
-`platform` widget — see below — not as a `data_menu`-typed row.)
+`showcase`, `collection`, `game_collector`, `completionist`, `passport`,
+`rank`, `main`, and `art` are the kinds the client writes today.
+
+`template`, `composed_card` and `data_menu` are **client-retired**: the client
+no longer writes them and no longer reads them — a row carrying one of those
+tokens resolves to nothing and is omitted, so it renders as absent without
+needing to be removed. They stay documented above, with their binding rule,
+because the service still accepts them: a consumer must be able to tell a valid
+row from an invalid one for as long as that is true. They leave this document
+when they leave the accepted values.
 
 ### `platform` — valid values and binding rule
 
@@ -85,7 +92,7 @@ Whether `platform` is required or must be null depends on `type`:
 - `type = showcase` → `platform` **must be a non-null** value from the list
   above (the single source platform the showcase draws from).
 - `type` in {`composed_card`, `data_menu`, `template`} → `platform`
-  **must be null**.
+  **must be null** (client-retired, still accepted).
 - `type = collection` → `platform` **must be null** (a collection spans multiple
   games).
 - `type = game_collector` → `platform` **must be a non-null** value from the
@@ -114,22 +121,11 @@ client-enforced, not server-validated — the client offers only legal sizes.
   - `settings` is a JSON object up to ~50 KB. Versioned envelope:
     `{ "schema_version": 1, "size": "small" | "wide" | "large" }`. The
     `settings` schema is client-owned; the client may add fields additively
-    under the same `schema_version: 1`. The data-menu curation is one such
-    field — `"data_menu_items": ["<platform>.<stat_or_field>", ...]`, the
-    stable pointers a `platform` widget surfaces. It is additive, ignored when
-    absent (an un-customized widget behaves as before), and never bumps the
-    version. An `art` widget may carry its picture source under another such
+    under the same `schema_version: 1`. An `art` widget may carry its picture source under another such
     field — `"art": { "source": "<platform>" }` — the platform whose artwork it
     shows. It is likewise additive and optional: absent means the client
     resolves the best available image at render time, and it never bumps the
-    version. A `template` widget carries its choice under another such field —
-    `"template": { "id": "<templateId>", "slots": { "<slotId>":
-    "<data_menu_item_id>" } }` — the chosen template and its per-slot fills. It
-    is likewise additive, ignored when absent, and never bumps the version. A
-    `composed_card` widget carries its freely-picked item set under another such
-    field — `"composed": { "items": ["<data_menu_item_id>", ...] }` — the
-    ordered data-menu items the card surfaces. It is likewise additive, ignored
-    when absent, and never bumps the version. A `showcase` widget carries its
+    version. A `showcase` widget carries its
     single-game choice under another such field —
     `"showcase": { "game": "<gameKey>", "hero": "<stat>", "meta"?: "<stat>" }` —
     the game to render and which stat is the hero. It is likewise additive,

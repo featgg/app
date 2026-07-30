@@ -1,13 +1,10 @@
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
-import 'package:featgg/src/features/profile/domain/composed_card.dart';
-import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
-import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,19 +13,17 @@ import 'package:fpdart/fpdart.dart';
 
 /// Records every mutation call and returns the configured outcome.
 final class _RecordingRepository implements ProfileWidgetsRepository {
-  _RecordingRepository({this.failure, this.widgets = const []});
+  _RecordingRepository({this.failure});
 
   /// When non-null, every mutation returns this failure.
   final Failure? failure;
 
-  /// The widgets the read returns — the read-modify-write source of truth.
-  final List<ProfileWidget> widgets;
+  /// What the read returns. Every mutation is now a plain write, so no test
+  /// needs to seed it.
+  final List<ProfileWidget> widgets = const [];
 
   int fetchCalls = 0;
   final List<String> mutations = [];
-  List<String>? lastReorder;
-  TemplateFill? lastTemplateFill;
-  ComposedFill? lastComposedFill;
   ProfileWidgetSize? lastShowcaseSize;
   ShowcaseSelection? lastShowcaseSelection;
   ProfileWidgetSize? lastCollectionSize;
@@ -66,55 +61,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         id: 'new',
         kind: ProfileWidgetKind.platform,
         platform: platform,
-        position: position,
-        isEnabled: true,
-        size: size,
-      ),
-    );
-  }
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addTemplateWidget({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) async {
-    mutations.add('addTemplate');
-    return _result(
-      ProfileWidget(
-        id: 'new',
-        kind: ProfileWidgetKind.template,
-        platform: null,
-        position: position,
-        isEnabled: true,
-        size: size,
-        templateFill: TemplateFill(templateId, const {}),
-      ),
-    );
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setTemplateFill(
-    String id,
-    ProfileWidgetSize size,
-    TemplateFill fill,
-  ) async {
-    mutations.add('setTemplateFill');
-    lastTemplateFill = fill;
-    return _result(unit);
-  }
-
-  @override
-  Future<Either<Failure, ProfileWidget>> addComposedWidget({
-    required int position,
-    required ProfileWidgetSize size,
-  }) async {
-    mutations.add('addComposed');
-    return _result(
-      ProfileWidget(
-        id: 'new',
-        kind: ProfileWidgetKind.composed,
-        platform: null,
         position: position,
         isEnabled: true,
         size: size,
@@ -285,17 +231,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> setComposedFill(
-    String id,
-    ProfileWidgetSize size,
-    ComposedFill fill,
-  ) async {
-    mutations.add('setComposedFill');
-    lastComposedFill = fill;
-    return _result(unit);
-  }
-
-  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     mutations.add('remove');
     return _result(unit);
@@ -319,23 +254,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
     mutations.add('resizeShowcase');
     lastShowcaseSize = size;
     lastShowcaseSelection = selection;
-    return _result(unit);
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setDataMenuSelection(
-    String id,
-    ProfileWidgetSize size,
-    DataMenuSelection selection,
-  ) async {
-    mutations.add('setDataMenuSelection');
-    return _result(unit);
-  }
-
-  @override
-  Future<Either<Failure, Unit>> reorder(List<String> orderedIds) async {
-    mutations.add('reorder');
-    lastReorder = orderedIds;
     return _result(unit);
   }
 }
@@ -374,50 +292,6 @@ void main() {
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['add']);
-      expect(repo.fetchCalls, greaterThan(fetchesBefore));
-      expect(
-        container.read(profileWidgetsControllerProvider).hasError,
-        isFalse,
-      );
-    });
-
-    test('addTemplate', () async {
-      final repo = _RecordingRepository();
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-      final fetchesBefore = repo.fetchCalls;
-
-      await container
-          .read(profileWidgetsControllerProvider.notifier)
-          .addTemplate(
-            templateId: 'my_ranks',
-            position: 0,
-            size: ProfileWidgetSize.small,
-          );
-      await container.read(ownerProfileWidgetsProvider.future);
-
-      expect(repo.mutations, ['addTemplate']);
-      expect(repo.fetchCalls, greaterThan(fetchesBefore));
-      expect(
-        container.read(profileWidgetsControllerProvider).hasError,
-        isFalse,
-      );
-    });
-
-    test('addComposed', () async {
-      final repo = _RecordingRepository();
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-      final fetchesBefore = repo.fetchCalls;
-
-      await container
-          .read(profileWidgetsControllerProvider.notifier)
-          .addComposed(position: 0, size: ProfileWidgetSize.small);
-      await container.read(ownerProfileWidgetsProvider.future);
-
-      expect(repo.mutations, ['addComposed']);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,
@@ -572,153 +446,6 @@ void main() {
       );
     });
 
-    test('toggleComposedItem patches the live widget fill', () async {
-      const widget = ProfileWidget(
-        id: 'w-1',
-        kind: ProfileWidgetKind.composed,
-        platform: null,
-        position: 0,
-        isEnabled: true,
-        size: ProfileWidgetSize.wide,
-        composedFill: ComposedFill(['chess.rating']),
-      );
-      final repo = _RecordingRepository(widgets: const [widget]);
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-      final fetchesBefore = repo.fetchCalls;
-
-      await container
-          .read(profileWidgetsControllerProvider.notifier)
-          .toggleComposedItem(widgetId: 'w-1', itemId: 'wow_retail.profile');
-      await container.read(ownerProfileWidgetsProvider.future);
-
-      expect(repo.mutations, ['setComposedFill']);
-      // The patched fill keeps the already-picked item and appends the new one —
-      // proving the write derives from the live state, not an empty snapshot.
-      expect(repo.lastComposedFill!.itemIds, [
-        'chess.rating',
-        'wow_retail.profile',
-      ]);
-      expect(repo.fetchCalls, greaterThan(fetchesBefore));
-      expect(
-        container.read(profileWidgetsControllerProvider).hasError,
-        isFalse,
-      );
-    });
-
-    test('toggleComposedItem is a no-op when the widget is gone', () async {
-      final repo = _RecordingRepository();
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-
-      await container
-          .read(profileWidgetsControllerProvider.notifier)
-          .toggleComposedItem(widgetId: 'missing', itemId: 'chess.rating');
-
-      expect(repo.mutations, isEmpty);
-      expect(
-        container.read(profileWidgetsControllerProvider).hasError,
-        isFalse,
-      );
-    });
-
-    test('setTemplateSlot patches one slot against the live read', () async {
-      const widget = ProfileWidget(
-        id: 'w-1',
-        kind: ProfileWidgetKind.template,
-        platform: null,
-        position: 0,
-        isEnabled: true,
-        size: ProfileWidgetSize.wide,
-        templateFill: TemplateFill('my_ranks', {'slot_2': 'gw2.wvw_rank'}),
-      );
-      final repo = _RecordingRepository(widgets: const [widget]);
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-      final fetchesBefore = repo.fetchCalls;
-
-      await container
-          .read(profileWidgetsControllerProvider.notifier)
-          .setTemplateSlot(
-            widgetId: 'w-1',
-            slotId: 'slot_1',
-            itemId: 'chess.rating',
-          );
-      await container.read(ownerProfileWidgetsProvider.future);
-
-      expect(repo.mutations, ['setTemplateFill']);
-      // The patched fill keeps the already-saved slot and the template id —
-      // proving the write derives from the live state, not an empty snapshot.
-      expect(repo.lastTemplateFill!.templateId, 'my_ranks');
-      expect(repo.lastTemplateFill!.itemIdFor('slot_1'), 'chess.rating');
-      expect(repo.lastTemplateFill!.itemIdFor('slot_2'), 'gw2.wvw_rank');
-      expect(repo.fetchCalls, greaterThan(fetchesBefore));
-      expect(
-        container.read(profileWidgetsControllerProvider).hasError,
-        isFalse,
-      );
-    });
-
-    test('setTemplateSlot is a no-op when the widget is gone', () async {
-      final repo = _RecordingRepository();
-      final container = _container(repo);
-      container.listen(ownerProfileWidgetsProvider, (_, _) {});
-      await _primeRead(container);
-
-      await container
-          .read(profileWidgetsControllerProvider.notifier)
-          .setTemplateSlot(
-            widgetId: 'missing',
-            slotId: 'slot_1',
-            itemId: 'chess.rating',
-          );
-
-      expect(repo.mutations, isEmpty);
-      expect(
-        container.read(profileWidgetsControllerProvider).hasError,
-        isFalse,
-      );
-    });
-
-    test(
-      'a Left on setTemplateSlot lands in the error state, no invalidate',
-      () async {
-        const widget = ProfileWidget(
-          id: 'w-1',
-          kind: ProfileWidgetKind.template,
-          platform: null,
-          position: 0,
-          isEnabled: true,
-          size: ProfileWidgetSize.small,
-          templateFill: TemplateFill('my_ranks', {}),
-        );
-        final repo = _RecordingRepository(
-          failure: const NetworkFailure(),
-          widgets: const [widget],
-        );
-        final container = _container(repo);
-        container.listen(ownerProfileWidgetsProvider, (_, _) {});
-        await _primeRead(container);
-        final fetchesBefore = repo.fetchCalls;
-
-        await container
-            .read(profileWidgetsControllerProvider.notifier)
-            .setTemplateSlot(
-              widgetId: 'w-1',
-              slotId: 'slot_1',
-              itemId: 'chess.rating',
-            );
-
-        final state = container.read(profileWidgetsControllerProvider);
-        expect(state.hasError, isTrue);
-        expect(state.error, isA<NetworkFailure>());
-        expect(repo.fetchCalls, fetchesBefore);
-      },
-    );
-
     test('setShowcaseHero writes size + selection and invalidates', () async {
       final repo = _RecordingRepository();
       final container = _container(repo);
@@ -765,10 +492,8 @@ void main() {
 
       await notifier.remove('a');
       await notifier.resize('a', ProfileWidgetSize.large);
-      await notifier.reorder(['b', 'a']);
 
-      expect(repo.mutations, ['remove', 'resize', 'reorder']);
-      expect(repo.lastReorder, ['b', 'a']);
+      expect(repo.mutations, ['remove', 'resize']);
     });
   });
 

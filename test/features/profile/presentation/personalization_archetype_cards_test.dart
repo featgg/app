@@ -451,7 +451,6 @@ void main() {
 
     // The designed anatomy renders, never the generic Fallback card.
     expect(find.byType(RankCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     // No platform publishes rank-crest art, so the card is always framed and
     // the tier line moved into the datum rather than being dropped.
     expect(find.byType(PersonalizationCardGround), findsOneWidget);
@@ -551,7 +550,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(FallbackCard), findsNothing);
     // The mode narrows the platform rather than standing in for it: a rating
     // labelled only RAPID says which mode and not which game, and this card is
     // always framed, so its label is the only thing that can say.
@@ -598,7 +596,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(RankCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     // The card still renders framed; the datum band renders empty.
     expect(find.byType(PersonalizationCardGround), findsOneWidget);
     expect(
@@ -642,7 +639,6 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    expect(find.byType(FallbackCard), findsNothing);
     expect(find.text(l10n.personalizationMainTopChampion), findsOneWidget);
   });
 
@@ -844,7 +840,6 @@ void main() {
 
     // The designed anatomy renders through the registry dispatch, never Fallback.
     expect(find.byType(CollectionCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     expect(find.byKey(collectionOrbKey('c', 0)), findsOneWidget);
     expect(find.byKey(collectionOrbKey('c', 1)), findsOneWidget);
     // The game count is the datum stat.
@@ -951,7 +946,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CollectionCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     expect(find.byKey(collectionOrbKey('c', 0)), findsOneWidget);
     expect(find.text('0'), findsNothing);
   });
@@ -984,7 +978,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CollectionCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     // The whole-library emblem orb renders (no per-game panels).
     expect(find.byKey(collectionOrbKey('gc', 0)), findsOneWidget);
     expect(
@@ -1033,7 +1026,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AchievementGridCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     // One letter tile per resolved perfect-game shelf entry.
     expect(find.byKey(achievementLetterKey('cp', 0)), findsOneWidget);
     expect(find.byKey(achievementLetterKey('cp', 1)), findsOneWidget);
@@ -1070,7 +1062,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AchievementGridCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     // No stats and no letter tiles — only the two bracketing diamonds remain.
     expect(
       find.descendant(
@@ -1330,7 +1321,6 @@ void main() {
     // the designed anatomy resolves for a visitor exactly as for the owner.
     expect(find.byType(CollectionCard), findsOneWidget);
     expect(find.byType(AchievementGridCard), findsOneWidget);
-    expect(find.byType(FallbackCard), findsNothing);
     expect(find.byKey(collectionOrbKey('c', 0)), findsOneWidget);
     expect(find.byKey(achievementLetterKey('cp', 0)), findsOneWidget);
   });

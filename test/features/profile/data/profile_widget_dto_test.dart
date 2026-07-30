@@ -2,11 +2,8 @@ import 'package:featgg/src/features/connections/domain/connection.dart';
 import 'package:featgg/src/features/profile/data/profile_widget_dto.dart';
 import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
-import 'package:featgg/src/features/profile/domain/composed_card.dart';
-import 'package:featgg/src/features/profile/domain/data_menu_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
-import 'package:featgg/src/features/profile/domain/template_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _row({
@@ -104,12 +101,11 @@ void main() {
       expect(widget, isNull);
     });
 
-    test('reserved (unwired) kind tokens all degrade to null (omit)', () {
-      // The reserved kinds are named in the wire taxonomy but not yet wired on
-      // read; an older client must omit a row a newer client writes, never
-      // crash. `template` and `composed_card` are now wired kinds, so they
-      // leave this set.
-      for (final token in const ['data_menu']) {
+    test('the retired kind tokens all degrade to null (omit)', () {
+      // These rows may still exist on a profile. Omitting them is how the
+      // retired kinds leave: the row stops resolving, so nothing renders it
+      // and no migration is needed to make it disappear.
+      for (final token in const ['data_menu', 'template', 'composed_card']) {
         final widget = profileWidgetFromDto(
           ProfileWidgetDto.fromJson(_row(type: token)),
         );
@@ -148,12 +144,6 @@ void main() {
 
     test('profileWidgetKindToWire maps every kind to its wire token', () {
       expect(profileWidgetKindToWire(ProfileWidgetKind.platform), 'platform');
-      expect(profileWidgetKindToWire(ProfileWidgetKind.dataMenu), 'data_menu');
-      expect(profileWidgetKindToWire(ProfileWidgetKind.template), 'template');
-      expect(
-        profileWidgetKindToWire(ProfileWidgetKind.composed),
-        'composed_card',
-      );
       expect(profileWidgetKindToWire(ProfileWidgetKind.showcase), 'showcase');
       expect(
         profileWidgetKindToWire(ProfileWidgetKind.collection),
@@ -170,6 +160,7 @@ void main() {
       expect(profileWidgetKindToWire(ProfileWidgetKind.passport), 'passport');
       expect(profileWidgetKindToWire(ProfileWidgetKind.rank), 'rank');
       expect(profileWidgetKindToWire(ProfileWidgetKind.main), 'main');
+      expect(profileWidgetKindToWire(ProfileWidgetKind.art), 'art');
     });
   });
 
@@ -233,355 +224,6 @@ void main() {
         ),
       );
       expect(widget, isNull);
-    });
-  });
-
-  group('data-menu selection round-trip (additive to the v1 envelope)', () {
-    test('a row with data_menu_items parses selection AND keeps size', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(
-            size: 'wide',
-            dataMenuItems: ['steam.hours_played', 'steam.library_showcase'],
-          ),
-        ),
-      );
-
-      expect(widget, isNotNull);
-      expect(widget!.size, ProfileWidgetSize.wide);
-      expect(widget.selection.selectedIds, {
-        'steam.hours_played',
-        'steam.library_showcase',
-      });
-    });
-
-    test('a row with no data_menu_items → empty selection, size unchanged', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(_row(size: 'large')),
-      );
-
-      expect(widget!.selection, DataMenuSelection.empty);
-      expect(widget.size, ProfileWidgetSize.large);
-    });
-
-    test('unknown / garbage ids are dropped on read', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(
-            dataMenuItems: [
-              'steam.hours_played', // known
-              'not.a.real.id', // unknown → dropped
-              42, // non-string → dropped
-            ],
-          ),
-        ),
-      );
-
-      expect(widget!.selection.selectedIds, {'steam.hours_played'});
-    });
-
-    test('a non-list data_menu_items → empty selection', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(_row(dataMenuItems: 'oops')),
-      );
-      expect(widget!.selection, DataMenuSelection.empty);
-    });
-
-    test('dataMenuSelectionFromSettings is lenient on a null envelope', () {
-      expect(dataMenuSelectionFromSettings(null), DataMenuSelection.empty);
-    });
-
-    test('merge writer preserves schema_version + size and sets the ids', () {
-      final merged = mergeDataMenuSelectionIntoSettings(
-        ProfileWidgetSize.wide,
-        const DataMenuSelection({'gw2.total_ap'}),
-      );
-
-      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'wide');
-      expect(merged['data_menu_items'], ['gw2.total_ap']);
-    });
-
-    test('merge writer omits data_menu_items for an empty selection', () {
-      final merged = mergeDataMenuSelectionIntoSettings(
-        ProfileWidgetSize.small,
-        DataMenuSelection.empty,
-      );
-
-      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'small');
-      expect(merged.containsKey('data_menu_items'), isFalse);
-    });
-  });
-
-  group('template fill round-trip (additive to the v1 envelope)', () {
-    test('a template row maps to a template-kind widget with its fill', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(
-            type: 'template',
-            platform: null,
-            size: 'wide',
-            template: {
-              'id': 'my_ranks',
-              'slots': {'slot_1': 'chess.rating'},
-            },
-          ),
-        ),
-      );
-
-      expect(widget, isNotNull);
-      expect(widget!.kind, ProfileWidgetKind.template);
-      expect(widget.platform, isNull);
-      expect(widget.size, ProfileWidgetSize.wide);
-      expect(widget.templateFill.templateId, 'my_ranks');
-      expect(widget.templateFill.itemIdFor('slot_1'), 'chess.rating');
-    });
-
-    test('a template row with no slots maps to an empty-slot fill', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'template', platform: null, template: {'id': 'my_levels'}),
-        ),
-      );
-
-      expect(widget!.templateFill.templateId, 'my_levels');
-      expect(widget.templateFill.slotItemIds, isEmpty);
-    });
-
-    test(
-      'a template row preserves size + leaves data-menu selection empty',
-      () {
-        final widget = profileWidgetFromDto(
-          ProfileWidgetDto.fromJson(
-            _row(
-              type: 'template',
-              platform: null,
-              size: 'large',
-              template: {'id': 'my_ranks'},
-            ),
-          ),
-        );
-
-        expect(widget!.size, ProfileWidgetSize.large);
-        expect(widget.selection, DataMenuSelection.empty);
-      },
-    );
-
-    test('a platform row carries an empty template fill (no disturbance)', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(size: 'wide', dataMenuItems: ['steam.hours_played']),
-        ),
-      );
-
-      expect(widget!.kind, ProfileWidgetKind.platform);
-      expect(widget.templateFill, TemplateFill.empty);
-      expect(widget.size, ProfileWidgetSize.wide);
-      expect(widget.selection.selectedIds, {'steam.hours_played'});
-    });
-
-    test('unknown / garbage slot item ids are dropped on read', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(
-            type: 'template',
-            platform: null,
-            template: {
-              'id': 'my_ranks',
-              'slots': {
-                'slot_1': 'chess.rating', // known → kept
-                'slot_2': 'not.a.real.id', // unknown → dropped
-                'slot_3': 42, // non-string → dropped
-              },
-            },
-          ),
-        ),
-      );
-
-      expect(widget!.templateFill.slotItemIds, {'slot_1': 'chess.rating'});
-    });
-
-    test('a stale template id is kept raw (renderer soft-resolves it)', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'template', platform: null, template: {'id': 'gone'}),
-        ),
-      );
-
-      expect(widget!.templateFill.templateId, 'gone');
-    });
-
-    test('a malformed template (non-object) → empty fill', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'template', platform: null, template: 'oops'),
-        ),
-      );
-
-      expect(widget!.templateFill, TemplateFill.empty);
-    });
-
-    test('a template with a non-string id → empty fill', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'template', platform: null, template: {'id': 7}),
-        ),
-      );
-
-      expect(widget!.templateFill, TemplateFill.empty);
-    });
-
-    test('templateFillFromSettings is lenient on a null envelope', () {
-      expect(templateFillFromSettings(null), TemplateFill.empty);
-    });
-
-    test('merge writer preserves schema_version + size and sets the fill', () {
-      final merged = mergeTemplateFillIntoSettings(
-        ProfileWidgetSize.wide,
-        const TemplateFill('my_ranks', {'slot_1': 'chess.rating'}),
-      );
-
-      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'wide');
-      final template = merged['template'] as Map<String, dynamic>;
-      expect(template['id'], 'my_ranks');
-      expect(template['slots'], {'slot_1': 'chess.rating'});
-    });
-
-    test('merge writer omits slots for an empty-slot fill', () {
-      final merged = mergeTemplateFillIntoSettings(
-        ProfileWidgetSize.small,
-        const TemplateFill('my_ranks', {}),
-      );
-
-      final template = merged['template'] as Map<String, dynamic>;
-      expect(template['id'], 'my_ranks');
-      expect(template.containsKey('slots'), isFalse);
-    });
-
-    test('merge writer omits the template key for an un-chosen template', () {
-      final merged = mergeTemplateFillIntoSettings(
-        ProfileWidgetSize.small,
-        TemplateFill.empty,
-      );
-
-      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'small');
-      expect(merged.containsKey('template'), isFalse);
-    });
-  });
-
-  group('composed fill round-trip (additive to the v1 envelope)', () {
-    test(
-      'a composed_card row maps to a composed-kind widget with its fill',
-      () {
-        final widget = profileWidgetFromDto(
-          ProfileWidgetDto.fromJson(
-            _row(
-              type: 'composed_card',
-              platform: null,
-              size: 'wide',
-              composed: {
-                'items': ['chess.rating', 'wow_retail.profile'],
-              },
-            ),
-          ),
-        );
-
-        expect(widget, isNotNull);
-        expect(widget!.kind, ProfileWidgetKind.composed);
-        expect(widget.platform, isNull);
-        expect(widget.size, ProfileWidgetSize.wide);
-        // Order is preserved from the stored list.
-        expect(widget.composedFill.itemIds, [
-          'chess.rating',
-          'wow_retail.profile',
-        ]);
-      },
-    );
-
-    test('unknown / garbage / duplicate item ids are dropped on read', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(
-            type: 'composed_card',
-            platform: null,
-            composed: {
-              'items': [
-                'chess.rating', // known → kept
-                'chess.rating', // duplicate → dropped
-                'not.a.real.id', // unknown → dropped
-                42, // non-string → dropped
-              ],
-            },
-          ),
-        ),
-      );
-
-      expect(widget!.composedFill.itemIds, ['chess.rating']);
-    });
-
-    test('a non-object composed → empty fill', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'composed_card', platform: null, composed: 'oops'),
-        ),
-      );
-
-      expect(widget!.composedFill, ComposedFill.empty);
-    });
-
-    test('a composed with a non-list items → empty fill', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(
-            type: 'composed_card',
-            platform: null,
-            composed: {'items': 'oops'},
-          ),
-        ),
-      );
-
-      expect(widget!.composedFill, ComposedFill.empty);
-    });
-
-    test('a platform row carries an empty composed fill (no disturbance)', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(size: 'wide', dataMenuItems: ['steam.hours_played']),
-        ),
-      );
-
-      expect(widget!.kind, ProfileWidgetKind.platform);
-      expect(widget.composedFill, ComposedFill.empty);
-    });
-
-    test('composedFillFromSettings is lenient on a null envelope', () {
-      expect(composedFillFromSettings(null), ComposedFill.empty);
-    });
-
-    test('merge writer preserves schema_version + size and sets the items', () {
-      final merged = mergeComposedFillIntoSettings(
-        ProfileWidgetSize.wide,
-        const ComposedFill(['chess.rating', 'wow_retail.profile']),
-      );
-
-      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'wide');
-      final composed = merged['composed'] as Map<String, dynamic>;
-      expect(composed['items'], ['chess.rating', 'wow_retail.profile']);
-    });
-
-    test('merge writer omits the composed key for an empty fill', () {
-      final merged = mergeComposedFillIntoSettings(
-        ProfileWidgetSize.small,
-        ComposedFill.empty,
-      );
-
-      expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'small');
-      expect(merged.containsKey('composed'), isFalse);
     });
   });
 

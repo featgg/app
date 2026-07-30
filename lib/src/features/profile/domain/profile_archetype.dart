@@ -13,7 +13,6 @@ enum ProfileArchetype {
   collection,
   achievementGrid,
   art,
-  fallback,
 }
 
 /// The two rendered card sizes. Size is a consequence of placement,
@@ -21,12 +20,11 @@ enum ProfileArchetype {
 /// [half].
 enum ProfileCardSize { full, half }
 
-/// Maps a widget to its archetype via the legacy kind mapping: passport →
-/// identity, showcase → milestone, platform → platform, rank → rank, main →
-/// main, collection + game_collector → collection (the "Collector" variant),
-/// completionist → achievement grid (the "Completionist" variant). Kinds without
-/// a built card fall through to [ProfileArchetype.fallback],
-/// which renders a safe, never-blank card.
+/// Maps a widget to its archetype: passport → identity, showcase → milestone,
+/// platform → platform, rank → rank, main → main, collection + game_collector →
+/// collection (the "Collector" variant), completionist → achievement grid (the
+/// "Completionist" variant). Exhaustive on purpose — a new kind fails to compile
+/// here rather than silently rendering as something else.
 ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.passport => ProfileArchetype.identity,
   ProfileWidgetKind.showcase => ProfileArchetype.milestone,
@@ -37,7 +35,6 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.gameCollector => ProfileArchetype.collection,
   ProfileWidgetKind.completionist => ProfileArchetype.achievementGrid,
   ProfileWidgetKind.art => ProfileArchetype.art,
-  _ => ProfileArchetype.fallback,
 };
 
 /// Which chassis an archetype is designed for. [bleed] fills the card with the
@@ -65,8 +62,6 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   // The picture is the whole card — this is the one archetype whose art is not
   // illustrating a number, because it has none.
   ProfileArchetype.art => ProfileCardFormat.bleed,
-  // Falls back to the card envelope's hero image when the kind carries one.
-  ProfileArchetype.fallback => ProfileCardFormat.bleed,
 };
 
 /// The format a card actually renders in: the format [a] is designed for,
@@ -91,9 +86,9 @@ enum ProfileCardCategory {
   art,
 }
 
-/// The category for [kind], or null for the kinds outside the category model
-/// — the legacy row kinds on their way out of the catalog; a fresh
-/// composition seeds those after every categorized card.
+/// The category for [kind], or null for a kind outside the category model —
+/// today only the platform card, which the catalog no longer offers but whose
+/// existing rows still render; a fresh composition seeds those last.
 ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.passport => ProfileCardCategory.whoIAm,
   ProfileWidgetKind.main => ProfileCardCategory.whatIPlay,
@@ -142,8 +137,4 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   ProfileArchetype.achievementGrid => const {ProfileCardSize.full},
   // Both sizes: a picture is worth placing wide or beside something.
   ProfileArchetype.art => const {ProfileCardSize.full, ProfileCardSize.half},
-  ProfileArchetype.fallback => const {
-    ProfileCardSize.full,
-    ProfileCardSize.half,
-  },
 };

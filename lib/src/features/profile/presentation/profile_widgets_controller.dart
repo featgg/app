@@ -40,52 +40,6 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ),
   );
 
-  /// Adds a template widget for [templateId] at [position] with [size].
-  Future<void> addTemplate({
-    required String templateId,
-    required int position,
-    required ProfileWidgetSize size,
-  }) => _run(
-    (repo) => repo.addTemplateWidget(
-      templateId: templateId,
-      position: position,
-      size: size,
-    ),
-  );
-
-  /// Fills a single [slotId] of template widget [widgetId] with [itemId].
-  ///
-  /// Read-modify-write against the live read provider, not a snapshot from the
-  /// caller: the slot picker captures the widget when it opens, so a fill
-  /// computed from that snapshot would clobber a slot saved in the meantime.
-  /// No-op if the widget is gone by the time the write runs.
-  Future<void> setTemplateSlot({
-    required String widgetId,
-    required String slotId,
-    required String itemId,
-  }) => _run((repo) async {
-    final widgets = await ref.read(ownerProfileWidgetsProvider.future);
-    ProfileWidget? current;
-    for (final widget in widgets) {
-      if (widget.id == widgetId) {
-        current = widget;
-        break;
-      }
-    }
-    if (current == null) return right(unit);
-    return repo.setTemplateFill(
-      current.id,
-      current.size,
-      current.templateFill.withSlot(slotId, itemId),
-    );
-  });
-
-  /// Adds a composed-card widget at [position] with [size].
-  Future<void> addComposed({
-    required int position,
-    required ProfileWidgetSize size,
-  }) => _run((repo) => repo.addComposedWidget(position: position, size: size));
-
   /// Adds a showcase widget for [platform] and [selection] at [position] with
   /// [size].
   Future<void> addShowcase({
@@ -149,32 +103,6 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     CollectionSelection selection,
   ) => _run((repo) => repo.setCollectionSize(id, size, selection));
 
-  /// Toggles [itemId] in composed-card widget [widgetId]'s picked set.
-  ///
-  /// Read-modify-write against the live read provider, not a snapshot from the
-  /// caller: the picker captures the widget when it opens, so a fill computed
-  /// from that snapshot would clobber an item picked in the meantime. No-op if
-  /// the widget is gone by the time the write runs.
-  Future<void> toggleComposedItem({
-    required String widgetId,
-    required String itemId,
-  }) => _run((repo) async {
-    final widgets = await ref.read(ownerProfileWidgetsProvider.future);
-    ProfileWidget? current;
-    for (final widget in widgets) {
-      if (widget.id == widgetId) {
-        current = widget;
-        break;
-      }
-    }
-    if (current == null) return right(unit);
-    return repo.setComposedFill(
-      current.id,
-      current.size,
-      current.composedFill.toggle(itemId),
-    );
-  });
-
   /// Adds a passport widget at [position] with [size].
   Future<void> addPassport({
     required int position,
@@ -233,10 +161,6 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
-
-  /// Persists a new ordering of widget ids.
-  Future<void> reorder(List<String> orderedIds) =>
-      _run((repo) => repo.reorder(orderedIds));
 
   Future<void> _run(
     Future<Either<Failure, Object?>> Function(ProfileWidgetsRepository repo) op,

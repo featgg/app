@@ -34,7 +34,7 @@ ProfileWidget _widget(String id) => _widgetAt(id, 0);
 ProfileWidget _widgetAt(String id, int position, {bool enabled = true}) =>
     ProfileWidget(
       id: id,
-      kind: ProfileWidgetKind.template,
+      kind: ProfileWidgetKind.art,
       platform: null,
       position: position,
       isEnabled: enabled,
@@ -219,7 +219,7 @@ void main() {
           5,
           platform: Platform.steam,
         ),
-        kindAt('t', ProfileWidgetKind.template, 6),
+        kindAt('t', ProfileWidgetKind.art, 6),
         kindAt(
           'c',
           ProfileWidgetKind.completionist,

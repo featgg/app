@@ -3,20 +3,13 @@ import 'package:equatable/equatable.dart';
 import '../../connections/domain/connection.dart';
 import 'art_selection.dart';
 import 'collection_selection.dart';
-import 'composed_card.dart';
-import 'data_menu_selection.dart';
 import 'showcase_selection.dart';
-import 'template_catalog.dart';
 
-/// Forward-compatible widget kinds. Only [platform] is implemented today; the
-/// others are reserved for later personalization phases and degrade to
-/// "unknown → omit" on read. The full set is listed up front so later phases
-/// add no enum churn.
+/// The card kinds a profile can hold. A row whose wire token is not one of
+/// these is omitted on read, which is also how the retired kinds leave: their
+/// rows stop resolving rather than needing a migration to disappear.
 enum ProfileWidgetKind {
   platform,
-  dataMenu,
-  template,
-  composed,
   showcase,
   collection,
   gameCollector,
@@ -49,9 +42,6 @@ final class ProfileWidget extends Equatable {
     required this.position,
     required this.isEnabled,
     required this.size,
-    this.selection = DataMenuSelection.empty,
-    this.templateFill = TemplateFill.empty,
-    this.composedFill = ComposedFill.empty,
     this.showcaseSelection = ShowcaseSelection.empty,
     this.collectionSelection = CollectionSelection.empty,
     this.artSelection = ArtSelection.empty,
@@ -69,18 +59,6 @@ final class ProfileWidget extends Equatable {
   final bool isEnabled;
   final ProfileWidgetSize size;
 
-  /// The owner's data-menu curation for this widget. Empty (default) for a
-  /// widget that has not been customized.
-  final DataMenuSelection selection;
-
-  /// The owner's template choice + per-slot fills for a
-  /// [ProfileWidgetKind.template] widget. Empty (default) otherwise.
-  final TemplateFill templateFill;
-
-  /// The owner's freely-picked item set for a [ProfileWidgetKind.composed]
-  /// widget. Empty (default) otherwise.
-  final ComposedFill composedFill;
-
   /// The owner's per-game choice for a [ProfileWidgetKind.showcase] widget.
   /// Empty (default) otherwise.
   final ShowcaseSelection showcaseSelection;
@@ -96,9 +74,6 @@ final class ProfileWidget extends Equatable {
     int? position,
     bool? isEnabled,
     ProfileWidgetSize? size,
-    DataMenuSelection? selection,
-    TemplateFill? templateFill,
-    ComposedFill? composedFill,
     ShowcaseSelection? showcaseSelection,
     CollectionSelection? collectionSelection,
     ArtSelection? artSelection,
@@ -109,9 +84,6 @@ final class ProfileWidget extends Equatable {
     position: position ?? this.position,
     isEnabled: isEnabled ?? this.isEnabled,
     size: size ?? this.size,
-    selection: selection ?? this.selection,
-    templateFill: templateFill ?? this.templateFill,
-    composedFill: composedFill ?? this.composedFill,
     showcaseSelection: showcaseSelection ?? this.showcaseSelection,
     collectionSelection: collectionSelection ?? this.collectionSelection,
     artSelection: artSelection ?? this.artSelection,
@@ -125,9 +97,6 @@ final class ProfileWidget extends Equatable {
     position,
     isEnabled,
     size,
-    selection,
-    templateFill,
-    composedFill,
     showcaseSelection,
     collectionSelection,
   ];
