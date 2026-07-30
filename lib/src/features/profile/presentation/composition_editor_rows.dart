@@ -8,6 +8,7 @@ import '../domain/profile_archetype.dart';
 import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
+import 'art_framing_control.dart';
 import 'personalization_archetype_cards.dart';
 import 'profile_composition_controller.dart';
 import 'profile_widgets_controller.dart';
@@ -115,9 +116,21 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       children.add(_gap(i + 1, palette));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
+    // Marks every card below as the owner's to reframe. The read view builds
+    // the same cards from the same builder and does not provide this, which is
+    // what makes a visitor's copy of the card inert.
+    return ArtFramingScope(
+      onChanged: (id, framing) {
+        final target = byId[id];
+        if (target == null) return;
+        ref
+            .read(profileCompositionProvider.notifier)
+            .setFraming(id, was: target.framing, now: framing);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 
@@ -223,8 +236,15 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     required bool Function(String) supportsHalf,
     required bool Function(String) supportsBoth,
   }) {
-    final widget = byId[cardId];
-    if (widget == null) return const SizedBox.shrink();
+    final stored = byId[cardId];
+    if (stored == null) return const SizedBox.shrink();
+    // The session's framing, where the owner has moved one this session. The
+    // card is built from the same builder the read view uses, so the working
+    // value has to reach it on the widget rather than beside it.
+    final working = ref.watch(
+      profileCompositionProvider.select((s) => s.framings[cardId]),
+    );
+    final widget = working == null ? stored : stored.copyWith(framing: working);
     final l10n = AppLocalizations.of(context);
 
     return Stack(

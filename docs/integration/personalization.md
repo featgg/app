@@ -123,7 +123,13 @@ client-enforced, not server-validated — the client offers only legal sizes.
     property of the saved arrangement may also carry a `size` string; it is
     ignored on read and no longer written. The
     `settings` schema is client-owned; the client may add fields additively
-    under the same `schema_version: 1`. An `art` widget may carry its picture source under another such
+    under the same `schema_version: 1`. Any widget that renders a picture may
+    carry how the owner framed it under such a field —
+    `"framing": { "x": <0..1>, "y": <0..1> }` — the point in the picture the
+    frame keeps when it crops. Unlike the sub-objects below it is not tied to
+    one kind, since every kind that shows a picture can be framed; it is
+    additive and optional, absent means the middle, and it never bumps the
+    version. An `art` widget may carry its picture source under another such
     field — `"art": { "source": "<platform>" }` — the platform whose artwork it
     shows. It is likewise additive and optional: absent means the client
     resolves the best available image at render time, and it never bumps the

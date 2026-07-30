@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/core.dart';
 import '../../domain/profile_archetype.dart';
 import '../../domain/profile_widget.dart';
+import '../art_framing_control.dart';
 import '../personalization_card_shell.dart';
 import '../profile_owner_cards_provider.dart';
 import 'card_data.dart';
@@ -38,6 +39,7 @@ class PlatformCard extends ConsumerWidget {
       archetype: ProfileArchetype.platform,
       size: size,
       art: card?.heroImage,
+      framing: ArtFramingTarget(widgetId: widget.id, framing: widget.framing),
       stats: cardStats(
         card,
         l10n,

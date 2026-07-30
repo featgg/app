@@ -269,6 +269,12 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   ) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, Unit>> setArtFraming(
+    ProfileWidget widget,
+    ArtFraming framing,
+  ) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async =>
       throw UnimplementedError();
 

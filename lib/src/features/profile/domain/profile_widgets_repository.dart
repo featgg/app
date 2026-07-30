@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import 'art_framing.dart';
 import 'collection_selection.dart';
 import 'profile_widget.dart';
 import 'showcase_selection.dart';
@@ -101,5 +102,13 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
     CollectionSelection selection,
+  );
+
+  /// Replaces how [widget]'s picture is framed. Takes the widget rather than
+  /// its id because framing shares the envelope with the widget's own
+  /// selection, and the write emits the envelope whole.
+  Future<Either<Failure, Unit>> setArtFraming(
+    ProfileWidget widget,
+    ArtFraming framing,
   );
 }

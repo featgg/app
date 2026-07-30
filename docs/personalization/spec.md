@@ -73,7 +73,7 @@ Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (on
 - The legacy `size` token (`small`/`wide`/`large`) and its aspect-ratio mapping (1/1, 2/1, 3/4) are **retired**: the client no longer writes it and ignores it on read. Rendered size is a property of the saved arrangement (§5), not of the widget row.
 - Each archetype declares its supported sizes in the **archetype registry** (§7.1): `[full]`, `[half]`, or `[full, half]`. One designed variant per supported size — fixed anatomy per variant, no free ratios.
 - An orphan (a `pair` row with one card) renders as a centered half. Designed state, not an error.
-- Art placement within bleed cards (#182) is per designed variant, not per free size.
+- Art placement within bleed cards is per designed variant, not per free size. Which part of the art the variant keeps is the owner's (§6.2).
 
 ## 6. Card formats and anatomy
 
@@ -87,7 +87,7 @@ The profile header (§4) is not a card of either family. It is a fixed surface o
 
 ### 6.1 The two formats
 
-- **Bleed** — real art fills the card edge to edge; a short bottom gradient plus a text shadow guarantees legibility over light art; the datum sits bottom-left, over the art. The designed variant accommodates the art's orientation; placement within the frame is per variant (#182).
+- **Bleed** — real art fills the card edge to edge; a short bottom gradient plus a text shadow guarantees legibility over light art; the datum sits bottom-left, over the art. The designed variant accommodates the art's orientation; which part of the art the variant keeps is the owner's (§6.2).
 - **Framed** — no art; the theme's own vertical fill grounds the card, with nothing drawn over it; the datum sits in its own band; a single line closes the card at the bottom; no side or top borders.
 - **Nothing sits at the top of any card**: no card title, no platform tag, no date.
 - Format is a registry property (§7.1), not per-card special-casing: bleed when real art exists for the card's subject (§7.2), framed otherwise.
@@ -101,6 +101,18 @@ The profile header (§4) is not a card of either family. It is a fixed surface o
 - The hero number uses tabular figures so values do not reflow the layout as they change; labels are uppercase with wide tracking and a floor of 11pt (the `tag` size in `docs/design-system.md` § 6). Where the floor and the block's target share disagree, **the floor wins**: a block that meets a percentage with labels nobody can read has traded away the thing it exists for.
 - Values are formatted compactly so a number is never truncated at the narrowest supported width (§3.1).
 - Where a datum has no possible visual subject (a whole library, a lifetime count), the number itself becomes the graphic and centres.
+
+**Framing.** A bleed card fills its frame with the art and crops the rest, so on any picture wider or taller than the frame something is lost — and the default middle crop is regularly the wrong thing to keep. The owner moves the art inside its frame, in edit mode, on the card itself: **hold, then drag**, with the card marked while editing to say its picture can be moved.
+
+The hold is not decoration. A card lives in a scrolling page, and a plain drag on the picture competes with the page's own: the page wins a vertical swipe — which is right, an ordinary swipe must scroll — and that would leave the owner able to move art sideways and never up or down. Waiting for a hold takes the picture out of the contest, so both axes work and scrolling is untouched.
+
+What is stored is a **point in the picture**, not a rectangle cut out of it: where the part that matters is, as a fraction of the picture's own width and height. A rectangle belongs to one frame shape and stops meaning anything when the card moves between full and half — the two are different proportions. A point stays correct in both, and on every screen, because §2.7 fixes each variant's proportions and only the global scale changes.
+
+The fit never changes with the framing, so reframing only pans: it can never shrink the art below its frame. A picture nobody has moved is centred, which is what every surface has always done. The cover (§4) is on the same rule but is not yet the owner's to move.
+
+**Only where it does something.** A card earns the control by carrying a picture genuinely larger than its frame — not by carrying a picture at all. One that failed to load, or whose proportions already match the frame, has nothing cropped and so nothing to reveal; offering to move it and answering a deliberate hold with no movement reads as broken. The same applies per axis: a wide picture in a tall frame moves sideways and not up.
+
+**It is an edit, not an action.** A reframe waits for Done and is dropped by Cancel, like every other edit in the session. Moving a picture and being told the profile has no unsaved changes is the session disagreeing with what the owner just did.
 
 ### 6.3 Empty, unavailable and stale states
 

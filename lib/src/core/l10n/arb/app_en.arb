@@ -1381,5 +1381,9 @@
   "profileComposeDeleteLabel": "Delete card",
   "@profileComposeDeleteLabel": {
     "description": "Accessibility label on a card's delete affordance in the composition editor; removes the card and deletes its widget."
+  },
+  "profileArtFramingLabel": "Drag the picture to frame it",
+  "@profileArtFramingLabel": {
+    "description": "Accessibility label on a card's picture while editing, where dragging moves which part of it the frame shows."
   }
 }

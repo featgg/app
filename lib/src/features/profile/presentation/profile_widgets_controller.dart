@@ -5,7 +5,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
+import '../domain/art_framing.dart';
 import '../domain/collection_selection.dart';
+import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
 import '../domain/showcase_selection.dart';
@@ -108,6 +110,10 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
   /// whole selection, so the hero change is one rewrite of it.
   Future<void> setShowcaseHero(String id, ShowcaseSelection selection) =>
       _run((repo) => repo.setShowcaseSelection(id, selection));
+
+  /// Moves the picture inside [widget]'s frame.
+  Future<void> setArtFraming(ProfileWidget widget, ArtFraming framing) =>
+      _run((repo) => repo.setArtFraming(widget, framing));
 
   Future<void> _run(
     Future<Either<Failure, Object?>> Function(ProfileWidgetsRepository repo) op,

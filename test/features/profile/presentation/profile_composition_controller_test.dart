@@ -2,13 +2,17 @@ import 'dart:async';
 
 import 'package:featgg/src/core/error/failure.dart';
 import 'package:featgg/src/features/connections/domain/connection.dart';
+import 'package:featgg/src/features/profile/domain/art_framing.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_layout.dart';
 import 'package:featgg/src/features/profile/domain/profile_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_repository.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
+import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
+import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/presentation/profile_composition_controller.dart';
 import 'package:featgg/src/features/profile/presentation/profile_provider.dart';
+import 'package:featgg/src/features/profile/presentation/profile_widgets_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
@@ -102,6 +106,48 @@ ProviderContainer _container(_FakeRepository repo) {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
+
+/// Records the framings a save writes, so a test can tell what reached the
+/// store from what only sat in the session.
+final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
+  _FakeWidgetsRepository({this.failure});
+
+  final Failure? failure;
+  final List<String> writtenIds = [];
+  final List<ArtFraming> writtenFramings = [];
+
+  @override
+  Future<Either<Failure, Unit>> setArtFraming(
+    ProfileWidget widget,
+    ArtFraming framing,
+  ) async {
+    if (failure != null) return left(failure!);
+    writtenIds.add(widget.id);
+    writtenFramings.add(framing);
+    return right(unit);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// A container whose widget reads and writes are the fakes, so a framing save
+/// has both the widgets to look up and a store to land in.
+ProviderContainer _framingContainer(
+  _FakeRepository repo,
+  _FakeWidgetsRepository widgetsRepo,
+) {
+  final container = ProviderContainer(
+    retry: (count, error) => null,
+    overrides: [
+      profileRepositoryProvider.overrideWithValue(repo),
+      profileWidgetsRepositoryProvider.overrideWithValue(widgetsRepo),
+      ownerProfileWidgetsProvider.overrideWith((ref) async => _widgets),
+    ],
   );
   addTearDown(container.dispose);
   return container;
@@ -878,6 +924,107 @@ void main() {
 
       gate.complete(right(unit));
       await saving;
+    });
+  });
+
+  group('framing is an edit like any other', () {
+    const moved = ArtFraming(x: 0.2, y: 0.8);
+
+    test('moving a picture is enough to have something to save', () {
+      // The whole defect: the picture moved, the session said nothing had
+      // changed, and Done stayed closed against an edit just made.
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      expect(container.read(profileCompositionProvider).isDirty, isFalse);
+
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+
+      expect(container.read(profileCompositionProvider).isDirty, isTrue);
+    });
+
+    test('putting it back where it was leaves nothing to save', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+      // A later drag reports where the picture started, not where the previous
+      // one left it, so the session still compares against the beginning.
+      notifier.setFraming('a', was: ArtFraming.center, now: ArtFraming.center);
+
+      expect(container.read(profileCompositionProvider).isDirty, isFalse);
+    });
+
+    test('cancel drops it', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+
+      notifier.cancelEditing();
+
+      final state = container.read(profileCompositionProvider);
+      expect(state.framings, isEmpty);
+      expect(state.isDirty, isFalse);
+    });
+
+    test('nothing reaches the store before Done', () async {
+      final widgetsRepo = _FakeWidgetsRepository();
+      final container = _framingContainer(_FakeRepository(), widgetsRepo);
+      await container.read(ownerProfileWidgetsProvider.future);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+
+      expect(widgetsRepo.writtenIds, isEmpty);
+    });
+
+    test('Done writes it', () async {
+      final widgetsRepo = _FakeWidgetsRepository();
+      final container = _framingContainer(_FakeRepository(), widgetsRepo);
+      await container.read(ownerProfileWidgetsProvider.future);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+
+      await notifier.save();
+
+      expect(widgetsRepo.writtenIds, ['a']);
+      expect(widgetsRepo.writtenFramings, [moved]);
+      expect(container.read(profileCompositionProvider).editing, isFalse);
+    });
+
+    test('a picture nobody moved is not rewritten', () async {
+      final widgetsRepo = _FakeWidgetsRepository();
+      final container = _framingContainer(_FakeRepository(), widgetsRepo);
+      await container.read(ownerProfileWidgetsProvider.future);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+      notifier.onToggleSize('a');
+
+      await notifier.save();
+
+      expect(widgetsRepo.writtenIds, ['a']);
+    });
+
+    test('a framing that will not write fails the save loudly', () async {
+      final widgetsRepo = _FakeWidgetsRepository(
+        failure: const NetworkFailure(),
+      );
+      final container = _framingContainer(_FakeRepository(), widgetsRepo);
+      await container.read(ownerProfileWidgetsProvider.future);
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      notifier.setFraming('a', was: ArtFraming.center, now: moved);
+
+      await notifier.save();
+
+      final state = container.read(profileCompositionProvider);
+      expect(state.saveFailed, isTrue);
+      expect(state.editing, isTrue, reason: 'the owner keeps the session');
     });
   });
 }

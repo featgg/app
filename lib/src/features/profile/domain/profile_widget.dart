@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../connections/domain/connection.dart';
+import 'art_framing.dart';
 import 'art_selection.dart';
 import 'collection_selection.dart';
 import 'showcase_selection.dart';
@@ -39,6 +40,8 @@ final class ProfileWidget extends Equatable {
     this.showcaseSelection = ShowcaseSelection.empty,
     this.collectionSelection = CollectionSelection.empty,
     this.artSelection = ArtSelection.empty,
+    this.framing = ArtFraming.center,
+    this.storedSettings = const {},
   });
 
   final String id;
@@ -63,12 +66,25 @@ final class ProfileWidget extends Equatable {
   /// Where an art widget's picture comes from; empty for every other kind.
   final ArtSelection artSelection;
 
+  /// How the owner framed whatever picture this widget shows. Kind-independent:
+  /// the picture's source differs per kind, the framing of it does not.
+  final ArtFraming framing;
+
+  /// The row's settings envelope exactly as it was read.
+  ///
+  /// The fields above are this build's reading of it, and the envelope is
+  /// additive under one schema version — so it may carry keys written by a
+  /// build that knows something this one does not. Kept whole so a write of one
+  /// key does not take the rest with it.
+  final Map<String, dynamic> storedSettings;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
     ShowcaseSelection? showcaseSelection,
     CollectionSelection? collectionSelection,
     ArtSelection? artSelection,
+    ArtFraming? framing,
   }) => ProfileWidget(
     id: id,
     kind: kind,
@@ -78,6 +94,8 @@ final class ProfileWidget extends Equatable {
     showcaseSelection: showcaseSelection ?? this.showcaseSelection,
     collectionSelection: collectionSelection ?? this.collectionSelection,
     artSelection: artSelection ?? this.artSelection,
+    framing: framing ?? this.framing,
+    storedSettings: storedSettings,
   );
 
   @override
@@ -89,5 +107,8 @@ final class ProfileWidget extends Equatable {
     isEnabled,
     showcaseSelection,
     collectionSelection,
+    artSelection,
+    framing,
+    storedSettings,
   ];
 }
