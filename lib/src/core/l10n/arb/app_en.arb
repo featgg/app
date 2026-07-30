@@ -1384,6 +1384,14 @@
   },
   "profileArtFramingLabel": "Drag the picture to frame it",
   "@profileArtFramingLabel": {
-    "description": "Accessibility label on a card's picture while editing, where dragging moves which part of it the frame shows."
+    "description": "Accessibility label on a card's picture while it is in framing mode, where dragging moves which part of it the frame shows."
+  },
+  "profileArtFramingStart": "Frame the picture",
+  "@profileArtFramingStart": {
+    "description": "Accessibility label on the mark that puts a card's picture into framing mode."
+  },
+  "profileArtFramingDone": "Done framing",
+  "@profileArtFramingDone": {
+    "description": "Accessibility label on the mark while a card is in framing mode; tapping it confirms and leaves the mode."
   }
 }

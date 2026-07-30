@@ -8,7 +8,6 @@ import 'package:featgg/src/features/profile/domain/art_framing.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/presentation/art_framing_control.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_card_shell.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,6 +54,33 @@ Future<String> _seedArt(
     );
   });
   return url;
+}
+
+/// The editor's half of the contract: owns which card is in framing mode, the
+/// way the real editor does, so entering and leaving the mode behaves here as
+/// it does in production.
+class _EditorScope extends StatefulWidget {
+  const _EditorScope({required this.onChanged, required this.child});
+
+  final void Function(String, ArtFraming) onChanged;
+  final Widget child;
+
+  @override
+  State<_EditorScope> createState() => _EditorScopeState();
+}
+
+class _EditorScopeState extends State<_EditorScope> {
+  String? _active;
+
+  @override
+  Widget build(BuildContext context) {
+    return ArtFramingScope(
+      activeId: _active,
+      onActivate: (id) => setState(() => _active = id),
+      onChanged: widget.onChanged,
+      child: widget.child,
+    );
+  }
 }
 
 /// Mounts art cards in a scrolling page, which is the only place they ever
@@ -106,7 +132,7 @@ Widget _page({
           palette: PersonalizationPalette.crimson,
           child: onChanged == null
               ? list
-              : ArtFramingScope(onChanged: onChanged, child: list),
+              : _EditorScope(onChanged: onChanged, child: list),
         ),
       ),
     ),
@@ -118,21 +144,28 @@ Alignment _paintedAlignment(WidgetTester tester) => tester
     .widget<CachedNetworkImage>(find.byType(CachedNetworkImage).first)
     .alignment;
 
+/// Taps the first card's mark, which is how the owner enters framing mode.
+Future<void> _enterMode(WidgetTester tester) async {
+  await tester.tap(find.byType(ArtFramingBadge).first);
+  await tester.pump();
+}
+
+/// Whether some card is in framing mode right now — the confirm mark is only
+/// ever drawn on the active card.
+Finder get _activeMark => find.byIcon(Icons.check);
+
 /// Drives a pointer the way a finger does — many small moves — because a
 /// gesture that has to win an arena resolves on the movement between events,
 /// not on the total. A single synthetic move never gets past the slop.
 Future<void> _swipe(
   WidgetTester tester,
   Offset total, {
-  bool hold = false,
+  Offset? from,
   int steps = 20,
 }) async {
   final gesture = await tester.startGesture(
-    tester.getCenter(find.byType(CachedNetworkImage).first),
+    from ?? tester.getCenter(find.byType(CachedNetworkImage).first),
   );
-  if (hold) {
-    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 20));
-  }
   for (var i = 0; i < steps; i++) {
     await gesture.moveBy(total / steps.toDouble());
     await tester.pump(const Duration(milliseconds: 16));
@@ -226,7 +259,7 @@ void main() {
     });
   });
 
-  group('which cards offer the control', () {
+  group('which cards offer the mark', () {
     testWidgets('a picture larger than its frame does', (tester) async {
       final url = await _seedArt(tester, width: 1600, height: 900);
       await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
@@ -237,7 +270,7 @@ void main() {
 
     testWidgets('a picture the shape of its frame does not', (tester) async {
       // Nothing is cropped, so there is nothing to move to. A card that
-      // answered a deliberate hold with no movement would read as broken.
+      // answered the mark with no movement would read as broken.
       final url = await _seedArt(tester, width: 400, height: 500);
       await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
       await tester.pump();
@@ -277,8 +310,8 @@ void main() {
     });
   });
 
-  group('living in a scrolling page', () {
-    testWidgets('an ordinary vertical swipe scrolls, it does not reframe', (
+  group('the mode', () {
+    testWidgets('outside it, a swipe on the card scrolls the page', (
       tester,
     ) async {
       final url = await _seedArt(tester, width: 600, height: 1600);
@@ -298,29 +331,91 @@ void main() {
 
       expect(controller.offset, greaterThan(0));
       expect(moved, isEmpty);
+      expect(_activeMark, findsNothing);
     });
 
-    testWidgets('a held swipe reframes, it does not scroll', (tester) async {
-      // Vertical, which is the whole reason the hold is there: without it the
-      // page wins every vertical drag and the owner can only move art sideways.
+    testWidgets('the mark enters it, visibly', (tester) async {
       final url = await _seedArt(tester, width: 600, height: 1600);
-      final moved = <ArtFraming>[];
+      await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
+      await tester.pump();
+      expect(_activeMark, findsNothing);
+
+      await _enterMode(tester);
+
+      expect(_activeMark, findsOneWidget);
+    });
+
+    testWidgets(
+      'inside it, a plain vertical drag reframes and nothing scrolls',
+      (tester) async {
+        // The axis the old hold existed for: without ownership the page wins
+        // every vertical drag and the owner can only move art sideways.
+        final url = await _seedArt(tester, width: 600, height: 1600);
+        final moved = <ArtFraming>[];
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          _page(
+            art: url,
+            controller: controller,
+            onChanged: (_, f) => moved.add(f),
+          ),
+        );
+        await tester.pump();
+        await _enterMode(tester);
+
+        await _swipe(tester, const Offset(0, -100));
+
+        expect(controller.offset, 0);
+        expect(moved, hasLength(1));
+        expect(moved.single.y, greaterThan(0.5));
+      },
+    );
+
+    testWidgets('the mark leaves it again', (tester) async {
+      final url = await _seedArt(tester, width: 600, height: 1600);
       final controller = ScrollController();
       addTearDown(controller.dispose);
       await tester.pumpWidget(
-        _page(
-          art: url,
-          controller: controller,
-          onChanged: (_, f) => moved.add(f),
-        ),
+        _page(art: url, controller: controller, onChanged: (_, _) {}),
       );
       await tester.pump();
+      await _enterMode(tester);
 
-      await _swipe(tester, const Offset(0, -100), hold: true);
+      await tester.tap(_activeMark);
+      await tester.pump();
 
-      expect(controller.offset, 0);
-      expect(moved, hasLength(1));
-      expect(moved.single.y, greaterThan(0.5));
+      expect(_activeMark, findsNothing);
+      // And the page is a page again.
+      await _swipe(tester, const Offset(0, -200));
+      expect(controller.offset, greaterThan(0));
+    });
+
+    testWidgets('a press outside the card leaves it', (tester) async {
+      final url = await _seedArt(tester, width: 600, height: 1600);
+      await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
+      await tester.pump();
+      await _enterMode(tester);
+
+      // Off the column entirely — the empty ground beside the cards.
+      await tester.tapAt(const Offset(700, 300));
+      await tester.pump();
+
+      expect(_activeMark, findsNothing);
+    });
+
+    testWidgets('only one card frames at a time', (tester) async {
+      final url = await _seedArt(tester, width: 600, height: 1600);
+      await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
+      await tester.pump();
+      await _enterMode(tester);
+
+      // Entering on a second card hands the mode over rather than opening a
+      // second one.
+      await tester.tap(find.byType(ArtFramingBadge).at(1));
+      await tester.pump();
+
+      expect(_activeMark, findsOneWidget);
     });
   });
 
@@ -337,12 +432,13 @@ void main() {
         _page(art: url, onChanged: (_, f) => moved.add(f)),
       );
       await tester.pump();
+      await _enterMode(tester);
 
       final overflow = artOverflow(
         frame: const Size(_cardWidth, _frameHeight),
         image: const Size(1600, 900),
       );
-      await _swipe(tester, Offset(overflow.width / 4, 0), hold: true);
+      await _swipe(tester, Offset(overflow.width / 4, 0));
 
       expect(moved.single.x, closeTo(0.25, 0.01));
       expect(moved.single.y, 0.5);
@@ -355,8 +451,9 @@ void main() {
         _page(art: url, onChanged: (id, _) => ids.add(id)),
       );
       await tester.pump();
+      await _enterMode(tester);
 
-      await _swipe(tester, const Offset(60, 0), hold: true);
+      await _swipe(tester, const Offset(60, 0));
 
       expect(ids, ['w-0']);
     });
@@ -370,8 +467,9 @@ void main() {
         _page(art: url, onChanged: (_, f) => moved.add(f)),
       );
       await tester.pump();
+      await _enterMode(tester);
 
-      await _swipe(tester, Offset.zero, hold: true);
+      await _swipe(tester, Offset.zero);
 
       expect(moved, isEmpty);
     });
@@ -383,8 +481,9 @@ void main() {
         _page(art: url, onChanged: (_, f) => moved.add(f)),
       );
       await tester.pump();
+      await _enterMode(tester);
 
-      await _swipe(tester, const Offset(-_cardWidth * 8, 0), hold: true);
+      await _swipe(tester, const Offset(-_cardWidth * 8, 0));
 
       expect(moved.single.x, 1);
     });
@@ -398,8 +497,9 @@ void main() {
         _page(art: url, onChanged: (_, f) => moved.add(f)),
       );
       await tester.pump();
+      await _enterMode(tester);
 
-      await _swipe(tester, const Offset(0, -80), hold: true);
+      await _swipe(tester, const Offset(0, -80));
 
       expect(moved, isEmpty);
     });
@@ -408,8 +508,9 @@ void main() {
       final url = await _seedArt(tester, width: 1600, height: 900);
       await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
       await tester.pump();
+      await _enterMode(tester);
 
-      await _swipe(tester, const Offset(60, 0), hold: true);
+      await _swipe(tester, const Offset(60, 0));
 
       expect(_paintedAlignment(tester).x, lessThan(0));
     });
@@ -423,10 +524,10 @@ void main() {
     const stats = [PersonalizationStat(value: '412', label: 'STEAM HOURS')];
 
     Future<void> pumpCard(
-      WidgetTester tester,
-      String url, {
+      WidgetTester tester, {
       void Function(String, ArtFraming)? onChanged,
     }) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
       await tester.pumpWidget(
         _page(
           art: url,
@@ -438,17 +539,10 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('draws its number', (tester) async {
-      final url = await _seedArt(tester, width: 1600, height: 900);
-      await pumpCard(tester, url, onChanged: (_, _) {});
+    testWidgets('draws its number and offers the mark', (tester) async {
+      await pumpCard(tester, onChanged: (_, _) {});
 
       expect(find.text('412'), findsWidgets);
-    });
-
-    testWidgets('offers the control', (tester) async {
-      final url = await _seedArt(tester, width: 1600, height: 900);
-      await pumpCard(tester, url, onChanged: (_, _) {});
-
       expect(find.byType(ArtFramingBadge), findsWidgets);
     });
 
@@ -457,8 +551,7 @@ void main() {
     ) async {
       // Painted under the gradient the mark is still found, just unreadable —
       // so being present proves nothing. What proves it is being last.
-      final url = await _seedArt(tester, width: 1600, height: 900);
-      await pumpCard(tester, url, onChanged: (_, _) {});
+      await pumpCard(tester, onChanged: (_, _) {});
 
       final painted = find
           .descendant(
@@ -473,33 +566,28 @@ void main() {
       expect(badge, greaterThan(scrim));
     });
 
-    testWidgets('takes a hold over the number, not just over the art', (
+    testWidgets('in the mode, a drag over the number moves the picture', (
       tester,
     ) async {
       // The corner the number occupies is the one a finger reaches for on a
       // card whose top half is the picture.
-      final url = await _seedArt(tester, width: 1600, height: 900);
       final moved = <ArtFraming>[];
-      await pumpCard(tester, url, onChanged: (_, f) => moved.add(f));
+      await pumpCard(tester, onChanged: (_, f) => moved.add(f));
+      await _enterMode(tester);
 
       final card = tester.getRect(find.byType(PersonalizationCardShell).first);
-      final overTheNumber = Offset(card.left + 40, card.bottom - 20);
-      final gesture = await tester.startGesture(overTheNumber);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 20));
-      for (var i = 0; i < 20; i++) {
-        await gesture.moveBy(const Offset(4, 0));
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      await gesture.up();
-      await tester.pumpAndSettle();
+      await _swipe(
+        tester,
+        const Offset(80, 0),
+        from: Offset(card.left + 40, card.bottom - 20),
+      );
 
       expect(moved, hasLength(1));
       expect(moved.single.x, lessThan(0.5));
     });
 
     testWidgets('a visitor gets no mark on it either', (tester) async {
-      final url = await _seedArt(tester, width: 1600, height: 900);
-      await pumpCard(tester, url);
+      await pumpCard(tester);
 
       expect(find.byType(ArtFramingBadge), findsNothing);
       expect(find.text('412'), findsWidgets);
