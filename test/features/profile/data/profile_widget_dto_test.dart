@@ -51,37 +51,8 @@ void main() {
       expect(widget, isNotNull);
       expect(widget!.kind, ProfileWidgetKind.platform);
       expect(widget.platform, Platform.steam);
-      expect(widget.size, ProfileWidgetSize.wide);
       expect(widget.position, 3);
       expect(widget.isEnabled, isTrue);
-    });
-
-    test('round-trips the three size tokens', () {
-      const cases = {
-        'small': ProfileWidgetSize.small,
-        'wide': ProfileWidgetSize.wide,
-        'large': ProfileWidgetSize.large,
-      };
-      for (final entry in cases.entries) {
-        final widget = profileWidgetFromDto(
-          ProfileWidgetDto.fromJson(_row(size: entry.key)),
-        );
-        expect(widget!.size, entry.value, reason: entry.key);
-      }
-    });
-
-    test('unknown size token → small', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(_row(size: 'gigantic')),
-      );
-      expect(widget!.size, ProfileWidgetSize.small);
-    });
-
-    test('absent size key → small', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(_row(size: null)),
-      );
-      expect(widget!.size, ProfileWidgetSize.small);
     });
 
     test('absent settings entirely → small', () {
@@ -89,7 +60,6 @@ void main() {
         ProfileWidgetDto.fromJson(_row(includeSettings: false)),
       );
       expect(widget, isNotNull);
-      expect(widget!.size, ProfileWidgetSize.small);
     });
   });
 
@@ -136,12 +106,6 @@ void main() {
   });
 
   group('serialization helpers', () {
-    test('profileWidgetSizeToWire round-trips the size tokens', () {
-      expect(profileWidgetSizeToWire(ProfileWidgetSize.small), 'small');
-      expect(profileWidgetSizeToWire(ProfileWidgetSize.wide), 'wide');
-      expect(profileWidgetSizeToWire(ProfileWidgetSize.large), 'large');
-    });
-
     test('profileWidgetKindToWire maps every kind to its wire token', () {
       expect(profileWidgetKindToWire(ProfileWidgetKind.platform), 'platform');
       expect(profileWidgetKindToWire(ProfileWidgetKind.showcase), 'showcase');
@@ -168,7 +132,7 @@ void main() {
     test('a non-null rank row round-trips to the kind with its platform', () {
       final widget = profileWidgetFromDto(
         ProfileWidgetDto.fromJson(
-          _row(type: 'rank', platform: 'league_of_legends', size: 'small'),
+          _row(type: 'rank', platform: 'league_of_legends'),
         ),
       );
 
@@ -176,7 +140,6 @@ void main() {
       expect(widget!.kind, ProfileWidgetKind.rank);
       // Platform-bound: the source platform lives in the row's `platform` column.
       expect(widget.platform, Platform.leagueOfLegends);
-      expect(widget.size, ProfileWidgetSize.small);
     });
 
     test('a null-platform rank row → null (binding rule)', () {
@@ -199,15 +162,12 @@ void main() {
   group('main binding (platform-BOUND, size-only envelope)', () {
     test('a non-null main row round-trips to the kind with its platform', () {
       final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'main', platform: 'steam', size: 'wide'),
-        ),
+        ProfileWidgetDto.fromJson(_row(type: 'main', platform: 'steam')),
       );
 
       expect(widget, isNotNull);
       expect(widget!.kind, ProfileWidgetKind.main);
       expect(widget.platform, Platform.steam);
-      expect(widget.size, ProfileWidgetSize.wide);
     });
 
     test('a null-platform main row → null (binding rule)', () {
@@ -247,7 +207,6 @@ void main() {
         // The source platform is the row's `platform` column, non-null per the
         // binding rule — not duplicated inside settings.
         expect(widget.platform, Platform.steam);
-        expect(widget.size, ProfileWidgetSize.large);
         expect(widget.showcaseSelection.gameRef, '730');
         expect(widget.showcaseSelection.hero, ShowcaseHeroStat.hours);
         expect(widget.showcaseSelection.meta, isNull);
@@ -317,9 +276,7 @@ void main() {
     test(
       'a platform row carries an empty showcase selection (no disturbance)',
       () {
-        final widget = profileWidgetFromDto(
-          ProfileWidgetDto.fromJson(_row(size: 'wide')),
-        );
+        final widget = profileWidgetFromDto(ProfileWidgetDto.fromJson(_row()));
 
         expect(widget!.kind, ProfileWidgetKind.platform);
         expect(widget.showcaseSelection, ShowcaseSelection.empty);
@@ -328,12 +285,10 @@ void main() {
 
     test('merge writer preserves schema_version + size and sets game/hero', () {
       final merged = mergeShowcaseSelectionIntoSettings(
-        ProfileWidgetSize.large,
         const ShowcaseSelection(gameRef: '730'),
       );
 
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'large');
       final showcase = merged['showcase'] as Map<String, dynamic>;
       expect(showcase['game'], '730');
       expect(showcase['hero'], 'hours');
@@ -342,18 +297,15 @@ void main() {
 
     test('merge writer omits the showcase key for an empty selection', () {
       final merged = mergeShowcaseSelectionIntoSettings(
-        ProfileWidgetSize.small,
         ShowcaseSelection.empty,
       );
 
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'small');
       expect(merged.containsKey('showcase'), isFalse);
     });
 
     test('round-trips merge → fromDto with non-null platform + selection', () {
       final merged = mergeShowcaseSelectionIntoSettings(
-        ProfileWidgetSize.large,
         const ShowcaseSelection(gameRef: '730'),
       );
       final widget = profileWidgetFromDto(
@@ -384,7 +336,6 @@ void main() {
 
     test('round-trips an achievements hero through merge → fromDto', () {
       final merged = mergeShowcaseSelectionIntoSettings(
-        ProfileWidgetSize.large,
         const ShowcaseSelection(
           gameRef: '730',
           hero: ShowcaseHeroStat.achievements,
@@ -447,7 +398,6 @@ void main() {
         // A collection spans multiple games — the binding rule keeps platform
         // null.
         expect(widget.platform, isNull);
-        expect(widget.size, ProfileWidgetSize.wide);
         expect(widget.collectionSelection.gameRefs, ['730', '570', '440']);
         expect(widget.collectionSelection.titleKey, 'collectionTitleFavorites');
       },
@@ -517,9 +467,7 @@ void main() {
     });
 
     test('a platform row carries an empty collection selection', () {
-      final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(_row(size: 'wide')),
-      );
+      final widget = profileWidgetFromDto(ProfileWidgetDto.fromJson(_row()));
 
       expect(widget!.kind, ProfileWidgetKind.platform);
       expect(widget.collectionSelection, CollectionSelection.empty);
@@ -533,7 +481,6 @@ void main() {
       'merge writer preserves schema_version + size and sets games/title',
       () {
         final merged = mergeCollectionSelectionIntoSettings(
-          ProfileWidgetSize.wide,
           const CollectionSelection(
             gameRefs: ['730', '570'],
             titleKey: 'collectionTitleBacklog',
@@ -541,7 +488,6 @@ void main() {
         );
 
         expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-        expect(merged['size'], 'wide');
         final collection = merged['collection'] as Map<String, dynamic>;
         expect(collection['games'], ['730', '570']);
         expect(collection['title'], 'collectionTitleBacklog');
@@ -550,7 +496,6 @@ void main() {
 
     test('merge writer omits the title when none is set', () {
       final merged = mergeCollectionSelectionIntoSettings(
-        ProfileWidgetSize.small,
         const CollectionSelection(gameRefs: ['730']),
       );
 
@@ -561,18 +506,15 @@ void main() {
 
     test('merge writer omits the collection key for an empty selection', () {
       final merged = mergeCollectionSelectionIntoSettings(
-        ProfileWidgetSize.small,
         CollectionSelection.empty,
       );
 
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'small');
       expect(merged.containsKey('collection'), isFalse);
     });
 
     test('round-trips merge → fromDto with a null platform + selection', () {
       final merged = mergeCollectionSelectionIntoSettings(
-        ProfileWidgetSize.wide,
         const CollectionSelection(
           gameRefs: ['730', '570', '440'],
           titleKey: 'collectionTitleMostPlayed',
@@ -594,7 +536,6 @@ void main() {
       expect(widget.platform, isNull);
       expect(widget.collectionSelection.gameRefs, ['730', '570', '440']);
       expect(widget.collectionSelection.titleKey, 'collectionTitleMostPlayed');
-      expect(widget.size, ProfileWidgetSize.wide);
     });
   });
 
@@ -602,7 +543,7 @@ void main() {
     test('a non-null Steam game_collector row round-trips to the kind', () {
       final widget = profileWidgetFromDto(
         ProfileWidgetDto.fromJson(
-          _row(type: 'game_collector', platform: 'steam', size: 'large'),
+          _row(type: 'game_collector', platform: 'steam'),
         ),
       );
 
@@ -610,7 +551,6 @@ void main() {
       expect(widget!.kind, ProfileWidgetKind.gameCollector);
       // Platform-bound: the source platform lives in the row's `platform` column.
       expect(widget.platform, Platform.steam);
-      expect(widget.size, ProfileWidgetSize.large);
     });
 
     test('a null-platform game_collector row → null (binding rule)', () {
@@ -646,7 +586,7 @@ void main() {
     test('a non-null Steam completionist row round-trips to the kind', () {
       final widget = profileWidgetFromDto(
         ProfileWidgetDto.fromJson(
-          _row(type: 'completionist', platform: 'steam', size: 'large'),
+          _row(type: 'completionist', platform: 'steam'),
         ),
       );
 
@@ -654,7 +594,6 @@ void main() {
       expect(widget!.kind, ProfileWidgetKind.completionist);
       // Platform-bound: the source platform lives in the row's `platform` column.
       expect(widget.platform, Platform.steam);
-      expect(widget.size, ProfileWidgetSize.large);
     });
 
     test('a null-platform completionist row → null (binding rule)', () {
@@ -690,9 +629,7 @@ void main() {
     test('a null-platform passport row round-trips to the kind with its '
         'size', () {
       final widget = profileWidgetFromDto(
-        ProfileWidgetDto.fromJson(
-          _row(type: 'passport', platform: null, size: 'wide'),
-        ),
+        ProfileWidgetDto.fromJson(_row(type: 'passport', platform: null)),
       );
 
       expect(widget, isNotNull);
@@ -700,7 +637,6 @@ void main() {
       // A passport aggregates every linked platform — the binding rule keeps
       // platform null.
       expect(widget.platform, isNull);
-      expect(widget.size, ProfileWidgetSize.wide);
     });
 
     test('a passport row with a stray platform still maps with null '
@@ -746,7 +682,6 @@ void main() {
       // An art card reads no account data, so its row carries no binding; the
       // picture it points at is the envelope's business.
       expect(widget.platform, isNull);
-      expect(widget.size, ProfileWidgetSize.wide);
       expect(widget.artSelection.source, Platform.leagueOfLegends);
     });
 
@@ -784,22 +719,16 @@ void main() {
     test('mergeArtSelectionIntoSettings writes the v1 envelope with the wire '
         'source', () {
       final merged = mergeArtSelectionIntoSettings(
-        ProfileWidgetSize.wide,
         const ArtSelection(source: Platform.wowRetail),
       );
 
       expect(merged['schema_version'], kProfileWidgetSettingsVersion);
-      expect(merged['size'], 'wide');
       expect((merged['art']! as Map)['source'], 'wow_retail');
     });
 
     test('an empty selection writes no art sub-object', () {
-      final merged = mergeArtSelectionIntoSettings(
-        ProfileWidgetSize.wide,
-        ArtSelection.empty,
-      );
+      final merged = mergeArtSelectionIntoSettings(ArtSelection.empty);
 
-      expect(merged['size'], 'wide');
       expect(merged.containsKey('art'), isFalse);
     });
 
@@ -807,9 +736,7 @@ void main() {
       const selection = ArtSelection(source: Platform.steam);
 
       expect(
-        artSelectionFromSettings(
-          mergeArtSelectionIntoSettings(ProfileWidgetSize.wide, selection),
-        ),
+        artSelectionFromSettings(mergeArtSelectionIntoSettings(selection)),
         selection,
       );
     });

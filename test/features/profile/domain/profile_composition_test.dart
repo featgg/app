@@ -356,7 +356,6 @@ void main() {
       platform: null,
       position: position,
       isEnabled: enabled,
-      size: ProfileWidgetSize.small,
     );
 
     test('orders by question-category, position breaking ties', () {

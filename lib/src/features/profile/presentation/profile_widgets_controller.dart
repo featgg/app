@@ -6,7 +6,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/error/failure.dart';
 import '../../connections/domain/connection.dart';
 import '../domain/collection_selection.dart';
-import '../domain/profile_widget.dart';
 import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widgets_repository.dart';
 import '../domain/showcase_selection.dart';
@@ -27,140 +26,88 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
   @override
   FutureOr<void> build() {}
 
-  /// Adds a [platform] widget at the given [position] with [size].
+  /// Adds a [platform] widget at the given [position].
   Future<void> addPlatform({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) => _run(
-    (repo) => repo.addPlatformWidget(
-      platform: platform,
-      position: position,
-      size: size,
-    ),
+    (repo) => repo.addPlatformWidget(platform: platform, position: position),
   );
 
-  /// Adds a showcase widget for [platform] and [selection] at [position] with
-  /// [size].
+  /// Adds a showcase widget for [platform] and [selection] at [position].
   Future<void> addShowcase({
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) => _run(
     (repo) => repo.addShowcaseWidget(
       platform: platform,
       selection: selection,
       position: position,
-      size: size,
     ),
   );
 
-  /// Adds a collection widget for [selection] at [position] with [size].
+  /// Adds a collection widget for [selection] at [position].
   Future<void> addCollection({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) => _run(
-    (repo) => repo.addCollectionWidget(
-      selection: selection,
-      position: position,
-      size: size,
-    ),
+    (repo) =>
+        repo.addCollectionWidget(selection: selection, position: position),
   );
 
-  /// Adds a game-collector widget bound to [platform] at [position] with [size].
+  /// Adds a game-collector widget bound to [platform] at [position].
   Future<void> addGameCollector({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) => _run(
-    (repo) => repo.addGameCollectorWidget(
-      platform: platform,
-      position: position,
-      size: size,
-    ),
+    (repo) =>
+        repo.addGameCollectorWidget(platform: platform, position: position),
   );
 
-  /// Adds a completionist widget bound to [platform] at [position] with [size].
+  /// Adds a completionist widget bound to [platform] at [position].
   Future<void> addCompletionist({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) => _run(
-    (repo) => repo.addCompletionistWidget(
-      platform: platform,
-      position: position,
-      size: size,
-    ),
+    (repo) =>
+        repo.addCompletionistWidget(platform: platform, position: position),
   );
 
-  /// Sets the size on the collection widget [id], carrying its [selection]
-  /// through the rewritten settings envelope.
-  Future<void> resizeCollection(
+  /// Replaces the games and title on the collection widget [id].
+  Future<void> setCollectionSelection(
     String id,
-    ProfileWidgetSize size,
     CollectionSelection selection,
-  ) => _run((repo) => repo.setCollectionSize(id, size, selection));
+  ) => _run((repo) => repo.setCollectionSelection(id, selection));
 
-  /// Adds a passport widget at [position] with [size].
-  Future<void> addPassport({
-    required int position,
-    required ProfileWidgetSize size,
-  }) => _run((repo) => repo.addPassportWidget(position: position, size: size));
+  /// Adds a passport widget at [position].
+  Future<void> addPassport({required int position}) =>
+      _run((repo) => repo.addPassportWidget(position: position));
 
-  /// Adds a rank widget bound to [platform] at [position] with [size].
-  Future<void> addRank({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) => _run(
-    (repo) =>
-        repo.addRankWidget(platform: platform, position: position, size: size),
-  );
+  /// Adds a rank widget bound to [platform] at [position].
+  Future<void> addRank({required Platform platform, required int position}) =>
+      _run(
+        (repo) => repo.addRankWidget(platform: platform, position: position),
+      );
 
-  /// Adds a main widget bound to [platform] at [position] with [size].
-  Future<void> addMain({
-    required Platform platform,
-    required int position,
-    required ProfileWidgetSize size,
-  }) => _run(
-    (repo) =>
-        repo.addMainWidget(platform: platform, position: position, size: size),
-  );
+  /// Adds a main widget bound to [platform] at [position].
+  Future<void> addMain({required Platform platform, required int position}) =>
+      _run(
+        (repo) => repo.addMainWidget(platform: platform, position: position),
+      );
 
-  /// Adds an art widget at [position] with [size]. Without [source] the card
+  /// Adds an art widget at [position]. Without [source] the card
   /// resolves its own picture at render time; with one it pins that platform.
-  Future<void> addArt({
-    Platform? source,
-    required int position,
-    required ProfileWidgetSize size,
-  }) => _run(
-    (repo) => repo.addArtWidget(source: source, position: position, size: size),
-  );
+  Future<void> addArt({Platform? source, required int position}) =>
+      _run((repo) => repo.addArtWidget(source: source, position: position));
 
   /// Removes the widget [id].
   Future<void> remove(String id) => _run((repo) => repo.removeWidget(id));
 
-  /// Sets the size on the widget [id].
-  Future<void> resize(String id, ProfileWidgetSize size) =>
-      _run((repo) => repo.setSize(id, size));
-
-  /// Sets the size on the showcase widget [id], carrying its [selection]
-  /// through the rewritten settings envelope.
-  Future<void> resizeShowcase(
-    String id,
-    ProfileWidgetSize size,
-    ShowcaseSelection selection,
-  ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
-
-  /// Sets the hero stat on the showcase widget [id]. The settings envelope holds
-  /// both size and selection, so this is the same single rewrite as a resize.
-  Future<void> setShowcaseHero(
-    String id,
-    ProfileWidgetSize size,
-    ShowcaseSelection selection,
-  ) => _run((repo) => repo.setShowcaseSize(id, size, selection));
+  /// Sets the hero stat on the showcase widget [id]. The envelope holds the
+  /// whole selection, so the hero change is one rewrite of it.
+  Future<void> setShowcaseHero(String id, ShowcaseSelection selection) =>
+      _run((repo) => repo.setShowcaseSelection(id, selection));
 
   Future<void> _run(
     Future<Either<Failure, Object?>> Function(ProfileWidgetsRepository repo) op,

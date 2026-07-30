@@ -119,7 +119,9 @@ client-enforced, not server-validated — the client offers only legal sizes.
     rejected.
   - `position` is a non-negative integer (`>= 0`), unique per user.
   - `settings` is a JSON object up to ~50 KB. Versioned envelope:
-    `{ "schema_version": 1, "size": "small" | "wide" | "large" }`. The
+    `{ "schema_version": 1 }`. A row written before the rendered size became a
+    property of the saved arrangement may also carry a `size` string; it is
+    ignored on read and no longer written. The
     `settings` schema is client-owned; the client may add fields additively
     under the same `schema_version: 1`. An `art` widget may carry its picture source under another such
     field — `"art": { "source": "<platform>" }` — the platform whose artwork it
@@ -135,13 +137,12 @@ client-enforced, not server-validated — the client offers only legal sizes.
     ordered games it renders and a stable catalog title key. It is likewise
     additive, ignored when absent, and never bumps the version. A
     `game_collector` widget carries no additional settings sub-object beyond
-    `size` — it has no per-widget choice (it aggregates the whole library) — and
-    a future art-source selector may be added additively under the same
-    `schema_version: 1`. A `completionist` widget likewise carries no additional
-    settings sub-object beyond `size` — it has no per-widget choice (it counts
-    the whole library's perfect games). A `passport` widget likewise carries no
-    additional settings sub-object beyond `size` — it has no per-widget choice
-    (it aggregates every linked platform).
+    the envelope — it has no per-widget choice (it aggregates the whole
+    library) — and a future art-source selector may be added additively under
+    the same `schema_version: 1`. A `completionist` widget likewise carries no
+    additional settings sub-object — it has no per-widget choice (it counts the
+    whole library's perfect games). A `passport` widget likewise carries none —
+    it aggregates every linked platform.
   - `type` must be a valid value, and `platform` must satisfy the
     binding rule above.
 - **Ordering / pagination.** Read the user's widgets ordered by `position`.

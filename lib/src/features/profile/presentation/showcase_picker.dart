@@ -259,10 +259,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     return _AddRow(
       rowKey: const Key('passportAddRow'),
       label: l10n.passportLabel,
-      onAcquire: (controller) => controller.addPassport(
-        position: nextPosition,
-        size: ProfileWidgetSize.wide,
-      ),
+      onAcquire: (controller) => controller.addPassport(position: nextPosition),
     );
   }
 
@@ -292,16 +289,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       rowKey: Key('${prefix}AddRow_${platform.name}'),
       label: label,
       onAcquire: (controller) => kind == ProfileWidgetKind.rank
-          ? controller.addRank(
-              platform: platform,
-              position: nextPosition,
-              size: ProfileWidgetSize.small,
-            )
-          : controller.addMain(
-              platform: platform,
-              position: nextPosition,
-              size: ProfileWidgetSize.small,
-            ),
+          ? controller.addRank(platform: platform, position: nextPosition)
+          : controller.addMain(platform: platform, position: nextPosition),
     );
   }
 
@@ -319,7 +308,6 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       onAcquire: (controller) => controller.addArt(
         position: nextPosition,
         // A picture is the point, so it lands as a full-width card.
-        size: ProfileWidgetSize.wide,
       ),
     );
   }
@@ -392,7 +380,6 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         onAcquire: (controller) => controller.addGameCollector(
           platform: Platform.steam,
           position: nextPosition,
-          size: ProfileWidgetSize.small,
         ),
       );
     }
@@ -430,7 +417,6 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       onAcquire: (controller) => controller.addCompletionist(
         platform: Platform.steam,
         position: nextPosition,
-        size: ProfileWidgetSize.small,
       ),
     );
   }
@@ -799,7 +785,6 @@ class _GameTile extends ConsumerWidget {
               platform: Platform.steam,
               selection: ShowcaseSelection(gameRef: entry.appId.toString()),
               position: nextPosition,
-              size: ProfileWidgetSize.small,
             );
         Navigator.of(context).pop();
       },

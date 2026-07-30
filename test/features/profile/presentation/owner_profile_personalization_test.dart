@@ -42,7 +42,6 @@ ProfileWidget _widget(String id, ProfileWidgetKind kind) => ProfileWidget(
   platform: null,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 final _widgets = [
@@ -152,7 +151,6 @@ final class _AcquireWidgetsRepo implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     addMainCalls++;
     if (gate != null) {
@@ -167,7 +165,6 @@ final class _AcquireWidgetsRepo implements ProfileWidgetsRepository {
       platform: platform,
       position: position,
       isEnabled: true,
-      size: size,
     );
     _widgets.add(widget);
     return right(widget);

@@ -6,7 +6,6 @@ import '../../../core/core.dart';
 import '../../connections/domain/game_card.dart';
 import '../domain/collection_selection.dart';
 import '../domain/collection_title_catalog.dart';
-import '../domain/profile_widget.dart';
 import 'collection_title_labels.dart';
 import 'profile_widgets_controller.dart';
 
@@ -70,7 +69,6 @@ class _CollectionPickerBodyState extends ConsumerState<CollectionPickerBody> {
             titleKey: _titleKey,
           ),
           position: widget.nextPosition,
-          size: ProfileWidgetSize.wide,
         );
     Navigator.of(context).pop();
   }

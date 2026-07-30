@@ -70,7 +70,7 @@ A large, full-bleed art surface is still wanted — but as a **card the owner pl
 Exactly **two rendered sizes**: **`full`** (spans the column) and **`half`** (one slot of a pair row).
 
 - **Size is not stored per card.** It derives from placement: card in a `full` row → full variant; card in a `pair` row → half variant. There is no size field in card settings.
-- The legacy `size` token (`small`/`wide`/`large`) and its aspect-ratio mapping (1/1, 2/1, 3/4) are **retired**; remove from settings envelope, pickers, option menus and renderers (extend the legacy-cleanup issue accordingly).
+- The legacy `size` token (`small`/`wide`/`large`) and its aspect-ratio mapping (1/1, 2/1, 3/4) are **retired**: the client no longer writes it and ignores it on read. Rendered size is a property of the saved arrangement (§5), not of the widget row.
 - Each archetype declares its supported sizes in the **archetype registry** (§7.1): `[full]`, `[half]`, or `[full, half]`. One designed variant per supported size — fixed anatomy per variant, no free ratios.
 - An orphan (a `pair` row with one card) renders as a centered half. Designed state, not an error.
 - Art placement within bleed cards (#182) is per designed variant, not per free size.

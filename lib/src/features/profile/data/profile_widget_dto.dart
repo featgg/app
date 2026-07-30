@@ -49,9 +49,7 @@ final class ProfileWidgetDto {
 ///   [kProfileWidgetSettingsVersion],
 /// - a `platform`-, `showcase`-, `game_collector`-, or `completionist`-kind row
 ///   carries an unknown / absent platform token.
-///
-/// An unknown or absent `settings.size` token degrades to
-/// [ProfileWidgetSize.small] rather than omitting the row.
+
 ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
   final kind = _kindFromWire(dto.type);
   if (kind == null) return null;
@@ -63,8 +61,6 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
       settings['schema_version'] != kProfileWidgetSettingsVersion) {
     return null;
   }
-
-  final size = _sizeFromWire(settings?['size']);
 
   Platform? platform;
   if (kind == ProfileWidgetKind.platform ||
@@ -83,7 +79,6 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     platform: platform,
     position: dto.position,
     isEnabled: dto.isEnabled,
-    size: size,
     showcaseSelection: showcaseSelectionFromSettings(settings),
     collectionSelection: collectionSelectionFromSettings(settings),
     artSelection: artSelectionFromSettings(settings),
@@ -91,7 +86,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
 }
 
 /// Stable `settings` key the showcase selection is stored under. Additive
-/// beside `size` in the same `schema_version: 1` envelope. Shape:
+/// in the `schema_version: 1` envelope. Shape:
 /// `{ "game": "<gameKey>", "hero": "<stat>", "meta"?: "<stat>" }`. The single
 /// source platform lives in the row's `platform` column, not here.
 const String _showcaseKey = 'showcase';
@@ -114,8 +109,8 @@ ShowcaseSelection showcaseSelectionFromSettings(
   );
 }
 
-/// Stable `settings` key the art source is stored under. Additive beside `size`
-/// in the same `schema_version: 1` envelope.
+/// Stable `settings` key the art source is stored under. Additive in the
+/// `schema_version: 1` envelope.
 const String _artKey = 'art';
 
 /// Reads the art source leniently. An absent key, a malformed sub-object, or a
@@ -130,28 +125,22 @@ ArtSelection artSelectionFromSettings(Map<String, dynamic>? settings) {
 }
 
 /// Builds the full `settings` envelope to write for an art change: preserves
-/// `schema_version` and `size` and sets the `art` sub-object from [sel]. An
+/// `schema_version` and sets the `art` sub-object from [sel]. An
 /// empty selection omits the key.
-Map<String, dynamic> mergeArtSelectionIntoSettings(
-  ProfileWidgetSize size,
-  ArtSelection sel,
-) => {
+Map<String, dynamic> mergeArtSelectionIntoSettings(ArtSelection sel) => {
   'schema_version': kProfileWidgetSettingsVersion,
-  'size': profileWidgetSizeToWire(size),
   if (sel.source case final source?)
     _artKey: {'source': platformDescriptors[source]!.wireValue},
 };
 
 /// Builds the full `settings` envelope to write for a showcase change: preserves
-/// `schema_version` and `size` and sets the `showcase` sub-object from [sel].
+/// `schema_version` and sets the `showcase` sub-object from [sel].
 /// Additive — never bumps the version. An empty selection omits the key; `meta`
 /// is written only when set.
 Map<String, dynamic> mergeShowcaseSelectionIntoSettings(
-  ProfileWidgetSize size,
   ShowcaseSelection sel,
 ) => {
   'schema_version': kProfileWidgetSettingsVersion,
-  'size': profileWidgetSizeToWire(size),
   if (!sel.isEmpty)
     _showcaseKey: {
       'game': sel.gameRef,
@@ -161,7 +150,7 @@ Map<String, dynamic> mergeShowcaseSelectionIntoSettings(
 };
 
 /// Stable `settings` key the collection selection is stored under. Additive
-/// beside `size` in the same `schema_version: 1` envelope. Shape:
+/// in the `schema_version: 1` envelope. Shape:
 /// `{ "games": ["<gameKey>", ...], "title"?: "<titleKey>" }`. A collection spans
 /// multiple games, so — unlike the showcase — it has no single source platform
 /// in the row's `platform` column; its games live here.
@@ -194,15 +183,13 @@ CollectionSelection collectionSelectionFromSettings(
 }
 
 /// Builds the full `settings` envelope to write for a collection change:
-/// preserves `schema_version` and `size` and sets the `collection` sub-object
+/// preserves `schema_version` and sets the `collection` sub-object
 /// from [sel]. Additive — never bumps the version. An empty selection omits the
 /// key; `title` is written only when non-null.
 Map<String, dynamic> mergeCollectionSelectionIntoSettings(
-  ProfileWidgetSize size,
   CollectionSelection sel,
 ) => {
   'schema_version': kProfileWidgetSettingsVersion,
-  'size': profileWidgetSizeToWire(size),
   if (!sel.isEmpty)
     _collectionKey: {
       'games': sel.gameRefs,
@@ -221,13 +208,6 @@ ShowcaseHeroStat? showcaseHeroStatFromWire(Object? v) => switch (v) {
   'hours' => ShowcaseHeroStat.hours,
   'achievements' => ShowcaseHeroStat.achievements,
   _ => null,
-};
-
-/// Serializes [size] to its stable wire token.
-String profileWidgetSizeToWire(ProfileWidgetSize size) => switch (size) {
-  ProfileWidgetSize.small => 'small',
-  ProfileWidgetSize.wide => 'wide',
-  ProfileWidgetSize.large => 'large',
 };
 
 /// Serializes [kind] to its stable wire token.
@@ -257,13 +237,6 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'main' => ProfileWidgetKind.main,
   'art' => ProfileWidgetKind.art,
   _ => null,
-};
-
-ProfileWidgetSize _sizeFromWire(Object? value) => switch (value) {
-  'small' => ProfileWidgetSize.small,
-  'wide' => ProfileWidgetSize.wide,
-  'large' => ProfileWidgetSize.large,
-  _ => ProfileWidgetSize.small,
 };
 
 /// Reverse lookup over [platformDescriptors] by wire value. Null on an unknown

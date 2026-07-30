@@ -57,7 +57,6 @@ const _rank = ProfileWidget(
   platform: Platform.leagueOfLegends,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 const _main = ProfileWidget(
@@ -66,7 +65,6 @@ const _main = ProfileWidget(
   platform: Platform.steam,
   position: 1,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 /// A profile with no saved arrangement, so the session bootstraps one.

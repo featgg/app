@@ -26,38 +26,28 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Platform? lastShowcasePlatform;
   ShowcaseSelection? lastShowcaseSelection;
   int? lastShowcasePosition;
-  ProfileWidgetSize? lastShowcaseSize;
   CollectionSelection? lastCollectionSelection;
   int? lastCollectionPosition;
-  ProfileWidgetSize? lastCollectionSize;
   Platform? lastCollectorPlatform;
   int? lastCollectorPosition;
-  ProfileWidgetSize? lastCollectorSize;
   Platform? lastCompletionistPlatform;
   int? lastCompletionistPosition;
-  ProfileWidgetSize? lastCompletionistSize;
   int? lastPassportPosition;
-  ProfileWidgetSize? lastPassportSize;
   bool passportAdded = false;
   Platform? lastRankPlatform;
   int? lastRankPosition;
-  ProfileWidgetSize? lastRankSize;
   Platform? lastMainPlatform;
   int? lastMainPosition;
-  ProfileWidgetSize? lastMainSize;
   Platform? lastArtSource;
   int? lastArtPosition;
-  ProfileWidgetSize? lastArtSize;
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     Platform? source,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastArtSource = source;
     lastArtPosition = position;
-    lastArtSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -65,7 +55,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: null,
         position: position,
         isEnabled: true,
-        size: size,
         artSelection: ArtSelection(source: source),
       ),
     );
@@ -74,11 +63,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     passportAdded = true;
     lastPassportPosition = position;
-    lastPassportSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -86,7 +73,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: null,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -95,11 +81,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastCollectorPlatform = platform;
     lastCollectorPosition = position;
-    lastCollectorSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -107,7 +91,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -116,11 +99,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastCompletionistPlatform = platform;
     lastCompletionistPosition = position;
-    lastCompletionistSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -128,7 +109,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -138,12 +118,10 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastShowcasePlatform = platform;
     lastShowcaseSelection = selection;
     lastShowcasePosition = position;
-    lastShowcaseSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -151,7 +129,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
         showcaseSelection: selection,
       ),
     );
@@ -161,11 +138,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastCollectionSelection = selection;
     lastCollectionPosition = position;
-    lastCollectionSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -173,7 +148,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: null,
         position: position,
         isEnabled: true,
-        size: size,
         collectionSelection: selection,
       ),
     );
@@ -183,11 +157,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addRankWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastRankPlatform = platform;
     lastRankPosition = position;
-    lastRankSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -195,7 +167,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -204,11 +175,9 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     lastMainPlatform = platform;
     lastMainPosition = position;
-    lastMainSize = size;
     return right(
       ProfileWidget(
         id: 'new',
@@ -216,7 +185,6 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -425,7 +393,6 @@ ProfileWidget _showcaseFor(int appId, {required int position}) => ProfileWidget(
   platform: Platform.steam,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
   showcaseSelection: ShowcaseSelection(gameRef: appId.toString()),
 );
 
@@ -435,7 +402,6 @@ ProfileWidget _platformWidget({required int position}) => ProfileWidget(
   platform: Platform.steam,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 ProfileWidget _collectorWidget({required int position}) => ProfileWidget(
@@ -444,7 +410,6 @@ ProfileWidget _collectorWidget({required int position}) => ProfileWidget(
   platform: Platform.steam,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 ProfileWidget _completionistWidget({required int position}) => ProfileWidget(
@@ -453,7 +418,6 @@ ProfileWidget _completionistWidget({required int position}) => ProfileWidget(
   platform: Platform.steam,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 ProfileWidget _passportWidget({required int position}) => ProfileWidget(
@@ -462,7 +426,6 @@ ProfileWidget _passportWidget({required int position}) => ProfileWidget(
   platform: null,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.wide,
 );
 
 ProfileWidget _artWidget(Platform source, {required int position}) =>
@@ -473,7 +436,6 @@ ProfileWidget _artWidget(Platform source, {required int position}) =>
       platform: null,
       position: position,
       isEnabled: true,
-      size: ProfileWidgetSize.wide,
       artSelection: ArtSelection(source: source),
     );
 
@@ -484,7 +446,6 @@ ProfileWidget _rankWidget(Platform platform, {required int position}) =>
       platform: platform,
       position: position,
       isEnabled: true,
-      size: ProfileWidgetSize.small,
     );
 
 Widget _harness({
@@ -700,7 +661,6 @@ void main() {
 
     expect(widgetsRepo.passportAdded, isTrue);
     expect(widgetsRepo.lastPassportPosition, 3);
-    expect(widgetsRepo.lastPassportSize, ProfileWidgetSize.wide);
     expect(find.byKey(const Key('passportAddRow')), findsNothing);
   });
 
@@ -855,7 +815,6 @@ void main() {
       widgetsRepo.lastShowcaseSelection,
       const ShowcaseSelection(gameRef: '570'),
     );
-    expect(widgetsRepo.lastShowcaseSize, ProfileWidgetSize.small);
     expect(widgetsRepo.lastShowcasePosition, 3);
     expect(find.byKey(const Key('showcasePickerTile_570')), findsNothing);
   });
@@ -947,7 +906,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(widgetsRepo.lastCollectorPlatform, Platform.steam);
-    expect(widgetsRepo.lastCollectorSize, ProfileWidgetSize.small);
     expect(widgetsRepo.lastCollectorPosition, 3);
     expect(find.byKey(const Key('collectorAddRow_steam')), findsNothing);
   });
@@ -1033,7 +991,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(widgetsRepo.lastCompletionistPlatform, Platform.steam);
-      expect(widgetsRepo.lastCompletionistSize, ProfileWidgetSize.small);
       expect(widgetsRepo.lastCompletionistPosition, 3);
       expect(find.byKey(const Key('completionistAddRow_steam')), findsNothing);
     },
@@ -1290,7 +1247,6 @@ void main() {
     expect(widgetsRepo.lastArtPosition, 4);
     expect(widgetsRepo.lastArtSource, isNull);
     // A picture is the point, so it is born full-width.
-    expect(widgetsRepo.lastArtSize, ProfileWidgetSize.wide);
     expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
   });
 

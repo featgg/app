@@ -33,7 +33,6 @@ final class _FakeRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
@@ -41,61 +40,52 @@ final class _FakeRepository implements ProfileWidgetsRepository {
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     Platform? source,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addRankWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setCollectionSize(
+  Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
-    ProfileWidgetSize size,
     CollectionSelection selection,
   ) async => throw UnimplementedError();
 
@@ -104,15 +94,8 @@ final class _FakeRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setSize(
+  Future<Either<Failure, Unit>> setShowcaseSelection(
     String id,
-    ProfileWidgetSize size,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setShowcaseSize(
-    String id,
-    ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async => throw UnimplementedError();
 }
@@ -123,7 +106,6 @@ ProfileWidget _widget(String id, int position) => ProfileWidget(
   platform: Platform.steam,
   position: position,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 ProviderContainer _container(ProfileWidgetsRepository repo) {

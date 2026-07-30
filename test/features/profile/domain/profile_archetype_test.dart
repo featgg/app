@@ -9,7 +9,6 @@ ProfileWidget _widget(ProfileWidgetKind kind) => ProfileWidget(
   platform: Platform.steam,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 void main() {

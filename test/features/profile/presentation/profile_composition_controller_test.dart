@@ -38,7 +38,6 @@ ProfileWidget _widgetAt(String id, int position, {bool enabled = true}) =>
       platform: null,
       position: position,
       isEnabled: enabled,
-      size: ProfileWidgetSize.small,
     );
 
 final _widgets = [_widget('a'), _widget('b'), _widget('c')];
@@ -165,7 +164,6 @@ void main() {
         platform: Platform.leagueOfLegends,
         position: 0,
         isEnabled: true,
-        size: ProfileWidgetSize.small,
       );
       const main = ProfileWidget(
         id: 'm',
@@ -173,7 +171,6 @@ void main() {
         platform: Platform.steam,
         position: 1,
         isEnabled: true,
-        size: ProfileWidgetSize.small,
       );
 
       notifier.startEditing(_profileWith(const []), const [rank, main]);
@@ -203,7 +200,6 @@ void main() {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: ProfileWidgetSize.small,
       );
 
       // Add order is deliberately the reverse of the category order.
@@ -610,7 +606,6 @@ void main() {
         platform: Platform.leagueOfLegends,
         position: 3,
         isEnabled: true,
-        size: ProfileWidgetSize.small,
       );
       notifier.appendUnplacedWidgets([..._widgets, rank]);
 
