@@ -257,8 +257,13 @@ class _FramingDrag extends Drag {
 
 /// Marks a card whose picture the owner can move, drawn while editing.
 ///
-/// The badge never takes the touch: it sits over the picture, and one that
-/// caught the hold would swallow the gesture it exists to advertise.
+/// Centred, because every corner of a card in the editor is already spoken for
+/// — the handle, the delete, the size toggle, and the card's own number in the
+/// fourth. The middle is also where a finger lands to move a picture, so the
+/// mark sits where the gesture starts.
+///
+/// The badge never takes the touch: one that caught the hold would swallow the
+/// gesture it exists to advertise.
 class ArtFramingBadge extends StatelessWidget {
   const ArtFramingBadge({super.key});
 
@@ -267,7 +272,7 @@ class ArtFramingBadge extends StatelessWidget {
     final palette = PersonalizationTheme.of(context);
     return IgnorePointer(
       child: Align(
-        alignment: Alignment.bottomLeft,
+        alignment: Alignment.center,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xs),
           child: Container(
