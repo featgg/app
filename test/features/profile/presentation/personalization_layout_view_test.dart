@@ -74,7 +74,6 @@ ProfileWidget _widget(
   platform: null,
   position: 0,
   isEnabled: isEnabled,
-  size: ProfileWidgetSize.small,
 );
 
 final _widgets = [

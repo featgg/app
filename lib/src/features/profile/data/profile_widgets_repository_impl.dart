@@ -68,7 +68,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -80,10 +79,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'type': profileWidgetKindToWire(ProfileWidgetKind.platform),
         'position': await _freePosition(userId, position),
         'is_enabled': true,
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -101,7 +97,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -113,7 +108,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'type': profileWidgetKindToWire(ProfileWidgetKind.showcase),
         'position': await _freePosition(userId, position),
         'is_enabled': true,
-        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
+        'settings': mergeShowcaseSelectionIntoSettings(selection),
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -130,7 +125,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -140,7 +134,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'type': profileWidgetKindToWire(ProfileWidgetKind.collection),
         'position': await _freePosition(userId, position),
         'is_enabled': true,
-        'settings': mergeCollectionSelectionIntoSettings(size, selection),
+        'settings': mergeCollectionSelectionIntoSettings(selection),
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -157,7 +151,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -171,10 +164,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'is_enabled': true,
         // Size-only envelope: the collector aggregates the whole library, so it
         // carries no per-widget selection sub-object beyond size.
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -191,7 +181,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -205,10 +194,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'is_enabled': true,
         // Size-only envelope: the completionist surfaces a whole-library count,
         // so it carries no per-widget selection sub-object beyond size.
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -224,7 +210,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -236,10 +221,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'is_enabled': true,
         // Size-only envelope: the passport aggregates every linked platform, so
         // it carries no per-widget selection sub-object beyond size.
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -256,7 +238,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     Platform? source,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -268,10 +249,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'type': profileWidgetKindToWire(ProfileWidgetKind.art),
         'position': await _freePosition(userId, position),
         'is_enabled': true,
-        'settings': mergeArtSelectionIntoSettings(
-          size,
-          ArtSelection(source: source),
-        ),
+        'settings': mergeArtSelectionIntoSettings(ArtSelection(source: source)),
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -287,7 +265,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addRankWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -301,10 +278,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'is_enabled': true,
         // Size-only envelope: the rank card renders the platform's competitive
         // standing, so it carries no per-widget selection sub-object beyond size.
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -321,7 +295,6 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     try {
       final userId = _currentUserId();
@@ -335,10 +308,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
         'is_enabled': true,
         // Size-only envelope: the main card renders the platform's primary
         // game/character/mode, so it carries no selection sub-object beyond size.
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
       });
       final widget = profileWidgetFromDto(dto);
       if (widget == null) {
@@ -364,36 +334,15 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> setSize(
+  Future<Either<Failure, Unit>> setShowcaseSelection(
     String id,
-    ProfileWidgetSize size,
-  ) async {
-    try {
-      final userId = _currentUserId();
-      if (userId == null) return left(const AuthFailure());
-      await _source.updateWidget(id, {
-        'settings': {
-          'schema_version': kProfileWidgetSettingsVersion,
-          'size': profileWidgetSizeToWire(size),
-        },
-      });
-      return right(unit);
-    } catch (e, st) {
-      return left(_handleError(e, st));
-    }
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setShowcaseSize(
-    String id,
-    ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async {
     try {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(id, {
-        'settings': mergeShowcaseSelectionIntoSettings(size, selection),
+        'settings': mergeShowcaseSelectionIntoSettings(selection),
       });
       return right(unit);
     } catch (e, st) {
@@ -402,16 +351,15 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> setCollectionSize(
+  Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
-    ProfileWidgetSize size,
     CollectionSelection selection,
   ) async {
     try {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(id, {
-        'settings': mergeCollectionSelectionIntoSettings(size, selection),
+        'settings': mergeCollectionSelectionIntoSettings(selection),
       });
       return right(unit);
     } catch (e, st) {

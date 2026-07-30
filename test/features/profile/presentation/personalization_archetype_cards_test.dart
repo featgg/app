@@ -148,7 +148,6 @@ ProfileWidget _collectionWidget(
   platform: null,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
   collectionSelection: CollectionSelection(
     gameRefs: gameRefs,
     titleKey: titleKey,
@@ -162,7 +161,6 @@ ProfileWidget _artWidget(String id, {Platform? source}) => ProfileWidget(
   platform: null,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.wide,
   artSelection: ArtSelection(source: source),
 );
 
@@ -176,7 +174,6 @@ ProfileWidget _widget({
   platform: platform,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 CardSource _publicSource() =>
@@ -220,7 +217,6 @@ const _platformWidget = ProfileWidget(
   platform: Platform.steam,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 Map<Platform, GameCard?> _steamThreeStats() => {
@@ -1331,7 +1327,6 @@ void main() {
     platform: Platform.steam,
     position: 0,
     isEnabled: true,
-    size: ProfileWidgetSize.small,
     showcaseSelection: ShowcaseSelection(gameRef: '730'),
   );
 

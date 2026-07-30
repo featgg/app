@@ -387,7 +387,6 @@ ProfileWidget goldenWidget({
   platform: platform,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
   showcaseSelection: showcaseSelection,
   collectionSelection: collectionSelection,
   artSelection: artSelection,

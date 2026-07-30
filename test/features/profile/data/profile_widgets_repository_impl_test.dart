@@ -81,7 +81,6 @@ Map<String, dynamic> _rowMap({
   String type = 'platform',
   int position = 0,
   bool isEnabled = true,
-  String size = 'small',
   int schemaVersion = kProfileWidgetSettingsVersion,
 }) => {
   'id': id,
@@ -89,7 +88,7 @@ Map<String, dynamic> _rowMap({
   'type': type,
   'position': position,
   'is_enabled': isEnabled,
-  'settings': {'schema_version': schemaVersion, 'size': size},
+  'settings': {'schema_version': schemaVersion},
 };
 
 ProfileWidgetDto _dto(Map<String, dynamic> map) =>
@@ -151,17 +150,15 @@ void main() {
     test('maps rows to entities preserving order', () async {
       final source = _FakeDataSource(
         onFetch: () async => [
-          _dto(_rowMap(id: 'a', position: 0, size: 'small')),
-          _dto(_rowMap(id: 'b', position: 1, platform: 'chess', size: 'large')),
+          _dto(_rowMap(id: 'a', position: 0)),
+          _dto(_rowMap(id: 'b', position: 1, platform: 'chess')),
         ],
       );
       final result = await _repo(source, _RecordingReporter()).fetchMyWidgets();
 
       result.fold((f) => fail('want Right, got $f'), (widgets) {
         expect(widgets.map((w) => w.id), ['a', 'b']);
-        expect(widgets[0].size, ProfileWidgetSize.small);
         expect(widgets[1].platform, Platform.chess);
-        expect(widgets[1].size, ProfileWidgetSize.large);
       });
     });
 
@@ -366,22 +363,18 @@ void main() {
   group('addPlatformWidget', () {
     test('writes the v1 settings envelope and returns the entity', () async {
       final source = _FakeDataSource(
-        onInsert: (row) async => _dto(_rowMap(id: 'new', size: 'large')),
+        onInsert: (row) async => _dto(_rowMap(id: 'new')),
       );
-      final result = await _repo(source, _RecordingReporter())
-          .addPlatformWidget(
-            platform: Platform.steam,
-            position: 2,
-            size: ProfileWidgetSize.large,
-          );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addPlatformWidget(platform: Platform.steam, position: 2);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'new');
-        expect(widget.size, ProfileWidgetSize.large);
       });
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'large');
       expect(source.lastInsert!['type'], 'platform');
       expect(source.lastInsert!['platform'], 'steam');
       expect(source.lastInsert!['position'], 2);
@@ -400,12 +393,10 @@ void main() {
         ],
         onInsert: (row) async => _dto(_rowMap(id: 'new')),
       );
-      final result = await _repo(source, _RecordingReporter())
-          .addPlatformWidget(
-            platform: Platform.steam,
-            position: 1,
-            size: ProfileWidgetSize.small,
-          );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addPlatformWidget(platform: Platform.steam, position: 1);
 
       expect(result.isRight(), isTrue);
       expect(source.lastInsert!['position'], 8);
@@ -419,11 +410,10 @@ void main() {
               throw PostgrestException(message: 'duplicate', code: '23505'),
         );
         final reporter = _RecordingReporter();
-        final result = await _repo(source, reporter).addPlatformWidget(
-          platform: Platform.steam,
-          position: 0,
-          size: ProfileWidgetSize.small,
-        );
+        final result = await _repo(
+          source,
+          reporter,
+        ).addPlatformWidget(platform: Platform.steam, position: 0);
 
         result.fold((f) {
           expect(f, isA<InputFailure>());
@@ -442,11 +432,10 @@ void main() {
               throw PostgrestException(message: 'cap exceeded', code: '23514'),
         );
         final reporter = _RecordingReporter();
-        final result = await _repo(source, reporter).addPlatformWidget(
-          platform: Platform.steam,
-          position: 0,
-          size: ProfileWidgetSize.small,
-        );
+        final result = await _repo(
+          source,
+          reporter,
+        ).addPlatformWidget(platform: Platform.steam, position: 0);
 
         result.fold((f) {
           expect(f, isA<InputFailure>());
@@ -464,11 +453,10 @@ void main() {
               throw PostgrestException(message: 'no rows', code: 'PGRST116'),
         );
         final reporter = _RecordingReporter();
-        final result = await _repo(source, reporter).addPlatformWidget(
-          platform: Platform.steam,
-          position: 0,
-          size: ProfileWidgetSize.small,
-        );
+        final result = await _repo(
+          source,
+          reporter,
+        ).addPlatformWidget(platform: Platform.steam, position: 0);
 
         result.fold(
           (f) => expect(f, isA<UnexpectedFailure>()),
@@ -500,7 +488,6 @@ void main() {
             platform: Platform.steam,
             selection: const ShowcaseSelection(gameRef: '730'),
             position: 3,
-            size: ProfileWidgetSize.small,
           );
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
@@ -518,7 +505,6 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'small');
       final showcase = settings['showcase'] as Map<String, dynamic>;
       expect(showcase['game'], '730');
       expect(showcase['hero'], 'hours');
@@ -536,7 +522,6 @@ void main() {
         platform: Platform.steam,
         selection: const ShowcaseSelection(gameRef: '730'),
         position: 0,
-        size: ProfileWidgetSize.small,
       );
 
       result.fold((f) {
@@ -573,7 +558,6 @@ void main() {
               titleKey: 'collectionTitleFavorites',
             ),
             position: 3,
-            size: ProfileWidgetSize.wide,
           );
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
@@ -591,7 +575,6 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'wide');
       final collection = settings['collection'] as Map<String, dynamic>;
       expect(collection['games'], ['730', '570', '440']);
       expect(collection['title'], 'collectionTitleFavorites');
@@ -609,7 +592,6 @@ void main() {
           titleKey: 'collectionTitleFavorites',
         ),
         position: 0,
-        size: ProfileWidgetSize.wide,
       );
 
       result.fold((f) {
@@ -636,12 +618,10 @@ void main() {
           },
         }),
       );
-      final result = await _repo(source, _RecordingReporter())
-          .addGameCollectorWidget(
-            platform: Platform.steam,
-            position: 4,
-            size: ProfileWidgetSize.small,
-          );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addGameCollectorWidget(platform: Platform.steam, position: 4);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'gc');
@@ -650,7 +630,7 @@ void main() {
       });
 
       // The captured write is the personalization.md game_collector contract: a
-      // non-null Steam platform and a size-only envelope (no selection
+      // non-null Steam platform and a bare envelope (no selection
       // sub-object).
       expect(source.lastInsert!['type'], 'game_collector');
       expect(source.lastInsert!['platform'], 'steam');
@@ -658,7 +638,6 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'small');
       // Size-only: no showcase/collection/game_collector sub-object is written.
       expect(settings.containsKey('showcase'), isFalse);
       expect(settings.containsKey('collection'), isFalse);
@@ -671,11 +650,10 @@ void main() {
             throw PostgrestException(message: 'cap exceeded', code: '23514'),
       );
       final reporter = _RecordingReporter();
-      final result = await _repo(source, reporter).addGameCollectorWidget(
-        platform: Platform.steam,
-        position: 0,
-        size: ProfileWidgetSize.small,
-      );
+      final result = await _repo(
+        source,
+        reporter,
+      ).addGameCollectorWidget(platform: Platform.steam, position: 0);
 
       result.fold((f) {
         expect(f, isA<InputFailure>());
@@ -701,12 +679,10 @@ void main() {
           },
         }),
       );
-      final result = await _repo(source, _RecordingReporter())
-          .addCompletionistWidget(
-            platform: Platform.steam,
-            position: 4,
-            size: ProfileWidgetSize.small,
-          );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addCompletionistWidget(platform: Platform.steam, position: 4);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'cp');
@@ -715,7 +691,7 @@ void main() {
       });
 
       // The captured write is the personalization.md completionist contract: a
-      // non-null Steam platform and a size-only envelope (no selection
+      // non-null Steam platform and a bare envelope (no selection
       // sub-object).
       expect(source.lastInsert!['type'], 'completionist');
       expect(source.lastInsert!['platform'], 'steam');
@@ -723,7 +699,6 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'small');
       // Size-only: no showcase/collection/completionist sub-object is written.
       expect(settings.containsKey('showcase'), isFalse);
       expect(settings.containsKey('collection'), isFalse);
@@ -736,11 +711,10 @@ void main() {
             throw PostgrestException(message: 'cap exceeded', code: '23514'),
       );
       final reporter = _RecordingReporter();
-      final result = await _repo(source, reporter).addCompletionistWidget(
-        platform: Platform.steam,
-        position: 0,
-        size: ProfileWidgetSize.small,
-      );
+      final result = await _repo(
+        source,
+        reporter,
+      ).addCompletionistWidget(platform: Platform.steam, position: 0);
 
       result.fold((f) {
         expect(f, isA<InputFailure>());
@@ -769,24 +743,22 @@ void main() {
       final result = await _repo(
         source,
         _RecordingReporter(),
-      ).addPassportWidget(position: 4, size: ProfileWidgetSize.wide);
+      ).addPassportWidget(position: 4);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'pp');
         expect(widget.kind, ProfileWidgetKind.passport);
         expect(widget.platform, isNull);
-        expect(widget.size, ProfileWidgetSize.wide);
       });
 
       // The captured write is the personalization.md passport contract: a null
-      // platform (binding) and a size-only envelope (no selection sub-object).
+      // platform (binding) and a bare envelope (no selection sub-object).
       expect(source.lastInsert!['type'], 'passport');
       expect(source.lastInsert!['platform'], isNull);
       expect(source.lastInsert!['position'], 4);
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'wide');
       // Size-only: no selection sub-object is written.
       expect(settings.containsKey('showcase'), isFalse);
       expect(settings.containsKey('collection'), isFalse);
@@ -802,7 +774,7 @@ void main() {
       final result = await _repo(
         source,
         reporter,
-      ).addPassportWidget(position: 0, size: ProfileWidgetSize.wide);
+      ).addPassportWidget(position: 0);
 
       result.fold((f) {
         expect(f, isA<InputFailure>());
@@ -831,7 +803,7 @@ void main() {
       final result = await _repo(
         source,
         _RecordingReporter(),
-      ).addArtWidget(position: 2, size: ProfileWidgetSize.wide);
+      ).addArtWidget(position: 2);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.kind, ProfileWidgetKind.art);
@@ -842,7 +814,6 @@ void main() {
       expect(source.lastInsert!['type'], 'art');
       expect(source.lastInsert!['platform'], isNull);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
-      expect(settings['size'], 'wide');
       // Unpointed is the wire default: no art sub-object at all.
       expect(settings.containsKey('art'), isFalse);
     });
@@ -862,11 +833,10 @@ void main() {
           },
         }),
       );
-      final result = await _repo(source, _RecordingReporter()).addArtWidget(
-        source: Platform.leagueOfLegends,
-        position: 2,
-        size: ProfileWidgetSize.wide,
-      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addArtWidget(source: Platform.leagueOfLegends, position: 2);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'ar');
@@ -883,7 +853,6 @@ void main() {
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'wide');
       expect((settings['art']! as Map)['source'], 'league_of_legends');
     });
 
@@ -893,11 +862,10 @@ void main() {
             throw PostgrestException(message: 'cap exceeded', code: '23514'),
       );
       final reporter = _RecordingReporter();
-      final result = await _repo(source, reporter).addArtWidget(
-        source: Platform.steam,
-        position: 0,
-        size: ProfileWidgetSize.wide,
-      );
+      final result = await _repo(
+        source,
+        reporter,
+      ).addArtWidget(source: Platform.steam, position: 0);
 
       result.fold((f) {
         expect(f, isA<InputFailure>());
@@ -923,11 +891,10 @@ void main() {
           },
         }),
       );
-      final result = await _repo(source, _RecordingReporter()).addRankWidget(
-        platform: Platform.leagueOfLegends,
-        position: 4,
-        size: ProfileWidgetSize.small,
-      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addRankWidget(platform: Platform.leagueOfLegends, position: 4);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'rk');
@@ -936,14 +903,13 @@ void main() {
       });
 
       // The captured write is the personalization.md rank contract: a non-null
-      // platform and a size-only envelope (no selection sub-object).
+      // platform and a bare envelope (no selection sub-object).
       expect(source.lastInsert!['type'], 'rank');
       expect(source.lastInsert!['platform'], 'league_of_legends');
       expect(source.lastInsert!['position'], 4);
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'small');
       // Size-only: no selection sub-object is written.
       expect(settings.containsKey('showcase'), isFalse);
       expect(settings.containsKey('collection'), isFalse);
@@ -956,11 +922,10 @@ void main() {
             throw PostgrestException(message: 'cap exceeded', code: '23514'),
       );
       final reporter = _RecordingReporter();
-      final result = await _repo(source, reporter).addRankWidget(
-        platform: Platform.leagueOfLegends,
-        position: 0,
-        size: ProfileWidgetSize.small,
-      );
+      final result = await _repo(
+        source,
+        reporter,
+      ).addRankWidget(platform: Platform.leagueOfLegends, position: 0);
 
       result.fold((f) {
         expect(f, isA<InputFailure>());
@@ -986,11 +951,10 @@ void main() {
           },
         }),
       );
-      final result = await _repo(source, _RecordingReporter()).addMainWidget(
-        platform: Platform.steam,
-        position: 4,
-        size: ProfileWidgetSize.wide,
-      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addMainWidget(platform: Platform.steam, position: 4);
 
       result.fold((f) => fail('want Right, got $f'), (widget) {
         expect(widget.id, 'mn');
@@ -999,14 +963,13 @@ void main() {
       });
 
       // The captured write is the personalization.md main contract: a non-null
-      // platform and a size-only envelope (no selection sub-object).
+      // platform and a bare envelope (no selection sub-object).
       expect(source.lastInsert!['type'], 'main');
       expect(source.lastInsert!['platform'], 'steam');
       expect(source.lastInsert!['position'], 4);
       expect(source.lastInsert!['is_enabled'], true);
       final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
       expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'wide');
       // Size-only: no selection sub-object is written.
       expect(settings.containsKey('showcase'), isFalse);
       expect(settings.containsKey('collection'), isFalse);
@@ -1019,11 +982,10 @@ void main() {
             throw PostgrestException(message: 'cap exceeded', code: '23514'),
       );
       final reporter = _RecordingReporter();
-      final result = await _repo(source, reporter).addMainWidget(
-        platform: Platform.steam,
-        position: 0,
-        size: ProfileWidgetSize.small,
-      );
+      final result = await _repo(
+        source,
+        reporter,
+      ).addMainWidget(platform: Platform.steam, position: 0);
 
       result.fold((f) {
         expect(f, isA<InputFailure>());
@@ -1034,35 +996,20 @@ void main() {
   });
 
   group('mutations write the expected values', () {
-    test('setSize writes the v1 envelope', () async {
-      final source = _FakeDataSource();
-      await _repo(
-        source,
-        _RecordingReporter(),
-      ).setSize('w-1', ProfileWidgetSize.wide);
-
-      final settings =
-          source.lastUpdate!.values['settings'] as Map<String, dynamic>;
-      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-      expect(settings['size'], 'wide');
-    });
-
     test(
-      'setShowcaseSize rewrites the envelope preserving the selection',
+      'setShowcaseSelection rewrites the envelope preserving the selection',
       () async {
         final source = _FakeDataSource();
-        await _repo(source, _RecordingReporter()).setShowcaseSize(
-          'sc',
-          ProfileWidgetSize.wide,
-          const ShowcaseSelection(gameRef: '730'),
-        );
+        await _repo(
+          source,
+          _RecordingReporter(),
+        ).setShowcaseSelection('sc', const ShowcaseSelection(gameRef: '730'));
 
-        // A showcase size change rides the full envelope: the game selection
-        // must survive the write or the card resolves as unavailable.
+        // The write is the whole envelope: the game selection must survive it
+        // or the card resolves as unavailable.
         final settings =
             source.lastUpdate!.values['settings'] as Map<String, dynamic>;
         expect(settings['schema_version'], kProfileWidgetSettingsVersion);
-        expect(settings['size'], 'wide');
         final showcase = settings['showcase'] as Map<String, dynamic>;
         expect(showcase['game'], '730');
         expect(showcase['hero'], 'hours');

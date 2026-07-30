@@ -174,7 +174,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     final failure = mutationFailure;
     if (failure != null) return left(failure);
@@ -185,7 +184,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -195,7 +193,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     final failure = mutationFailure;
     if (failure != null) return left(failure);
@@ -206,7 +203,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
         showcaseSelection: selection,
       ),
     );
@@ -216,7 +212,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     final failure = mutationFailure;
     if (failure != null) return left(failure);
@@ -227,7 +222,6 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
         platform: null,
         position: position,
         isEnabled: true,
-        size: size,
         collectionSelection: selection,
       ),
     );
@@ -237,47 +231,40 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     Platform? source,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addRankWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setCollectionSize(
+  Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
-    ProfileWidgetSize size,
     CollectionSelection selection,
   ) async => throw UnimplementedError();
 
@@ -286,15 +273,8 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
       throw UnimplementedError();
 
   @override
-  Future<Either<Failure, Unit>> setSize(
+  Future<Either<Failure, Unit>> setShowcaseSelection(
     String id,
-    ProfileWidgetSize size,
-  ) async => throw UnimplementedError();
-
-  @override
-  Future<Either<Failure, Unit>> setShowcaseSize(
-    String id,
-    ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async => throw UnimplementedError();
 }
@@ -399,7 +379,6 @@ ProfileWidget _steamWidget() => const ProfileWidget(
   platform: Platform.steam,
   position: 0,
   isEnabled: true,
-  size: ProfileWidgetSize.small,
 );
 
 const _profile = Profile(

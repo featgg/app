@@ -24,9 +24,7 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
 
   int fetchCalls = 0;
   final List<String> mutations = [];
-  ProfileWidgetSize? lastShowcaseSize;
   ShowcaseSelection? lastShowcaseSelection;
-  ProfileWidgetSize? lastCollectionSize;
   CollectionSelection? lastCollectionSelection;
   Platform? lastCollectorPlatform;
   Platform? lastCompletionistPlatform;
@@ -53,7 +51,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('add');
     return _result(
@@ -63,7 +60,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -73,7 +69,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addShowcase');
     return _result(
@@ -83,7 +78,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
         showcaseSelection: selection,
       ),
     );
@@ -93,10 +87,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addCollection');
-    lastCollectionSize = size;
     lastCollectionSelection = selection;
     return _result(
       ProfileWidget(
@@ -105,7 +97,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: null,
         position: position,
         isEnabled: true,
-        size: size,
         collectionSelection: selection,
       ),
     );
@@ -115,7 +106,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addGameCollector');
     lastCollectorPlatform = platform;
@@ -126,7 +116,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -135,7 +124,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addCompletionist');
     lastCompletionistPlatform = platform;
@@ -146,7 +134,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -155,13 +142,11 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     Platform? source,
     required int position,
-    required ProfileWidgetSize size,
   }) async => throw UnimplementedError();
 
   @override
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addPassport');
     return _result(
@@ -171,7 +156,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: null,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -180,7 +164,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addRankWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addRank');
     lastRankPlatform = platform;
@@ -192,7 +175,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
@@ -201,7 +183,6 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   }) async {
     mutations.add('addMain');
     lastMainPlatform = platform;
@@ -213,19 +194,16 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
         platform: platform,
         position: position,
         isEnabled: true,
-        size: size,
       ),
     );
   }
 
   @override
-  Future<Either<Failure, Unit>> setCollectionSize(
+  Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
-    ProfileWidgetSize size,
     CollectionSelection selection,
   ) async {
-    mutations.add('resizeCollection');
-    lastCollectionSize = size;
+    mutations.add('setCollectionSelection');
     lastCollectionSelection = selection;
     return _result(unit);
   }
@@ -237,22 +215,11 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> setSize(
+  Future<Either<Failure, Unit>> setShowcaseSelection(
     String id,
-    ProfileWidgetSize size,
-  ) async {
-    mutations.add('resize');
-    return _result(unit);
-  }
-
-  @override
-  Future<Either<Failure, Unit>> setShowcaseSize(
-    String id,
-    ProfileWidgetSize size,
     ShowcaseSelection selection,
   ) async {
-    mutations.add('resizeShowcase');
-    lastShowcaseSize = size;
+    mutations.add('setShowcaseSelection');
     lastShowcaseSelection = selection;
     return _result(unit);
   }
@@ -284,11 +251,7 @@ void main() {
 
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .addPlatform(
-            platform: Platform.steam,
-            position: 0,
-            size: ProfileWidgetSize.small,
-          );
+          .addPlatform(platform: Platform.steam, position: 0);
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['add']);
@@ -312,7 +275,6 @@ void main() {
             platform: Platform.steam,
             selection: const ShowcaseSelection(gameRef: '730'),
             position: 0,
-            size: ProfileWidgetSize.small,
           );
       await container.read(ownerProfileWidgetsProvider.future);
 
@@ -333,11 +295,7 @@ void main() {
 
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .addGameCollector(
-            platform: Platform.steam,
-            position: 0,
-            size: ProfileWidgetSize.small,
-          );
+          .addGameCollector(platform: Platform.steam, position: 0);
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addGameCollector']);
@@ -358,11 +316,7 @@ void main() {
 
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .addCompletionist(
-            platform: Platform.steam,
-            position: 0,
-            size: ProfileWidgetSize.small,
-          );
+          .addCompletionist(platform: Platform.steam, position: 0);
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addCompletionist']);
@@ -383,7 +337,7 @@ void main() {
 
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .addPassport(position: 3, size: ProfileWidgetSize.wide);
+          .addPassport(position: 3);
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addPassport']);
@@ -403,11 +357,7 @@ void main() {
 
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .addRank(
-            platform: Platform.leagueOfLegends,
-            position: 2,
-            size: ProfileWidgetSize.small,
-          );
+          .addRank(platform: Platform.leagueOfLegends, position: 2);
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addRank']);
@@ -429,11 +379,7 @@ void main() {
 
       await container
           .read(profileWidgetsControllerProvider.notifier)
-          .addMain(
-            platform: Platform.steam,
-            position: 3,
-            size: ProfileWidgetSize.small,
-          );
+          .addMain(platform: Platform.steam, position: 3);
       await container.read(ownerProfileWidgetsProvider.future);
 
       expect(repo.mutations, ['addMain']);
@@ -457,7 +403,6 @@ void main() {
           .read(profileWidgetsControllerProvider.notifier)
           .setShowcaseHero(
             'sc',
-            ProfileWidgetSize.large,
             const ShowcaseSelection(
               gameRef: '730',
               hero: ShowcaseHeroStat.achievements,
@@ -465,8 +410,7 @@ void main() {
           );
       await container.read(ownerProfileWidgetsProvider.future);
 
-      expect(repo.mutations, ['resizeShowcase']);
-      expect(repo.lastShowcaseSize, ProfileWidgetSize.large);
+      expect(repo.mutations, ['setShowcaseSelection']);
       expect(
         repo.lastShowcaseSelection,
         const ShowcaseSelection(
@@ -491,9 +435,8 @@ void main() {
       );
 
       await notifier.remove('a');
-      await notifier.resize('a', ProfileWidgetSize.large);
 
-      expect(repo.mutations, ['remove', 'resize']);
+      expect(repo.mutations, ['remove']);
     });
   });
 

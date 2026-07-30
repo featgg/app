@@ -20,18 +20,13 @@ enum ProfileWidgetKind {
   art,
 }
 
-/// Grid footprint a widget occupies. Maps to row-layout spans in
-/// presentation: small→1x1, wide→2x1, large→2x2. Unknown wire tokens degrade
-/// to [small].
-enum ProfileWidgetSize { small, wide, large }
-
 /// Schema version of the `settings` JSON envelope. v1 from day one; the data
 /// layer omits any row whose envelope is a different version. Mirrors the
 /// `game_cards.widget_data` version gate.
 const int kProfileWidgetSettingsVersion = 1;
 
 /// A profile-layout widget read from `profile_widgets`. The widget row carries
-/// the layout (position, size, enabled state) and the kind/identity; the card
+/// its position and enabled state and the kind/identity; the card
 /// content for a [ProfileWidgetKind.platform] widget still comes from the
 /// `game_cards` surface.
 final class ProfileWidget extends Equatable {
@@ -41,7 +36,6 @@ final class ProfileWidget extends Equatable {
     required this.platform,
     required this.position,
     required this.isEnabled,
-    required this.size,
     this.showcaseSelection = ShowcaseSelection.empty,
     this.collectionSelection = CollectionSelection.empty,
     this.artSelection = ArtSelection.empty,
@@ -57,7 +51,6 @@ final class ProfileWidget extends Equatable {
   final Platform? platform;
   final int position;
   final bool isEnabled;
-  final ProfileWidgetSize size;
 
   /// The owner's per-game choice for a [ProfileWidgetKind.showcase] widget.
   /// Empty (default) otherwise.
@@ -73,7 +66,6 @@ final class ProfileWidget extends Equatable {
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
-    ProfileWidgetSize? size,
     ShowcaseSelection? showcaseSelection,
     CollectionSelection? collectionSelection,
     ArtSelection? artSelection,
@@ -83,7 +75,6 @@ final class ProfileWidget extends Equatable {
     platform: platform,
     position: position ?? this.position,
     isEnabled: isEnabled ?? this.isEnabled,
-    size: size ?? this.size,
     showcaseSelection: showcaseSelection ?? this.showcaseSelection,
     collectionSelection: collectionSelection ?? this.collectionSelection,
     artSelection: artSelection ?? this.artSelection,
@@ -96,7 +87,6 @@ final class ProfileWidget extends Equatable {
     platform,
     position,
     isEnabled,
-    size,
     showcaseSelection,
     collectionSelection,
   ];

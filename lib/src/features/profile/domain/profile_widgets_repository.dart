@@ -24,7 +24,6 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addPlatformWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a showcase widget for [platform] with [selection] at [position]
@@ -33,7 +32,6 @@ abstract interface class ProfileWidgetsRepository {
     required Platform platform,
     required ShowcaseSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a collection widget with [selection] at [position] and [size],
@@ -41,7 +39,6 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCollectionWidget({
     required CollectionSelection selection,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a game-collector widget bound to [platform] at [position] with
@@ -50,7 +47,6 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a completionist widget bound to [platform] at [position] with
@@ -60,7 +56,6 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a passport widget at [position] with [size], enabled and with a
@@ -68,7 +63,6 @@ abstract interface class ProfileWidgetsRepository {
   /// carries only the size (no per-widget selection sub-object).
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts an art widget at [position] with [size], enabled. Left without a
@@ -80,7 +74,6 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addArtWidget({
     Platform? source,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a rank widget bound to [platform] at [position] with [size],
@@ -89,7 +82,6 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addRankWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Inserts a main widget bound to [platform] at [position] with [size],
@@ -98,30 +90,20 @@ abstract interface class ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addMainWidget({
     required Platform platform,
     required int position,
-    required ProfileWidgetSize size,
   });
 
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
-  /// Sets the size (`settings.size`) for [id].
-  Future<Either<Failure, Unit>> setSize(String id, ProfileWidgetSize size);
-
-  /// Sets the size for the showcase widget [id]. The settings envelope
-  /// carries the game [selection] alongside the size, so a size change must
-  /// rewrite both — a size-only write would drop the selection.
-  Future<Either<Failure, Unit>> setShowcaseSize(
+  /// Replaces the game [selection] of the showcase widget [id].
+  Future<Either<Failure, Unit>> setShowcaseSelection(
     String id,
-    ProfileWidgetSize size,
     ShowcaseSelection selection,
   );
 
-  /// Sets the size for the collection widget [id]. The settings envelope carries
-  /// the game [selection] alongside the size, so a size change must rewrite both
-  /// — a size-only write would drop the games and title.
-  Future<Either<Failure, Unit>> setCollectionSize(
+  /// Replaces the game [selection] of the collection widget [id].
+  Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
-    ProfileWidgetSize size,
     CollectionSelection selection,
   );
 }
