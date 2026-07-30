@@ -117,7 +117,8 @@ class PersonalizationCardShell extends StatelessWidget {
   Widget _art(BuildContext context) {
     final target = framing;
     final scope = ArtFramingScope.maybeOf(context);
-    if (target == null || scope == null || art == null) {
+    final url = art;
+    if (target == null || scope == null || url == null) {
       return personalizationArtOrPlaceholder(
         imageUrl: art,
         placeholder: const PersonalizationCardGround(),
@@ -125,18 +126,13 @@ class PersonalizationCardShell extends StatelessWidget {
       );
     }
     return ArtFramingGesture(
+      imageUrl: url,
       framing: target.framing,
       onChanged: (next) => scope.onChanged(target.widgetId, next),
-      builder: (context, framing) => Stack(
-        fit: StackFit.expand,
-        children: [
-          personalizationArtOrPlaceholder(
-            imageUrl: art,
-            placeholder: const PersonalizationCardGround(),
-            framing: framing,
-          ),
-          const ArtFramingBadge(),
-        ],
+      builder: (context, framing) => personalizationArtOrPlaceholder(
+        imageUrl: url,
+        placeholder: const PersonalizationCardGround(),
+        framing: framing,
       ),
     );
   }

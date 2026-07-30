@@ -120,13 +120,12 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     // the same cards from the same builder and does not provide this, which is
     // what makes a visitor's copy of the card inert.
     return ArtFramingScope(
-      onChanged: (id, framing) async {
+      onChanged: (id, framing) {
         final target = byId[id];
-        if (target == null) return false;
-        await ref
-            .read(profileWidgetsControllerProvider.notifier)
-            .setArtFraming(target, framing);
-        return !ref.read(profileWidgetsControllerProvider).hasError;
+        if (target == null) return;
+        ref
+            .read(profileCompositionProvider.notifier)
+            .setFraming(id, was: target.framing, now: framing);
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,8 +236,15 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     required bool Function(String) supportsHalf,
     required bool Function(String) supportsBoth,
   }) {
-    final widget = byId[cardId];
-    if (widget == null) return const SizedBox.shrink();
+    final stored = byId[cardId];
+    if (stored == null) return const SizedBox.shrink();
+    // The session's framing, where the owner has moved one this session. The
+    // card is built from the same builder the read view uses, so the working
+    // value has to reach it on the widget rather than beside it.
+    final working = ref.watch(
+      profileCompositionProvider.select((s) => s.framings[cardId]),
+    );
+    final widget = working == null ? stored : stored.copyWith(framing: working);
     final l10n = AppLocalizations.of(context);
 
     return Stack(

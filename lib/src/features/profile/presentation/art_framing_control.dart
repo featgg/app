@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -5,7 +8,7 @@ import '../../../core/core.dart';
 import '../domain/art_framing.dart';
 
 /// Whose framing an art surface renders, so the surface can both apply it and,
-/// where the owner is editing, write a new one back.
+/// where the owner is editing, hand a new one back.
 class ArtFramingTarget {
   const ArtFramingTarget({required this.widgetId, required this.framing});
 
@@ -13,14 +16,16 @@ class ArtFramingTarget {
   final ArtFraming framing;
 }
 
-/// Marks the subtree the owner is editing, and carries the one call that
-/// persists a reframe. It reports whether the framing landed, which the
-/// surface cannot infer: a successful write refreshes the profile
-/// asynchronously, so "the stored value has not caught up yet" describes a
-/// write in flight and a rejected one alike.
+/// Marks the subtree the owner is editing, and carries the call that records a
+/// reframe.
 ///
-/// An inherited marker rather than a parameter threaded through every card:
-/// the read view and the editor build cards from the same builder, and only the
+/// Recording, not writing: a reframe is an edit like any other in the session,
+/// so it waits for Done and is dropped by Cancel. Moving the art and being told
+/// there is nothing to save is the session disagreeing with what the owner just
+/// did.
+///
+/// An inherited marker rather than a parameter threaded through every card: the
+/// read view and the editor build cards from the same builder, and only the
 /// enclosing surface knows which of the two it is.
 class ArtFramingScope extends InheritedWidget {
   const ArtFramingScope({
@@ -29,7 +34,7 @@ class ArtFramingScope extends InheritedWidget {
     required super.child,
   });
 
-  final Future<bool> Function(String widgetId, ArtFraming framing) onChanged;
+  final void Function(String widgetId, ArtFraming framing) onChanged;
 
   static ArtFramingScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ArtFramingScope>();
@@ -39,35 +44,50 @@ class ArtFramingScope extends InheritedWidget {
       onChanged != oldWidget.onChanged;
 }
 
-/// Hold, then drag to reframe. The picture follows the finger and the new point
-/// is persisted once, on release.
+/// How much of [image] a frame of [frame] cannot show, per axis, once the
+/// picture is scaled to cover it. Zero on an axis means the picture ends where
+/// the frame does and there is nothing on that axis to move to.
+@visibleForTesting
+Size artOverflow({required Size frame, required Size image}) {
+  if (frame.isEmpty || image.isEmpty) return Size.zero;
+  final scale = math.max(
+    frame.width / image.width,
+    frame.height / image.height,
+  );
+  return Size(
+    math.max(0, image.width * scale - frame.width),
+    math.max(0, image.height * scale - frame.height),
+  );
+}
+
+/// Hold, then drag to move the picture inside its frame.
+///
+/// Offered only where it does something. A card earns the control by having a
+/// picture genuinely larger than its frame — not merely by having a url. A
+/// picture that failed to load, or one whose proportions already match the
+/// frame, has nothing to reveal, and a control that answers a deliberate hold
+/// with no movement reads as broken.
 ///
 /// The hold is what lets the card sit in a scrolling page. A plain drag on the
 /// picture competes with the page's own: the page wins a vertical swipe, which
 /// is right, but it leaves the owner able to move the art sideways and never up
 /// or down. Waiting for a hold takes the picture out of that contest — an
 /// ordinary swipe still scrolls, and a deliberate one moves both axes.
-///
-/// A drag across the full frame travels the full picture, whatever the
-/// picture's proportions. That keeps the control predictable — the owner always
-/// knows how far there is left to go — and it degrades the right way: a picture
-/// with barely more width than its frame has barely anything to reveal, and a
-/// drag moves it barely at all.
 class ArtFramingGesture extends StatefulWidget {
   const ArtFramingGesture({
     super.key,
+    required this.imageUrl,
     required this.framing,
     required this.onChanged,
     required this.builder,
   });
 
+  final String imageUrl;
   final ArtFraming framing;
-
-  /// Persists [framing] and reports whether it landed.
-  final Future<bool> Function(ArtFraming framing) onChanged;
+  final ValueChanged<ArtFraming> onChanged;
 
   /// Builds the art at the framing to paint — the in-flight one while the owner
-  /// is moving it, the persisted one otherwise.
+  /// is moving it, the recorded one otherwise.
   final Widget Function(BuildContext context, ArtFraming framing) builder;
 
   @override
@@ -75,71 +95,101 @@ class ArtFramingGesture extends StatefulWidget {
 }
 
 class _ArtFramingGestureState extends State<ArtFramingGesture> {
-  /// The framing the finger is on, held past the release so the picture does
-  /// not jump back to where it was while the write is in flight.
+  /// The picture's own dimensions, or null until it has loaded — and forever if
+  /// it never does.
+  Size? _image;
+
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+
+  /// The framing the finger is on. Held past the release so the picture does
+  /// not step back while the session records it.
   ArtFraming? _live;
 
-  /// Set while the owner has hold of the picture, which is what draws the mark
-  /// saying so.
   bool _holding = false;
-
-  /// Whether a write is in flight. A second release while one is running would
-  /// race it, and the two can land out of order — leaving the framing the owner
-  /// moved off as the stored one.
-  bool _writing = false;
-
-  /// What to write once the running write finishes. Only the newest matters:
-  /// every framing between is a point the owner already moved off.
-  ArtFraming? _queued;
-
   Size _frame = Size.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
 
   @override
   void didUpdateWidget(ArtFramingGesture oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Anything upstream says — the write landing, a refetch, a failure putting
-    // the old value back — outranks the local preview.
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _image = null;
+      _resolve();
+    }
+    // What the session holds outranks the local preview.
     if (oldWidget.framing != widget.framing) _live = null;
   }
 
+  @override
+  void dispose() {
+    _detach();
+    super.dispose();
+  }
+
+  void _detach() {
+    final listener = _listener;
+    if (listener != null) _stream?.removeListener(listener);
+    _stream = null;
+    _listener = null;
+  }
+
+  void _resolve() {
+    _detach();
+    final stream = CachedNetworkImageProvider(
+      widget.imageUrl,
+    ).resolve(ImageConfiguration.empty);
+    final listener = ImageStreamListener(
+      (info, _) {
+        final image = Size(
+          info.image.width.toDouble(),
+          info.image.height.toDouble(),
+        );
+        if (mounted) setState(() => _image = image);
+      },
+      // A picture that never arrives simply never earns the control.
+      onError: (_, _) {},
+    );
+    _stream = stream;
+    _listener = listener;
+    stream.addListener(listener);
+  }
+
+  Size get _overflow {
+    final image = _image;
+    if (image == null) return Size.zero;
+    return artOverflow(frame: _frame, image: image);
+  }
+
+  /// Whether there is enough of the picture outside the frame to be worth
+  /// moving to. Sub-pixel slack is not.
+  bool get _movable => _overflow.width > 1 || _overflow.height > 1;
+
   void _move(Offset delta) {
-    if (_frame.isEmpty) return;
+    final overflow = _overflow;
     final from = _live ?? widget.framing;
     setState(() {
+      // The picture tracks the finger: a pixel of drag is a pixel of picture.
       // Dragging right pulls the picture right, which brings the part to its
       // left into view — so the point being looked at moves the other way.
       _live = from.shifted(
-        dx: -delta.dx / _frame.width,
-        dy: -delta.dy / _frame.height,
+        dx: overflow.width == 0 ? 0 : -delta.dx / overflow.width,
+        dy: overflow.height == 0 ? 0 : -delta.dy / overflow.height,
       );
     });
   }
 
-  Future<void> _release() async {
+  void _release() {
     if (mounted) setState(() => _holding = false);
     final settled = _live;
-    if (settled == null || settled == widget.framing) return;
-    if (_writing) {
-      _queued = settled;
-      return;
+    if (settled != null && settled != widget.framing) {
+      widget.onChanged(settled);
     }
-    _writing = true;
-    var next = settled;
-    bool landed;
-    while (true) {
-      landed = await widget.onChanged(next);
-      if (!mounted) return;
-      final queued = _queued;
-      if (queued == null) break;
-      _queued = null;
-      next = queued;
-    }
-    _writing = false;
-    // A framing that landed clears itself when the refreshed profile arrives.
-    // One that did not would otherwise sit there forever: the stored value
-    // never changes, so nothing else would ever take the preview down, and the
-    // card would keep showing a crop nobody has.
-    if (!landed && _live != null) setState(() => _live = null);
   }
 
   @override
@@ -148,6 +198,8 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _frame = constraints.biggest;
+        final art = widget.builder(context, _live ?? widget.framing);
+        if (!_movable) return art;
         return Semantics(
           label: AppLocalizations.of(context).profileArtFramingLabel,
           child: RawGestureDetector(
@@ -166,7 +218,8 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                widget.builder(context, _live ?? widget.framing),
+                art,
+                const ArtFramingBadge(),
                 if (_holding)
                   DecoratedBox(
                     decoration: BoxDecoration(

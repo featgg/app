@@ -3,13 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../connections/domain/connection.dart';
+import '../domain/art_framing.dart';
 import '../domain/profile.dart';
 import '../domain/profile_archetype.dart';
 import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
 import '../domain/profile_providers.dart';
+import '../domain/profile_widgets_providers.dart';
 import '../domain/profile_widget.dart';
 import 'profile_provider.dart';
+import 'profile_widgets_provider.dart';
 
 part 'profile_composition_controller.g.dart';
 
@@ -30,6 +33,8 @@ final class ProfileCompositionState extends Equatable {
     this.saved = const [],
     this.draft,
     this.savedDraft,
+    this.framings = const {},
+    this.savedFramings = const {},
     this.saving = false,
     this.saveFailed = false,
     this.hasPersisted = false,
@@ -40,6 +45,12 @@ final class ProfileCompositionState extends Equatable {
   final List<ProfileLayoutRow> saved;
   final ProfileEdit? draft;
   final ProfileEdit? savedDraft;
+
+  /// Framings the owner has moved this session, by widget id, and what each was
+  /// when they first moved it. Only touched cards appear; every other card
+  /// renders the framing its widget already carries.
+  final Map<String, ArtFraming> framings;
+  final Map<String, ArtFraming> savedFramings;
   final bool saving;
   final bool saveFailed;
   final bool hasPersisted;
@@ -50,8 +61,11 @@ final class ProfileCompositionState extends Equatable {
   /// Whether the identity diverges from what was last persisted.
   bool get draftIsDirty => draft != null && draft != savedDraft;
 
+  /// Whether any picture has been moved off where it was.
+  bool get framingIsDirty => !mapEquals(framings, savedFramings);
+
   /// Whether the session has anything to write — gates the save.
-  bool get isDirty => layoutIsDirty || draftIsDirty;
+  bool get isDirty => layoutIsDirty || draftIsDirty || framingIsDirty;
 
   ProfileCompositionState copyWith({
     bool? editing,
@@ -59,6 +73,8 @@ final class ProfileCompositionState extends Equatable {
     List<ProfileLayoutRow>? saved,
     ProfileEdit? draft,
     ProfileEdit? savedDraft,
+    Map<String, ArtFraming>? framings,
+    Map<String, ArtFraming>? savedFramings,
     bool? saving,
     bool? saveFailed,
     bool? hasPersisted,
@@ -68,6 +84,8 @@ final class ProfileCompositionState extends Equatable {
     saved: saved ?? this.saved,
     draft: draft ?? this.draft,
     savedDraft: savedDraft ?? this.savedDraft,
+    framings: framings ?? this.framings,
+    savedFramings: savedFramings ?? this.savedFramings,
     saving: saving ?? this.saving,
     saveFailed: saveFailed ?? this.saveFailed,
     hasPersisted: hasPersisted ?? this.hasPersisted,
@@ -80,6 +98,8 @@ final class ProfileCompositionState extends Equatable {
     saved,
     draft,
     savedDraft,
+    framings,
+    savedFramings,
     saving,
     saveFailed,
     hasPersisted,
@@ -142,7 +162,28 @@ class ProfileComposition extends _$ProfileComposition {
       // which is why the entry point stays closed while the profile refetches.
       draft: draft,
       savedDraft: draft,
+      framings: const {},
+      savedFramings: const {},
       saveFailed: false,
+    );
+  }
+
+  /// Records where the owner moved the picture on the widget [widgetId], whose
+  /// stored framing is [was]. Kept in the session, written by Save, dropped by
+  /// Cancel — the same contract as every other edit here.
+  void setFraming(
+    String widgetId, {
+    required ArtFraming was,
+    required ArtFraming now,
+  }) {
+    if (state.saving || !state.editing) return;
+    state = state.copyWith(
+      framings: {...state.framings, widgetId: now},
+      // Recorded on the first move only, so the comparison Save makes is
+      // against where the picture started, not where the last drag left it.
+      savedFramings: state.savedFramings.containsKey(widgetId)
+          ? state.savedFramings
+          : {...state.savedFramings, widgetId: was},
     );
   }
 
@@ -242,6 +283,8 @@ class ProfileComposition extends _$ProfileComposition {
     editing: false,
     working: state.saved,
     draft: state.savedDraft,
+    framings: const {},
+    savedFramings: const {},
   );
 
   void onGapDrop(String id, int gapIndex) {
@@ -297,6 +340,7 @@ class ProfileComposition extends _$ProfileComposition {
     final draft = state.draft;
     final savingDraft = state.draftIsDirty && draft != null;
     final savingLayout = state.layoutIsDirty;
+    final savingFramings = state.framingIsDirty;
     state = state.copyWith(saving: true, saveFailed: false);
     final repo = ref.read(profileRepositoryProvider);
 
@@ -328,6 +372,29 @@ class ProfileComposition extends _$ProfileComposition {
       }
     }
 
+    if (savingFramings) {
+      final byId = {
+        for (final w in ref.read(ownerProfileWidgetsProvider).value ?? const [])
+          w.id: w,
+      };
+      final widgetsRepo = ref.read(profileWidgetsRepositoryProvider);
+      for (final entry in state.framings.entries) {
+        if (entry.value == state.savedFramings[entry.key]) continue;
+        final target = byId[entry.key];
+        // A card deleted in the same session has no framing left to write.
+        if (target == null) continue;
+        final result = await widgetsRepo.setArtFraming(target, entry.value);
+        if (!ref.mounted) return;
+        if (result.isLeft()) {
+          if (savingDraft) ref.invalidate(profileProvider);
+          ref.invalidate(ownerProfileWidgetsProvider);
+          state = state.copyWith(saving: false, saveFailed: true);
+          return;
+        }
+      }
+      ref.invalidate(ownerProfileWidgetsProvider);
+    }
+
     // The profile read reconciles to what was persisted. `hasPersisted` marks
     // that this session now knows the persisted state (save or clear), so the
     // gate/seed trust `saved` over the still-stale profile refetch.
@@ -336,6 +403,8 @@ class ProfileComposition extends _$ProfileComposition {
       saving: false,
       editing: false,
       saved: state.working,
+      framings: const {},
+      savedFramings: const {},
       hasPersisted: true,
     );
   }

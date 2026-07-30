@@ -110,6 +110,10 @@ What is stored is a **point in the picture**, not a rectangle cut out of it: whe
 
 The fit never changes with the framing, so reframing only pans: it can never shrink the art below its frame. A picture nobody has moved is centred, which is what every surface has always done. The cover (§4) is on the same rule but is not yet the owner's to move.
 
+**Only where it does something.** A card earns the control by carrying a picture genuinely larger than its frame — not by carrying a picture at all. One that failed to load, or whose proportions already match the frame, has nothing cropped and so nothing to reveal; offering to move it and answering a deliberate hold with no movement reads as broken. The same applies per axis: a wide picture in a tall frame moves sideways and not up.
+
+**It is an edit, not an action.** A reframe waits for Done and is dropped by Cancel, like every other edit in the session. Moving a picture and being told the profile has no unsaved changes is the session disagreeing with what the owner just did.
+
 ### 6.3 Empty, unavailable and stale states
 
 - A card whose subject cannot be named does not ship (§2, rule 2).
