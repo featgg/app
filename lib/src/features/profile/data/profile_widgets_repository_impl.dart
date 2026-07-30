@@ -377,7 +377,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
       await _source.updateWidget(widget.id, {
-        'settings': profileWidgetSettings(widget.copyWith(framing: framing)),
+        'settings': settingsWithFraming(widget, framing),
       });
       return right(unit);
     } catch (e, st) {

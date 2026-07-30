@@ -804,7 +804,30 @@ void main() {
         isEnabled: true,
       );
 
-      expect(profileWidgetSettings(w).containsKey('framing'), isFalse);
+      expect(
+        settingsWithFraming(w, ArtFraming.center).containsKey('framing'),
+        isFalse,
+      );
+    });
+
+    test('reframing back to the centre drops the key it wrote', () {
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        framing: ArtFraming(x: 0.1, y: 0.9),
+        storedSettings: {
+          'schema_version': 1,
+          'framing': {'x': 0.1, 'y': 0.9},
+        },
+      );
+
+      expect(
+        settingsWithFraming(w, ArtFraming.center).containsKey('framing'),
+        isFalse,
+      );
     });
 
     test('a framing write keeps the kind sub-object beside it', () {
@@ -817,14 +840,55 @@ void main() {
         position: 0,
         isEnabled: true,
         artSelection: ArtSelection(source: Platform.steam),
-        framing: ArtFraming(x: 0.1, y: 0.9),
+        storedSettings: {
+          'schema_version': 1,
+          'art': {'source': 'steam'},
+        },
       );
 
-      final written = profileWidgetSettings(w);
+      final written = settingsWithFraming(w, const ArtFraming(x: 0.1, y: 0.9));
 
       expect((written['art']! as Map)['source'], 'steam');
       expect(written['framing'], {'x': 0.1, 'y': 0.9});
       expect(written['schema_version'], kProfileWidgetSettingsVersion);
+    });
+
+    test('a framing write keeps a key this build does not understand', () {
+      // The envelope is additive under one schema version, so another build
+      // can have written a field this one has no reading for. Rebuilding the
+      // envelope from what this build parses would delete it — the same
+      // profile losing content by being opened on the wrong version.
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        storedSettings: {
+          'schema_version': 1,
+          'something_a_later_build_wrote': {'keep': 'me'},
+        },
+      );
+
+      final written = settingsWithFraming(w, const ArtFraming(x: 0.2, y: 0.3));
+
+      expect(written['something_a_later_build_wrote'], {'keep': 'me'});
+    });
+
+    test('the write does not mutate the envelope it was given', () {
+      const stored = {'schema_version': 1};
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+        storedSettings: stored,
+      );
+
+      settingsWithFraming(w, const ArtFraming(x: 0.2, y: 0.3));
+
+      expect(stored.containsKey('framing'), isFalse);
     });
 
     test('serialize -> parse preserves the point', () {
@@ -834,10 +898,10 @@ void main() {
         platform: null,
         position: 0,
         isEnabled: true,
-        framing: ArtFraming(x: 0.2, y: 0.4),
       );
+      const framing = ArtFraming(x: 0.2, y: 0.4);
 
-      expect(artFramingFromSettings(profileWidgetSettings(w)), w.framing);
+      expect(artFramingFromSettings(settingsWithFraming(w, framing)), framing);
     });
   });
 }

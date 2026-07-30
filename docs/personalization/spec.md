@@ -102,7 +102,9 @@ The profile header (§4) is not a card of either family. It is a fixed surface o
 - Values are formatted compactly so a number is never truncated at the narrowest supported width (§3.1).
 - Where a datum has no possible visual subject (a whole library, a lifetime count), the number itself becomes the graphic and centres.
 
-**Framing.** A bleed card fills its frame with the art and crops the rest, so on any picture wider or taller than the frame something is lost — and the default middle crop is regularly the wrong thing to keep. The owner moves the art inside its frame, in edit mode, on the card itself.
+**Framing.** A bleed card fills its frame with the art and crops the rest, so on any picture wider or taller than the frame something is lost — and the default middle crop is regularly the wrong thing to keep. The owner moves the art inside its frame, in edit mode, on the card itself: **hold, then drag**, with the card marked while editing to say its picture can be moved.
+
+The hold is not decoration. A card lives in a scrolling page, and a plain drag on the picture competes with the page's own: the page wins a vertical swipe — which is right, an ordinary swipe must scroll — and that would leave the owner able to move art sideways and never up or down. Waiting for a hold takes the picture out of the contest, so both axes work and scrolling is untouched.
 
 What is stored is a **point in the picture**, not a rectangle cut out of it: where the part that matters is, as a fraction of the picture's own width and height. A rectangle belongs to one frame shape and stops meaning anything when the card moves between full and half — the two are different proportions. A point stays correct in both, and on every screen, because §2.7 fixes each variant's proportions and only the global scale changes.
 

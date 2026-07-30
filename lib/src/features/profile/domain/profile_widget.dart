@@ -41,6 +41,7 @@ final class ProfileWidget extends Equatable {
     this.collectionSelection = CollectionSelection.empty,
     this.artSelection = ArtSelection.empty,
     this.framing = ArtFraming.center,
+    this.storedSettings = const {},
   });
 
   final String id;
@@ -69,6 +70,14 @@ final class ProfileWidget extends Equatable {
   /// the picture's source differs per kind, the framing of it does not.
   final ArtFraming framing;
 
+  /// The row's settings envelope exactly as it was read.
+  ///
+  /// The fields above are this build's reading of it, and the envelope is
+  /// additive under one schema version — so it may carry keys written by a
+  /// build that knows something this one does not. Kept whole so a write of one
+  /// key does not take the rest with it.
+  final Map<String, dynamic> storedSettings;
+
   ProfileWidget copyWith({
     int? position,
     bool? isEnabled,
@@ -86,6 +95,7 @@ final class ProfileWidget extends Equatable {
     collectionSelection: collectionSelection ?? this.collectionSelection,
     artSelection: artSelection ?? this.artSelection,
     framing: framing ?? this.framing,
+    storedSettings: storedSettings,
   );
 
   @override
@@ -99,5 +109,6 @@ final class ProfileWidget extends Equatable {
     collectionSelection,
     artSelection,
     framing,
+    storedSettings,
   ];
 }

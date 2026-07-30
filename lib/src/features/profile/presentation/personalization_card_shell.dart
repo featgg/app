@@ -126,12 +126,17 @@ class PersonalizationCardShell extends StatelessWidget {
     }
     return ArtFramingGesture(
       framing: target.framing,
-      semanticsLabel: AppLocalizations.of(context).profileArtFramingLabel,
       onChanged: (next) => scope.onChanged(target.widgetId, next),
-      builder: (context, framing) => personalizationArtOrPlaceholder(
-        imageUrl: art,
-        placeholder: const PersonalizationCardGround(),
-        framing: framing,
+      builder: (context, framing) => Stack(
+        fit: StackFit.expand,
+        children: [
+          personalizationArtOrPlaceholder(
+            imageUrl: art,
+            placeholder: const PersonalizationCardGround(),
+            framing: framing,
+          ),
+          const ArtFramingBadge(),
+        ],
       ),
     );
   }

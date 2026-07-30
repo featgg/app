@@ -120,12 +120,13 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     // the same cards from the same builder and does not provide this, which is
     // what makes a visitor's copy of the card inert.
     return ArtFramingScope(
-      onChanged: (id, framing) {
+      onChanged: (id, framing) async {
         final target = byId[id];
-        if (target == null) return;
-        ref
+        if (target == null) return false;
+        await ref
             .read(profileWidgetsControllerProvider.notifier)
             .setArtFraming(target, framing);
+        return !ref.read(profileWidgetsControllerProvider).hasError;
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

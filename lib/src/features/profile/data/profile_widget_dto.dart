@@ -84,6 +84,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
     collectionSelection: collectionSelectionFromSettings(settings),
     artSelection: artSelectionFromSettings(settings),
     framing: artFramingFromSettings(settings),
+    storedSettings: settings ?? const {},
   );
 }
 
@@ -109,18 +110,27 @@ ArtFraming artFramingFromSettings(Map<String, dynamic>? settings) {
   return ArtFraming.clamped(x.toDouble(), y.toDouble());
 }
 
-/// The full `settings` envelope for [widget].
+/// The envelope to write for a framing change: [widget]'s own, with the framing
+/// replaced and everything else left exactly as it was read.
 ///
-/// Rebuilt from the whole widget, not from the one concern being changed:
-/// framing sits beside a kind's own sub-object rather than inside it, so a
-/// write that emitted only its own key would drop the other.
-Map<String, dynamic> profileWidgetSettings(ProfileWidget widget) => {
-  ...mergeArtSelectionIntoSettings(widget.artSelection),
-  ...mergeShowcaseSelectionIntoSettings(widget.showcaseSelection),
-  ...mergeCollectionSelectionIntoSettings(widget.collectionSelection),
-  if (!widget.framing.isCenter)
-    _framingKey: {'x': widget.framing.x, 'y': widget.framing.y},
-};
+/// A merge rather than a rebuild. The envelope is additive under one schema
+/// version, so it can hold keys this build does not parse — a build that knows
+/// a field this one predates, or one it postdates. Rebuilding from the fields
+/// this build understands would drop them, which is the same profile losing
+/// content by being opened on the wrong version.
+Map<String, dynamic> settingsWithFraming(
+  ProfileWidget widget,
+  ArtFraming framing,
+) {
+  final next = Map<String, dynamic>.of(widget.storedSettings);
+  next['schema_version'] = kProfileWidgetSettingsVersion;
+  if (framing.isCenter) {
+    next.remove(_framingKey);
+  } else {
+    next[_framingKey] = {'x': framing.x, 'y': framing.y};
+  }
+  return next;
+}
 
 /// Stable `settings` key the showcase selection is stored under. Additive
 /// in the `schema_version: 1` envelope. Shape:
