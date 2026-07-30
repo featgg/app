@@ -244,7 +244,7 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
       if (userId == null) return left(const AuthFailure());
       final dto = await _source.insertWidget({
         // Platform-less on the row; a pinned source lives in the envelope,
-        // and the usual unpinned add writes a size-only envelope.
+        // and the usual unpinned add writes a bare envelope.
         'platform': null,
         'type': profileWidgetKindToWire(ProfileWidgetKind.art),
         'position': await _freePosition(userId, position),

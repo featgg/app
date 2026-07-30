@@ -26,7 +26,7 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
   @override
   FutureOr<void> build() {}
 
-  /// Adds a [platform] widget at the given [position] with [size].
+  /// Adds a [platform] widget at the given [position].
   Future<void> addPlatform({
     required Platform platform,
     required int position,
@@ -34,8 +34,7 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     (repo) => repo.addPlatformWidget(platform: platform, position: position),
   );
 
-  /// Adds a showcase widget for [platform] and [selection] at [position] with
-  /// [size].
+  /// Adds a showcase widget for [platform] and [selection] at [position].
   Future<void> addShowcase({
     required Platform platform,
     required ShowcaseSelection selection,
@@ -48,7 +47,7 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
     ),
   );
 
-  /// Adds a collection widget for [selection] at [position] with [size].
+  /// Adds a collection widget for [selection] at [position].
   Future<void> addCollection({
     required CollectionSelection selection,
     required int position,
@@ -57,7 +56,7 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
         repo.addCollectionWidget(selection: selection, position: position),
   );
 
-  /// Adds a game-collector widget bound to [platform] at [position] with [size].
+  /// Adds a game-collector widget bound to [platform] at [position].
   Future<void> addGameCollector({
     required Platform platform,
     required int position,
@@ -66,7 +65,7 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
         repo.addGameCollectorWidget(platform: platform, position: position),
   );
 
-  /// Adds a completionist widget bound to [platform] at [position] with [size].
+  /// Adds a completionist widget bound to [platform] at [position].
   Future<void> addCompletionist({
     required Platform platform,
     required int position,
@@ -85,19 +84,19 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
   Future<void> addPassport({required int position}) =>
       _run((repo) => repo.addPassportWidget(position: position));
 
-  /// Adds a rank widget bound to [platform] at [position] with [size].
+  /// Adds a rank widget bound to [platform] at [position].
   Future<void> addRank({required Platform platform, required int position}) =>
       _run(
         (repo) => repo.addRankWidget(platform: platform, position: position),
       );
 
-  /// Adds a main widget bound to [platform] at [position] with [size].
+  /// Adds a main widget bound to [platform] at [position].
   Future<void> addMain({required Platform platform, required int position}) =>
       _run(
         (repo) => repo.addMainWidget(platform: platform, position: position),
       );
 
-  /// Adds an art widget at [position] with [size]. Without [source] the card
+  /// Adds an art widget at [position]. Without [source] the card
   /// resolves its own picture at render time; with one it pins that platform.
   Future<void> addArt({Platform? source, required int position}) =>
       _run((repo) => repo.addArtWidget(source: source, position: position));
