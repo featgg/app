@@ -27,6 +27,7 @@ final class PersonalizationPalette extends Equatable {
     required this.text,
     required this.muted,
     required this.accent,
+    required this.accentText,
     required this.accentSoft,
     required this.artA,
     required this.artB,
@@ -36,12 +37,19 @@ final class PersonalizationPalette extends Equatable {
 
   /// A curated theme: the shared theme-independent base with only the accent and
   /// art tones supplied. Keeps the base identical across the closed set.
+  ///
+  /// [accentText] is the accent at a lightness that clears AA-normal on the
+  /// grounds this palette puts text on. Most accents already do, and pass their
+  /// own value through; the ones that do not declare a lifted tone here rather
+  /// than being lightened everywhere, because grounds, borders and graphics do
+  /// not need it and would lose the theme's character to it.
   const PersonalizationPalette.themed({
     required Color accent,
     required Color accentSoft,
     required Color artA,
     required Color artB,
     required Color artC,
+    Color? accentText,
   }) : this(
          bg: _baseBg,
          surface: _baseSurface,
@@ -50,6 +58,7 @@ final class PersonalizationPalette extends Equatable {
          text: _baseText,
          muted: _baseMuted,
          accent: accent,
+         accentText: accentText ?? accent,
          accentSoft: accentSoft,
          artA: artA,
          artB: artB,
@@ -60,6 +69,9 @@ final class PersonalizationPalette extends Equatable {
   /// Default/brand theme; an unknown `theme_id` falls back to it.
   static const crimson = PersonalizationPalette.themed(
     accent: Color(0xFFBC3B4E),
+    // The brand red lands at 3.12:1 as small text; lifted in lightness only, so
+    // the hue and saturation that make it crimson are untouched.
+    accentText: Color(0xFFCF6574),
     accentSoft: Color(0x29BC3B4E), // rgba(188,59,78,.16)
     artA: Color(0xFFBC3B4E),
     artB: Color(0xFF5A1D2A),
@@ -114,6 +126,8 @@ final class PersonalizationPalette extends Equatable {
   /// Violet theme.
   static const arcane = PersonalizationPalette.themed(
     accent: Color(0xFF8E5CE8),
+    // 3.91:1 as small text; same lightness-only lift.
+    accentText: Color(0xFF9A6DEA),
     accentSoft: Color(0x298E5CE8),
     artA: Color(0xFF8E5CE8),
     artB: Color(0xFF3E2775),
@@ -150,6 +164,12 @@ final class PersonalizationPalette extends Equatable {
   /// Theme accent — tags, highlights, chip outlines.
   final Color accent;
 
+  /// The accent as small text. Equal to [accent] where that already clears
+  /// AA-normal on this palette's grounds, lifted where it does not — so an
+  /// accent-colored label carries its theme instead of falling back to a
+  /// neutral.
+  final Color accentText;
+
   /// Low-alpha accent wash for chip/backing fills.
   final Color accentSoft;
 
@@ -171,6 +191,7 @@ final class PersonalizationPalette extends Equatable {
     text,
     muted,
     accent,
+    accentText,
     accentSoft,
     artA,
     artB,

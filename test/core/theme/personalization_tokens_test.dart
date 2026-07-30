@@ -10,6 +10,7 @@ PersonalizationPalette _paletteWith(Color accent) => PersonalizationPalette(
   text: const Color(0xFFFFFFFF),
   muted: const Color(0xFF999999),
   accent: accent,
+  accentText: accent,
   accentSoft: const Color(0x22FFFFFF),
   artA: const Color(0xFF444444),
   artB: const Color(0xFF555555),
