@@ -93,7 +93,7 @@ Respond in the human's language. Anything committed — code, comments, docs, co
 
 ## Public-repo discipline
 
-Nothing about backend internals belongs in this repo — code, comments, commits, docs, fixtures, branch names, issue/PR text.
+Nothing about backend internals belongs in this repo — and the repo's public surface is everything on GitHub, not only the tree: code, comments, commits, docs, fixtures, branch names, issue and PR titles and bodies, review comments, and triage tables posted as comments.
 
 - No paths reaching outside this repo root.
 - No internal function names, schema namespaces, migration filenames, cron job names, or backend env var names.

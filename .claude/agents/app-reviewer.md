@@ -155,8 +155,10 @@ Apply each item that is relevant. Cite a file:line for every finding.
       contradictions of canon.
 - [ ] **Public-repo discipline**: no backend internals in the diff —
       paths, internal function names, schema names, env var names,
-      internal issue numbers. Branch names, commit messages, PR body,
-      and file contents all clean.
+      internal issue numbers. File contents, the branch name, and any
+      commit messages that exist at review time all clean. Surfaces
+      created after this stage (PR title and body, PR comments) are
+      gated at posting time by the operator's tooling, not here.
 - [ ] **Instrumentation drift**: if the change touches `AGENTS.md`,
       `.claude/agents/`, `.claude/hooks/`, `.ai/templates/`,
       `.claude/settings.json`, or `.github/workflows/`, related files
