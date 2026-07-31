@@ -133,6 +133,9 @@ class PersonalizationCardShell extends StatelessWidget {
     return ArtFramingGesture(
       imageUrl: url,
       framing: target.framing,
+      active: scope.activeId == target.widgetId,
+      onActiveChanged: (entering) =>
+          scope.onActivate(entering ? target.widgetId : null),
       onChanged: (next) => scope.onChanged(target.widgetId, next),
       builder: (context, framing) => over(picture(framing)),
     );

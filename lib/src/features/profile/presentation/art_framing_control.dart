@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
@@ -16,32 +15,42 @@ class ArtFramingTarget {
   final ArtFraming framing;
 }
 
-/// Marks the subtree the owner is editing, and carries the call that records a
-/// reframe.
+/// Marks the subtree the owner is editing: the call that records a reframe,
+/// and which single card is in framing mode.
 ///
 /// Recording, not writing: a reframe is an edit like any other in the session,
 /// so it waits for Done and is dropped by Cancel. Moving the art and being told
 /// there is nothing to save is the session disagreeing with what the owner just
 /// did.
 ///
-/// An inherited marker rather than a parameter threaded through every card: the
-/// read view and the editor build cards from the same builder, and only the
-/// enclosing surface knows which of the two it is.
+/// The mode lives here rather than in each card because it is exclusive: one
+/// card frames at a time, so the editor owns whose turn it is, the way it owns
+/// which card is being dragged.
 class ArtFramingScope extends InheritedWidget {
   const ArtFramingScope({
     super.key,
     required this.onChanged,
+    required this.activeId,
+    required this.onActivate,
     required super.child,
   });
 
   final void Function(String widgetId, ArtFraming framing) onChanged;
+
+  /// The widget whose picture is being framed right now, or null.
+  final String? activeId;
+
+  /// Puts [activeId]'s card into framing mode; null leaves it.
+  final void Function(String? widgetId) onActivate;
 
   static ArtFramingScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ArtFramingScope>();
 
   @override
   bool updateShouldNotify(ArtFramingScope oldWidget) =>
-      onChanged != oldWidget.onChanged;
+      onChanged != oldWidget.onChanged ||
+      activeId != oldWidget.activeId ||
+      onActivate != oldWidget.onActivate;
 }
 
 /// How much of [image] a frame of [frame] cannot show, per axis, once the
@@ -60,30 +69,42 @@ Size artOverflow({required Size frame, required Size image}) {
   );
 }
 
-/// Hold, then drag to move the picture inside its frame.
+/// An explicit framing mode, entered from the mark on the card.
 ///
-/// Offered only where it does something. A card earns the control by having a
+/// Tap the mark; the card enters framing; an ordinary one-finger drag moves the
+/// picture, both axes; tap the mark again — or anywhere outside the card — to
+/// leave. Inside the mode the card owns the gesture outright, so there is no
+/// contest with the page; outside it the picture is inert and the page scrolls
+/// exactly as it always did. Ownership, not delay: this replaced a hold that
+/// existed only to survive the scroll contest, and that nothing else in the
+/// industry uses for framing.
+///
+/// Offered only where it does something. A card earns the mark by having a
 /// picture genuinely larger than its frame — not merely by having a url. A
 /// picture that failed to load, or one whose proportions already match the
-/// frame, has nothing to reveal, and a control that answers a deliberate hold
-/// with no movement reads as broken.
-///
-/// The hold is what lets the card sit in a scrolling page. A plain drag on the
-/// picture competes with the page's own: the page wins a vertical swipe, which
-/// is right, but it leaves the owner able to move the art sideways and never up
-/// or down. Waiting for a hold takes the picture out of that contest — an
-/// ordinary swipe still scrolls, and a deliberate one moves both axes.
+/// frame, has nothing to reveal, and a control that answers with no movement
+/// reads as broken.
 class ArtFramingGesture extends StatefulWidget {
   const ArtFramingGesture({
     super.key,
     required this.imageUrl,
     required this.framing,
+    required this.active,
+    required this.onActiveChanged,
     required this.onChanged,
     required this.builder,
   });
 
   final String imageUrl;
   final ArtFraming framing;
+
+  /// Whether this card is the one in framing mode.
+  final bool active;
+
+  /// Asks the editor to put this card in or out of the mode.
+  final ValueChanged<bool> onActiveChanged;
+
+  /// Records where a drag left the picture.
   final ValueChanged<ArtFraming> onChanged;
 
   /// Builds the art at the framing to paint — the in-flight one while the owner
@@ -106,7 +127,6 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
   /// not step back while the session records it.
   ArtFraming? _live;
 
-  bool _holding = false;
   Size _frame = Size.zero;
 
   @override
@@ -185,7 +205,6 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
   }
 
   void _release() {
-    if (mounted) setState(() => _holding = false);
     final settled = _live;
     if (settled != null && settled != widget.framing) {
       widget.onChanged(settled);
@@ -195,33 +214,47 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
   @override
   Widget build(BuildContext context) {
     final palette = PersonalizationTheme.of(context);
+    final l10n = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         _frame = constraints.biggest;
         final art = widget.builder(context, _live ?? widget.framing);
         if (!_movable) return art;
-        return Semantics(
-          label: AppLocalizations.of(context).profileArtFramingLabel,
-          child: RawGestureDetector(
-            behavior: HitTestBehavior.opaque,
-            gestures: {
-              DelayedMultiDragGestureRecognizer:
-                  GestureRecognizerFactoryWithHandlers<
-                    DelayedMultiDragGestureRecognizer
-                  >(DelayedMultiDragGestureRecognizer.new, (recognizer) {
-                    recognizer.onStart = (_) {
-                      setState(() => _holding = true);
-                      return _FramingDrag(onMove: _move, onEnd: _release);
-                    };
-                  }),
-            },
+        if (!widget.active) {
+          // Inert but for the mark: the page keeps every gesture, so scrolling
+          // over the card works exactly as it does over any other.
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              art,
+              ArtFramingBadge(
+                label: l10n.profileArtFramingStart,
+                onTap: () => widget.onActiveChanged(true),
+              ),
+            ],
+          );
+        }
+        // A press anywhere outside the card — including the one that starts a
+        // scroll — puts the mode down. Leaving is never the owner's problem.
+        return TapRegion(
+          onTapOutside: (_) => widget.onActiveChanged(false),
+          child: Semantics(
+            label: l10n.profileArtFramingLabel,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                art,
-                const ArtFramingBadge(),
-                if (_holding)
-                  DecoratedBox(
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // A plain drag, uncontested: the mode holds the page still,
+                  // so there is no recognizer left to out-wait. Competing for
+                  // it was the earlier design, and the page won.
+                  onPanUpdate: (details) => _move(details.delta),
+                  onPanEnd: (_) => _release(),
+                  onPanCancel: _release,
+                  child: art,
+                ),
+                IgnorePointer(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: palette.accent,
@@ -229,6 +262,12 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
                       ),
                     ),
                   ),
+                ),
+                ArtFramingBadge(
+                  active: true,
+                  label: l10n.profileArtFramingDone,
+                  onTap: () => widget.onActiveChanged(false),
+                ),
               ],
             ),
           ),
@@ -238,49 +277,47 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
   }
 }
 
-/// The live drag handed back once the hold is recognised.
-class _FramingDrag extends Drag {
-  _FramingDrag({required this.onMove, required this.onEnd});
-
-  final void Function(Offset delta) onMove;
-  final VoidCallback onEnd;
-
-  @override
-  void update(DragUpdateDetails details) => onMove(details.delta);
-
-  @override
-  void end(DragEndDetails details) => onEnd();
-
-  @override
-  void cancel() => onEnd();
-}
-
-/// Marks a card whose picture the owner can move, drawn while editing.
+/// The mark on a card whose picture can be moved: the button that enters the
+/// framing mode, and — [active] — the one that confirms and leaves it.
 ///
-/// Centred, because every corner of a card in the editor is already spoken for
-/// — the handle, the delete, the size toggle, and the card's own number in the
-/// fourth. The middle is also where a finger lands to move a picture, so the
-/// mark sits where the gesture starts.
+/// Centred while idle, because every corner of a card in the editor is already
+/// spoken for — the handle, the delete, the size toggle, and the card's own
+/// number in the fourth — and the middle is where a finger lands on a picture.
+/// Once the mode is on, that same spot is where the drag begins, so the
+/// confirm steps aside to the top edge instead of sitting on the gesture it
+/// would otherwise swallow.
 ///
-/// The badge never takes the touch: one that caught the hold would swallow the
-/// gesture it exists to advertise.
+/// It sits above the drag layer on its own pixels only, so a drag starting
+/// anywhere else on the picture never has to compete with it.
 class ArtFramingBadge extends StatelessWidget {
-  const ArtFramingBadge({super.key});
+  const ArtFramingBadge({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.active = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     final palette = PersonalizationTheme.of(context);
-    return IgnorePointer(
-      child: Align(
-        alignment: Alignment.center,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xs),
+    return Align(
+      alignment: active ? Alignment.topCenter : Alignment.center,
+      child: Semantics(
+        label: label,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
           child: Container(
+            margin: const EdgeInsets.all(AppSpacing.xs),
             width: AppSpacing.xl,
             height: AppSpacing.xl,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: palette.bg,
+              color: active ? palette.accent : palette.bg,
               border: Border.all(
                 color: palette.accent,
                 width: PersonalizationLayout.borderWidth,
@@ -288,9 +325,9 @@ class ArtFramingBadge extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.sm),
             ),
             child: Icon(
-              Icons.open_with,
+              active ? Icons.check : Icons.open_with,
               size: AppSpacing.md,
-              color: palette.text,
+              color: active ? palette.accentText : palette.text,
             ),
           ),
         ),

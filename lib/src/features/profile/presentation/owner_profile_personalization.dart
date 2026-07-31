@@ -29,7 +29,11 @@ class OwnerProfilePersonalization extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final session = ref.watch(
       profileCompositionProvider.select(
-        (s) => (editing: s.editing, draft: s.editing ? s.draft : null),
+        (s) => (
+          editing: s.editing,
+          draft: s.editing ? s.draft : null,
+          framingId: s.framingId,
+        ),
       ),
     );
     // Watched in both modes so the auto-dispose upload controller outlives the
@@ -126,6 +130,7 @@ class OwnerProfilePersonalization extends ConsumerWidget {
       profile: shown,
       userId: profile.id,
       widgetsProvider: ownerProfileWidgetsProvider,
+      scrollLocked: session.framingId != null,
       headerEditing: session.editing
           ? ProfileHeaderEditing(
               avatarBusy: busy,

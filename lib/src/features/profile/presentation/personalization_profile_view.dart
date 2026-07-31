@@ -30,6 +30,7 @@ class PersonalizationProfileView extends ConsumerWidget {
     this.widgetsProvider,
     this.rowsBuilder,
     this.headerEditing,
+    this.scrollLocked = false,
   });
 
   /// Carries the layout and the theme that selects this view's palette.
@@ -49,6 +50,12 @@ class PersonalizationProfileView extends ConsumerWidget {
   /// Builds the rows region given the resolved column width. Null → the
   /// read-only rows; the owner injects the editor rows while editing.
   final Widget Function(BuildContext context, double columnWidth)? rowsBuilder;
+
+  /// Holds the page still. Set while the owner is moving a picture inside its
+  /// frame: the drag and the page's own scrolling are the same gesture, and a
+  /// contest between them is one the page wins on a device — so the page steps
+  /// out rather than competing.
+  final bool scrollLocked;
 
   /// The header's edit affordances. Null → a header that is only read; the owner
   /// injects them while editing.
@@ -78,6 +85,9 @@ class PersonalizationProfileView extends ConsumerWidget {
                         outerWidth -
                         2 * PersonalizationLayout.columnSidePadding;
                     return SingleChildScrollView(
+                      physics: scrollLocked
+                          ? const NeverScrollableScrollPhysics()
+                          : null,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [

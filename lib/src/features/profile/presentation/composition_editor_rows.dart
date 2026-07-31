@@ -120,6 +120,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     // the same cards from the same builder and does not provide this, which is
     // what makes a visitor's copy of the card inert.
     return ArtFramingScope(
+      activeId: ref.watch(
+        profileCompositionProvider.select((s) => s.framingId),
+      ),
+      onActivate: (id) =>
+          ref.read(profileCompositionProvider.notifier).setFramingTarget(id),
       onChanged: (id, framing) {
         final target = byId[id];
         if (target == null) return;

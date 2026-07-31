@@ -35,6 +35,7 @@ final class ProfileCompositionState extends Equatable {
     this.savedDraft,
     this.framings = const {},
     this.savedFramings = const {},
+    this.framingId,
     this.saving = false,
     this.saveFailed = false,
     this.hasPersisted = false,
@@ -51,6 +52,13 @@ final class ProfileCompositionState extends Equatable {
   /// renders the framing its widget already carries.
   final Map<String, ArtFraming> framings;
   final Map<String, ArtFraming> savedFramings;
+
+  /// The card whose picture is being moved right now, or null.
+  ///
+  /// Session state rather than the editor's own, because it reaches past the
+  /// editor: while a picture is being moved the page must not scroll under the
+  /// finger, and the page is not the editor's to silence.
+  final String? framingId;
   final bool saving;
   final bool saveFailed;
   final bool hasPersisted;
@@ -75,6 +83,7 @@ final class ProfileCompositionState extends Equatable {
     ProfileEdit? savedDraft,
     Map<String, ArtFraming>? framings,
     Map<String, ArtFraming>? savedFramings,
+    String? Function()? framingId,
     bool? saving,
     bool? saveFailed,
     bool? hasPersisted,
@@ -86,6 +95,8 @@ final class ProfileCompositionState extends Equatable {
     savedDraft: savedDraft ?? this.savedDraft,
     framings: framings ?? this.framings,
     savedFramings: savedFramings ?? this.savedFramings,
+    // Nullary so leaving the mode can be expressed at all.
+    framingId: framingId != null ? framingId() : this.framingId,
     saving: saving ?? this.saving,
     saveFailed: saveFailed ?? this.saveFailed,
     hasPersisted: hasPersisted ?? this.hasPersisted,
@@ -100,6 +111,7 @@ final class ProfileCompositionState extends Equatable {
     savedDraft,
     framings,
     savedFramings,
+    framingId,
     saving,
     saveFailed,
     hasPersisted,
@@ -164,6 +176,7 @@ class ProfileComposition extends _$ProfileComposition {
       savedDraft: draft,
       framings: const {},
       savedFramings: const {},
+      framingId: () => null,
       saveFailed: false,
     );
   }
@@ -285,7 +298,16 @@ class ProfileComposition extends _$ProfileComposition {
     draft: state.savedDraft,
     framings: const {},
     savedFramings: const {},
+    framingId: () => null,
   );
+
+  /// Puts [widgetId]'s picture into the framing mode, or null to leave it. One
+  /// at a time: entering on a second card hands the mode over.
+  void setFramingTarget(String? widgetId) {
+    if (state.saving || !state.editing) return;
+    if (state.framingId == widgetId) return;
+    state = state.copyWith(framingId: () => widgetId);
+  }
 
   void onGapDrop(String id, int gapIndex) {
     // A save snapshots the working layout; ignore edits until it resolves so a
@@ -405,6 +427,7 @@ class ProfileComposition extends _$ProfileComposition {
       saved: state.working,
       framings: const {},
       savedFramings: const {},
+      framingId: () => null,
       hasPersisted: true,
     );
   }
