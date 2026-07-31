@@ -184,16 +184,39 @@ widget-tier avatar and the hero art):
         "achieved": 142, "total": 167 }
     ],
     "recent_games": [
-      { "app_id": 730, "title": "CS2", "hours_2weeks": 12 }
+      { "app_id": 730, "title": "CS2", "hours_2weeks": 12,
+        "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+        "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg" }
     ],
     "perfect_showcase": [
       { "app_id": 730, "title": "CS2",
         "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
         "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg" }
-    ]
+    ],
+    "rarest_achievement": {
+      "name": "Ashes to Ashes",
+      "icon_image": "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/730/abc123.jpg",
+      "game": "CS2",
+      "game_icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+      "rarity_pct": 0.31,
+      "rarity_basis": "GAME_PLAYERS"
+    }
   }
 }
 ```
+
+`recent_games[]` entries carry the same constructed cover art as
+`library_showcase[]`. Both image fields follow § Image rules.
+
+`rarest_achievement` is optional and absent when no achievement resolved —
+the service samples a bounded number of games per sync, so the published
+achievement is the rarest **among the games sampled**, not a whole-library
+guarantee. `rarity_pct` is a percentage; `rarity_basis` names what that
+percentage is measured against, and `GAME_PLAYERS` is the only value today.
+Read the basis rather than assuming a denominator: a platform added later may
+measure rarity differently, and a hard-coded "% of players" would then be
+wrong. Nothing decodes these fields yet — the Recent and Rarest Achievement
+cards are where that lands.
 
 `library_showcase[]` entries may carry an optional achievements pair:
 `achieved` (integer ≥ 0, unlocked count) and `total` (integer > 0,
