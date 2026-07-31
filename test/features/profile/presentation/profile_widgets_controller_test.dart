@@ -34,6 +34,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   int? lastRankPosition;
   Platform? lastMainPlatform;
   int? lastMainPosition;
+  Platform? lastRecentPlatform;
+  int? lastRecentPosition;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -193,6 +195,25 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
       ProfileWidget(
         id: 'new',
         kind: ProfileWidgetKind.main,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRecentWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    mutations.add('addRecent');
+    lastRecentPlatform = platform;
+    lastRecentPosition = position;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.recent,
         platform: platform,
         position: position,
         isEnabled: true,
@@ -397,6 +418,29 @@ void main() {
       expect(repo.mutations, ['addMain']);
       expect(repo.lastMainPlatform, Platform.steam);
       expect(repo.lastMainPosition, 3);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addRecent forwards platform and position and invalidates the '
+        'read', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addRecent(platform: Platform.steam, position: 5);
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addRecent']);
+      expect(repo.lastRecentPlatform, Platform.steam);
+      expect(repo.lastRecentPosition, 5);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,

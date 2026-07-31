@@ -98,6 +98,12 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
         (repo) => repo.addMainWidget(platform: platform, position: position),
       );
 
+  /// Adds a recent widget bound to [platform] at [position].
+  Future<void> addRecent({required Platform platform, required int position}) =>
+      _run(
+        (repo) => repo.addRecentWidget(platform: platform, position: position),
+      );
+
   /// Adds an art widget at [position]. Without [source] the card
   /// resolves its own picture at render time; with one it pins that platform.
   Future<void> addArt({Platform? source, required int position}) =>
