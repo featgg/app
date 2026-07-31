@@ -995,6 +995,60 @@ void main() {
     });
   });
 
+  group('addRecentWidget', () {
+    test('writes type recent, a non-null platform, and a bare '
+        'envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'rc',
+          'platform': 'steam',
+          'type': 'recent',
+          'position': 4,
+          'is_enabled': true,
+          'settings': {'schema_version': kProfileWidgetSettingsVersion},
+        }),
+      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addRecentWidget(platform: Platform.steam, position: 4);
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'rc');
+        expect(widget.kind, ProfileWidgetKind.recent);
+        expect(widget.platform, Platform.steam);
+      });
+
+      // The captured write is the brief's recent contract: a non-null platform
+      // and a bare envelope (no selection sub-object).
+      expect(source.lastInsert!['type'], 'recent');
+      expect(source.lastInsert!['platform'], 'steam');
+      expect(source.lastInsert!['position'], 4);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings.keys, ['schema_version']);
+    });
+
+    test('a 23xxx rejection → Left(InputFailure), not reported', () async {
+      final source = _FakeDataSource(
+        onInsert: (_) async =>
+            throw PostgrestException(message: 'cap exceeded', code: '23514'),
+      );
+      final reporter = _RecordingReporter();
+      final result = await _repo(
+        source,
+        reporter,
+      ).addRecentWidget(platform: Platform.steam, position: 0);
+
+      result.fold((f) {
+        expect(f, isA<InputFailure>());
+        expect(f.isExpected, isTrue);
+      }, (_) => fail('want Left'));
+      expect(reporter.reported, isEmpty);
+    });
+  });
+
   group('mutations write the expected values', () {
     test(
       'setShowcaseSelection rewrites the envelope preserving the selection',
