@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
@@ -244,23 +243,14 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                RawGestureDetector(
+                GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  gestures: {
-                    // Claims the pointer on contact. Inside the mode the card
-                    // owns the gesture — that is what the mode is for — so the
-                    // drag must not have to out-wait the page's own recognizer
-                    // the way a plain pan would.
-                    ImmediateMultiDragGestureRecognizer:
-                        GestureRecognizerFactoryWithHandlers<
-                          ImmediateMultiDragGestureRecognizer
-                        >(ImmediateMultiDragGestureRecognizer.new, (
-                          recognizer,
-                        ) {
-                          recognizer.onStart = (_) =>
-                              _FramingDrag(onMove: _move, onEnd: _release);
-                        }),
-                  },
+                  // A plain drag, uncontested: the mode holds the page still,
+                  // so there is no recognizer left to out-wait. Competing for
+                  // it was the earlier design, and the page won.
+                  onPanUpdate: (details) => _move(details.delta),
+                  onPanEnd: (_) => _release(),
+                  onPanCancel: _release,
                   child: art,
                 ),
                 IgnorePointer(
@@ -285,23 +275,6 @@ class _ArtFramingGestureState extends State<ArtFramingGesture> {
       },
     );
   }
-}
-
-/// The live drag for the card in framing mode.
-class _FramingDrag extends Drag {
-  _FramingDrag({required this.onMove, required this.onEnd});
-
-  final void Function(Offset delta) onMove;
-  final VoidCallback onEnd;
-
-  @override
-  void update(DragUpdateDetails details) => onMove(details.delta);
-
-  @override
-  void end(DragEndDetails details) => onEnd();
-
-  @override
-  void cancel() => onEnd();
 }
 
 /// The mark on a card whose picture can be moved: the button that enters the

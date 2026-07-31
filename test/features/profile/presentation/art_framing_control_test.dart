@@ -56,14 +56,21 @@ Future<String> _seedArt(
   return url;
 }
 
-/// The editor's half of the contract: owns which card is in framing mode, the
-/// way the real editor does, so entering and leaving the mode behaves here as
-/// it does in production.
+/// The editor's half of the contract: owns which card is in framing mode, and
+/// holds the page still while one is — both halves, because the second is what
+/// makes the drag reachable at all. A drag on a card and a scroll of the page
+/// are the same gesture and the page wins the contest, so the mode takes the
+/// page out of it rather than competing.
 class _EditorScope extends StatefulWidget {
-  const _EditorScope({required this.onChanged, required this.child});
+  const _EditorScope({
+    required this.onChanged,
+    required this.controller,
+    required this.builder,
+  });
 
   final void Function(String, ArtFraming) onChanged;
-  final Widget child;
+  final ScrollController? controller;
+  final Widget Function(ScrollPhysics? physics) builder;
 
   @override
   State<_EditorScope> createState() => _EditorScopeState();
@@ -78,7 +85,9 @@ class _EditorScopeState extends State<_EditorScope> {
       activeId: _active,
       onActivate: (id) => setState(() => _active = id),
       onChanged: widget.onChanged,
-      child: widget.child,
+      child: widget.builder(
+        _active != null ? const NeverScrollableScrollPhysics() : null,
+      ),
     );
   }
 }
@@ -102,10 +111,11 @@ Widget _page({
   // Bounded here rather than per card: a sliver hands its children the
   // viewport's width whatever they ask for, so a card sized from the inside
   // would silently be the full screen instead.
-  final list = SizedBox(
+  Widget list(ScrollPhysics? physics) => SizedBox(
     width: _cardWidth,
     child: ListView(
       controller: controller,
+      physics: physics,
       children: [
         for (var i = 0; i < cards; i++)
           PersonalizationCardShell(
@@ -131,8 +141,12 @@ Widget _page({
         child: PersonalizationTheme(
           palette: PersonalizationPalette.crimson,
           child: onChanged == null
-              ? list
-              : _EditorScope(onChanged: onChanged, child: list),
+              ? list(null)
+              : _EditorScope(
+                  onChanged: onChanged,
+                  controller: controller,
+                  builder: list,
+                ),
         ),
       ),
     ),

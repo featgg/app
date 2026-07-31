@@ -33,11 +33,6 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
   // The id currently lifted, or null. Ephemeral UI state driving the glow.
   String? _draggingId;
 
-  // The card whose picture is in framing mode, or null. Editor state for the
-  // same reason _draggingId is: the mode is exclusive, so the surface that
-  // builds every card owns whose turn it is.
-  String? _framingId;
-
   Set<ProfileCardSize> _sizesOf(String id, Map<String, ProfileWidget> byId) {
     final widget = byId[id];
     return widget == null
@@ -125,8 +120,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     // the same cards from the same builder and does not provide this, which is
     // what makes a visitor's copy of the card inert.
     return ArtFramingScope(
-      activeId: _framingId,
-      onActivate: (id) => setState(() => _framingId = id),
+      activeId: ref.watch(
+        profileCompositionProvider.select((s) => s.framingId),
+      ),
+      onActivate: (id) =>
+          ref.read(profileCompositionProvider.notifier).setFramingTarget(id),
       onChanged: (id, framing) {
         final target = byId[id];
         if (target == null) return;
