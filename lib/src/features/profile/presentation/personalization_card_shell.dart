@@ -40,15 +40,31 @@ Widget personalizationArtOrPlaceholder({
 }) {
   final url = imageUrl;
   if (url == null) return placeholder;
-  return CachedNetworkImage(
+  final anchor = artFramingAlignment(framing);
+  final picture = CachedNetworkImage(
     imageUrl: url,
     fit: BoxFit.cover,
     // The framing decides which part of an oversized picture survives the crop.
-    // The fit never changes with it, so panning can never shrink the art below
-    // its frame and expose the ground behind it.
-    alignment: Alignment(framing.x * 2 - 1, framing.y * 2 - 1),
+    // The fit covers the frame at every setting, so no framing can shrink the
+    // art below its frame and expose the ground behind it.
+    alignment: anchor,
     placeholder: (_, _) => placeholder,
     errorWidget: (_, _, _) => placeholder,
+  );
+  // At the covering size the picture is drawn exactly as it always was — no
+  // wrapper at all, so nothing already on a profile can render differently.
+  if (framing.scale == ArtFraming.coverScale) return picture;
+  // Enlarged about the very point the crop is anchored on, so one value drives
+  // both and the window can only ever be a sub-rect of the picture. The clip is
+  // not decoration: a transform does not clip, and most of this helper's call
+  // sites are outside a card shell, so it cannot lean on an ancestor to keep an
+  // enlarged picture inside its frame.
+  return ClipRect(
+    child: Transform.scale(
+      scale: framing.scale,
+      alignment: anchor,
+      child: picture,
+    ),
   );
 }
 
