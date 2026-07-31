@@ -225,6 +225,22 @@ abstract final class PersonalizationArtText {
   ];
 }
 
+/// The lift under the card being dragged in the composition editor — the one
+/// shadow on a surface that is otherwise flat, because it is the one thing that
+/// is off the page.
+abstract final class PersonalizationLift {
+  static const Color shadowColor = Color(0x99000000);
+  static const double shadowBlur = 50;
+  static const double shadowOffsetY = 16;
+  static const List<BoxShadow> shadows = <BoxShadow>[
+    BoxShadow(
+      color: shadowColor,
+      blurRadius: shadowBlur,
+      offset: Offset(0, shadowOffsetY),
+    ),
+  ];
+}
+
 /// Named layout constants for the personalization profile. Keeps every size out of the
 /// presentation files as literals; the fixed column width and hero budget are
 /// tokens, not magic numbers.
@@ -363,6 +379,22 @@ abstract final class PersonalizationLayout {
   /// compact preview, and a slight transparency so it reads as a ghost.
   static const double editorGhostMaxWidth = 240;
   static const double editorGhostOpacity = 0.85;
+
+  /// The slot a card left while it is in the air, so the origin reads vacated
+  /// rather than duplicated.
+  static const double editorOriginOpacity = 0.35;
+
+  /// How far outside the rows region a release still lands in the nearest
+  /// landing place — about half a full card at the design floor
+  /// (`(320 - 28) / 1.5 / 2 ≈ 97`). Inside the region every point already
+  /// belongs to some landing place, so this governs only the outside margin:
+  /// past it the owner has aimed away and the drag is cancelled.
+  static const double dropAcquireRadius = 96;
+
+  /// How much nearer a rival landing place must be before the drag hands the
+  /// acquisition over: a deadband on the boundary two of them share, so a
+  /// pointer tracking along it settles instead of flickering between them.
+  static const double dropHysteresis = AppSpacing.smMd;
 }
 
 /// A fluid size that ramps with the column width between [min] and [max],

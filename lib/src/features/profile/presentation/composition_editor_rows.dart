@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/core.dart';
@@ -9,16 +10,19 @@ import '../domain/profile_composition.dart';
 import '../domain/profile_layout.dart';
 import '../domain/profile_widget.dart';
 import 'art_framing_control.dart';
+import 'composition_drop_zones.dart';
 import 'personalization_archetype_cards.dart';
 import 'profile_composition_controller.dart';
 import 'profile_widgets_controller.dart';
 import 'profile_widgets_provider.dart';
 
 /// The draggable rows region shown while the owner is editing their composition.
-/// Interleaves gap drop zones between rows and side drop zones on each card, wires
-/// the drag lifecycle to [ProfileComposition], and offers the size toggle on any
-/// card that supports both sizes. Disabled cards stay visible and draggable so
-/// their slot is preserved through the save.
+/// Measures the gaps between rows and the rows a lifted card may pair with, and
+/// hands the nearest of them to the drag — so a release near a landing place
+/// lands there rather than demanding a pointer-exact hover. Wires the drag
+/// lifecycle to [ProfileComposition] and offers the size toggle on any card that
+/// supports both sizes. Disabled cards stay visible and draggable so their slot
+/// is preserved through the save.
 class CompositionEditorRows extends ConsumerStatefulWidget {
   const CompositionEditorRows({super.key, required this.columnWidth});
 
@@ -30,8 +34,31 @@ class CompositionEditorRows extends ConsumerStatefulWidget {
 }
 
 class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
+  // Everything below is born and dies inside one drag and is read nowhere else;
+  // every consequence of it goes through the composition controller.
+  //
   // The id currently lifted, or null. Ephemeral UI state driving the glow.
   String? _draggingId;
+
+  // The landing place the drag holds, and — for a pair — which side of the
+  // target card. The two always move together.
+  DropZone? _acquired;
+  DropSide? _acquiredSide;
+
+  // Where the finger is, in global coordinates.
+  Offset? _point;
+
+  final GlobalKey _regionKey = GlobalKey();
+  final Map<int, GlobalKey> _gapKeys = {};
+
+  // Positional, never card-id-keyed: a duplicate GlobalKey is a crash, and a
+  // persisted layout carrying a duplicate id today merely renders twice.
+  final Map<(int, int), GlobalKey> _slotKeys = {};
+
+  GlobalKey _gapKey(int index) => _gapKeys.putIfAbsent(index, GlobalKey.new);
+
+  GlobalKey _slotKey(int rowIndex, int slotIndex) =>
+      _slotKeys.putIfAbsent((rowIndex, slotIndex), GlobalKey.new);
 
   Set<ProfileCardSize> _sizesOf(String id, Map<String, ProfileWidget> byId) {
     final widget = byId[id];
@@ -40,12 +67,22 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         : supportedSizes(archetypeForWidget(widget));
   }
 
+  /// One definition of half-support, shared by the glow in [build] and the
+  /// zones the drag is scored against.
+  CardSizeSupport _halfSupport(Map<String, ProfileWidget> byId) =>
+      (id) => _sizesOf(id, byId).contains(ProfileCardSize.half);
+
+  Map<String, ProfileWidget> _widgetsById() {
+    final widgets = ref.read(ownerProfileWidgetsProvider).value ?? const [];
+    return {for (final w in widgets) w.id: w};
+  }
+
   /// Nudge the surrounding scroll view when the pointer nears a viewport edge.
-  void _autoScroll(DragUpdateDetails details) {
+  void _autoScroll(Offset point) {
     final position = Scrollable.maybeOf(context)?.position;
     final media = MediaQuery.maybeOf(context);
     if (position == null || media == null) return;
-    final y = details.globalPosition.dy;
+    final y = point.dy;
     const band = AppSpacing.xl * 3;
     const step = PersonalizationLayout.rowGap;
     if (y < band && position.pixels > position.minScrollExtent) {
@@ -57,6 +94,123 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       position.jumpTo(
         math.min(position.maxScrollExtent, position.pixels + step),
       );
+    }
+  }
+
+  /// Anchors the lifted card on the pointer — the answer
+  /// [pointerDragAnchorStrategy] gives — and records where the press was on the
+  /// way through. This is the only place the drag reports where it began, and
+  /// the update details cannot stand in for it: an update carries the press
+  /// point when it is the one that started the drag and the live position
+  /// otherwise, and the two are indistinguishable from the details alone.
+  Offset _liftFrom(
+    Draggable<Object> draggable,
+    BuildContext context,
+    Offset position,
+  ) {
+    _point = position;
+    return Offset.zero;
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    final start = _point;
+    if (start == null) return;
+    // The press point plus every delta since, which is the drag avatar's own
+    // accounting — so the card riding under the finger and the zone being
+    // scored are read off the same position.
+    final point = start + details.delta;
+    _point = point;
+    _autoScroll(point);
+    _acquire(point);
+  }
+
+  /// The box [key] renders, in the rows region's coordinates.
+  Rect? _rectIn(RenderBox region, GlobalKey? key) {
+    final box = key?.currentContext?.findRenderObject() as RenderBox?;
+    // A card deleted while its key was cached has no context left.
+    if (box == null || !box.hasSize) return null;
+    return region.globalToLocal(box.localToGlobal(Offset.zero)) & box.size;
+  }
+
+  /// Every landing place [dragId] currently has. Re-measured on each move: the
+  /// gaps grow when the drag starts and the page auto-scrolls under the finger,
+  /// so a set measured once at lift would describe a layout that is gone.
+  List<DropZone> _zones(String dragId, RenderBox region) {
+    final working = ref.read(profileCompositionProvider).working;
+    final supportsHalf = _halfSupport(_widgetsById());
+    final zones = <DropZone>[];
+    for (var i = 0; i <= working.length; i++) {
+      final rect = _rectIn(region, _gapKeys[i]);
+      if (rect != null) zones.add(GapZone(index: i, rect: rect));
+    }
+    for (var i = 0; i < working.length; i++) {
+      final targetId = pairTargetAt(
+        working,
+        i,
+        dragId,
+        supportsHalf: supportsHalf,
+      );
+      // A row offering nothing contributes no zone at all, so a release over it
+      // falls to the nearest gap instead of reading as dead.
+      if (targetId == null) continue;
+      final slotIndex = switch (working[i]) {
+        FullRow() => 0,
+        PairRow(:final left) => left == targetId ? 0 : 1,
+      };
+      final card = _rectIn(region, _slotKeys[(i, slotIndex)]);
+      if (card == null) continue;
+      zones.add(
+        PairZone(
+          targetId: targetId,
+          cardCenterX: card.center.dx,
+          rect: Rect.fromLTRB(0, card.top, region.size.width, card.bottom),
+        ),
+      );
+    }
+    return zones;
+  }
+
+  void _acquire(Offset globalPoint) {
+    final dragId = _draggingId;
+    final region = _regionKey.currentContext?.findRenderObject() as RenderBox?;
+    if (dragId == null || region == null || !region.hasSize) return;
+    final point = region.globalToLocal(globalPoint);
+    final zone = resolveDropZone(
+      point: point,
+      bounds: Offset.zero & region.size,
+      zones: _zones(dragId, region),
+      current: _acquired,
+    );
+    final side = zone is PairZone ? zone.sideFor(point) : null;
+    if (zone == _acquired && side == _acquiredSide) return;
+    // Each change of target is felt, so the owner knows what a release will do
+    // without looking away from the card they are carrying.
+    if (zone != null) HapticFeedback.selectionClick();
+    setState(() {
+      _acquired = zone;
+      _acquiredSide = side;
+    });
+  }
+
+  /// The release. Fires on both endings of a drag, so nothing held means a
+  /// clean cancel and an untouched layout.
+  void _drop() {
+    final dragId = _draggingId;
+    final zone = _acquired;
+    final side = _acquiredSide;
+    setState(() {
+      _draggingId = null;
+      _acquired = null;
+      _acquiredSide = null;
+      _point = null;
+    });
+    if (dragId == null || zone == null) return;
+    final composition = ref.read(profileCompositionProvider.notifier);
+    switch (zone) {
+      case GapZone(:final index):
+        composition.onGapDrop(dragId, index);
+      case PairZone(:final targetId):
+        composition.onPairDrop(dragId, targetId, side!);
     }
   }
 
@@ -77,8 +231,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
 
-    bool supportsHalf(String id) =>
-        _sizesOf(id, byId).contains(ProfileCardSize.half);
+    final supportsHalf = _halfSupport(byId);
     bool supportsBoth(String id) =>
         _sizesOf(id, byId).contains(ProfileCardSize.half) &&
         _sizesOf(id, byId).contains(ProfileCardSize.full);
@@ -108,7 +261,6 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           byId,
           palette,
           saving: saving,
-          supportsHalf: supportsHalf,
           supportsBoth: supportsBoth,
           glowing: glowRows.contains(i),
         ),
@@ -133,6 +285,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
             .setFraming(id, was: target.framing, now: framing);
       },
       child: Column(
+        key: _regionKey,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,
       ),
@@ -141,30 +294,27 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
 
   Widget _gap(int index, PersonalizationPalette palette) {
     final dragging = _draggingId != null;
-    return DragTarget<String>(
-      // Any card can become its own row in a gap.
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (details) => ref
-          .read(profileCompositionProvider.notifier)
-          .onGapDrop(details.data, index),
-      builder: (context, candidate, rejected) {
-        final active = candidate.isNotEmpty;
-        return Container(
-          key: Key('compositionGap_$index'),
-          height: dragging ? AppSpacing.lg : PersonalizationLayout.rowGap,
-          alignment: Alignment.center,
-          child: active
-              ? Container(
-                  height: AppSpacing.hairline * 2,
-                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: palette.accent,
-                    borderRadius: BorderRadius.circular(AppRadii.full),
-                  ),
-                )
-              : null,
-        );
-      },
+    final acquired = _acquired;
+    final active = acquired is GapZone && acquired.index == index;
+    // KeyedSubtree carries no render object of its own, so the measured box is
+    // the Container's and the gap key stays where it has always been.
+    return KeyedSubtree(
+      key: _gapKey(index),
+      child: Container(
+        key: Key('compositionGap_$index'),
+        height: dragging ? AppSpacing.lg : PersonalizationLayout.rowGap,
+        alignment: Alignment.center,
+        child: active
+            ? Container(
+                height: AppSpacing.hairline * 2,
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: palette.accent,
+                  borderRadius: BorderRadius.circular(AppRadii.full),
+                ),
+              )
+            : null,
+      ),
     );
   }
 
@@ -174,7 +324,6 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     Map<String, ProfileWidget> byId,
     PersonalizationPalette palette, {
     required bool saving,
-    required bool Function(String) supportsHalf,
     required bool Function(String) supportsBoth,
     required bool glowing,
   }) {
@@ -182,11 +331,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       FullRow(:final cardId) => _slot(
         cardId,
         rowIndex,
+        0,
         ProfileCardSize.full,
         byId,
         palette,
         saving: saving,
-        supportsHalf: supportsHalf,
         supportsBoth: supportsBoth,
       ),
       PairRow(:final left, :final right) => personalizationPairFrame(
@@ -195,11 +344,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
             : _slot(
                 left,
                 rowIndex,
+                0,
                 ProfileCardSize.half,
                 byId,
                 palette,
                 saving: saving,
-                supportsHalf: supportsHalf,
                 supportsBoth: supportsBoth,
               ),
         right: right == null
@@ -207,11 +356,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
             : _slot(
                 right,
                 rowIndex,
+                1,
                 ProfileCardSize.half,
                 byId,
                 palette,
                 saving: saving,
-                supportsHalf: supportsHalf,
                 supportsBoth: supportsBoth,
               ),
       ),
@@ -234,11 +383,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
   Widget _slot(
     String cardId,
     int rowIndex,
+    int slotIndex,
     ProfileCardSize size,
     Map<String, ProfileWidget> byId,
     PersonalizationPalette palette, {
     required bool saving,
-    required bool Function(String) supportsHalf,
     required bool Function(String) supportsBoth,
   }) {
     final stored = byId[cardId];
@@ -251,39 +400,42 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     );
     final widget = working == null ? stored : stored.copyWith(framing: working);
     final l10n = AppLocalizations.of(context);
+    final acquired = _acquired;
+    final marked = acquired is PairZone && acquired.targetId == cardId;
 
-    return Stack(
+    final slot = Stack(
+      key: _slotKey(rowIndex, slotIndex),
       children: [
         // Owner cards (cardSource null); member-since is unused in edit mode.
         personalizationCardFor(widget, size: size),
-        Positioned.fill(
-          child: Row(
-            children: [
-              Expanded(
-                child: _sideTarget(
-                  rowIndex,
-                  cardId,
-                  DropSide.left,
-                  palette,
-                  supportsHalf: supportsHalf,
+        if (marked)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: _acquiredSide == DropSide.left
+                        ? BorderSide(
+                            color: palette.accent,
+                            width: AppSpacing.hairline,
+                          )
+                        : BorderSide.none,
+                    right: _acquiredSide == DropSide.right
+                        ? BorderSide(
+                            color: palette.accent,
+                            width: AppSpacing.hairline,
+                          )
+                        : BorderSide.none,
+                  ),
                 ),
+                child: const SizedBox.expand(),
               ),
-              Expanded(
-                child: _sideTarget(
-                  rowIndex,
-                  cardId,
-                  DropSide.right,
-                  palette,
-                  supportsHalf: supportsHalf,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
         Positioned(
           top: AppSpacing.xs,
           left: AppSpacing.xs,
-          child: _handle(cardId, palette, l10n),
+          child: _handle(widget, size, palette, l10n),
         ),
         Positioned(
           top: AppSpacing.xs,
@@ -320,57 +472,22 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           ),
       ],
     );
-  }
 
-  Widget _sideTarget(
-    int rowIndex,
-    String targetId,
-    DropSide side,
-    PersonalizationPalette palette, {
-    required bool Function(String) supportsHalf,
-  }) {
-    return DragTarget<String>(
-      // Read the live working layout at hit-test time.
-      onWillAcceptWithDetails: (details) => canPairBeside(
-        ref.read(profileCompositionProvider).working,
-        rowIndex,
-        details.data,
-        targetId,
-        supportsHalf: supportsHalf,
-      ),
-      onAcceptWithDetails: (details) => ref
-          .read(profileCompositionProvider.notifier)
-          .onPairDrop(details.data, targetId, side),
-      builder: (context, candidate, rejected) {
-        if (candidate.isEmpty) return const SizedBox.expand();
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              left: side == DropSide.left
-                  ? BorderSide(
-                      color: palette.accent,
-                      width: AppSpacing.hairline,
-                    )
-                  : BorderSide.none,
-              right: side == DropSide.right
-                  ? BorderSide(
-                      color: palette.accent,
-                      width: AppSpacing.hairline,
-                    )
-                  : BorderSide.none,
-            ),
-          ),
-          child: const SizedBox.expand(),
-        );
-      },
+    if (_draggingId != cardId) return slot;
+    // The card is in the air; the slot it left reads vacated.
+    return Opacity(
+      opacity: PersonalizationLayout.editorOriginOpacity,
+      child: slot,
     );
   }
 
   Widget _handle(
-    String cardId,
+    ProfileWidget card,
+    ProfileCardSize size,
     PersonalizationPalette palette,
     AppLocalizations l10n,
   ) {
+    final cardId = card.id;
     final icon = Container(
       width: AppSpacing.xl,
       height: AppSpacing.xl,
@@ -396,38 +513,53 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       child: Draggable<String>(
         key: Key('compositionDragHandle_$cardId'),
         data: cardId,
+        // The finger decides the acquisition, so the card has to be symmetric
+        // around it rather than hanging off the grab point.
+        dragAnchorStrategy: _liftFrom,
         onDragStarted: () => setState(() => _draggingId = cardId),
-        onDragUpdate: _autoScroll,
-        onDragEnd: (_) => setState(() => _draggingId = null),
-        onDraggableCanceled: (_, _) => setState(() => _draggingId = null),
-        feedback: _ghost(palette),
+        onDragUpdate: _onDragUpdate,
+        // Fires on both endings, so the release is decided in one place.
+        onDragEnd: (_) => _drop(),
+        feedback: _lifted(card, size, palette),
         child: icon,
       ),
     );
   }
 
-  Widget _ghost(PersonalizationPalette palette) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Opacity(
-        opacity: PersonalizationLayout.editorGhostOpacity,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: math.min(
-              widget.columnWidth / 2,
-              PersonalizationLayout.editorGhostMaxWidth,
+  /// The card itself, in the air: the same card the slot renders, capped and
+  /// centred on the finger.
+  Widget _lifted(
+    ProfileWidget card,
+    ProfileCardSize size,
+    PersonalizationPalette palette,
+  ) {
+    final slotWidth = size == ProfileCardSize.half
+        ? (widget.columnWidth - PersonalizationLayout.rowGap) / 2
+        : widget.columnWidth;
+    // The feedback builds inside the Overlay, above the page and so outside the
+    // profile's palette scope, and every card asserts a palette ancestor.
+    return PersonalizationTheme(
+      palette: palette,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Opacity(
+            opacity: PersonalizationLayout.editorGhostOpacity,
+            child: SizedBox(
+              width: math.min(
+                slotWidth,
+                PersonalizationLayout.editorGhostMaxWidth,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(palette.radius),
+                  boxShadow: PersonalizationLift.shadows,
+                ),
+                child: personalizationCardFor(card, size: size),
+              ),
             ),
           ),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: palette.surface,
-            border: Border.all(
-              color: palette.accent,
-              width: PersonalizationLayout.borderWidth,
-            ),
-            borderRadius: BorderRadius.circular(palette.radius),
-          ),
-          child: Icon(Icons.drag_indicator, color: palette.accent),
         ),
       ),
     );

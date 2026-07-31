@@ -294,15 +294,16 @@ Settings keeps what the profile page does not show: privacy, account, language, 
 
 Single-gesture model: **size and position are one decision** — where you drop determines the size.
 
-- Each card shows a drag handle in edit mode. Compact ghost (max ~240px) follows the pointer; auto-scroll near viewport edges. Touch + mouse.
+- Each card shows a drag handle in edit mode. Lifting it puts **the card itself** in the air — the same card, capped at ~240px and centered on the pointer — and the slot it left reads vacated until it lands. Auto-scroll near viewport edges. Touch + mouse.
 - Drop zones:
   - **Gap between rows** → card becomes its own row (full variant; centered orphan if the archetype is half-only). Gap indicators appear while dragging.
   - **Beside another card** (including the empty half of an orphan row — "next to" counts, not just "on top of") → pair, both half. Drop side sets left/right order.
   - **Onto own pair partner** → swap left/right.
 - Validity: both cards must support `half`; a full pair accepts no third card; full-only archetypes accept no side-drops. Invalid zones never light up.
 - **Discoverability:** on lift, every valid pair destination glows (dashed accent outline) — the system explains itself at the moment of need. One-time tooltip optional.
+- **Acquisition is by neighborhood, not by hover.** The drag holds the nearest landing place to the pointer, not the one under it: gaps and rows tile the editor, a row this card cannot pair with contributes none and falls to the gap beside it, and the empty half of an orphan row acquires the pair as readily as the card does. What is held is always what is highlighted, so nothing lands where it was not shown; it changes hands only when a rival is meaningfully nearer, so a pointer tracking a boundary settles rather than flickering, and each change of target is marked by a haptic tick. Releasing outside the editor — by more than about half a card — holds nothing and cancels cleanly. What this replaces: requiring the pointer to be over the target, which left a full-only card with a ~24px stripe as its only destination.
 - Complementary **⇆ size toggle** on dual-size archetypes: full → orphan half in place; half → new full row inserted after the origin row, ex-partner stays centered orphan.
-- `mockups/layout-editor.html` is normative for editor interaction — its mutations (`removeCard`, `insertAsRow`, `pairWith`, `toggleSize`) and drop-zone semantics — and for nothing else. Port the behavior, not the code. Drag ergonomics work is #208.
+- `mockups/layout-editor.html` is normative for editor interaction — its mutations (`removeCard`, `insertAsRow`, `pairWith`, `toggleSize`) and what each drop zone *means* — and for nothing else. Port the behavior, not the code. How a zone is *acquired* is this section's prose, not the mockup's pointer-exact hit test; #208 is where that model was decided.
 
 ## 10. Deferred
 

@@ -248,6 +248,73 @@ void main() {
     );
   });
 
+  group('pairTargetAt (the one card a row offers)', () {
+    test('offers the other half-capable card of a full row', () {
+      const rows = [FullRow('main')];
+      expect(
+        pairTargetAt(rows, 0, 'rankA', supportsHalf: _supportsHalf),
+        'main',
+      );
+    });
+
+    test('offers an orphan\'s card', () {
+      const rows = [PairRow(left: 'ms')];
+      expect(pairTargetAt(rows, 0, 'rankA', supportsHalf: _supportsHalf), 'ms');
+    });
+
+    test('offers the dragged card\'s own pair partner (the swap)', () {
+      const rows = [PairRow(left: 'rankA', right: 'rankB')];
+      expect(
+        pairTargetAt(rows, 0, 'rankA', supportsHalf: _supportsHalf),
+        'rankB',
+      );
+    });
+
+    test('offers nothing beside a full-only target', () {
+      const rows = [FullRow('id')];
+      expect(pairTargetAt(rows, 0, 'rankA', supportsHalf: _supportsHalf), null);
+    });
+
+    test('offers nothing to a full-only dragged card', () {
+      const rows = [FullRow('main')];
+      expect(pairTargetAt(rows, 0, 'id', supportsHalf: _supportsHalf), null);
+    });
+
+    test('offers nothing on a pair already holding two other cards', () {
+      const rows = [PairRow(left: 'rankA', right: 'rankB')];
+      expect(pairTargetAt(rows, 0, 'ms', supportsHalf: _supportsHalf), null);
+    });
+
+    test('offers nothing on the row holding only the dragged card', () {
+      const rows = [PairRow(left: 'rankA')];
+      expect(pairTargetAt(rows, 0, 'rankA', supportsHalf: _supportsHalf), null);
+    });
+
+    test('is non-null exactly on the rows pairableRowIndices lights', () {
+      // The glow promises what a drop delivers, so the two must never disagree.
+      const rows = [
+        FullRow('main'), // half-capable, has room
+        FullRow('id'), // full-only target
+        PairRow(left: 'rankA', right: 'ms'), // no room for a third
+        PairRow(left: 'note'), // orphan with an empty half
+      ];
+      final glow = pairableRowIndices(
+        rows,
+        'rankB',
+        supportsHalf: _supportsHalf,
+      );
+
+      for (var i = 0; i < rows.length; i++) {
+        expect(
+          pairTargetAt(rows, i, 'rankB', supportsHalf: _supportsHalf) != null,
+          glow.contains(i),
+          reason: 'row $i',
+        );
+      }
+      expect(glow, {0, 3});
+    });
+  });
+
   group('composed mutation locality (AC5)', () {
     test('an orphan→move→toggle→pair sequence never disturbs an untouched row '
         'or blanks a slot', () {

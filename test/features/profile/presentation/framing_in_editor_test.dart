@@ -27,8 +27,8 @@ import 'package:fpdart/fpdart.dart';
 /// mounted on its own.
 ///
 /// The card's own suite mounts the shell straight into a list, which leaves out
-/// everything the editor stacks over a card — the drop targets that cover it,
-/// the handle, the size toggle — and the page it all scrolls inside. A gesture
+/// everything the editor stacks over a card — the handle, the size toggle, the
+/// drop mark — and the page it all scrolls inside. A gesture
 /// that has to win an arena is decided by exactly that surrounding structure,
 /// so it is the only place a claim about the drag can be trusted.
 const _artUrl = 'https://cdn.test/hero-1600x900.jpg';
