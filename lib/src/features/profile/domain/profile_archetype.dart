@@ -10,6 +10,7 @@ enum ProfileArchetype {
   milestone,
   rank,
   main,
+  recent,
   collection,
   achievementGrid,
   art,
@@ -31,6 +32,7 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.platform => ProfileArchetype.platform,
   ProfileWidgetKind.rank => ProfileArchetype.rank,
   ProfileWidgetKind.main => ProfileArchetype.main,
+  ProfileWidgetKind.recent => ProfileArchetype.recent,
   ProfileWidgetKind.collection ||
   ProfileWidgetKind.gameCollector => ProfileArchetype.collection,
   ProfileWidgetKind.completionist => ProfileArchetype.achievementGrid,
@@ -55,6 +57,8 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   ProfileArchetype.rank => ProfileCardFormat.framed,
   // The top game / character cover.
   ProfileArchetype.main => ProfileCardFormat.bleed,
+  // The recently-played game's cover, published on the recent-activity entry.
+  ProfileArchetype.recent => ProfileCardFormat.bleed,
   // A shelf of many games, not one image — both the curated and library kinds.
   ProfileArchetype.collection => ProfileCardFormat.framed,
   // A shelf of many entries.
@@ -91,7 +95,8 @@ enum ProfileCardCategory {
 /// existing rows still render; a fresh composition seeds those last.
 ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.passport => ProfileCardCategory.whoIAm,
-  ProfileWidgetKind.main => ProfileCardCategory.whatIPlay,
+  ProfileWidgetKind.main ||
+  ProfileWidgetKind.recent => ProfileCardCategory.whatIPlay,
   ProfileWidgetKind.rank => ProfileCardCategory.howGoodIAm,
   ProfileWidgetKind.showcase ||
   ProfileWidgetKind.completionist => ProfileCardCategory.whatIAchieved,
@@ -131,6 +136,9 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   // crest as a full — size follows placement, not the archetype.
   ProfileArchetype.rank => const {ProfileCardSize.full, ProfileCardSize.half},
   ProfileArchetype.main => const {ProfileCardSize.full, ProfileCardSize.half},
+  // One datum with its own subject is legal as a half; placed full it has one
+  // supporting figure worth the extra width.
+  ProfileArchetype.recent => const {ProfileCardSize.full, ProfileCardSize.half},
   // Collection and Achievement Grid are full-only: the editor
   // offers them no side-drop and no size toggle.
   ProfileArchetype.collection => const {ProfileCardSize.full},
