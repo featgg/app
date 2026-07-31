@@ -63,13 +63,16 @@ snake_case). Any other value is rejected as an invalid value for the field.
 - `main` — a platform-bound card showing the owner's primary game / character /
   mode on one connected platform (Steam top game, WoW character, GW2 main, League
   top mastery, Chess primary mode). Reads only already-published card data.
+- `recent` — a platform-bound card showing what the owner has been playing
+  lately on one connected platform, and how much. Reads only already-published
+  card data. Client rendering is Steam-first.
 - `art` — a visual card carrying a picture and no data. It is not
   platform-bound: which picture it shows is a client-side choice carried in
   `settings` (see below), defaulting to a client-resolved best available image
   when absent.
 
 `showcase`, `collection`, `game_collector`, `completionist`, `passport`,
-`rank`, `main`, and `art` are the kinds the client writes today.
+`rank`, `main`, `recent`, and `art` are the kinds the client writes today.
 
 `template`, `composed_card` and `data_menu` are **client-retired**: the client
 no longer writes them and no longer reads them — a row carrying one of those
@@ -105,13 +108,15 @@ Whether `platform` is required or must be null depends on `type`:
   (the platform whose competitive standing it renders).
 - `type = main` → `platform` **must be a non-null** value from the list above
   (the platform whose primary game/character/mode it renders).
+- `type = recent` → `platform` **must be a non-null** value from the list above
+  (the platform whose recent activity it renders).
 - `type = art` → `platform` **must be null** (the card reads no account data;
   its picture source is a `settings` choice, not a binding).
 
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
 
-Per-kind rendered size (Rank and Main are both full or half) is
+Per-kind rendered size (Rank, Main and Recent are each full or half) is
 client-enforced, not server-validated — the client offers only legal sizes.
 
 - **Constraints (surface as the SDK error on violation).**
