@@ -34,7 +34,13 @@
         }
       ],
       "recent_games": [
-        { "app_id": 730, "title": "Counter-Strike 2", "hours_2weeks": 12 }
+        {
+          "app_id": 730,
+          "title": "Counter-Strike 2",
+          "hours_2weeks": 12,
+          "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+          "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg"
+        }
       ],
       "perfect_showcase": [
         {
@@ -49,7 +55,15 @@
           "icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/570/capsule_184x69.jpg",
           "hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/570/library_600x900.jpg"
         }
-      ]
+      ],
+      "rarest_achievement": {
+        "name": "Ashes to Ashes",
+        "icon_image": "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/730/abc123.jpg",
+        "game": "Counter-Strike 2",
+        "game_icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+        "rarity_pct": 0.31,
+        "rarity_basis": "GAME_PLAYERS"
+      }
     }
   }
 }
