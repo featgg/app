@@ -38,6 +38,8 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   int? lastRankPosition;
   Platform? lastMainPlatform;
   int? lastMainPosition;
+  Platform? lastRecentPlatform;
+  int? lastRecentPosition;
   Platform? lastArtSource;
   int? lastArtPosition;
 
@@ -190,6 +192,24 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRecentWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    lastRecentPlatform = platform;
+    lastRecentPosition = position;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.recent,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
       right(const []);
 
@@ -278,6 +298,7 @@ LibraryShowcaseEntry _entry(int appId) =>
 GameCard _steamCard(
   List<LibraryShowcaseEntry> library, {
   List<CardStat> stats = const [],
+  List<RecentGameEntry> recent = const [],
 }) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
@@ -288,7 +309,7 @@ GameCard _steamCard(
   profileUrl: null,
   stats: stats,
   lastUpdated: DateTime.utc(2026, 6, 1),
-  data: SteamCardData(libraryShowcase: library, recentGames: const []),
+  data: SteamCardData(libraryShowcase: library, recentGames: recent),
 );
 
 GameCard _card(Platform platform, CardData data, {String? heroImage}) =>
@@ -437,6 +458,15 @@ ProfileWidget _artWidget(Platform source, {required int position}) =>
       position: position,
       isEnabled: true,
       artSelection: ArtSelection(source: source),
+    );
+
+ProfileWidget _recentWidget(Platform platform, {required int position}) =>
+    ProfileWidget(
+      id: 'recent-${platform.name}',
+      kind: ProfileWidgetKind.recent,
+      platform: platform,
+      position: position,
+      isEnabled: true,
     );
 
 ProfileWidget _rankWidget(Platform platform, {required int position}) =>
@@ -786,6 +816,101 @@ void main() {
     expect(find.byKey(const Key('rankAddedRow_chess')), findsOneWidget);
     expect(find.byKey(const Key('rankAddRow_chess')), findsNothing);
     expect(find.byKey(const Key('mainAddRow_chess')), findsOneWidget);
+  });
+
+  testWidgets('Recent row: the What I play group offers it when Steam has '
+      'recent activity, and the tap writes a recent widget for Steam', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard(
+            [_entry(730)],
+            recent: const [
+              RecentGameEntry(appId: 730, title: 'Game 730', hours2Weeks: 12),
+            ],
+          ),
+        }),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
+        // A widget at position 2 proves the insert lands at max+1.
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // The row belongs to the "What I play" group: the nearest Column above the
+    // header is the group itself, so a match under it proves membership.
+    final playGroup = find
+        .ancestor(
+          of: find.byKey(const Key('catalogGroupWhatIPlay')),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      find.descendant(
+        of: playGroup,
+        matching: find.byKey(const Key('recentAddRow_steam')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('recentAddRow_steam')));
+    await tester.tap(find.byKey(const Key('recentAddRow_steam')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastRecentPlatform, Platform.steam);
+    expect(widgetsRepo.lastRecentPosition, 3);
+    expect(find.byKey(const Key('recentAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Recent row: no recent activity disables the row with its '
+      'reason', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        // A library with games but no recent activity: the card is not offered
+        // just because the account owns something.
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([_entry(730)]),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('recentDisabledRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('recentAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Recent row: an already-placed Recent card reads as added', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard(
+            [_entry(730)],
+            recent: const [
+              RecentGameEntry(appId: 730, title: 'Game 730', hours2Weeks: 12),
+            ],
+          ),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: [_recentWidget(Platform.steam, position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('recentAddedRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('recentAddRow_steam')), findsNothing);
   });
 
   testWidgets('Milestone row: step-2 reachable; a library tile adds a showcase '
