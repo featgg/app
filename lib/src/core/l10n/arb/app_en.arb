@@ -1182,6 +1182,10 @@
   "@cardStatHoursPlayed": {
     "description": "Card datum label for the hoursPlayed stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
   },
+  "cardStatHours2Weeks": "2 weeks",
+  "@cardStatHours2Weeks": {
+    "description": "Card datum label for the hours2Weeks stat on the Recent card. Names the window the platform publishes, not the unit — the value is hours. Measured by the label-width guard, which caps how long it may get."
+  },
   "cardStatNetworkLevel": "Network",
   "@cardStatNetworkLevel": {
     "description": "Card datum label for the networkLevel stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
@@ -1333,6 +1337,14 @@
   "addCatalogReasonMainNoData": "No main data yet.",
   "@addCatalogReasonMainNoData": {
     "description": "Reason on a disabled add-card catalog Main row when the linked platform's card carries no main data."
+  },
+  "addCatalogRowRecent": "Recently played",
+  "@addCatalogRowRecent": {
+    "description": "Label of the add-card catalog's Recent row, named by card rather than by platform because the group's Main rows are already labelled by platform."
+  },
+  "addCatalogReasonRecentNoData": "No recent activity yet.",
+  "@addCatalogReasonRecentNoData": {
+    "description": "Reason on a disabled add-card catalog Recent row when the linked platform's card publishes no recent activity."
   },
   "addCatalogRowArt": "Art card",
   "@addCatalogRowArt": {

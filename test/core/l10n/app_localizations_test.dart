@@ -291,5 +291,30 @@ void main() {
         isNot(en.personalizationStatPerfect),
       );
     });
+
+    test('new Recent keys exist and are non-empty, and the catalog reason '
+        'translates per locale', () async {
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+      final es = await AppLocalizations.delegate.load(const Locale('es'));
+      final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+
+      for (final l10n in [en, es, pt]) {
+        expect(l10n.cardStatHours2Weeks, isNotEmpty);
+        expect(l10n.addCatalogRowRecent, isNotEmpty);
+        expect(l10n.addCatalogReasonRecentNoData, isNotEmpty);
+      }
+
+      // The reason loads per-locale copy rather than the template fallback.
+      // cardStatHours2Weeks is intentionally identical in es and pt, so no
+      // cross-locale difference is asserted for it.
+      expect(
+        es.addCatalogReasonRecentNoData,
+        isNot(en.addCatalogReasonRecentNoData),
+      );
+      expect(
+        pt.addCatalogReasonRecentNoData,
+        isNot(en.addCatalogReasonRecentNoData),
+      );
+    });
   });
 }
