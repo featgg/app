@@ -97,6 +97,15 @@ Apply each item that is relevant. Cite a file:line for every finding.
 - [ ] **Antipatterns**: god widgets, hidden side effects, misleading
       names, swallowed errors, magic constants, premature abstraction,
       legacy `StateNotifier` instead of Riverpod codegen.
+- [ ] **Recorded fixtures**: if the diff touches
+      `test/contract/fixtures/`, the fixture matches the backend artifact
+      it mirrors byte for byte, and any integration brief describing the
+      same payload is updated alongside it — a fixture and a brief that
+      disagree put two descriptions of one contract in this repo, and the
+      fixture is the record. A fixture carrying a field no decoder reads
+      yet is expected and not a finding: it records what the service
+      sends so the story that adopts the field builds against the real
+      payload. A brief omitting that field is a finding.
 - [ ] **Design tokens**: UI code in `lib/` consumes named design tokens, not
       hard-coded design values. Flag raw `Color(...)` constructions or
       `Colors.*` literals, magic spacing/radii numbers in padding/margin/
