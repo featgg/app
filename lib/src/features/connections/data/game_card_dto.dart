@@ -162,16 +162,19 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
         total: bothPresent ? totalRaw : null,
       );
     }).toList(),
-    recentGames: recentRaw
-        .whereType<Map<String, dynamic>>()
-        .map(
-          (e) => RecentGameEntry(
-            appId: (e['app_id'] as num).toInt(),
-            title: e['title'] as String,
-            hours2Weeks: e['hours_2weeks'] as num,
-          ),
-        )
-        .toList(),
+    recentGames: recentRaw.whereType<Map<String, dynamic>>().map((e) {
+      // Images are optional: a wrong-typed value degrades to null rather than
+      // throwing, so one malformed url cannot take down the whole Steam block.
+      final iconImage = e['icon_image'];
+      final heroImage = e['hero_image'];
+      return RecentGameEntry(
+        appId: (e['app_id'] as num).toInt(),
+        title: e['title'] as String,
+        hours2Weeks: e['hours_2weeks'] as num,
+        iconImage: iconImage is String ? iconImage : null,
+        heroImage: heroImage is String ? heroImage : null,
+      );
+    }).toList(),
   );
 }
 

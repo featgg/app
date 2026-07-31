@@ -158,6 +158,63 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — Steam recent_games art', () {
+    SteamCardData parseWithRecent(List<dynamic> recent) {
+      final raw = Map<String, dynamic>.from(_steamWidgetData);
+      raw['data'] = <String, dynamic>{
+        'library_showcase': <dynamic>[],
+        'recent_games': recent,
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+      return card.data! as SteamCardData;
+    }
+
+    test('recent_games entries carry their icon and hero art', () {
+      final data = parseWithRecent([
+        <String, dynamic>{
+          'app_id': 730,
+          'title': 'CS2',
+          'hours_2weeks': 12,
+          'icon_image': 'https://cdn.example/730_capsule.jpg',
+          'hero_image': 'https://cdn.example/730_library.jpg',
+        },
+      ]);
+
+      final entry = data.recentGames.single;
+      expect(entry.iconImage, 'https://cdn.example/730_capsule.jpg');
+      expect(entry.heroImage, 'https://cdn.example/730_library.jpg');
+    });
+
+    test('a wrong-typed image on a recent entry degrades to null', () {
+      // Images are optional: a malformed url must not throw, which would take
+      // down the whole Steam block over one bad entry.
+      final data = parseWithRecent([
+        <String, dynamic>{
+          'app_id': 730,
+          'title': 'CS2',
+          'hours_2weeks': 12,
+          'icon_image': 123,
+          'hero_image': 456,
+        },
+      ]);
+
+      final entry = data.recentGames.single;
+      expect(entry.appId, 730);
+      expect(entry.iconImage, isNull);
+      expect(entry.heroImage, isNull);
+    });
+
+    test('absent images read as null', () {
+      final data = parseWithRecent([
+        <String, dynamic>{'app_id': 730, 'title': 'CS2', 'hours_2weeks': 12},
+      ]);
+
+      final entry = data.recentGames.single;
+      expect(entry.iconImage, isNull);
+      expect(entry.heroImage, isNull);
+    });
+  });
+
   group('gameCardFromDto — Steam library_showcase achievement pair', () {
     LibraryShowcaseEntry parseFirstShowcase(Object? achieved, Object? total) {
       final entry = <String, dynamic>{

@@ -68,14 +68,22 @@ final class RecentGameEntry extends Equatable {
     required this.appId,
     required this.title,
     required this.hours2Weeks,
+    this.iconImage,
+    this.heroImage,
   });
 
   final int appId;
   final String title;
   final num hours2Weeks;
 
+  /// Capsule crop url, or null (envelope image rules).
+  final String? iconImage;
+
+  /// Portrait cover url, or null (envelope image rules).
+  final String? heroImage;
+
   @override
-  List<Object?> get props => [appId, title, hours2Weeks];
+  List<Object?> get props => [appId, title, hours2Weeks, iconImage, heroImage];
 }
 
 /// A perfect-game entry in Steam `widget_data.data.perfect_showcase` — a
