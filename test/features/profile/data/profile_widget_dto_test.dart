@@ -903,5 +903,107 @@ void main() {
 
       expect(artFramingFromSettings(settingsWithFraming(w, framing)), framing);
     });
+
+    group('the size the picture is drawn at', () {
+      const w = ProfileWidget(
+        id: 'w-1',
+        kind: ProfileWidgetKind.art,
+        platform: null,
+        position: 0,
+        isEnabled: true,
+      );
+
+      test('a stored size is read back', () {
+        final read = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(framing: {'x': 0.25, 'y': 0.75, 'scale': 2.0}),
+          ),
+        );
+
+        expect(read!.framing, const ArtFraming(x: 0.25, y: 0.75, scale: 2));
+      });
+
+      test('a row with a point and no size reads as the covering size', () {
+        // Everything already stored is this row, and it has to keep rendering
+        // exactly as it does today.
+        final read = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(_row(framing: {'x': 0.25, 'y': 0.75})),
+        );
+
+        expect(read!.framing.scale, ArtFraming.coverScale);
+      });
+
+      test('a stored size below the covering one is pulled up to it', () {
+        // The floor is enforced against data too, not only against gestures:
+        // no envelope can letterbox a card.
+        final read = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(framing: {'x': 0.5, 'y': 0.5, 'scale': 0.2}),
+          ),
+        );
+
+        expect(read!.framing.scale, ArtFraming.coverScale);
+      });
+
+      test('a stored size above the ceiling is pulled down to it', () {
+        // Same rule in the other direction: stored data cannot zoom past
+        // what the gestures allow.
+        final read = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(framing: {'x': 0.5, 'y': 0.5, 'scale': 40.0}),
+          ),
+        );
+
+        expect(read!.framing.scale, ArtFraming.maxScale);
+      });
+
+      test('a malformed size costs the size, not the framing', () {
+        final read = profileWidgetFromDto(
+          ProfileWidgetDto.fromJson(
+            _row(framing: {'x': 0.25, 'y': 0.75, 'scale': 'big'}),
+          ),
+        );
+
+        expect(read!.framing, const ArtFraming(x: 0.25, y: 0.75));
+      });
+
+      test('the covering size writes no size key', () {
+        // A profile that was only panned keeps writing the bytes it wrote
+        // before the size existed.
+        expect(
+          settingsWithFraming(w, const ArtFraming(x: 0.1, y: 0.9))['framing'],
+          {'x': 0.1, 'y': 0.9},
+        );
+      });
+
+      test('a scaled framing writes the size beside the point', () {
+        expect(
+          settingsWithFraming(
+            w,
+            const ArtFraming(x: 0.1, y: 0.9, scale: 2),
+          )['framing'],
+          {'x': 0.1, 'y': 0.9, 'scale': 2.0},
+        );
+      });
+
+      test('a picture scaled at the middle still writes a framing', () {
+        expect(
+          settingsWithFraming(
+            w,
+            const ArtFraming(x: 0.5, y: 0.5, scale: 2),
+          ).containsKey('framing'),
+          isTrue,
+        );
+      });
+
+      test('serialize -> parse preserves the size', () {
+        const framing = ArtFraming(x: 0.2, y: 0.4, scale: 1.5);
+
+        expect(
+          artFramingFromSettings(settingsWithFraming(w, framing)),
+          framing,
+        );
+      });
+    });
   });
 }
