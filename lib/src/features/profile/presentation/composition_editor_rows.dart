@@ -181,7 +181,17 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       zones: _zones(dragId, region),
       current: _acquired,
     );
-    final side = zone is PairZone ? zone.sideFor(point) : null;
+    final held = _acquired;
+    final side = zone is PairZone
+        ? zone.sideFor(
+            point,
+            // A side is only held against the same target card; landing on a
+            // new one chooses its side fresh.
+            current: held is PairZone && held.targetId == zone.targetId
+                ? _acquiredSide
+                : null,
+          )
+        : null;
     if (zone == _acquired && side == _acquiredSide) return;
     // Each change of target is felt, so the owner knows what a release will do
     // without looking away from the card they are carrying.
@@ -205,11 +215,19 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       _point = null;
     });
     if (dragId == null || zone == null) return;
+    // The layout can change under a held acquisition — the delete affordance
+    // stays live through a drag, and a second finger reaches it — so what was
+    // acquired is re-checked against the layout as it is now. A landing place
+    // that is gone cancels the release rather than being nudged onto another
+    // one: a card must never land somewhere its owner did not aim it.
+    final working = ref.read(profileCompositionProvider).working;
     final composition = ref.read(profileCompositionProvider.notifier);
     switch (zone) {
       case GapZone(:final index):
+        if (index > working.length) return;
         composition.onGapDrop(dragId, index);
       case PairZone(:final targetId):
+        if (!layoutHolds(working, targetId)) return;
         composition.onPairDrop(dragId, targetId, side!);
     }
   }

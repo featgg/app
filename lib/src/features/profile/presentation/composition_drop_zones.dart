@@ -43,8 +43,23 @@ final class PairZone extends DropZone {
   /// the side of the card it is actually on.
   final double cardCenterX;
 
-  DropSide sideFor(Offset point) =>
-      point.dx < cardCenterX ? DropSide.left : DropSide.right;
+  /// Which side of the target card [point] falls on.
+  ///
+  /// [current] is the side the drag already holds on this card: it survives a
+  /// crossing of the centre shorter than [hysteresis], so a pointer wavering
+  /// about the centre settles on one side instead of flipping — repainting the
+  /// mark and ticking — on every sub-pixel crossing. The same deadband the
+  /// zones use on the boundary they share, for the same reason. With nothing
+  /// held yet the centre alone decides.
+  DropSide sideFor(
+    Offset point, {
+    DropSide? current,
+    double hysteresis = PersonalizationLayout.dropHysteresis,
+  }) {
+    final side = point.dx < cardCenterX ? DropSide.left : DropSide.right;
+    if (current == null || side == current) return side;
+    return (point.dx - cardCenterX).abs() > hysteresis ? side : current;
+  }
 
   @override
   List<Object?> get props => [targetId, cardCenterX, rect];

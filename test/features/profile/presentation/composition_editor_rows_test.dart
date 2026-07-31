@@ -21,20 +21,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
-/// Serves a fixed set of owner widgets; every mutation is out of scope here.
+/// Serves the owner widgets and honours a delete, which is the one mutation the
+/// editor can reach while a card is in the air.
 final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
-  _FakeWidgetsRepository(this.widgets);
+  _FakeWidgetsRepository(Iterable<ProfileWidget> widgets)
+    : widgets = [...widgets];
 
   final List<ProfileWidget> widgets;
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
-      right(widgets);
+      right([...widgets]);
 
   @override
   Future<Either<Failure, List<ProfileWidget>>> fetchPublicWidgets(
     String userId,
-  ) async => right(widgets);
+  ) async => right([...widgets]);
+
+  @override
+  Future<Either<Failure, Unit>> removeWidget(String id) async {
+    widgets.removeWhere((w) => w.id == id);
+    return right(unit);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
@@ -171,6 +179,27 @@ Finder _vacatedOrigin() => find.byWidgetPredicate(
   (w) => w is Opacity && w.opacity == PersonalizationLayout.editorOriginOpacity,
 );
 
+/// The accent line the editor draws inside the gap it holds. The gap itself
+/// carries no decoration, so its only decorated descendant is that line.
+Finder _gapMark(int index) => find.descendant(
+  of: find.byKey(Key('compositionGap_$index')),
+  matching: find.byType(DecoratedBox),
+);
+
+/// The accent edge the editor draws on the card a pair drop is aimed at:
+/// exactly one of left/right and no horizontal edge, which is what tells it
+/// apart from a card's own border and from the pairable row's glow.
+Finder _sideMark(DropSide side) => find.byWidgetPredicate((w) {
+  if (w is! DecoratedBox) return false;
+  final decoration = w.decoration;
+  if (decoration is! BoxDecoration) return false;
+  final border = decoration.border;
+  if (border is! Border || border.top != BorderSide.none) return false;
+  return side == DropSide.left
+      ? border.left != BorderSide.none && border.right == BorderSide.none
+      : border.right != BorderSide.none && border.left == BorderSide.none;
+});
+
 void main() {
   testWidgets(
     'a seeded Rank (now dual-size) shows a size toggle and bootstraps '
@@ -257,6 +286,60 @@ void main() {
     );
 
     expect(_working(container), before);
+  });
+
+  // The delete affordance stays live while a card is in the air (it is only
+  // disabled during a save) and a second finger reaches it, so the layout can
+  // change under a held acquisition. Both tests below drive that sequence:
+  // hold a landing place, delete the row it was measured against, release.
+  testWidgets('a gap that stopped existing under the drag cancels the drop', (
+    tester,
+  ) async {
+    final container = await _openEditor(tester, const [_rank, _main]);
+    expect(_working(container), const [FullRow('m'), FullRow('r')]);
+
+    final gesture = await _lift(tester, 'm');
+    await gesture.moveTo(
+      tester.getCenter(find.byKey(const Key('compositionGap_2'))),
+    );
+    await tester.pump();
+    // The gap below every row — the one the shortened layout will not have.
+    expect(_gapMark(2), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('compositionDelete_r')));
+    await tester.pumpAndSettle();
+    expect(_working(container), const [FullRow('m')]);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    // The release lands nowhere rather than inserting past the end of what is
+    // left of the layout.
+    expect(_working(container), const [FullRow('m')]);
+  });
+
+  testWidgets('a pair target deleted under the drag cancels the drop', (
+    tester,
+  ) async {
+    final container = await _openEditor(tester, const [_rank, _main]);
+
+    final gesture = await _lift(tester, 'm');
+    final target = tester.getRect(find.byKey(personalizationCardKey('r')));
+    await gesture.moveTo(Offset(target.left + 8, target.center.dy));
+    await tester.pump();
+    // Aimed at the left of the Rank card, which is what a release would pair.
+    expect(_sideMark(DropSide.left), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('compositionDelete_r')));
+    await tester.pumpAndSettle();
+    expect(_working(container), const [FullRow('m')]);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    // The card that was in the air is still placed: pairing beside a target
+    // that is gone would lift it out of its row and never put it back.
+    expect(_working(container), const [FullRow('m')]);
   });
 
   testWidgets('the lifted card is the card', (tester) async {

@@ -89,6 +89,41 @@ void main() {
     expect(_pair.sideFor(const Offset(320, 110)), DropSide.right);
   });
 
+  test('the held side survives a crossing of the centre shorter than the '
+      'deadband, and yields to one past it', () {
+    const deadband = PersonalizationLayout.dropHysteresis;
+    // Holding the left side, the pointer wavers just past the card's centre.
+    expect(
+      _pair.sideFor(
+        const Offset(180 + deadband - 1, 110),
+        current: DropSide.left,
+      ),
+      DropSide.left,
+    );
+    expect(
+      _pair.sideFor(
+        const Offset(180 + deadband + 1, 110),
+        current: DropSide.left,
+      ),
+      DropSide.right,
+    );
+    // Mirrored, holding the right side.
+    expect(
+      _pair.sideFor(
+        const Offset(180 - deadband + 1, 110),
+        current: DropSide.right,
+      ),
+      DropSide.right,
+    );
+    expect(
+      _pair.sideFor(
+        const Offset(180 - deadband - 1, 110),
+        current: DropSide.right,
+      ),
+      DropSide.left,
+    );
+  });
+
   test('a point past the radius outside the bounds holds nothing', () {
     expect(
       resolveDropZone(

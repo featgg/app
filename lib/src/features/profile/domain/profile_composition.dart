@@ -90,6 +90,10 @@ List<ProfileLayoutRow> normalizeLayout(
   return out;
 }
 
+/// Whether [rows] still place [id] in some slot.
+bool layoutHolds(List<ProfileLayoutRow> rows, String id) =>
+    rows.any((row) => _cardIds(row).contains(id));
+
 /// The row indices that light up while [dragId] is lifted: rows where [dragId]
 /// can legally pair — [dragId] and some other card in the row both support half,
 /// and the row has room (it is full, an orphan, or already holds [dragId]).
