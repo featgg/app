@@ -110,3 +110,5 @@ message, and do not report it to crash reporting.
 ## Cross-references
 
 - `auth.md` — issues the bearer token every operation requires.
+- `profile.md` — the owner-scoped read that reports whether a deletion is
+  pending.

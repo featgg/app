@@ -23,13 +23,14 @@ it — a user can update only their own profile.
   `bio`, `theme_id`, `privacy_level`, `featured_platform`, `header_platform`,
   `layout`, `created_at`. A public profile exposes these to anyone; a private profile is
   readable only by its owner.
-- **Owner-only readable column.** `deletion_requested_at` — readable only by the
-  owner, server-managed, and never client-writable (see below). It is not part
-  of the public readable set above, even on a public profile.
+- **`deletion_requested_at`.** Server-managed and never client-writable. It is
+  **not** part of the readable set above: the client does not select it. The
+  signed-in user's pending-deletion state is read through the owner-scoped
+  operation in § Deletion status below.
 - **Writable columns (owner only).** `display_name`, `bio`, `theme_id`,
   `privacy_level`, `featured_platform`, `header_platform`.
 - **Server-managed (read-only to the client).** `id`, `created_at`,
-  `last_updated_at`, `deletion_requested_at`, `layout`, and `avatar_url`. Never
+  `last_updated_at`, `layout`, and `avatar_url`. Never
   client-writable directly; `avatar_url` is updated by the upload endpoint
   (see `avatar.md`). `layout` is written through the owner-scoped layout write
   operation, not this update surface (see `personalization.md` § Layout write
@@ -70,6 +71,31 @@ it — a user can update only their own profile.
 - **Ordering / pagination.** Reads are single-row: the signed-in user's own
   profile, or one public profile looked up by `username`. No pagination.
 
+## Deletion status (owner-scoped read)
+
+Whether a deletion is pending for the signed-in account is read through a
+dedicated owner-scoped server operation, not through the profile row. The
+backend is treated as an opaque HTTPS service. The operations that request,
+confirm, and cancel a deletion live in `account-deletion.md`.
+
+### Shape 1 (server operation)
+
+- **Operation.** `POST /rest/v1/rpc/get_my_deletion_status`
+- **Headers.** `Authorization: Bearer <jwt>`, `Content-Type: application/json`.
+- **Auth.** Requires a valid session; an anonymous caller may not execute it.
+  Always reports on the caller's own account — the identity comes from the
+  session and there is no target field, so it can never return another
+  account's value.
+- **Request body.** Empty: `{}` (the operation takes no arguments).
+- **Success.** `200` — the caller's pending-deletion timestamp as an ISO 8601
+  JSON string, or `null` when no deletion is pending. The grace period runs 7
+  days from that timestamp (see `account-deletion.md`).
+- **Errors.** JSON `{ code, message, … }`. Branch on `code`/status, never on
+  `message`:
+  - `401` — the session is invalid or expired; re-authenticate.
+  - `5xx` / other — transient; surface a generic error and allow a retry.
+- **Idempotency and retry semantics.** A read; safe to retry.
+
 ## Out-of-band side effects
 
 Setting `privacy_level` propagates server-side to the visibility of the
@@ -80,6 +106,8 @@ user's game cards (see `feed.md`): private hides them, public restores them.
 - `auth.md` — issues the session token and provisions the profile at sign-up.
 - `avatar.md` — the upload operation that writes `avatar_url` server-side.
 - `feed.md` — the user's public game cards, gated by the same `privacy_level`.
+- `account-deletion.md` — requests, confirms, and cancels the deletion this
+  status reports.
 
 ## Notes
 
