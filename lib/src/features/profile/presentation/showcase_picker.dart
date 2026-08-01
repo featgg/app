@@ -12,6 +12,7 @@ import '../domain/game_collector_value_resolver.dart';
 import '../domain/main_value_resolver.dart';
 import '../domain/profile_widget.dart';
 import '../domain/rank_value_resolver.dart';
+import '../domain/rarest_achievement_value_resolver.dart';
 import '../domain/recent_value_resolver.dart';
 import '../domain/showcase_selection.dart';
 import 'collection_picker.dart';
@@ -44,6 +45,7 @@ final Set<Platform> _catalogUniverse = {
   ...kRankPlatforms,
   ...kMainPlatforms,
   ...kRecentPlatforms,
+  ...kRarestAchievementPlatforms,
 };
 
 /// Showcase text sits on the dark art scrim in BOTH themes, so its neutral
@@ -184,6 +186,16 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         _milestoneRow(l10n, steamLibrary),
         _completionistRow(l10n, steamCard, nextPosition),
       ],
+      // Driven by the platform set, so a platform publishing no achievement
+      // rarity gets no row at all rather than a disabled one.
+      for (final platform in kRarestAchievementPlatforms)
+        if (linked.contains(platform))
+          _rarestRow(
+            l10n,
+            platform,
+            resolveRarestAchievement(cardFor(platform)) != null,
+            nextPosition,
+          ),
     ];
     final whatIOwnRows = steamLinked
         ? _collectionRows(l10n, steamCard, steamLibrary, nextPosition)
@@ -333,6 +345,41 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       label: label,
       onAcquire: (controller) =>
           controller.addRecent(platform: platform, position: nextPosition),
+    );
+  }
+
+  /// The Rarest Achievement row for [platform]: added when already placed,
+  /// disabled with a reason when the platform published no achievement rarity,
+  /// otherwise a single-tap offer. Labelled by card name rather than by
+  /// platform, like the Recent row.
+  Widget _rarestRow(
+    AppLocalizations l10n,
+    Platform platform,
+    bool hasData,
+    int nextPosition,
+  ) {
+    final label = l10n.addCatalogRowRarest;
+    if (widget.existing.any(
+      (w) =>
+          w.kind == ProfileWidgetKind.rarestAchievement &&
+          w.platform == platform,
+    )) {
+      return _addedRow(Key('rarestAddedRow_${platform.name}'), label);
+    }
+    if (!hasData) {
+      return _disabledRow(
+        Key('rarestDisabledRow_${platform.name}'),
+        label,
+        l10n.addCatalogReasonRarestNoData,
+      );
+    }
+    return _AddRow(
+      rowKey: Key('rarestAddRow_${platform.name}'),
+      label: label,
+      onAcquire: (controller) => controller.addRarestAchievement(
+        platform: platform,
+        position: nextPosition,
+      ),
     );
   }
 
