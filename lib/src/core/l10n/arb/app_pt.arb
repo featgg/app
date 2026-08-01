@@ -334,7 +334,7 @@
   "profileComposeDone": "Concluir",
   "profileComposeCancel": "Cancelar",
   "profileEditSaveFailed": "Não foi possível salvar suas alterações. Tente novamente.",
-  "profileComposeHint": "Arraste um cartão entre as linhas para largura total, ou ao lado de outro para emparelhá-los.",
+  "profileComposeHint": "Arraste um cartão entre as linhas para movê-lo, ou ao lado de outro para emparelhá-los.",
   "profileComposeDragHandleLabel": "Arraste para mover o cartão",
   "profileComposeSizeToggleLabel": "Alternar o tamanho do cartão",
   "profileComposeDeleteLabel": "Excluir cartão",
