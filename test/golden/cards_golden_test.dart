@@ -454,6 +454,99 @@ void main() {
     });
   });
 
+  group('Rarest Achievement', () {
+    final widget = goldenWidget(
+      id: 'rarest',
+      kind: ProfileWidgetKind.rarestAchievement,
+      platform: Platform.steam,
+    );
+    // File-local: only this card reads a rarest block.
+    Map<Platform, GameCard?> cards({
+      String? gameIconImage = goldenArtUrlA,
+      String name = 'Ashes to Ashes',
+      String game = 'Counter-Strike',
+    }) => _steam(
+      data: SteamCardData(
+        libraryShowcase: const [],
+        recentGames: const [],
+        rarestAchievement: RarestAchievement(
+          name: name,
+          game: game,
+          rarityPct: 0.31,
+          rarityBasis: 'GAME_PLAYERS',
+          iconImage: goldenArtUrlB,
+          gameIconImage: gameIconImage,
+        ),
+      ),
+    );
+
+    goldenTest("full bleeds the game's art under the achievement, the game "
+        'and the rarity', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards(),
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/rarest_full.png'),
+      );
+    });
+
+    goldenTest('half bleeds the same art at the pair aspect', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.half),
+        width: goldenHalfWidth,
+        cards: cards(),
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/rarest_half.png'),
+      );
+    });
+
+    goldenTest('no game art renders framed with the achievement badge', (
+      tester,
+    ) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards(gameIconImage: null),
+        art: const {goldenArtUrlB: goldenArtColorB},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/rarest_full_no_art.png'),
+      );
+    });
+
+    goldenTest('half ellipsizes a long achievement name and a long game name '
+        'at the narrowest width', (tester) async {
+      // This card stacks three ellipsizable lines on a half, which is where it
+      // can regress.
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.half),
+        width: goldenHalfWidth,
+        cards: cards(name: _longTitle, game: _longTitle),
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/rarest_half_long_name.png'),
+      );
+    });
+  });
+
   group('Collection', () {
     final widget = goldenWidget(
       id: 'collection',

@@ -104,6 +104,15 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
         (repo) => repo.addRecentWidget(platform: platform, position: position),
       );
 
+  /// Adds a rarest-achievement widget bound to [platform] at [position].
+  Future<void> addRarestAchievement({
+    required Platform platform,
+    required int position,
+  }) => _run(
+    (repo) =>
+        repo.addRarestAchievementWidget(platform: platform, position: position),
+  );
+
   /// Adds an art widget at [position]. Without [source] the card
   /// resolves its own picture at render time; with one it pins that platform.
   Future<void> addArt({Platform? source, required int position}) =>

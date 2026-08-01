@@ -1286,6 +1286,23 @@
   "@cardStatVeterancyYears": {
     "description": "Card datum label for the veterancyYears stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
   },
+  "cardStatRarity": "Rarity",
+  "@cardStatRarity": {
+    "description": "Card datum label for a rarity whose basis this build does not recognize. Names the concept without claiming what the percentage is measured against."
+  },
+  "cardStatRarityGamePlayers": "Players",
+  "@cardStatRarityGamePlayers": {
+    "description": "Card datum label for a rarity measured against the game's players: the value reads as the percentage of players who hold the achievement. Terse on purpose — a supporting label gets about a third of a datum row."
+  },
+  "cardValueRarityBelow": "<{value}",
+  "@cardValueRarityBelow": {
+    "description": "A rarity finer than the card states, shown as a bound rather than as a rounded zero.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "cardValueHours": "{value} h",
   "@cardValueHours": {
     "description": "A playtime value with its unit, for a card whose labels spend their width naming which playtime each number is.",
@@ -1366,6 +1383,14 @@
   "addCatalogReasonRecentNoData": "No recent activity yet.",
   "@addCatalogReasonRecentNoData": {
     "description": "Reason on a disabled add-card catalog Recent row when the linked platform's card publishes no recent activity."
+  },
+  "addCatalogRowRarest": "Rarest achievement",
+  "@addCatalogRowRarest": {
+    "description": "Label of the add-card catalog's Rarest Achievement row, named by card rather than by platform."
+  },
+  "addCatalogReasonRarestNoData": "No rare achievement yet.",
+  "@addCatalogReasonRarestNoData": {
+    "description": "Reason on a disabled add-card catalog Rarest Achievement row when the linked platform's card publishes no achievement rarity."
   },
   "addCatalogRowArt": "Art card",
   "@addCatalogRowArt": {

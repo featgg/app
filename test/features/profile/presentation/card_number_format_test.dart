@@ -2,6 +2,7 @@ import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/features/profile/presentation/cards/card_data.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 Future<AppLocalizations> _l10n(String tag) =>
     AppLocalizations.delegate.load(Locale(tag));
@@ -91,6 +92,81 @@ void main() {
       );
     }
   });
+
+  test('a sub-1% rarity keeps the decimals that make it rare', () async {
+    final l10n = await _l10n('en');
+
+    // The adversarial case against reusing formatCardValue: it rounds to a
+    // whole number, so the documented 0.31 would render as 0 — a card claiming
+    // nobody has the achievement the owner is holding.
+    final rendered = formatRarityValue(0.31, l10n);
+    expect(rendered, contains('31'));
+    expect(rendered, isNot(formatRarityValue(0, l10n)));
+  });
+
+  test('the decimal count follows the magnitude', () async {
+    final l10n = await _l10n('en');
+
+    // Two decimals below 1%, one below 10%, none above: the band boundaries
+    // are asserted so the ladder cannot drift.
+    // The exact floor belongs to the stated side, not the bound: 0.01 is the
+    // finest rarity the card states as-is, and asserting it literally is what
+    // keeps the floor comparison strict.
+    expect(formatRarityValue(0.01, l10n), '0.01%');
+    expect(formatRarityValue(0.5, l10n), '0.50%');
+    expect(formatRarityValue(1, l10n), '1.0%');
+    expect(formatRarityValue(9.9, l10n), '9.9%');
+    expect(formatRarityValue(10, l10n), '10%');
+    expect(formatRarityValue(100, l10n), '100%');
+  });
+
+  test('a rarity finer than the card states renders as a bound, never as '
+      'zero', () async {
+    final l10n = await _l10n('en');
+
+    // An ultra-rare achievement is the strongest thing this card can show;
+    // rendering it as 0.00% would hide exactly the best case. The adversarial
+    // rendering is built the way a formatter without the bound would build it,
+    // so dropping the bound turns this red.
+    final roundedZero = NumberFormat.decimalPercentPattern(
+      locale: l10n.localeName,
+      decimalDigits: 2,
+    ).format(0);
+    // The bound the card states instead, composed from the same public surface
+    // rather than spelled out.
+    final bound = l10n.cardValueRarityBelow(formatRarityValue(0.01, l10n));
+    for (final pct in const [0.0001, 0.004, 0.009]) {
+      final rendered = formatRarityValue(pct, l10n);
+      expect(
+        rendered,
+        isNot(roundedZero),
+        reason: '$pct rendered as "$rendered"',
+      );
+      expect(rendered, bound, reason: '$pct rendered as "$rendered"');
+    }
+  });
+
+  test(
+    'the percent form follows the locale, not a symbol written here',
+    () async {
+      final en = await _l10n('en');
+      final es = await _l10n('es');
+      final pt = await _l10n('pt');
+
+      // A hand-written '%' with a '.' separator would satisfy the English
+      // assertions above and be wrong in the other two languages the app ships.
+      final rendered = {
+        formatRarityValue(0.31, en),
+        formatRarityValue(0.31, es),
+        formatRarityValue(0.31, pt),
+      };
+      expect(
+        rendered.length,
+        greaterThan(1),
+        reason: 'every locale rendered 0.31 identically: $rendered',
+      );
+    },
+  );
 
   test('a fractional value does not carry its decimal onto the card', () async {
     final l10n = await _l10n('en');

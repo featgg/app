@@ -358,6 +358,11 @@ abstract final class PersonalizationLayout {
   /// Achievement-grid letter tile edge (mockup `.letter` 42px).
   static const double letterTileSize = 42;
 
+  /// The lone achievement badge on a framed Rarest Achievement card. Larger
+  /// than one tile of a shelf because it is the card's whole content rather
+  /// than one of several.
+  static const double achievementBadgeSize = 64;
+
   /// How many perfect-game letter tiles the Achievement Grid draws; the
   /// `games_perfect` count stays the hero, so extra shelf entries are not drawn.
   static const int achievementGridLetterCap = 5;

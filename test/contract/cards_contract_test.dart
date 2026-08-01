@@ -76,6 +76,25 @@ void main() {
       expect(entry.iconImage, isNotNull);
     });
 
+    test('steam_v1 → rarest_achievement parses with its recorded basis '
+        'token', () {
+      final fixture = loadRecordedFixture('$_dir/steam_v1.json');
+      final steam = _cardFrom(fixture).data! as SteamCardData;
+
+      final rarest = steam.rarestAchievement;
+      expect(rarest, isNotNull);
+      expect(rarest!.name, isNotEmpty);
+      expect(rarest.game, isNotEmpty);
+      expect(rarest.rarityPct, greaterThan(0));
+      // The basis is read from the payload, never assumed: the card labels the
+      // rarity by what the recorded token says it is measured against.
+      final rawRarest =
+          (fixture.payload['data']
+                  as Map<String, dynamic>)['rarest_achievement']
+              as Map<String, dynamic>;
+      expect(rarest.rarityBasis, rawRarest['rarity_basis']);
+    });
+
     test('wow_retail_v1 → WowRetailCardData; best-run completedTimestamp '
         'derives from epoch ms', () {
       final card = _cardFrom(loadRecordedFixture('$_dir/wow_retail_v1.json'));

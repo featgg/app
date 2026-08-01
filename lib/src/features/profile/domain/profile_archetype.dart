@@ -13,6 +13,7 @@ enum ProfileArchetype {
   recent,
   collection,
   achievementGrid,
+  rarestAchievement,
   art,
 }
 
@@ -36,6 +37,7 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.collection ||
   ProfileWidgetKind.gameCollector => ProfileArchetype.collection,
   ProfileWidgetKind.completionist => ProfileArchetype.achievementGrid,
+  ProfileWidgetKind.rarestAchievement => ProfileArchetype.rarestAchievement,
   ProfileWidgetKind.art => ProfileArchetype.art,
 };
 
@@ -63,6 +65,9 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   ProfileArchetype.collection => ProfileCardFormat.framed,
   // A shelf of many entries.
   ProfileArchetype.achievementGrid => ProfileCardFormat.framed,
+  // The game art the payload publishes on the achievement's own block; with
+  // none, the achievement's badge becomes the framed variant's content.
+  ProfileArchetype.rarestAchievement => ProfileCardFormat.bleed,
   // The picture is the whole card — this is the one archetype whose art is not
   // illustrating a number, because it has none.
   ProfileArchetype.art => ProfileCardFormat.bleed,
@@ -99,7 +104,8 @@ ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.recent => ProfileCardCategory.whatIPlay,
   ProfileWidgetKind.rank => ProfileCardCategory.howGoodIAm,
   ProfileWidgetKind.showcase ||
-  ProfileWidgetKind.completionist => ProfileCardCategory.whatIAchieved,
+  ProfileWidgetKind.completionist ||
+  ProfileWidgetKind.rarestAchievement => ProfileCardCategory.whatIAchieved,
   ProfileWidgetKind.collection ||
   ProfileWidgetKind.gameCollector => ProfileCardCategory.whatIOwn,
   ProfileWidgetKind.art => ProfileCardCategory.art,
@@ -143,6 +149,12 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   // offers them no side-drop and no size toggle.
   ProfileArchetype.collection => const {ProfileCardSize.full},
   ProfileArchetype.achievementGrid => const {ProfileCardSize.full},
+  // One subject line, one context line and one figure: the shape a half already
+  // carries, while the full variant gives a long achievement name its width.
+  ProfileArchetype.rarestAchievement => const {
+    ProfileCardSize.full,
+    ProfileCardSize.half,
+  },
   // Both sizes: a picture is worth placing wide or beside something.
   ProfileArchetype.art => const {ProfileCardSize.full, ProfileCardSize.half},
 };

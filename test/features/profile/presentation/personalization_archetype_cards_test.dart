@@ -1022,6 +1022,202 @@ void main() {
     expect(_artFor(_coverA), findsOneWidget);
   });
 
+  ProfileWidget rarestWidget() => _widget(
+    id: 'ra',
+    kind: ProfileWidgetKind.rarestAchievement,
+    platform: Platform.steam,
+  );
+
+  Map<Platform, GameCard?> steamRarest({RarestAchievement? rarest}) => {
+    Platform.steam: _cardData(
+      Platform.steam,
+      SteamCardData(
+        libraryShowcase: const [],
+        recentGames: const [],
+        rarestAchievement: rarest,
+      ),
+    ),
+  };
+
+  const rarestBlock = RarestAchievement(
+    name: 'Ashes to Ashes',
+    game: 'Counter-Strike',
+    rarityPct: 0.31,
+    rarityBasis: 'GAME_PLAYERS',
+    iconImage: _coverB,
+    gameIconImage: _coverA,
+  );
+
+  /// The three facts the card exists to state, each read back through the
+  /// card's own formatter / label lookup rather than spelled out here.
+  void expectNamesAllThree(RarestAchievement rarest, String rarityKey) {
+    for (final text in [
+      rarest.name,
+      rarest.game,
+      formatRarityValue(rarest.rarityPct, _en),
+      cardStatLabel(_en, rarityKey)!.toUpperCase(),
+    ]) {
+      expect(
+        find.ancestor(
+          of: find.text(text),
+          matching: find.byType(PersonalizationDatum),
+        ),
+        findsOneWidget,
+        reason: text,
+      );
+    }
+  }
+
+  testWidgets("RarestAchievementCard with the game's art bleeds over it and "
+      'names achievement, game and rarity in the datum', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RarestAchievementCard(
+          widget: rarestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRarest(rarest: rarestBlock),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The game's art is the picture; the badge is not bled across the card.
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(_artFor(_coverB), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsOneWidget,
+    );
+    expectNamesAllThree(rarestBlock, 'rarity_game_players');
+  });
+
+  testWidgets('RarestAchievementCard with no game art renders the framed '
+      'ground with the achievement badge, and still names all three', (
+    tester,
+  ) async {
+    const noGameArt = RarestAchievement(
+      name: 'Ashes to Ashes',
+      game: 'Counter-Strike',
+      rarityPct: 0.31,
+      rarityBasis: 'GAME_PLAYERS',
+      iconImage: _coverB,
+    );
+    await tester.pumpWidget(
+      _harness(
+        card: RarestAchievementCard(
+          widget: rarestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRarest(rarest: noGameArt),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    // The badge lands in the framed variant's content slot, where the card has
+    // room for it and nothing else to show.
+    expect(_artFor(_coverB), findsOneWidget);
+    expectNamesAllThree(noGameArt, 'rarity_game_players');
+  });
+
+  testWidgets('RarestAchievementCard with neither picture keeps the badge '
+      "tile's placeholder, never a broken image", (tester) async {
+    const noArt = RarestAchievement(
+      name: 'Ashes to Ashes',
+      game: 'Counter-Strike',
+      rarityPct: 0.31,
+      rarityBasis: 'GAME_PLAYERS',
+    );
+    await tester.pumpWidget(
+      _harness(
+        card: RarestAchievementCard(
+          widget: rarestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRarest(rarest: noArt),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(
+      find.byKey(const Key('personalizationRarestBadge_ra')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('personalizationRarestBadge_ra')),
+        matching: find.byType(PersonalizationDiamond),
+      ),
+      findsOneWidget,
+    );
+    expectNamesAllThree(noArt, 'rarity_game_players');
+  });
+
+  testWidgets('RarestAchievementCard renders the generic label for a basis '
+      'this build does not know', (tester) async {
+    const unknownBasis = RarestAchievement(
+      name: 'Ashes to Ashes',
+      game: 'Counter-Strike',
+      rarityPct: 0.31,
+      rarityBasis: 'GLOBAL_ACCOUNTS',
+      gameIconImage: _coverA,
+    );
+    await tester.pumpWidget(
+      _harness(
+        card: RarestAchievementCard(
+          widget: rarestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRarest(rarest: unknownBasis),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // An additive backend token must not blank the card; it renders with the
+    // label that names the concept without claiming a denominator.
+    expectNamesAllThree(unknownBasis, 'rarity');
+    expect(
+      find.text(cardStatLabel(_en, 'rarity_game_players')!.toUpperCase()),
+      findsNothing,
+    );
+  });
+
+  testWidgets('RarestAchievementCard with no rarest achievement renders the '
+      'no-data card', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RarestAchievementCard(
+          widget: rarestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRarest(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(
+      find.byKey(const Key('personalizationRarestBadge_ra')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.byType(Text),
+      ),
+      findsNothing,
+    );
+  });
+
   Map<Platform, GameCard?> lolRankCards() => {
     Platform.leagueOfLegends: _cardData(
       Platform.leagueOfLegends,

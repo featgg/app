@@ -128,6 +128,10 @@ void main() {
       expect(profileWidgetKindToWire(ProfileWidgetKind.rank), 'rank');
       expect(profileWidgetKindToWire(ProfileWidgetKind.main), 'main');
       expect(profileWidgetKindToWire(ProfileWidgetKind.recent), 'recent');
+      expect(
+        profileWidgetKindToWire(ProfileWidgetKind.rarestAchievement),
+        'rarest_achievement',
+      );
       expect(profileWidgetKindToWire(ProfileWidgetKind.art), 'art');
     });
   });
@@ -216,6 +220,36 @@ void main() {
         ),
       );
       expect(widget, isNull);
+    });
+  });
+
+  group('rarest_achievement binding (platform-BOUND, bare envelope)', () {
+    test('a rarest_achievement row round-trips to the kind with its '
+        'platform', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'rarest_achievement', platform: 'steam'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.rarestAchievement);
+      expect(widget.platform, Platform.steam);
+    });
+
+    test('a rarest_achievement row with an absent or unknown platform is '
+        'dropped', () {
+      for (final platform in const [null, 'not_a_platform']) {
+        expect(
+          profileWidgetFromDto(
+            ProfileWidgetDto.fromJson(
+              _row(type: 'rarest_achievement', platform: platform),
+            ),
+          ),
+          isNull,
+          reason: 'platform: $platform',
+        );
+      }
     });
   });
 

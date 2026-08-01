@@ -215,8 +215,7 @@ guarantee. `rarity_pct` is a percentage; `rarity_basis` names what that
 percentage is measured against, and `GAME_PLAYERS` is the only value today.
 Read the basis rather than assuming a denominator: a platform added later may
 measure rarity differently, and a hard-coded "% of players" would then be
-wrong. Nothing decodes these fields yet — the Recent and Rarest Achievement
-cards are where that lands.
+wrong.
 
 `library_showcase[]` entries may carry an optional achievements pair:
 `achieved` (integer ≥ 0, unlocked count) and `total` (integer > 0,

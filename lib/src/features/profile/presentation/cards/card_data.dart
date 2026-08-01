@@ -6,6 +6,7 @@ import '../../../connections/domain/game_card.dart';
 import '../../../connections/domain/platform_descriptor.dart';
 import '../../domain/completionist_value_resolver.dart';
 import '../../domain/game_collector_value_resolver.dart';
+import '../../domain/rarest_achievement_value_resolver.dart';
 import '../../domain/recent_value_resolver.dart';
 import '../../domain/showcase_selection.dart';
 import '../../domain/showcase_value_resolver.dart';
@@ -169,6 +170,57 @@ List<PersonalizationStat> recentStats(
   ];
 }
 
+/// The rarity below which the card states a bound rather than an exact figure.
+/// Finer than this the figure stops being readable at datum size, and a rounded
+/// rendering would read as zero — which is the one thing an ultra-rare
+/// achievement is not.
+const double _rarityStatedFloor = 0.01;
+
+/// [pct] as a locale-formatted percentage carrying [digits] decimals. The
+/// pattern (not a `%` written here) so the symbol, its spacing and the decimal
+/// separator all come from the reader's locale; it multiplies by 100, hence the
+/// division — the payload publishes a percentage, not a fraction.
+String _rarityPercent(num pct, int digits, AppLocalizations l10n) =>
+    NumberFormat.decimalPercentPattern(
+      locale: l10n.localeName,
+      decimalDigits: digits,
+    ).format(pct / 100);
+
+/// A rarity as the card states it: a percentage in the reader's locale, carrying
+/// only the decimals the figure needs — two below 1%, where a rounded figure
+/// would throw away the very thing that makes an achievement rare, and none past
+/// 10%, where they would only cost width. A figure finer than the card states
+/// renders as a bound rather than as a rounded zero.
+///
+/// [formatCardValue] is deliberately not reused: it rounds to a whole number,
+/// which would render a rarity of 0.31 as 0.
+String formatRarityValue(num pct, AppLocalizations l10n) {
+  if (pct < _rarityStatedFloor) {
+    return l10n.cardValueRarityBelow(
+      _rarityPercent(_rarityStatedFloor, 2, l10n),
+    );
+  }
+  return _rarityPercent(pct, pct >= 10 ? 0 : (pct >= 1 ? 1 : 2), l10n);
+}
+
+/// The Rarest Achievement datum: one entry — the rarity, labelled by what the
+/// payload says the percentage is measured against. Empty for a null resolve
+/// (the neutral no-data card).
+List<PersonalizationStat> rarestAchievementStats(
+  ResolvedRarestAchievement? resolved,
+  AppLocalizations l10n,
+) {
+  if (resolved == null) return const [];
+  final label = cardStatLabel(l10n, resolved.rarityKey);
+  if (label == null) return const [];
+  return [
+    PersonalizationStat(
+      value: formatRarityValue(resolved.rarityPct, l10n),
+      label: label,
+    ),
+  ];
+}
+
 /// The uppercased first character of a perfect-game [title] for its letter tile,
 /// or null for an empty title (that tile is skipped). Reads the first Unicode
 /// code point so an astral leading character is not split mid-surrogate.
@@ -221,6 +273,8 @@ const List<String> cardStatKeys = [
   'total_ap',
   'account_age_hours',
   'veterancy_years',
+  'rarity',
+  'rarity_game_players',
 ];
 
 /// A card's label for [key]: the terse noun, without the platform. Distinct
@@ -254,6 +308,11 @@ String? cardStatLabel(AppLocalizations l10n, String key) => switch (key) {
   'total_ap' => l10n.cardStatTotalAp,
   'account_age_hours' => l10n.cardStatAccountAgeHours,
   'veterancy_years' => l10n.cardStatVeterancyYears,
+  // The two rarity labels name the denominator the payload declared. The
+  // generic one carries a basis this build does not know, so it names the
+  // concept without claiming what the percentage is measured against.
+  'rarity' => l10n.cardStatRarity,
+  'rarity_game_players' => l10n.cardStatRarityGamePlayers,
   _ => null,
 };
 

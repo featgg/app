@@ -46,6 +46,13 @@ void main() {
       );
     });
 
+    test('rarest_achievement maps to its own archetype', () {
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.rarestAchievement)),
+        ProfileArchetype.rarestAchievement,
+      );
+    });
+
     test('collection and game_collector → collection, completionist → '
         'achievement grid', () {
       expect(
@@ -111,6 +118,16 @@ void main() {
       });
     });
 
+    test('rarest achievement supports full and half', () {
+      // One subject line, one context line and one figure: the shape a half
+      // already carries, while the full variant gives a long achievement name
+      // the width it usually needs.
+      expect(supportedSizes(ProfileArchetype.rarestAchievement), {
+        ProfileCardSize.full,
+        ProfileCardSize.half,
+      });
+    });
+
     test('rank supports both full and half (not half-only)', () {
       expect(supportedSizes(ProfileArchetype.rank), {
         ProfileCardSize.full,
@@ -136,6 +153,8 @@ void main() {
         ProfileArchetype.milestone,
         ProfileArchetype.main,
         ProfileArchetype.recent,
+        // The payload publishes the game's art on the achievement's own block.
+        ProfileArchetype.rarestAchievement,
       ]) {
         expect(
           cardFormat(archetype),
@@ -246,6 +265,16 @@ void main() {
         ProfileCardCategory.whatIOwn,
       );
       expect(cardCategory(ProfileWidgetKind.art), ProfileCardCategory.art);
+    });
+
+    test('rarest achievement answers "what I achieved"', () {
+      // Without its own arm the `_ => null` default would swallow it and a
+      // fresh composition would seed it last instead of with the other
+      // accomplishment cards.
+      expect(
+        cardCategory(ProfileWidgetKind.rarestAchievement),
+        ProfileCardCategory.whatIAchieved,
+      );
     });
 
     test('the kind outside the model resolves to no category', () {

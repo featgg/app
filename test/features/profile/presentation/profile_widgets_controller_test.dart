@@ -36,6 +36,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   int? lastMainPosition;
   Platform? lastRecentPlatform;
   int? lastRecentPosition;
+  Platform? lastRarestPlatform;
+  int? lastRarestPosition;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -214,6 +216,25 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
       ProfileWidget(
         id: 'new',
         kind: ProfileWidgetKind.recent,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRarestAchievementWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    mutations.add('addRarestAchievement');
+    lastRarestPlatform = platform;
+    lastRarestPosition = position;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.rarestAchievement,
         platform: platform,
         position: position,
         isEnabled: true,
@@ -441,6 +462,29 @@ void main() {
       expect(repo.mutations, ['addRecent']);
       expect(repo.lastRecentPlatform, Platform.steam);
       expect(repo.lastRecentPosition, 5);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addRarestAchievement delegates to the repository and invalidates the '
+        'read', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addRarestAchievement(platform: Platform.steam, position: 7);
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addRarestAchievement']);
+      expect(repo.lastRarestPlatform, Platform.steam);
+      expect(repo.lastRarestPosition, 7);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,

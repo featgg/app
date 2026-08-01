@@ -12,6 +12,7 @@ import 'package:featgg/src/features/profile/domain/collection_selection.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
+import 'package:featgg/src/features/profile/domain/rarest_achievement_value_resolver.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
 import 'package:featgg/src/features/profile/presentation/showcase_picker.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,8 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   int? lastMainPosition;
   Platform? lastRecentPlatform;
   int? lastRecentPosition;
+  Platform? lastRarestPlatform;
+  int? lastRarestPosition;
   Platform? lastArtSource;
   int? lastArtPosition;
 
@@ -210,6 +213,24 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRarestAchievementWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    lastRarestPlatform = platform;
+    lastRarestPosition = position;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.rarestAchievement,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
       right(const []);
 
@@ -299,6 +320,7 @@ GameCard _steamCard(
   List<LibraryShowcaseEntry> library, {
   List<CardStat> stats = const [],
   List<RecentGameEntry> recent = const [],
+  RarestAchievement? rarest,
 }) => GameCard(
   schemaVersion: 1,
   platform: Platform.steam,
@@ -309,7 +331,20 @@ GameCard _steamCard(
   profileUrl: null,
   stats: stats,
   lastUpdated: DateTime.utc(2026, 6, 1),
-  data: SteamCardData(libraryShowcase: library, recentGames: recent),
+  data: SteamCardData(
+    libraryShowcase: library,
+    recentGames: recent,
+    rarestAchievement: rarest,
+  ),
+);
+
+/// A published rarest achievement, art-less so no image decodes in a widget
+/// test.
+const _rarest = RarestAchievement(
+  name: 'Ashes to Ashes',
+  game: 'Game 730',
+  rarityPct: 0.31,
+  rarityBasis: 'GAME_PLAYERS',
 );
 
 GameCard _card(Platform platform, CardData data, {String? heroImage}) =>
@@ -458,6 +493,15 @@ ProfileWidget _artWidget(Platform source, {required int position}) =>
       position: position,
       isEnabled: true,
       artSelection: ArtSelection(source: source),
+    );
+
+ProfileWidget _rarestWidget(Platform platform, {required int position}) =>
+    ProfileWidget(
+      id: 'rarest-${platform.name}',
+      kind: ProfileWidgetKind.rarestAchievement,
+      platform: platform,
+      position: position,
+      isEnabled: true,
     );
 
 ProfileWidget _recentWidget(Platform platform, {required int position}) =>
@@ -911,6 +955,118 @@ void main() {
 
     expect(find.byKey(const Key('recentAddedRow_steam')), findsOneWidget);
     expect(find.byKey(const Key('recentAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Rarest row: the What I achieved group offers it when Steam '
+      'publishes rarity, and the tap writes a rarest widget for Steam', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([_entry(730)], rarest: _rarest),
+        }),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.steam],
+        // A widget at position 2 proves the insert lands at max+1.
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // The row belongs to the "What I achieved" group: the nearest Column above
+    // the header is the group itself, so a match under it proves membership.
+    final achievedGroup = find
+        .ancestor(
+          of: find.byKey(const Key('catalogGroupWhatIAchieved')),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      find.descendant(
+        of: achievedGroup,
+        matching: find.byKey(const Key('rarestAddRow_steam')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('rarestAddRow_steam')));
+    await tester.tap(find.byKey(const Key('rarestAddRow_steam')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastRarestPlatform, Platform.steam);
+    expect(widgetsRepo.lastRarestPosition, 3);
+    expect(find.byKey(const Key('rarestAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Rarest row: no published rarity disables the row with its '
+      'reason', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        // A library with games but no rarest block: the card is not offered
+        // just because the account owns something.
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([_entry(730)]),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('rarestDisabledRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('rarestAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Rarest row: an already-placed card reads as added', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([_entry(730)], rarest: _rarest),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: [_rarestWidget(Platform.steam, position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('rarestAddedRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('rarestAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Rarest row: a platform that publishes no rarity is offered no '
+      'row at all', (tester) async {
+    // The catalog loop is driven by the platform set, so a rarity-less platform
+    // does not even get a disabled row — the issue's "platforms without rarity
+    // data do not offer the card".
+    expect(kRarestAchievementPlatforms, {Platform.steam});
+
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({Platform.chess: _chessCard()}),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.chess],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    for (final key in const [
+      'rarestAddRow_chess',
+      'rarestDisabledRow_chess',
+      'rarestAddedRow_chess',
+    ]) {
+      expect(find.byKey(Key(key)), findsNothing, reason: key);
+    }
   });
 
   testWidgets('Milestone row: step-2 reachable; a library tile adds a showcase '
