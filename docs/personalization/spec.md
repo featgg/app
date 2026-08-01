@@ -147,7 +147,7 @@ Card by card:
 | Personal Best | the best I have ever done | full, half | auto | the peak figure with the mode or context it belongs to (#227) |
 | Milestone | what I conquered | full, half | curated pick, auto data | one chosen game's progress |
 | Achievement shelf | how much I completed | full | auto | whole-library completion |
-| Rarest Achievement | the hardest thing I have done | set by the registry when the card lands (#231) | auto | the achievement, its game and how rare it is |
+| Rarest Achievement | the hardest thing I have done | full, half | auto | the achievement, its game and how rare it is |
 | Collection | what I own or chase | full | curated | a chosen set of games with progress states |
 | Collector | how big my library is | full | auto | one platform's whole library aggregated |
 | Art | none — it is a picture | full, half | auto art, curation later | added in one tap, unpointed; it falls back to the first linked platform publishing art (§6's image rule) with no datum over it, and reads no other surface's preference. Pointing it at a specific picture arrives with the image picker (§10). Its full variant keeps the 4:5 portrait at column width — a tall plate, not a landscape strip — per §6.1's designed-variant rule |
@@ -189,6 +189,7 @@ The table lists sources, not per-card guarantees; per-card availability is the r
 | `rank` | Rank |
 | `main` | Main |
 | `recent` | Recent |
+| `rarest_achievement` | Rarest Achievement |
 | `passport` | Identity |
 | `art` | Art |
 
