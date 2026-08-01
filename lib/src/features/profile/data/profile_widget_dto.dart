@@ -89,7 +89,8 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
 }
 
 /// Stable `settings` key the art framing is stored under. Additive in the
-/// `schema_version: 1` envelope. Shape: `{ "x": <0..1>, "y": <0..1> }`.
+/// `schema_version: 1` envelope. Shape:
+/// `{ "x": <0..1>, "y": <0..1>, "scale"?: <1..3> }`.
 ///
 /// Top-level rather than inside a kind's sub-object because framing is not a
 /// property of where the picture came from: every kind that renders art can
@@ -101,13 +102,23 @@ const String _framingKey = 'framing';
 /// has always done — so a bad value costs the owner their framing, never the
 /// card. Out-of-range coordinates are pulled back into the picture rather than
 /// discarded: they still name a direction the owner moved in.
+///
+/// The size is the same discipline one level down: a malformed one costs the
+/// size and keeps the point, and one outside the range is pulled into it — so
+/// no stored envelope can draw the picture below the size that covers its
+/// frame.
 ArtFraming artFramingFromSettings(Map<String, dynamic>? settings) {
   final raw = settings?[_framingKey];
   if (raw is! Map) return ArtFraming.center;
   final x = raw['x'];
   final y = raw['y'];
   if (x is! num || y is! num) return ArtFraming.center;
-  return ArtFraming.clamped(x.toDouble(), y.toDouble());
+  final scale = raw['scale'];
+  return ArtFraming.clamped(
+    x.toDouble(),
+    y.toDouble(),
+    scale: scale is num ? scale.toDouble() : ArtFraming.coverScale,
+  );
 }
 
 /// The envelope to write for a framing change: [widget]'s own, with the framing
@@ -124,10 +135,17 @@ Map<String, dynamic> settingsWithFraming(
 ) {
   final next = Map<String, dynamic>.of(widget.storedSettings);
   next['schema_version'] = kProfileWidgetSettingsVersion;
-  if (framing.isCenter) {
+  if (framing.isDefault) {
     next.remove(_framingKey);
   } else {
-    next[_framingKey] = {'x': framing.x, 'y': framing.y};
+    // The size is written only when it is not the covering one, so a profile
+    // that was only panned keeps writing exactly the bytes it wrote before the
+    // size existed.
+    next[_framingKey] = {
+      'x': framing.x,
+      'y': framing.y,
+      if (framing.scale != ArtFraming.coverScale) 'scale': framing.scale,
+    };
   }
   return next;
 }

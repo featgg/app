@@ -107,12 +107,13 @@ Widget _page({
   int cards = 4,
   ProfileArchetype archetype = ProfileArchetype.art,
   List<PersonalizationStat> stats = const [],
+  double width = _cardWidth,
 }) {
   // Bounded here rather than per card: a sliver hands its children the
   // viewport's width whatever they ask for, so a card sized from the inside
   // would silently be the full screen instead.
   Widget list(ScrollPhysics? physics) => SizedBox(
-    width: _cardWidth,
+    width: width,
     child: ListView(
       controller: controller,
       physics: physics,
@@ -157,6 +158,18 @@ Widget _page({
 Alignment _paintedAlignment(WidgetTester tester) => tester
     .widget<CachedNetworkImage>(find.byType(CachedNetworkImage).first)
     .alignment;
+
+/// Every transform the first card draws inside itself. Empty is the claim that
+/// a card at the covering size renders exactly the tree it always did — scoped
+/// to the card because the app around it (the route's own transition) carries
+/// transforms of its own.
+Iterable<Transform> _artTransforms(WidgetTester tester) =>
+    tester.widgetList<Transform>(
+      find.descendant(
+        of: find.byType(PersonalizationCardShell).first,
+        matching: find.byType(Transform),
+      ),
+    );
 
 /// Taps the first card's mark, which is how the owner enters framing mode.
 Future<void> _enterMode(WidgetTester tester) async {
@@ -224,6 +237,124 @@ void main() {
         Size.zero,
       );
     });
+
+    test('a scaled picture overflows its frame on both axes', () {
+      // Covering the frame, a 1600x900 picture is 666.67x375 and hangs off
+      // nowhere vertically. Drawn twice that size it is 1333.33x750, so the
+      // axis that had no travel gains it.
+      final overflow = artOverflow(
+        frame: const Size(300, 375),
+        image: const Size(1600, 900),
+        scale: 2,
+      );
+
+      expect(overflow.width, closeTo(1033.3, 0.1));
+      expect(overflow.height, closeTo(375, 0.1));
+    });
+  });
+
+  group('what the frame shows of the picture', () {
+    // Slack for the arithmetic only: every bound below is exact in real
+    // numbers, so anything larger would be hiding a real escape.
+    const slack = 1e-9;
+    const frames = [Size(300, 375), Size(139, 174)];
+    const images = [Size(1600, 900), Size(400, 500), Size(600, 1600)];
+    const points = [
+      Offset(0.5, 0.5),
+      Offset.zero,
+      Offset(1, 0),
+      Offset(0, 1),
+      Offset(1, 1),
+    ];
+    const scales = [1.0, 1.5, 3.0];
+
+    test('the frame never shows anything but the picture', () {
+      // The one invariant the whole control rests on, stated over every frame,
+      // picture, point and size the app can produce.
+      for (final frame in frames) {
+        for (final image in images) {
+          for (final point in points) {
+            for (final scale in scales) {
+              final framing = ArtFraming(
+                x: point.dx,
+                y: point.dy,
+                scale: scale,
+              );
+              final rect = artVisibleRect(
+                frame: frame,
+                image: image,
+                framing: framing,
+              );
+              final where = '$frame / $image / $point / $scale';
+
+              expect(rect.left, greaterThanOrEqualTo(-slack), reason: where);
+              expect(rect.top, greaterThanOrEqualTo(-slack), reason: where);
+              expect(rect.right, lessThanOrEqualTo(1 + slack), reason: where);
+              expect(rect.bottom, lessThanOrEqualTo(1 + slack), reason: where);
+            }
+          }
+        }
+      }
+    });
+
+    test('a picture drawn below the covering size escapes the frame', () {
+      // The adversarial row: proof the assertion above is able to go red. Only
+      // the const constructor can produce this — every path an owner or an
+      // envelope reaches is clamped to the floor.
+      final rect = artVisibleRect(
+        frame: const Size(300, 375),
+        image: const Size(1600, 900),
+        framing: const ArtFraming(x: 0.5, y: 0.5, scale: 0.5),
+      );
+
+      expect(rect.bottom, greaterThan(1));
+    });
+
+    test('scaling halves what the frame shows', () {
+      const frame = Size(300, 375);
+      const image = Size(1600, 900);
+      final covering = artVisibleRect(
+        frame: frame,
+        image: image,
+        framing: ArtFraming.center,
+      );
+      final twice = artVisibleRect(
+        frame: frame,
+        image: image,
+        framing: const ArtFraming(x: 0.5, y: 0.5, scale: 2),
+      );
+
+      expect(twice.width, closeTo(covering.width / 2, slack));
+      expect(twice.height, closeTo(covering.height / 2, slack));
+    });
+
+    test('the same choice keeps its meaning when the card changes size', () {
+      // Neither the point nor the size is expressed in a frame's own units, so
+      // the same stored choice describes the same region of the picture at
+      // both card sizes.
+      const image = Size(1600, 900);
+      const middle = ArtFraming(x: 0.5, y: 0.5, scale: 2);
+      const leftEdge = ArtFraming(x: 0, y: 0.5, scale: 2);
+
+      for (final frame in frames) {
+        final centred = artVisibleRect(
+          frame: frame,
+          image: image,
+          framing: middle,
+        );
+        expect(centred.center.dx, closeTo(0.5, slack), reason: '$frame');
+        expect(centred.center.dy, closeTo(0.5, slack), reason: '$frame');
+        expect(centred.left, greaterThanOrEqualTo(-slack), reason: '$frame');
+        expect(centred.right, lessThanOrEqualTo(1 + slack), reason: '$frame');
+
+        final flush = artVisibleRect(
+          frame: frame,
+          image: image,
+          framing: leftEdge,
+        );
+        expect(flush.left, 0, reason: '$frame');
+      }
+    });
   });
 
   group('rendering', () {
@@ -271,6 +402,103 @@ void main() {
 
       expect(_paintedAlignment(tester), full);
     });
+
+    testWidgets('a card with no size chosen renders as it always did', (
+      tester,
+    ) async {
+      // On a picture that resolved, so the claim is about the covering size and
+      // not about a card that has nothing to wrap yet.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await tester.pumpWidget(
+        _page(art: url, framing: const ArtFraming(x: 0.25, y: 0.75)),
+      );
+      await tester.pump();
+
+      expect(_artTransforms(tester), isEmpty);
+    });
+
+    testWidgets('only the picture that arrived is drawn larger', (
+      tester,
+    ) async {
+      // A size describes a picture. While one is loading, and forever if it
+      // fails, the card is showing the theme's own ground instead — and the
+      // fallback is that ground as the theme draws it, not a gradient blown up
+      // and pushed off centre by a setting that was never about it.
+      const framing = ArtFraming(x: 0.25, y: 0.75, scale: 2);
+      // Seeded before anything is mounted: the default url is served by
+      // nothing, so a card pointed at it is the card that never resolves.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+
+      await tester.pumpWidget(_page(framing: framing));
+      await tester.pump();
+
+      expect(_artTransforms(tester), isEmpty);
+
+      await tester.pumpWidget(_page(framing: framing, art: url));
+      await tester.pump();
+
+      expect(_artTransforms(tester), hasLength(1));
+    });
+
+    testWidgets(
+      'a scaled card draws the picture larger than its frame, about the '
+      'framing point',
+      (tester) async {
+        // What binds the pure geometry to the tree that actually paints: the
+        // enlargement is anchored on the very alignment the crop uses, so the
+        // two can never disagree about where the picture is held.
+        final url = await _seedArt(tester, width: 1600, height: 900);
+        await tester.pumpWidget(
+          _page(
+            art: url,
+            framing: const ArtFraming(x: 0.25, y: 0.75, scale: 2),
+          ),
+        );
+        await tester.pump();
+
+        final transform = _artTransforms(tester).single;
+
+        expect(transform.transform.getMaxScaleOnAxis(), closeTo(2, 1e-9));
+        expect(transform.alignment, _paintedAlignment(tester));
+      },
+    );
+
+    testWidgets('the size survives the card changing size', (tester) async {
+      const framing = ArtFraming(x: 0.25, y: 0.75, scale: 2);
+      final url = await _seedArt(tester, width: 1600, height: 900);
+
+      await tester.pumpWidget(_page(art: url, framing: framing));
+      await tester.pump();
+      final full = _paintedAlignment(tester);
+      final fullScale = _artTransforms(
+        tester,
+      ).single.transform.getMaxScaleOnAxis();
+
+      await tester.pumpWidget(
+        _page(art: url, framing: framing, size: ProfileCardSize.half),
+      );
+      await tester.pump();
+
+      expect(_paintedAlignment(tester), full);
+      expect(
+        _artTransforms(tester).single.transform.getMaxScaleOnAxis(),
+        fullScale,
+      );
+    });
+
+    testWidgets('a visitor sees the size the owner chose', (tester) async {
+      // No editing scope at all — the read path every visitor gets.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await tester.pumpWidget(
+        _page(art: url, framing: const ArtFraming(x: 1, y: 0, scale: 2)),
+      );
+      await tester.pump();
+
+      expect(
+        _artTransforms(tester).single.transform.getMaxScaleOnAxis(),
+        closeTo(2, 1e-9),
+      );
+    });
   });
 
   group('which cards offer the mark', () {
@@ -282,14 +510,14 @@ void main() {
       expect(find.byType(ArtFramingBadge), findsWidgets);
     });
 
-    testWidgets('a picture the shape of its frame does not', (tester) async {
-      // Nothing is cropped, so there is nothing to move to. A card that
-      // answered the mark with no movement would read as broken.
+    testWidgets('a picture the frame does not crop does too', (tester) async {
+      // Nothing is cropped, so there is nothing to pan to — but it can still
+      // be drawn larger, which is movement enough to earn the mark.
       final url = await _seedArt(tester, width: 400, height: 500);
       await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
       await tester.pump();
 
-      expect(find.byType(ArtFramingBadge), findsNothing);
+      expect(find.byType(ArtFramingBadge), findsWidgets);
     });
 
     testWidgets('a picture that never loaded does not', (tester) async {
@@ -425,11 +653,170 @@ void main() {
       await _enterMode(tester);
 
       // Entering on a second card hands the mode over rather than opening a
-      // second one.
-      await tester.tap(find.byType(ArtFramingBadge).at(1));
+      // second one. Found by the idle mark rather than by position: the active
+      // card draws marks of its own, so counting across cards stops meaning
+      // "the next card".
+      await tester.tap(find.byIcon(Icons.open_with).first);
       await tester.pump();
 
       expect(_activeMark, findsOneWidget);
+    });
+
+    testWidgets('the mode offers a way to scale without pinching', (
+      tester,
+    ) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await tester.pumpWidget(_page(art: url, onChanged: (_, _) {}));
+      await tester.pump();
+      expect(find.byIcon(Icons.zoom_in), findsNothing);
+      expect(find.byIcon(Icons.zoom_out), findsNothing);
+
+      await _enterMode(tester);
+
+      expect(find.byIcon(Icons.zoom_in), findsOneWidget);
+      expect(find.byIcon(Icons.zoom_out), findsOneWidget);
+    });
+
+    testWidgets('a press on the enlarge mark scales the picture and records '
+        'it', (tester) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+
+      await tester.tap(find.byIcon(Icons.zoom_in));
+      await tester.pump();
+
+      expect(moved, hasLength(1));
+      expect(moved.single.scale, greaterThan(ArtFraming.coverScale));
+      expect(moved.single.x, 0.5);
+      expect(moved.single.y, 0.5);
+    });
+
+    testWidgets('presses stop at the ceiling', (tester) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+
+      for (var i = 0; i < 10; i++) {
+        await tester.tap(find.byIcon(Icons.zoom_in), warnIfMissed: false);
+        await tester.pump();
+      }
+
+      expect(moved.last.scale, ArtFraming.maxScale);
+      final reached = moved.length;
+
+      await tester.tap(find.byIcon(Icons.zoom_in), warnIfMissed: false);
+      await tester.pump();
+
+      expect(moved, hasLength(reached));
+    });
+
+    testWidgets('at the covering size the reduce mark is inert', (
+      tester,
+    ) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+
+      await tester.tap(find.byIcon(Icons.zoom_out), warnIfMissed: false);
+      await tester.pump();
+
+      expect(moved, isEmpty);
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.zoom_out)).color,
+        PersonalizationPalette.crimson.muted,
+      );
+    });
+
+    testWidgets('reducing returns the picture to the size that covers the '
+        'frame', (tester) async {
+      // The path back to a row with no framing key at all.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byIcon(Icons.zoom_in));
+        await tester.pump();
+      }
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byIcon(Icons.zoom_out));
+        await tester.pump();
+      }
+
+      expect(moved.last, ArtFraming.center);
+      expect(moved.last.isDefault, isTrue);
+    });
+
+    testWidgets('a pinch scales the picture', (tester) async {
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+
+      // Small steps with a pump between, because a recognizer resolves on the
+      // movement between events; a single synthetic jump never clears the
+      // slop. Started clear of the marks on the right edge.
+      final centre = tester.getCenter(
+        find.byType(PersonalizationCardShell).first,
+      );
+      final left = await tester.startGesture(centre - const Offset(20, 0));
+      final right = await tester.startGesture(centre + const Offset(20, 0));
+      for (var i = 0; i < 10; i++) {
+        await left.moveBy(const Offset(-4, 0));
+        await right.moveBy(const Offset(4, 0));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await left.up();
+      await right.up();
+      await tester.pumpAndSettle();
+
+      expect(moved, isNotEmpty);
+      expect(moved.last.scale, greaterThan(ArtFraming.coverScale));
+    });
+
+    testWidgets('the marks fit the narrowest card the editor can show', (
+      tester,
+    ) async {
+      // The width a half card takes in the narrowest column the editor draws.
+      const narrow =
+          (PersonalizationLayout.columnMinWidth -
+              2 * PersonalizationLayout.columnSidePadding -
+              PersonalizationLayout.rowGap) /
+          2;
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      await tester.pumpWidget(
+        _page(
+          art: url,
+          onChanged: (_, _) {},
+          size: ProfileCardSize.half,
+          width: narrow,
+        ),
+      );
+      await tester.pump();
+
+      await _enterMode(tester);
+
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -516,6 +903,63 @@ void main() {
       await _swipe(tester, const Offset(0, -80));
 
       expect(moved, isEmpty);
+    });
+
+    testWidgets('at a larger size the drag still tracks the finger', (
+      tester,
+    ) async {
+      // The travel grows with the picture, so the divisor has to be the
+      // overflow at the size being drawn now — not the covering one.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byIcon(Icons.zoom_in));
+        await tester.pump();
+      }
+
+      final overflow = artOverflow(
+        frame: const Size(_cardWidth, _frameHeight),
+        image: const Size(1600, 900),
+        scale: 2,
+      );
+      await _swipe(
+        tester,
+        Offset(overflow.width / 4, 0),
+        from: tester.getCenter(find.byType(PersonalizationCardShell).first),
+      );
+
+      expect(moved.last.scale, 2);
+      expect(moved.last.x, closeTo(0.25, 0.01));
+    });
+
+    testWidgets('an axis the frame does not crop moves once the picture is '
+        'scaled', (tester) async {
+      // The case the whole change exists for: a wide picture in a tall frame
+      // has no vertical travel at all until it is drawn larger.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+      final moved = <ArtFraming>[];
+      await tester.pumpWidget(
+        _page(art: url, onChanged: (_, f) => moved.add(f)),
+      );
+      await tester.pump();
+      await _enterMode(tester);
+
+      await _swipe(tester, const Offset(0, -80));
+      expect(moved, isEmpty);
+
+      await tester.tap(find.byIcon(Icons.zoom_in));
+      await tester.pump();
+      moved.clear();
+
+      await _swipe(tester, const Offset(0, -80));
+
+      expect(moved, hasLength(1));
+      expect(moved.single.y, greaterThan(0.5));
     });
 
     testWidgets('the picture holds where the finger left it', (tester) async {

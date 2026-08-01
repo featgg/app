@@ -1382,9 +1382,9 @@
   "@profileComposeDeleteLabel": {
     "description": "Accessibility label on a card's delete affordance in the composition editor; removes the card and deletes its widget."
   },
-  "profileArtFramingLabel": "Drag the picture to frame it",
+  "profileArtFramingLabel": "Drag or pinch the picture to frame it",
   "@profileArtFramingLabel": {
-    "description": "Accessibility label on a card's picture while it is in framing mode, where dragging moves which part of it the frame shows."
+    "description": "Accessibility label on a card's picture while it is in framing mode, where dragging moves which part of it the frame shows and pinching changes how large it is drawn."
   },
   "profileArtFramingStart": "Frame the picture",
   "@profileArtFramingStart": {
@@ -1393,5 +1393,13 @@
   "profileArtFramingDone": "Done framing",
   "@profileArtFramingDone": {
     "description": "Accessibility label on the mark while a card is in framing mode; tapping it confirms and leaves the mode."
+  },
+  "profileArtFramingZoomIn": "Enlarge the picture",
+  "@profileArtFramingZoomIn": {
+    "description": "Accessibility label on the mark that draws a card's picture larger inside its frame, for input that cannot pinch."
+  },
+  "profileArtFramingZoomOut": "Reduce the picture",
+  "@profileArtFramingZoomOut": {
+    "description": "Accessibility label on the mark that draws a card's picture smaller inside its frame, down to the size that covers it."
   }
 }

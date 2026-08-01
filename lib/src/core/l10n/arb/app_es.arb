@@ -333,7 +333,9 @@
   "profileComposeDragHandleLabel": "Arrastra para mover la tarjeta",
   "profileComposeSizeToggleLabel": "Cambiar el tamaño de la tarjeta",
   "profileComposeDeleteLabel": "Eliminar tarjeta",
-  "profileArtFramingLabel": "Arrastra la imagen para encuadrarla",
+  "profileArtFramingLabel": "Arrastra o pellizca la imagen para encuadrarla",
   "profileArtFramingStart": "Encuadrar la imagen",
-  "profileArtFramingDone": "Terminar el encuadre"
+  "profileArtFramingDone": "Terminar el encuadre",
+  "profileArtFramingZoomIn": "Agrandar la imagen",
+  "profileArtFramingZoomOut": "Reducir la imagen"
 }

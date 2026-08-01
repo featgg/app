@@ -11,6 +11,9 @@ import 'package:featgg/src/features/connections/domain/connections_providers.dar
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/art_framing.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/domain/profile_layout.dart';
+import 'package:featgg/src/features/profile/domain/profile_providers.dart';
+import 'package:featgg/src/features/profile/domain/profile_repository.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
@@ -83,6 +86,26 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// Save reaches the profile repository before it reaches the widgets one, so
+/// the editor cannot be driven through a save without it.
+final class _FakeProfileRepository implements ProfileRepository {
+  @override
+  Future<Either<Failure, Profile>> fetchMyProfile() async => right(_profile);
+
+  @override
+  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
+      right(_profile);
+
+  @override
+  Future<Either<Failure, Unit>> setMyLayout(
+    List<ProfileLayoutRow> rows,
+  ) async => right(unit);
+
+  @override
+  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
+      right(_profile);
 }
 
 /// A Steam card carrying real art, so the art widget resolves a picture the
@@ -168,14 +191,18 @@ Widget _harness(ProviderContainer container) => UncontrolledProviderScope(
   ),
 );
 
-Future<ProviderContainer> _openEditor(WidgetTester tester) async {
+Future<ProviderContainer> _openEditor(
+  WidgetTester tester, {
+  _FakeWidgetsRepository? widgets,
+}) async {
   await _seedArt(tester);
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
       profileWidgetsRepositoryProvider.overrideWithValue(
-        _FakeWidgetsRepository(const [_art]),
+        widgets ?? _FakeWidgetsRepository(const [_art]),
       ),
+      profileRepositoryProvider.overrideWithValue(_FakeProfileRepository()),
       cardsRepositoryProvider.overrideWithValue(_ArtCardsRepository()),
     ],
   );
@@ -265,5 +292,39 @@ void main() {
     await _swipe(tester, const Offset(0, -120));
 
     expect(_scrolled(tester), greaterThan(0));
+  });
+
+  testWidgets(
+    'in the mode, the enlarge mark scales the picture and the session records '
+    'it',
+    (tester) async {
+      final container = await _openEditor(tester);
+      await tester.tap(find.byType(ArtFramingBadge));
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.zoom_in));
+      await tester.pump();
+
+      final framing = container.read(profileCompositionProvider).framings['a'];
+      expect(framing, isNotNull, reason: 'the press never reached the picture');
+      expect(framing!.scale, greaterThan(ArtFraming.coverScale));
+    },
+  );
+
+  testWidgets('a scale is written on Save', (tester) async {
+    // The whole session path: a press in the editor, Save, and the size
+    // arrives at the repository beside the point.
+    final repository = _FakeWidgetsRepository(const [_art]);
+    final container = await _openEditor(tester, widgets: repository);
+
+    await tester.tap(find.byType(ArtFramingBadge));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.zoom_in));
+    await tester.pump();
+    await container.read(profileCompositionProvider.notifier).save();
+    await tester.pumpAndSettle();
+
+    expect(repository.written, hasLength(1));
+    expect(repository.written.single.scale, greaterThan(ArtFraming.coverScale));
   });
 }
