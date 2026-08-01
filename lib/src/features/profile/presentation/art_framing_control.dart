@@ -446,7 +446,7 @@ class ArtFramingBadge extends StatelessWidget {
             size: AppSpacing.md,
             color: switch ((enabled, filled)) {
               (false, _) => palette.muted,
-              (true, true) => palette.accentText,
+              (true, true) => palette.bg,
               (true, false) => palette.text,
             },
           ),

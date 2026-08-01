@@ -17,7 +17,7 @@ final class ResolvedRecent extends Equatable {
   /// not resolve at all.
   final String title;
 
-  /// Stable-keyed stats: `hours_2weeks` first, then `hours_played`.
+  /// Stable-keyed stats: `hours_2weeks` first, then `hours_total`.
   final List<CardStat> stats;
 
   /// The recent entry's own cover art url; null when it publishes none (the
@@ -58,7 +58,7 @@ ResolvedRecent? resolveRecent(GameCard? card) {
   // game; for any other game it explains nothing.
   for (final entry in data.libraryShowcase) {
     if (entry.appId == top.appId) {
-      stats.add(CardStat(key: 'hours_played', value: entry.hours));
+      stats.add(CardStat(key: 'hours_total', value: entry.hours));
       break;
     }
   }

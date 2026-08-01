@@ -300,13 +300,16 @@ void main() {
 
       for (final l10n in [en, es, pt]) {
         expect(l10n.cardStatHours2Weeks, isNotEmpty);
+        expect(l10n.cardStatHoursTotal, isNotEmpty);
+        expect(l10n.cardValueHours('1'), isNotEmpty);
         expect(l10n.addCatalogRowRecent, isNotEmpty);
         expect(l10n.addCatalogReasonRecentNoData, isNotEmpty);
       }
 
-      // The reason loads per-locale copy rather than the template fallback.
-      // cardStatHours2Weeks is intentionally identical in es and pt, so no
-      // cross-locale difference is asserted for it.
+      // The reason and the recent-playtime label load per-locale copy rather
+      // than the template fallback. cardStatHoursTotal and cardValueHours are
+      // intentionally identical across the three locales, so no cross-locale
+      // difference is asserted for them.
       expect(
         es.addCatalogReasonRecentNoData,
         isNot(en.addCatalogReasonRecentNoData),
@@ -315,6 +318,8 @@ void main() {
         pt.addCatalogReasonRecentNoData,
         isNot(en.addCatalogReasonRecentNoData),
       );
+      expect(es.cardStatHours2Weeks, isNot(en.cardStatHours2Weeks));
+      expect(pt.cardStatHours2Weeks, isNot(en.cardStatHours2Weeks));
     });
   });
 }

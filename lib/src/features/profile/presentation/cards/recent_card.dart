@@ -49,11 +49,7 @@ class RecentCard extends ConsumerWidget {
       detail: resolved == null
           ? null
           : cardLabelPlatform(platform, hasArt: resolved.heroImage != null),
-      stats: statsFromResolved(
-        resolved?.stats ?? const [],
-        l10n,
-        PersonalizationLayout.statCapFull,
-      ),
+      stats: recentStats(resolved, l10n),
     );
   }
 }
