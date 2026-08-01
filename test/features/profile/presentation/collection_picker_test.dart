@@ -107,6 +107,12 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRarestAchievementWidget({
+    required Platform platform,
+    required int position,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
     CollectionSelection selection,
