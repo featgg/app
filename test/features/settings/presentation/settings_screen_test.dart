@@ -28,82 +28,92 @@ const _publicProfile = Profile(
   featuredPlatform: null,
 );
 
-final _pendingProfile = Profile(
-  id: 'user-1',
-  username: 'pub',
-  displayName: 'Public User',
-  avatarUrl: null,
-  bio: null,
-  theme: ProfileTheme.crimson,
-  privacy: ProfilePrivacy.public,
-  featuredPlatform: null,
-  deletionRequestedAt: DateTime.now().toUtc(),
-);
-
-/// Profile fake whose `fetchMyProfile` returns a pending profile until
-/// [cleared] is set, then a cleared one. Driven by a flag rather than a call
-/// sequence so the result is deterministic even though both the privacy seam
-/// and the deletion-status seam read this same repository.
-final class _ClearableProfileRepository implements ProfileRepository {
-  bool cleared = false;
-
-  @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async =>
-      right(cleared ? _publicProfile : _pendingProfile);
-
-  @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_publicProfile);
-
-  @override
-  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
-      right(null);
-
-  @override
-  Future<Either<Failure, Unit>> setMyLayout(
-    List<ProfileLayoutRow> rows,
-  ) async => right(unit);
-}
-
-/// Profile fake that starts non-pending and flips to pending once [scheduled]
-/// is set — simulating a deletion scheduled inside the pushed delete-account
-/// flow, observable only on a fresh read of the deletion-status seam.
-final class _SchedulingProfileRepository implements ProfileRepository {
-  bool scheduled = false;
-
-  @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async =>
-      right(scheduled ? _pendingProfile : _publicProfile);
-
-  @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_publicProfile);
-
-  @override
-  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
-      right(null);
-
-  @override
-  Future<Either<Failure, Unit>> setMyLayout(
-    List<ProfileLayoutRow> rows,
-  ) async => right(unit);
-}
-
-/// Recording deletion-repo fake: counts cancel calls and, on cancel, clears the
-/// linked profile fake so the post-invalidation re-read returns a cleared row.
+/// Recording deletion-repo fake: counts cancel calls and reports the pending
+/// state from a mutable flag, so a test can flip it between reads (a deletion
+/// scheduled elsewhere) and a cancel clears it for the post-invalidation
+/// re-read.
 final class _RecordingAccountDeletionRepository
     implements AccountDeletionRepository {
-  _RecordingAccountDeletionRepository({this.onCancel});
+  _RecordingAccountDeletionRepository({this.pending = false});
 
-  final void Function()? onCancel;
+  bool pending;
   int cancelCalls = 0;
 
   @override
   Future<Either<Failure, Unit>> cancelDeletion() async {
     cancelCalls++;
-    onCancel?.call();
+    pending = false;
     return right(unit);
   }
+
+  @override
+  Future<Either<Failure, DeletionSchedule>> confirmDeletion(
+    String code,
+  ) async => right(DeletionSchedule(scheduledAt: DateTime.utc(2026)));
+
+  @override
+  Future<Either<Failure, Unit>> requestDeletion() async => right(unit);
+
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async => right(
+    DeletionStatus(requestedAt: pending ? DateTime.now().toUtc() : null),
+  );
+}
+
+/// Deletion-repo fake whose status read fails its first [failures] calls, so
+/// both the errored slot and the retry that recovers it are observable. When
+/// [retryGate] is set every call after the first hangs until the test completes
+/// it, which is what makes the in-flight retry window observable.
+final class _StatusFailingAccountDeletionRepository
+    implements AccountDeletionRepository {
+  _StatusFailingAccountDeletionRepository({
+    required this.failures,
+    this.pendingOnRecovery = false,
+    this.retryGate,
+  });
+
+  final int failures;
+  final bool pendingOnRecovery;
+  final Completer<void>? retryGate;
+  int statusCalls = 0;
+
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async {
+    statusCalls++;
+    final gate = retryGate;
+    if (gate != null && statusCalls > 1) await gate.future;
+    if (statusCalls <= failures) return left(const NetworkFailure());
+    return right(
+      DeletionStatus(
+        requestedAt: pendingOnRecovery ? DateTime.now().toUtc() : null,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> cancelDeletion() async => right(unit);
+
+  @override
+  Future<Either<Failure, DeletionSchedule>> confirmDeletion(
+    String code,
+  ) async => right(DeletionSchedule(scheduledAt: DateTime.utc(2026)));
+
+  @override
+  Future<Either<Failure, Unit>> requestDeletion() async => right(unit);
+}
+
+/// Deletion-repo fake whose status read never resolves, so the first-load
+/// window is observable.
+final class _PendingStatusReadDeletionRepository
+    implements AccountDeletionRepository {
+  final _statusGate = Completer<Either<Failure, DeletionStatus>>();
+
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() =>
+      _statusGate.future;
+
+  @override
+  Future<Either<Failure, Unit>> cancelDeletion() async => right(unit);
 
   @override
   Future<Either<Failure, DeletionSchedule>> confirmDeletion(
@@ -389,7 +399,11 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _screen(_ClearableProfileRepository(), _RecordingAuthRepository()),
+      _screen(
+        _RecordingProfileRepository(),
+        _RecordingAuthRepository(),
+        deletionRepo: _RecordingAccountDeletionRepository(pending: true),
+      ),
     );
     // The pending banner contains a CooldownCountdown periodic timer, so the
     // tree never quiesces; pump fixed frames instead of pumpAndSettle.
@@ -415,6 +429,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('accountDeletionBanner')), findsNothing);
+    // A resolved "nothing pending" read must never look like a failed one; the
+    // paired failure test asserts the other half of that distinction.
+    expect(
+      find.byKey(const Key('accountDeletionStatusUnavailable')),
+      findsNothing,
+    );
     // No pending deletion: the delete-account tile stays enabled.
     expect(
       tester
@@ -428,7 +448,11 @@ void main() {
     'the delete-account tile is disabled when a deletion is pending',
     (tester) async {
       await tester.pumpWidget(
-        _screen(_ClearableProfileRepository(), _RecordingAuthRepository()),
+        _screen(
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: _RecordingAccountDeletionRepository(pending: true),
+        ),
       );
       // The pending banner's CooldownCountdown periodic timer keeps the tree
       // busy; pump fixed frames instead of pumpAndSettle.
@@ -447,18 +471,186 @@ void main() {
   );
 
   testWidgets(
-    'tapping Cancel invokes cancelDeletion and the refreshed read clears the '
-    'banner',
+    'a failed deletion-status read renders the unavailable state, not silence',
     (tester) async {
-      final profileRepo = _ClearableProfileRepository();
-      // On cancel the deletion repo clears the profile fake, so the re-read the
-      // controller triggers via invalidation returns a cleared row.
-      final deletionRepo = _RecordingAccountDeletionRepository(
-        onCancel: () => profileRepo.cleared = true,
+      // Silence is how "no deletion pending" renders, so a failed read that
+      // renders nothing tells a user inside the grace period the opposite of
+      // the truth.
+      await tester.pumpWidget(
+        _screen(
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: _StatusFailingAccountDeletionRepository(failures: 99),
+        ),
+      );
+      await tester.pump(); // resolve the deletion-status future to a Left
+      await tester.pump(); // render the errored slot
+
+      expect(
+        find.byKey(const Key('accountDeletionStatusUnavailable')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('accountDeletionStatusRetryButton')),
+        findsOneWidget,
+      );
+      // The failed state must not be mistaken for the pending one either.
+      expect(find.byKey(const Key('accountDeletionBanner')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'tapping retry re-reads the status and the recovered banner replaces the '
+    'card',
+    (tester) async {
+      final deletionRepo = _StatusFailingAccountDeletionRepository(
+        failures: 1,
+        pendingOnRecovery: true,
       );
       await tester.pumpWidget(
         _screen(
-          profileRepo,
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: deletionRepo,
+        ),
+      );
+      await tester.pump(); // first read fails
+      await tester.pump(); // render the errored slot
+      expect(
+        find.byKey(const Key('accountDeletionStatusUnavailable')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('accountDeletionStatusRetryButton')),
+      );
+      // The recovered banner carries a CooldownCountdown periodic timer, so the
+      // tree never quiesces; pump fixed frames instead of pumpAndSettle. The
+      // frames elapse the clock because an invalidated provider is re-read on
+      // the next turn of the event loop, and a zero-duration pump never turns
+      // it.
+      await tester.pump(Duration.zero); // invalidate → the re-read starts
+      await tester.pump(Duration.zero); // it resolves to a pending deletion
+      await tester.pump(Duration.zero); // banner replaces the card
+
+      expect(deletionRepo.statusCalls, 2);
+      expect(find.byKey(const Key('accountDeletionBanner')), findsOneWidget);
+      expect(
+        find.byKey(const Key('accountDeletionStatusUnavailable')),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'a second retry tap while the re-read is in flight does not issue another '
+    'read',
+    (tester) async {
+      final deletionRepo = _StatusFailingAccountDeletionRepository(
+        failures: 99,
+        retryGate: Completer<void>(),
+      );
+      await tester.pumpWidget(
+        _screen(
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: deletionRepo,
+        ),
+      );
+      await tester.pump(); // first read fails
+      await tester.pump(); // render the errored slot
+
+      await tester.tap(
+        find.byKey(const Key('accountDeletionStatusRetryButton')),
+      );
+      // Elapsing frames: an invalidated provider is re-read on the next turn of
+      // the event loop, which a zero-duration pump never reaches.
+      await tester.pump(Duration.zero); // re-read in flight → action disables
+      expect(deletionRepo.statusCalls, 2);
+      expect(
+        tester
+            .widget<TextButton>(
+              find.byKey(const Key('accountDeletionStatusRetryButton')),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      // The second tap lands on the now-disabled action and must be a no-op:
+      // mashing must not fan out concurrent privileged reads.
+      await tester.tap(
+        find.byKey(const Key('accountDeletionStatusRetryButton')),
+        warnIfMissed: false,
+      );
+      await tester.pump(Duration.zero);
+
+      expect(deletionRepo.statusCalls, 2);
+    },
+  );
+
+  testWidgets(
+    'nothing renders in the deletion slot while the first status read is in '
+    'flight',
+    (tester) async {
+      await tester.pumpWidget(
+        _screen(
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: _PendingStatusReadDeletionRepository(),
+        ),
+      );
+      await tester.pump(); // the status read is still in flight
+
+      expect(find.byKey(const Key('accountDeletionBanner')), findsNothing);
+      expect(
+        find.byKey(const Key('accountDeletionStatusUnavailable')),
+        findsNothing,
+      );
+      // Without this the two absences would also hold on an unrendered
+      // section, and a cold start must not flash an error state.
+      expect(
+        find.byKey(const Key('accountSectionIdentityEmail')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'the delete-account tile stays enabled when the status read fails',
+    (tester) async {
+      // Fail-open: a transient read must never lock the user out of deleting
+      // their own account.
+      await tester.pumpWidget(
+        _screen(
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: _StatusFailingAccountDeletionRepository(failures: 99),
+        ),
+      );
+      await tester.pump(); // read fails
+      await tester.pump(); // render with the errored state applied
+
+      expect(
+        tester
+            .widget<ListTile>(
+              find.byKey(const Key('settingsDeleteAccountTile')),
+            )
+            .enabled,
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    'tapping Cancel invokes cancelDeletion and the refreshed read clears the '
+    'banner',
+    (tester) async {
+      // The cancel clears the pending flag, so the re-read the controller
+      // triggers via invalidation reports no pending deletion.
+      final deletionRepo = _RecordingAccountDeletionRepository(pending: true);
+      await tester.pumpWidget(
+        _screen(
+          _RecordingProfileRepository(),
           _RecordingAuthRepository(),
           deletionRepo: deletionRepo,
         ),
@@ -485,15 +677,15 @@ void main() {
   testWidgets(
     'returning from the delete-account flow refreshes the pending banner',
     (tester) async {
-      final profileRepo = _SchedulingProfileRepository();
+      final deletionRepo = _RecordingAccountDeletionRepository();
       final container = ProviderContainer(
         retry: (count, error) => null,
         overrides: [
-          profileRepositoryProvider.overrideWithValue(profileRepo),
-          authRepositoryProvider.overrideWithValue(_RecordingAuthRepository()),
-          accountDeletionRepositoryProvider.overrideWithValue(
-            _RecordingAccountDeletionRepository(),
+          profileRepositoryProvider.overrideWithValue(
+            _RecordingProfileRepository(),
           ),
+          authRepositoryProvider.overrideWithValue(_RecordingAuthRepository()),
+          accountDeletionRepositoryProvider.overrideWithValue(deletionRepo),
         ],
       );
       addTearDown(container.dispose);
@@ -527,7 +719,7 @@ void main() {
       expect(find.byKey(const Key('accountDeletionBanner')), findsNothing);
 
       // The user schedules a deletion inside the pushed delete-account flow.
-      profileRepo.scheduled = true;
+      deletionRepo.pending = true;
       await tester.tap(find.byKey(const Key('settingsDeleteAccountTile')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('stubDeleteAccountScreen')), findsOneWidget);

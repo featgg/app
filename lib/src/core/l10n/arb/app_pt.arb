@@ -239,6 +239,8 @@
   "accountDeletionCountdown": "{days, plural, =1{resta 1 dia} other{restam {days} dias}}",
   "accountCancelDeletionButton": "Cancelar exclusão",
   "accountDeletionCancelled": "Exclusão de conta cancelada.",
+  "accountDeletionStatusUnavailableTitle": "Status de exclusão indisponível",
+  "accountDeletionStatusUnavailableBody": "Não foi possível verificar se sua conta tem uma exclusão agendada. Tente novamente para ver o status atual.",
   "dataMenuItemLeagueRank": "Rank",
   "dataMenuItemSteamLibraryShowcase": "Biblioteca em destaque",
   "dataMenuItemLeagueTopMastery": "Melhores campeões",

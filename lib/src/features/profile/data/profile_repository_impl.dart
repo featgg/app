@@ -28,7 +28,7 @@ final class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final userId = _currentUserId();
       if (userId == null) return left(const AuthFailure());
-      final dto = await _dataSource.fetchMyProfileRow(userId);
+      final dto = await _dataSource.fetchProfileRow(userId);
       if (dto == null) {
         // Profiles are provisioned at sign-up; a signed-in user with no row
         // is a fault, not control flow.

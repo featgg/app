@@ -33,4 +33,34 @@ void main() {
       expect(dto.cancelled, isTrue);
     });
   });
+
+  group('DeletionStatusDto.fromPayload', () {
+    test('null reads as no deletion pending', () {
+      expect(DeletionStatusDto.fromPayload(null).requestedAt, isNull);
+    });
+
+    test('an ISO-8601 string carries the timestamp', () {
+      expect(
+        DeletionStatusDto.fromPayload('2026-06-12T10:00:00Z').requestedAt,
+        '2026-06-12T10:00:00Z',
+      );
+    });
+
+    test('throws on a shape that is neither a string nor null', () {
+      // Hiding a pending deletion from its owner is worse than an error, so an
+      // unexpected payload must be a fault — never a silent "not pending".
+      for (final payload in <Object>[
+        <String, dynamic>{'requested_at': '2026-06-12T10:00:00Z'},
+        <dynamic>['2026-06-12T10:00:00Z'],
+        42,
+        true,
+      ]) {
+        expect(
+          () => DeletionStatusDto.fromPayload(payload),
+          throwsA(isA<FormatException>()),
+          reason: '${payload.runtimeType} must not degrade to "not pending"',
+        );
+      }
+    });
+  });
 }

@@ -30,7 +30,6 @@ final class _FakeDataSource implements ProfileDataSource {
   onUpdate;
   final Future<void> Function(List<Map<String, dynamic>> rows)? onSaveLayout;
   int fetchCalls = 0;
-  int myFetchCalls = 0;
   int updateCalls = 0;
   int saveLayoutCalls = 0;
   List<Map<String, dynamic>>? lastSavedRows;
@@ -38,12 +37,6 @@ final class _FakeDataSource implements ProfileDataSource {
   @override
   Future<ProfileDto?> fetchProfileRow(String userId) {
     fetchCalls++;
-    return onFetch?.call(userId) ?? Future.value(null);
-  }
-
-  @override
-  Future<ProfileDto?> fetchMyProfileRow(String userId) {
-    myFetchCalls++;
     return onFetch?.call(userId) ?? Future.value(null);
   }
 
@@ -116,20 +109,9 @@ void main() {
           (_) => fail('expected Left'),
         );
         expect(reporter.reported, isEmpty);
-        expect(dataSource.myFetchCalls, equals(0));
+        expect(dataSource.fetchCalls, equals(0));
       },
     );
-
-    test('reads the owner row, not the public row (owner-only columns stay off '
-        'public reads)', () async {
-      final dataSource = _FakeDataSource(onFetch: (_) async => _validDto);
-      await _repo(dataSource, _RecordingReporter()).fetchMyProfile();
-
-      // fetchMyProfile must go through the owner read (which alone requests the
-      // owner-only deletion marker), never the shared public read.
-      expect(dataSource.myFetchCalls, equals(1));
-      expect(dataSource.fetchCalls, equals(0));
-    });
 
     test(
       'AuthException 401 returns Left(AuthFailure) and is not reported',
@@ -257,10 +239,6 @@ void main() {
         expect(profile!.id, 'user-123');
         expect(profile.username, 'testuser');
       });
-      // A public read must use the public column set, never the owner read that
-      // requests the owner-only deletion marker.
-      expect(dataSource.fetchCalls, equals(1));
-      expect(dataSource.myFetchCalls, equals(0));
     });
 
     test('returns Right(null) on a null row (private/not-found)', () async {

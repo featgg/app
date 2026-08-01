@@ -50,4 +50,11 @@ final class SupabaseAccountDeletionDataSource
       Map<String, dynamic>.from(response.data as Map),
     );
   }
+
+  @override
+  Future<DeletionStatusDto> fetchDeletionStatus() async {
+    // Owner-scoped: the operation keys off the session, so no target id is sent.
+    final payload = await _client.rpc('get_my_deletion_status');
+    return DeletionStatusDto.fromPayload(payload);
+  }
 }

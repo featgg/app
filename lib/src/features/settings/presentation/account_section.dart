@@ -41,14 +41,31 @@ class AccountSection extends ConsumerWidget {
               value: p,
             ),
           ],
-          deletionAsync.maybeWhen(
+          deletionAsync.when(
+            // Both skip flags are passed explicitly so a re-read keeps whatever
+            // is already on screen instead of blinking through an empty slot.
+            skipLoadingOnReload: true,
+            skipLoadingOnRefresh: true,
             data: (status) => status.isPending && status.scheduledAt != null
                 ? Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.md),
                     child: _DeletionBanner(scheduledAt: status.scheduledAt!),
                   )
                 : const SizedBox.shrink(),
-            orElse: () => const SizedBox.shrink(),
+            // A failed read must not render as an empty slot: that is exactly
+            // how "no deletion pending" looks, so a user inside the grace
+            // period would be told the opposite of the truth.
+            error: (_, _) => Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: _DeletionStatusUnavailable(
+                isRetrying: deletionAsync.isLoading,
+                onRetry: () => ref.invalidate(settingsDeletionStatusProvider),
+              ),
+            ),
+            // Silent on purpose: the slot is empty for almost every account, so
+            // a placeholder here would promise something is arriving for
+            // everyone and flash on every cold start.
+            loading: () => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -161,4 +178,61 @@ class _DeletionBanner extends ConsumerWidget {
   /// day left rather than dropping to zero before the deadline.
   int _daysFromSeconds(int seconds) =>
       (seconds / Duration.secondsPerDay).ceil();
+}
+
+/// Shown in the deletion slot when the status read failed. It asserts nothing
+/// about whether a deletion is pending — the app genuinely does not know — so
+/// it stays on the neutral surface role rather than the error colouring the
+/// pending banner owns, and carries the re-read itself: without it the only way
+/// back to the countdown and its Cancel button would be leaving the screen.
+class _DeletionStatusUnavailable extends StatelessWidget {
+  const _DeletionStatusUnavailable({
+    required this.isRetrying,
+    required this.onRetry,
+  });
+
+  /// True while the re-read is in flight, which disables the action so mashing
+  /// it cannot fan out concurrent privileged reads.
+  final bool isRetrying;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    return Container(
+      key: const Key('accountDeletionStatusUnavailable'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.accountDeletionStatusUnavailableTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.accountDeletionStatusUnavailableBody,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            key: const Key('accountDeletionStatusRetryButton'),
+            onPressed: isRetrying ? null : onRetry,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.asyncRetry),
+          ),
+        ],
+      ),
+    );
+  }
 }
