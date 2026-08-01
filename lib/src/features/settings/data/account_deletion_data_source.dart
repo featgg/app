@@ -15,4 +15,9 @@ abstract interface class AccountDeletionDataSource {
   /// Cancels a pending deletion: sends `{}` to the cancel function.
   /// Returns [DeletionCancelDto] on 200. Throws on non-2xx or transport fault.
   Future<DeletionCancelDto> cancelDeletion();
+
+  /// Reads the caller's pending-deletion marker through the owner-scoped status
+  /// operation (no arguments; the session identifies the caller).
+  /// Returns [DeletionStatusDto] on success. Throws on transport or parse fault.
+  Future<DeletionStatusDto> fetchDeletionStatus();
 }

@@ -22,4 +22,12 @@ abstract interface class AccountDeletionRepository {
   /// Right(unit) even when nothing is pending. Defined here for the cancel
   /// affordance shipped in a later slice.
   Future<Either<Failure, Unit>> cancelDeletion();
+
+  /// Reads whether a deletion is pending for the signed-in account, through the
+  /// owner-scoped status operation (session-scoped; no user id is sent).
+  /// Right(DeletionStatus) with a null `requestedAt` when nothing is pending.
+  /// Left(AuthFailure) when there is no valid session or access is denied;
+  /// Left(NetworkFailure) on transport error; Left(UnexpectedFailure) on a parse
+  /// failure or any unclassified fault.
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus();
 }

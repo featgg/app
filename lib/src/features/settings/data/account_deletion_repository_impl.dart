@@ -59,6 +59,21 @@ final class AccountDeletionRepositoryImpl implements AccountDeletionRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async {
+    try {
+      final dto = await _source.fetchDeletionStatus();
+      final raw = dto.requestedAt;
+      return right(
+        DeletionStatus(
+          requestedAt: raw == null ? null : DateTime.parse(raw).toUtc(),
+        ),
+      );
+    } catch (e, st) {
+      return left(_handleNonFunctionError(e, st));
+    }
+  }
+
   Failure _handleNonFunctionError(Object error, StackTrace st) {
     final failure = _mapNonFunctionError(error);
     if (!failure.isExpected) _crashReporter.reportError(error, st);
@@ -66,6 +81,14 @@ final class AccountDeletionRepositoryImpl implements AccountDeletionRepository {
   }
 
   Failure _mapNonFunctionError(Object error) {
+    if (error is PostgrestException) {
+      final code = error.code;
+      // The data API surfaces access denials and dead tokens as 401/403.
+      if (code == '401' || code == '403' || code == 'PGRST301') {
+        return const AuthFailure();
+      }
+      return UnexpectedFailure(message: error.message);
+    }
     if (error is SocketException) return NetworkFailure(message: error.message);
     if (error is TimeoutException) {
       return NetworkFailure(message: error.message);
