@@ -1391,9 +1391,9 @@
   "@profileEditSaveFailed": {
     "description": "Snackbar shown when saving the profile edit session fails; edit mode stays open and the owner can retry."
   },
-  "profileComposeHint": "Drag a card between rows for full width, or next to another to pair them.",
+  "profileComposeHint": "Drag a card between rows to move it, or next to another to pair them.",
   "@profileComposeHint": {
-    "description": "One-line hint in the control bar while editing the composition."
+    "description": "One-line hint above the cards in the composition editor while editing the arrangement."
   },
   "profileComposeDragHandleLabel": "Drag to move card",
   "@profileComposeDragHandleLabel": {

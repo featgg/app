@@ -17,12 +17,13 @@ import 'profile_widgets_controller.dart';
 import 'profile_widgets_provider.dart';
 
 /// The draggable rows region shown while the owner is editing their composition.
-/// Measures the gaps between rows and the rows a lifted card may pair with, and
+/// Measures the gaps between rows and the rows a lifted card may pair with,
 /// hands the nearest of them to the drag — so a release near a landing place
-/// lands there rather than demanding a pointer-exact hover. Wires the drag
-/// lifecycle to [ProfileComposition] and offers the size toggle on any card that
-/// supports both sizes. Disabled cards stay visible and draggable so their slot
-/// is preserved through the save.
+/// lands there rather than demanding a pointer-exact hover — and marks that one
+/// landing place and nothing else. Wires the drag lifecycle to
+/// [ProfileComposition] and offers the size toggle on any card that supports
+/// both sizes. Disabled cards stay visible and draggable so their slot is
+/// preserved through the save.
 class CompositionEditorRows extends ConsumerStatefulWidget {
   const CompositionEditorRows({super.key, required this.columnWidth});
 
@@ -33,11 +34,12 @@ class CompositionEditorRows extends ConsumerStatefulWidget {
       _CompositionEditorRowsState();
 }
 
-class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
+class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
+    with SingleTickerProviderStateMixin {
   // Everything below is born and dies inside one drag and is read nowhere else;
   // every consequence of it goes through the composition controller.
   //
-  // The id currently lifted, or null. Ephemeral UI state driving the glow.
+  // The id currently lifted, or null.
   String? _draggingId;
 
   // The landing place the drag holds, and — for a pair — which side of the
@@ -55,6 +57,32 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
   // persisted layout carrying a duplicate id today merely renders twice.
   final Map<(int, int), GlobalKey> _slotKeys = {};
 
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: PersonalizationLayout.editorMarkPulse,
+    );
+    // Starts at full strength and breathes down, so a mark never appears
+    // mid-fade on a drag too short to complete a cycle.
+    _pulse = _pulseController.drive(
+      Tween<double>(
+        begin: 1,
+        end: PersonalizationLayout.editorMarkPulseFloor,
+      ).chain(CurveTween(curve: Curves.easeInOut)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
   GlobalKey _gapKey(int index) => _gapKeys.putIfAbsent(index, GlobalKey.new);
 
   GlobalKey _slotKey(int rowIndex, int slotIndex) =>
@@ -67,8 +95,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         : supportedSizes(archetypeForWidget(widget));
   }
 
-  /// One definition of half-support, shared by the glow in [build] and the
-  /// zones the drag is scored against.
+  /// Half-support as the zones the drag is scored against read it.
   CardSizeSupport _halfSupport(Map<String, ProfileWidget> byId) =>
       (id) => _sizesOf(id, byId).contains(ProfileCardSize.half);
 
@@ -205,6 +232,8 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
   /// The release. Fires on both endings of a drag, so nothing held means a
   /// clean cancel and an untouched layout.
   void _drop() {
+    // Stops the ticker and leaves the marks at their static full strength.
+    _pulseController.reset();
     final dragId = _draggingId;
     final zone = _acquired;
     final side = _acquiredSide;
@@ -249,14 +278,9 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
 
-    final supportsHalf = _halfSupport(byId);
     bool supportsBoth(String id) =>
         _sizesOf(id, byId).contains(ProfileCardSize.half) &&
         _sizesOf(id, byId).contains(ProfileCardSize.full);
-
-    final glowRows = _draggingId == null
-        ? const <int>{}
-        : pairableRowIndices(working, _draggingId!, supportsHalf: supportsHalf);
 
     final children = <Widget>[
       // The drag hint lives here now that no floating bar hosts it: a bounded
@@ -280,7 +304,6 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
           palette,
           saving: saving,
           supportsBoth: supportsBoth,
-          glowing: glowRows.contains(i),
         ),
       );
       children.add(_gap(i + 1, palette));
@@ -323,12 +346,16 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         height: dragging ? AppSpacing.lg : PersonalizationLayout.rowGap,
         alignment: Alignment.center,
         child: active
-            ? Container(
-                height: AppSpacing.hairline * 2,
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: palette.accent,
-                  borderRadius: BorderRadius.circular(AppRadii.full),
+            ? _Pulse(
+                animation: _pulse,
+                child: Container(
+                  key: Key('compositionMark_gap_$index'),
+                  height: AppSpacing.hairline * 2,
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: palette.accent,
+                    borderRadius: BorderRadius.circular(AppRadii.full),
+                  ),
                 ),
               )
             : null,
@@ -343,9 +370,8 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
     PersonalizationPalette palette, {
     required bool saving,
     required bool Function(String) supportsBoth,
-    required bool glowing,
   }) {
-    final content = switch (row) {
+    return switch (row) {
       FullRow(:final cardId) => _slot(
         cardId,
         rowIndex,
@@ -383,19 +409,6 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
               ),
       ),
     };
-
-    if (!glowing) return content;
-    // A valid pair destination glows while a card is lifted.
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: palette.accent,
-          width: PersonalizationLayout.borderWidth,
-        ),
-        borderRadius: BorderRadius.circular(palette.radius),
-      ),
-      child: content,
-    );
   }
 
   Widget _slot(
@@ -427,26 +440,23 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         // Owner cards (cardSource null); member-since is unused in edit mode.
         personalizationCardFor(widget, size: size),
         if (marked)
-          Positioned.fill(
+          Positioned(
+            top: PersonalizationLayout.editorMarkBarInset,
+            bottom: PersonalizationLayout.editorMarkBarInset,
+            left: _acquiredSide == DropSide.left ? AppSpacing.xs : null,
+            right: _acquiredSide == DropSide.right ? AppSpacing.xs : null,
+            width: AppSpacing.hairline * 2,
             child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: _acquiredSide == DropSide.left
-                        ? BorderSide(
-                            color: palette.accent,
-                            width: AppSpacing.hairline,
-                          )
-                        : BorderSide.none,
-                    right: _acquiredSide == DropSide.right
-                        ? BorderSide(
-                            color: palette.accent,
-                            width: AppSpacing.hairline,
-                          )
-                        : BorderSide.none,
+              child: _Pulse(
+                animation: _pulse,
+                child: DecoratedBox(
+                  key: Key('compositionMark_pair_$cardId'),
+                  decoration: BoxDecoration(
+                    color: palette.accent,
+                    borderRadius: BorderRadius.circular(AppRadii.full),
                   ),
+                  child: const SizedBox.expand(),
                 ),
-                child: const SizedBox.expand(),
               ),
             ),
           ),
@@ -534,7 +544,14 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
         // The finger decides the acquisition, so the card has to be symmetric
         // around it rather than hanging off the grab point.
         dragAnchorStrategy: _liftFrom,
-        onDragStarted: () => setState(() => _draggingId = cardId),
+        onDragStarted: () {
+          setState(() => _draggingId = cardId);
+          // Reduced motion opts out of the ticker itself, not just of its
+          // effect.
+          if (!MediaQuery.disableAnimationsOf(context)) {
+            _pulseController.repeat(reverse: true);
+          }
+        },
         onDragUpdate: _onDragUpdate,
         // Fires on both endings, so the release is decided in one place.
         onDragEnd: (_) => _drop(),
@@ -618,6 +635,23 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows> {
       ),
     );
   }
+}
+
+/// Breathes the landing indicator while a card is in the air. Wraps the mark
+/// only — the rows never rebuild for it — and steps aside entirely where the
+/// platform asks for reduced motion, leaving the mark at full strength.
+class _Pulse extends StatelessWidget {
+  const _Pulse({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MediaQuery.disableAnimationsOf(context)
+      ? child
+      : RepaintBoundary(
+          child: FadeTransition(opacity: animation, child: child),
+        );
 }
 
 /// The per-card delete affordance. Stateful with a per-instance single-fire

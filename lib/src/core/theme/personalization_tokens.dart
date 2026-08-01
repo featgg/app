@@ -395,6 +395,18 @@ abstract final class PersonalizationLayout {
   /// acquisition over: a deadband on the boundary two of them share, so a
   /// pointer tracking along it settles instead of flickering between them.
   static const double dropHysteresis = AppSpacing.smMd;
+
+  /// How far the pair landing bar is held off the target card's ends, so it
+  /// reads as a bar rather than as a border on the card.
+  static const double editorMarkBarInset = AppSpacing.md;
+
+  /// The landing indicator breathes while a card is in the air: during a drag
+  /// the eye is on the card under the finger, and motion is what peripheral
+  /// vision catches. Slow enough to read as alive rather than as an alarm, and
+  /// floored well short of invisible — the mark is legible at every point of
+  /// the cycle.
+  static const Duration editorMarkPulse = Duration(milliseconds: 900);
+  static const double editorMarkPulseFloor = 0.45;
 }
 
 /// A fluid size that ramps with the column width between [min] and [max],

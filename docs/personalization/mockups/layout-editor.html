@@ -91,9 +91,6 @@ body.dragging .gap{height:26px}
 }
 .slot.drag-origin{opacity:.35}
 
-/* discoverability: when a card is lifted, every valid pair destination glows */
-body.dragging .p-row.can-pair .slot{outline:1px dashed var(--accent);outline-offset:3px;border-radius:var(--radius)}
-
 /* explicit full/half variant toggle */
 .card-tools{display:none;position:absolute;bottom:8px;right:8px;z-index:4}
 body.editing .card-tools{display:flex}
@@ -559,8 +556,8 @@ function removeCard(id){
   }
   return {removedRow:-1};
 }
-function insertAsRow(id,idx){
-  rows.splice(idx,0, supportsFull(id)?{t:'full',c:[id]}:{t:'pair',c:[id,null]});
+function insertAsRow(id,idx,asFull=supportsFull(id)){
+  rows.splice(idx,0, asFull?{t:'full',c:[id]}:{t:'pair',c:[id,null]});
 }
 function pairWith(dragId,targetId,side){
   for(let i=0;i<rows.length;i++){
@@ -589,15 +586,6 @@ document.addEventListener('pointerdown',e=>{
   slot.classList.add('drag-origin');
   drag={id,target:null,originSlot:slot};
   document.body.classList.add('dragging');
-  /* light up valid destinations: the system teaches itself at the moment of need */
-  document.querySelectorAll('#rows .p-row').forEach(rw=>{
-    const r=rows[+rw.dataset.row];
-    const ids=r.c.filter(Boolean);
-    const valid = supportsHalf(id)
-      && ids.some(x=>x!==id&&supportsHalf(x))
-      && (r.t==='full'||isOrphan(r)||ids.includes(id));
-    if(valid)rw.classList.add('can-pair');
-  });
 });
 
 function moveGhost(x,y){
@@ -653,13 +641,14 @@ document.addEventListener('pointerup',e=>{
   ghost.style.display='none';
   document.body.classList.remove('dragging');
   clearMarks();
-  document.querySelectorAll('.p-row.can-pair').forEach(x=>x.classList.remove('can-pair'));
   if(t){
     if(t.kind==='gap'){
+      /* a move keeps the size the card already had; ⇆ is what changes it */
+      const wasFull=rows[findCard(drag.id).i].t==='full';
       const {removedRow}=removeCard(drag.id);
       let idx=t.idx;
       if(removedRow>-1&&removedRow<idx)idx--;
-      insertAsRow(drag.id,idx);
+      insertAsRow(drag.id,idx,wasFull);
     }else if(t.kind==='pair'){
       removeCard(drag.id);
       pairWith(drag.id,t.targetId,t.side);

@@ -94,26 +94,6 @@ List<ProfileLayoutRow> normalizeLayout(
 bool layoutHolds(List<ProfileLayoutRow> rows, String id) =>
     rows.any((row) => _cardIds(row).contains(id));
 
-/// The row indices that light up while [dragId] is lifted: rows where [dragId]
-/// can legally pair — [dragId] and some other card in the row both support half,
-/// and the row has room (it is full, an orphan, or already holds [dragId]).
-Set<int> pairableRowIndices(
-  List<ProfileLayoutRow> rows,
-  String dragId, {
-  required CardSizeSupport supportsHalf,
-}) {
-  final result = <int>{};
-  if (!supportsHalf(dragId)) return result;
-  for (var i = 0; i < rows.length; i++) {
-    final row = rows[i];
-    final ids = _cardIds(row);
-    final hasHalfPartner = ids.any((id) => id != dragId && supportsHalf(id));
-    final hasRoom = row is FullRow || isOrphanRow(row) || ids.contains(dragId);
-    if (hasHalfPartner && hasRoom) result.add(i);
-  }
-  return result;
-}
-
 /// Whether [dragId] may drop beside [targetId] in the row at [rowIndex]: both
 /// support half AND the row has room (full, orphan, or already holds [dragId]).
 /// Full-only cards and already-full pairs return false, so the UI never offers
@@ -202,21 +182,28 @@ String? pairTargetAt(
 List<ProfileLayoutRow> removeCard(List<ProfileLayoutRow> rows, String id) =>
     _removeCard(rows, id).rows;
 
-/// Move [id] into the gap at [gapIndex] as its own row — full when it supports
-/// full, else a single-slot pair (centered orphan). Removes it from its current
-/// row first and shifts the target index down by one when the removed row sat
-/// strictly before the gap.
+/// Move [id] into the gap at [gapIndex] as its own row, **at the size it
+/// already has**: a card in a full row lands full, a card in a pair slot lands
+/// as a centered orphan. Moving is not resizing — [toggleSize] is the control
+/// for that. Removes [id] from its current row first and shifts the target index
+/// down by one when the removed row sat strictly before the gap.
+///
+/// A layout that no longer places [id] is returned untouched: a card that is not
+/// placed has no size to preserve, and re-inserting it would resurrect a row for
+/// a card deleted while it was in the air.
 List<ProfileLayoutRow> moveToGap(
   List<ProfileLayoutRow> rows,
   String id,
-  int gapIndex, {
-  required CardSizeSupport supportsFull,
-}) {
+  int gapIndex,
+) {
+  final from = _findCard(rows, id);
+  if (from == null) return [...rows];
+  final wasFull = rows[from.row] is FullRow;
   final removed = _removeCard(rows, id);
   var index = gapIndex;
   if (removed.removedRow > -1 && removed.removedRow < index) index--;
   final out = removed.rows;
-  out.insert(index, supportsFull(id) ? FullRow(id) : PairRow(left: id));
+  out.insert(index, wasFull ? FullRow(id) : PairRow(left: id));
   return out;
 }
 

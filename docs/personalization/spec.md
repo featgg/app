@@ -293,17 +293,17 @@ Settings keeps what the profile page does not show: privacy, account, language, 
 
 ### 9.2 Editor interaction (arranging cards)
 
-Single-gesture model: **size and position are one decision** — where you drop determines the size.
+**A drag moves a card; the ⇆ toggle resizes it.** A card dropped into a gap keeps the size it had: the toggle is already the explicit control for that decision, and coupling size to where a card lands made a second control for the same thing — an owner who moved a card got a resize they never asked for. A drop *beside* another card is still a half placement; there the size is not a side effect, it is what the zone means.
 
 - Each card shows a drag handle in edit mode. Lifting it puts **the card itself** in the air — the same card, capped at ~240px and centered on the pointer — and the slot it left reads vacated until it lands. Auto-scroll near viewport edges. Touch + mouse.
 - Drop zones:
-  - **Gap between rows** → card becomes its own row (full variant; centered orphan if the archetype is half-only). Gap indicators appear while dragging.
+  - **Gap between rows** → card becomes its own row, at the size it already had: a full card lands full, a half card lands as a centered orphan. Gap indicators appear while dragging.
   - **Beside another card** (including the empty half of an orphan row — "next to" counts, not just "on top of") → pair, both half. Drop side sets left/right order.
   - **Onto own pair partner** → swap left/right.
 - Validity: both cards must support `half`; a full pair accepts no third card; full-only archetypes accept no side-drops. Invalid zones never light up.
-- **Discoverability:** on lift, every valid pair destination glows (dashed accent outline) — the system explains itself at the moment of need. One-time tooltip optional.
+- **The landing indicator is the discoverability.** Because the drag holds the nearest landing place rather than demanding the pointer over it, the indicator appears as soon as the card is near one, and it is one vocabulary for both zones: an accent bar, across the column in a gap and down the drop side of the target card. It **pulses** while a card is in the air — the eye is on the card under the finger during a drag, and motion is what peripheral vision catches (§10's one motion exception; reduced motion suppresses the pulse and leaves the same bar, legible on its own). A lift that can pair with nothing never shows a pair bar: each row it passes hands the aim to the gap beside it, which is how an owner learns that card places whole rows only. A separate outline on every merely-*possible* destination was tried and withdrawn — once acquisition worked by neighborhood it restated what the mark already said, and as a closed rectangle around a whole row it outweighed the mark it was meant to introduce, enclosing the empty half of an orphan row into the bargain. One-time tooltip optional.
 - **Acquisition is by neighborhood, not by hover.** The drag holds the nearest landing place to the pointer, not the one under it: gaps and rows tile the editor, a row this card cannot pair with contributes none and falls to the gap beside it, and the empty half of an orphan row acquires the pair as readily as the card does. What is held is always what is highlighted, so nothing lands where it was not shown; it changes hands only when a rival is meaningfully nearer, so a pointer tracking a boundary settles rather than flickering, and each change of target is marked by a haptic tick. Releasing outside the editor — by more than about half a card — holds nothing and cancels cleanly. What this replaces: requiring the pointer to be over the target, which left a full-only card with a ~24px stripe as its only destination.
-- Complementary **⇆ size toggle** on dual-size archetypes: full → orphan half in place; half → new full row inserted after the origin row, ex-partner stays centered orphan.
+- **⇆ size toggle** on dual-size archetypes, the one control whose purpose is the size: full → orphan half in place; half → new full row inserted after the origin row, ex-partner stays centered orphan.
 - `mockups/layout-editor.html` is normative for editor interaction — its mutations (`removeCard`, `insertAsRow`, `pairWith`, `toggleSize`) and what each drop zone *means* — and for nothing else. Port the behavior, not the code. How a zone is *acquired* is this section's prose, not the mockup's pointer-exact hit test; #208 is where that model was decided.
 
 ## 10. Deferred
@@ -314,7 +314,7 @@ Out of v1 — deferred, not rejected, except where a line says otherwise.
 - **Recap / "Feat Replay"** (monthly wrapped card): requires historical aggregation (monthly stat snapshots) that does not exist. Own epic post-V1; high retention value, not a launch blocker.
 - **Public-text moderation** — unblocks Text Note *editing*; one policy for note + display_name + bio, reusing the existing moderation provider seam with text input (#199).
 - Uploading your own header art (choosing among the art the profile already carries is part of the header, §4).
-- **Motion** — there is none today, and adding it is post-V1 polish.
+- **Motion** — post-V1 polish, with one exception already taken: the composition editor's landing indicator pulses while a card is in the air (§9.2). It earns the exception because it is the only thing telling an owner where a release will land, it is drawn over whatever art the card beneath it carries, and a drag is exactly the moment the eye is elsewhere. It is scoped to that indicator, it runs only during a drag, and reduced motion suppresses it — the static bar is the one that has to be legible. Nothing else in the product animates.
 - Per-platform premium card art; user-derived palettes; multi-asset header art; animated backgrounds.
 - 3+ column layouts, vertical spans, free grid — **explicitly rejected**.
 

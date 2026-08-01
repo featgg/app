@@ -86,6 +86,16 @@ const _showcase = ProfileWidget(
   isEnabled: true,
 );
 
+/// Identity is full-only per the archetype registry, so no row ever offers it
+/// a pair slot.
+const _identity = ProfileWidget(
+  id: 'i',
+  kind: ProfileWidgetKind.passport,
+  platform: null,
+  position: 3,
+  isEnabled: true,
+);
+
 /// A profile with no saved arrangement, so the session bootstraps one.
 const _unarrangedProfile = Profile(
   id: 'owner-1',
@@ -100,33 +110,46 @@ const _unarrangedProfile = Profile(
 
 const double _columnWidth = 360;
 
-Widget _harness(ProviderContainer container) => UncontrolledProviderScope(
-  container: container,
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(
-      body: PersonalizationTheme(
-        palette: PersonalizationPalette.crimson,
-        // In production the editor always lives inside the fixed center column;
-        // unconstrained, the geometry a drag meets here is not the shipped one.
-        child: const SingleChildScrollView(
-          child: Center(
-            child: SizedBox(
-              width: _columnWidth,
-              child: CompositionEditorRows(columnWidth: _columnWidth),
+Widget _harness(ProviderContainer container, {required bool reducedMotion}) =>
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            // Copied from the ambient data rather than built fresh: a bare
+            // MediaQueryData zeroes the viewport the drag's auto-scroll is
+            // measured against.
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(disableAnimations: reducedMotion),
+              child: PersonalizationTheme(
+                palette: PersonalizationPalette.crimson,
+                // In production the editor always lives inside the fixed center
+                // column; unconstrained, the geometry a drag meets here is not
+                // the shipped one.
+                child: const SingleChildScrollView(
+                  child: Center(
+                    child: SizedBox(
+                      width: _columnWidth,
+                      child: CompositionEditorRows(columnWidth: _columnWidth),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
 
 Future<ProviderContainer> _openEditor(
   WidgetTester tester,
-  List<ProfileWidget> widgets,
-) async {
+  List<ProfileWidget> widgets, {
+  bool reducedMotion = false,
+}) async {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
@@ -144,7 +167,7 @@ Future<ProviderContainer> _openEditor(
       .read(profileCompositionProvider.notifier)
       .startEditing(_unarrangedProfile, widgets);
 
-  await tester.pumpWidget(_harness(container));
+  await tester.pumpWidget(_harness(container, reducedMotion: reducedMotion));
   await tester.pumpAndSettle();
   return container;
 }
@@ -186,19 +209,23 @@ Finder _gapMark(int index) => find.descendant(
   matching: find.byType(DecoratedBox),
 );
 
-/// The accent edge the editor draws on the card a pair drop is aimed at:
-/// exactly one of left/right and no horizontal edge, which is what tells it
-/// apart from a card's own border and from the pairable row's glow.
-Finder _sideMark(DropSide side) => find.byWidgetPredicate((w) {
-  if (w is! DecoratedBox) return false;
-  final decoration = w.decoration;
-  if (decoration is! BoxDecoration) return false;
-  final border = decoration.border;
-  if (border is! Border || border.top != BorderSide.none) return false;
-  return side == DropSide.left
-      ? border.left != BorderSide.none && border.right == BorderSide.none
-      : border.right != BorderSide.none && border.left == BorderSide.none;
+/// The accent bar the editor draws down the drop side of the card a pair drop
+/// is aimed at.
+Finder _pairMark(String cardId) =>
+    find.byKey(Key('compositionMark_pair_$cardId'));
+
+/// Every landing indicator on screen, whichever zone holds it.
+Finder _anyMark() => find.byWidgetPredicate((w) {
+  final key = w.key;
+  return key is ValueKey<String> && key.value.startsWith('compositionMark_');
 });
+
+/// The pulse wired onto a landing mark. Nothing else inside the editor fades,
+/// so this is the animation's whole footprint.
+Finder _pulseTransitions() => find.descendant(
+  of: find.byType(CompositionEditorRows),
+  matching: find.byType(FadeTransition),
+);
 
 void main() {
   testWidgets(
@@ -271,6 +298,149 @@ void main() {
     ]);
   });
 
+  testWidgets('a half card released into a gap stays half', (tester) async {
+    final container = await _openEditor(tester, const [
+      _rank,
+      _main,
+      _showcase,
+    ]);
+    container.read(profileCompositionProvider.notifier).onToggleSize('r');
+    await tester.pumpAndSettle();
+    expect(_working(container), const [
+      FullRow('m'),
+      PairRow(left: 'r'),
+      FullRow('s'),
+    ]);
+
+    final gesture = await _lift(tester, 'r');
+    // Measured after the lift, so the grown gaps are the ones scored; the
+    // bottom-biased point keeps the rival row-2 zone clear of the deadband.
+    final gap = tester.getRect(find.byKey(const Key('compositionGap_3')));
+    await _releaseAt(tester, gesture, Offset(gap.center.dx, gap.bottom - 1));
+
+    // Rank supports both sizes, so a rule reading the archetype would land it
+    // full; it stays the half it was lifted as.
+    expect(_working(container), const [
+      FullRow('m'),
+      FullRow('s'),
+      PairRow(left: 'r'),
+    ]);
+  });
+
+  testWidgets('exactly one landing indicator is shown while a card is in the '
+      'air', (tester) async {
+    await _openEditor(tester, const [_rank, _main, _showcase]);
+
+    final gesture = await _lift(tester, 'm');
+    final target = tester.getRect(find.byKey(personalizationCardKey('r')));
+    await gesture.moveTo(Offset(target.left + 8, target.center.dy));
+    await tester.pump();
+
+    // The Showcase row below accepts a pair too and stays unmarked: what is
+    // held is the only thing highlighted.
+    expect(_anyMark(), findsOneWidget);
+    expect(_pairMark('r'), findsOneWidget);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('the pair mark is a bar on the drop side of the target card', (
+    tester,
+  ) async {
+    await _openEditor(tester, const [_rank, _main, _showcase]);
+
+    final gesture = await _lift(tester, 'm');
+    final aimedAt = tester.getRect(find.byKey(personalizationCardKey('r')));
+    await gesture.moveTo(Offset(aimedAt.left + 8, aimedAt.center.dy));
+    await tester.pump();
+
+    final card = tester.getRect(find.byKey(personalizationCardKey('r')));
+    final mark = tester.getRect(_pairMark('r'));
+    // A bar, not a border or a ring: taller than it is wide, held off the
+    // card's ends, drawn inside it, and on the side the release would land.
+    expect(mark.width, lessThan(mark.height));
+    expect(mark.height, lessThan(card.height));
+    expect(card.contains(mark.topLeft), isTrue);
+    expect(card.contains(mark.bottomRight), isTrue);
+    expect(mark.center.dx, lessThan(card.center.dx));
+
+    await gesture.moveTo(Offset(card.right - 8, card.center.dy));
+    await tester.pump();
+    expect(
+      tester.getRect(_pairMark('r')).center.dx,
+      greaterThan(
+        tester.getRect(find.byKey(personalizationCardKey('r'))).center.dx,
+      ),
+    );
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('a card that can pair with nothing only ever marks gaps', (
+    tester,
+  ) async {
+    await _openEditor(tester, const [_rank, _identity]);
+
+    final gesture = await _lift(tester, 'i');
+    final target = tester.getRect(find.byKey(personalizationCardKey('r')));
+    await gesture.moveTo(target.center);
+    await tester.pump();
+
+    // No row offers a full-only card a pair slot, so aiming at a card hands
+    // the release to the gap beside it — the whole of the negative signal now
+    // that nothing is highlighted on lift.
+    expect(_pairMark('r'), findsNothing);
+    expect(_anyMark(), findsOneWidget);
+    expect(
+      (tester.widget(_anyMark()).key! as ValueKey<String>).value,
+      startsWith('compositionMark_gap_'),
+    );
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('the pulse stops when the drag ends', (tester) async {
+    await _openEditor(tester, const [_rank, _main]);
+
+    final gesture = await _lift(tester, 'm');
+    final target = tester.getRect(find.byKey(personalizationCardKey('r')));
+    await gesture.moveTo(Offset(target.left + 8, target.center.dy));
+    await tester.pump();
+    expect(_pairMark('r'), findsOneWidget);
+    expect(_pulseTransitions(), findsOneWidget);
+    expect(tester.binding.transientCallbackCount, greaterThan(0));
+
+    await gesture.up();
+    await tester.pump();
+
+    // A repeating controller left running past the drop keeps the device
+    // rendering and hangs every settle in this suite.
+    expect(tester.binding.transientCallbackCount, 0);
+  });
+
+  testWidgets('reduced motion leaves the mark unanimated and present', (
+    tester,
+  ) async {
+    await _openEditor(tester, const [_rank, _main], reducedMotion: true);
+
+    final gesture = await _lift(tester, 'm');
+    final target = tester.getRect(find.byKey(personalizationCardKey('r')));
+    await gesture.moveTo(Offset(target.left + 8, target.center.dy));
+    await tester.pump();
+
+    // The mark is there at full strength and the pulse is not wired at all,
+    // rather than wired and hidden.
+    expect(_pairMark('r'), findsOneWidget);
+    expect(_pulseTransitions(), findsNothing);
+    expect(tester.binding.transientCallbackCount, 0);
+
+    await gesture.up();
+    await tester.pump();
+  });
+
   testWidgets('releasing well outside the editor changes nothing', (
     tester,
   ) async {
@@ -306,8 +476,10 @@ void main() {
     // The gap below every row — the one the shortened layout will not have.
     expect(_gapMark(2), findsOneWidget);
 
+    // pump, never settle: the landing mark pulses while a card is in the air,
+    // and a repeating controller never settles.
     await tester.tap(find.byKey(const Key('compositionDelete_r')));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(_working(container), const [FullRow('m')]);
 
     await gesture.up();
@@ -328,10 +500,10 @@ void main() {
     await gesture.moveTo(Offset(target.left + 8, target.center.dy));
     await tester.pump();
     // Aimed at the left of the Rank card, which is what a release would pair.
-    expect(_sideMark(DropSide.left), findsOneWidget);
+    expect(_pairMark('r'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('compositionDelete_r')));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(_working(container), const [FullRow('m')]);
 
     await gesture.up();

@@ -279,8 +279,10 @@ class ProfileComposition extends _$ProfileComposition {
   }
 
   // Records whether each card supports a full row, from the owner's widgets. Full
-  // is the safe default for an unknown id (every archetype supports full); only
-  // moveToGap needs it, the editor rows read half-support locally.
+  // is the safe default for an unknown id (every archetype supports full). It
+  // seeds a card that has no placement yet — the bootstrap layout and a card
+  // acquired mid-session — which is the only case with no row type to read the
+  // size from; the editor rows read half-support locally.
   void _captureSupport(Map<String, ProfileWidget> byId) {
     _supportsFull = (id) {
       final widget = byId[id];
@@ -313,14 +315,7 @@ class ProfileComposition extends _$ProfileComposition {
     // A save snapshots the working layout; ignore edits until it resolves so a
     // mid-flight change can never be silently folded into `saved` unsent.
     if (state.saving) return;
-    state = state.copyWith(
-      working: moveToGap(
-        state.working,
-        id,
-        gapIndex,
-        supportsFull: _supportsFull,
-      ),
-    );
+    state = state.copyWith(working: moveToGap(state.working, id, gapIndex));
   }
 
   void onPairDrop(String dragId, String targetId, DropSide side) {
