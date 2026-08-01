@@ -90,6 +90,10 @@ List<ProfileLayoutRow> normalizeLayout(
   return out;
 }
 
+/// Whether [rows] still place [id] in some slot.
+bool layoutHolds(List<ProfileLayoutRow> rows, String id) =>
+    rows.any((row) => _cardIds(row).contains(id));
+
 /// The row indices that light up while [dragId] is lifted: rows where [dragId]
 /// can legally pair — [dragId] and some other card in the row both support half,
 /// and the row has room (it is full, an orphan, or already holds [dragId]).
@@ -125,6 +129,27 @@ bool canPairBeside(
   if (!supportsHalf(dragId) || !supportsHalf(targetId)) return false;
   final row = rows[rowIndex];
   return row is FullRow || isOrphanRow(row) || _cardIds(row).contains(dragId);
+}
+
+/// The card in the row at [rowIndex] that [dragId] would pair with, or null when
+/// the row is no destination for it. At most one card ever qualifies: a pair row
+/// already holding two other cards has no room for a third, so a row never has
+/// to choose between two offers.
+///
+/// Expressed through [canPairBeside] rather than restating the rule, so the drop
+/// a row offers is by construction the one the guard allows.
+String? pairTargetAt(
+  List<ProfileLayoutRow> rows,
+  int rowIndex,
+  String dragId, {
+  required CardSizeSupport supportsHalf,
+}) {
+  for (final id in _cardIds(rows[rowIndex])) {
+    if (canPairBeside(rows, rowIndex, dragId, id, supportsHalf: supportsHalf)) {
+      return id;
+    }
+  }
+  return null;
 }
 
 /// Where [id] currently sits, or null when it is not placed.
