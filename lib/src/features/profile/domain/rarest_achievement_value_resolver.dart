@@ -29,8 +29,9 @@ final class ResolvedRarestAchievement extends Equatable {
   /// The datum key naming what [rarityPct] is measured against.
   final String rarityKey;
 
-  /// The game's art url: the card's picture. Null when the payload publishes
-  /// none (the card then renders framed).
+  /// The card's picture: the game's portrait cover when the payload carries
+  /// one, else its store capsule. Null when the payload publishes neither (the
+  /// card then renders framed).
   final String? heroImage;
 
   /// The achievement's own badge url: the framed variant's content.
@@ -81,7 +82,10 @@ ResolvedRarestAchievement? resolveRarestAchievement(GameCard? card) {
     game: rarest.game,
     rarityPct: rarest.rarityPct,
     rarityKey: rarityStatKey(rarest.rarityBasis),
-    heroImage: rarest.gameIconImage,
+    // The capsule is a wide, low crop a full-bleed card can only stretch, so
+    // the portrait cover wins; the capsule stays the fallback because cards
+    // synced before the cover was published carry only that one.
+    heroImage: rarest.gameHeroImage ?? rarest.gameIconImage,
     iconImage: rarest.iconImage,
   );
 }

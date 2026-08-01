@@ -26,7 +26,8 @@ GameCard _steam({RarestAchievement? rarest}) => _card(
 );
 
 const _badgeUrl = 'https://cdn.test/badge.jpg';
-const _gameArtUrl = 'https://cdn.test/capsule.jpg';
+const _capsuleUrl = 'https://cdn.test/capsule.jpg';
+const _coverUrl = 'https://cdn.test/library_600x900.jpg';
 
 RarestAchievement _rarest({
   String name = 'Ashes to Ashes',
@@ -34,7 +35,8 @@ RarestAchievement _rarest({
   num rarityPct = 0.31,
   String rarityBasis = kRarityBasisGamePlayers,
   String? iconImage = _badgeUrl,
-  String? gameIconImage = _gameArtUrl,
+  String? gameIconImage = _capsuleUrl,
+  String? gameHeroImage = _coverUrl,
 }) => RarestAchievement(
   name: name,
   game: game,
@@ -42,6 +44,7 @@ RarestAchievement _rarest({
   rarityBasis: rarityBasis,
   iconImage: iconImage,
   gameIconImage: gameIconImage,
+  gameHeroImage: gameHeroImage,
 );
 
 void main() {
@@ -62,8 +65,31 @@ void main() {
       // whole card and hide the game art the payload published for the subject.
       final resolved = resolveRarestAchievement(_steam(rarest: _rarest()));
 
-      expect(resolved!.heroImage, _gameArtUrl);
+      expect(resolved!.heroImage, _coverUrl);
       expect(resolved.iconImage, _badgeUrl);
+    });
+
+    test("the game's portrait cover is the card's picture whenever the payload "
+        'carries one', () {
+      // The capsule is a wide, low crop; a full-bleed card can only stretch it.
+      final bothUrls = resolveRarestAchievement(_steam(rarest: _rarest()));
+      expect(bothUrls!.heroImage, _coverUrl);
+
+      final coverOnly = resolveRarestAchievement(
+        _steam(rarest: _rarest(gameIconImage: null)),
+      );
+      expect(coverOnly!.heroImage, _coverUrl);
+    });
+
+    test('a payload carrying only the capsule still draws the capsule', () {
+      // Every card synced before the cover was published carries the capsule
+      // alone: it must keep bleeding, not degrade to the framed no-art variant.
+      final resolved = resolveRarestAchievement(
+        _steam(rarest: _rarest(gameHeroImage: null)),
+      );
+
+      expect(resolved!.heroImage, isNotNull);
+      expect(resolved.heroImage, _capsuleUrl);
     });
 
     test('a null card, a non-Steam card and a Steam card with no data block '

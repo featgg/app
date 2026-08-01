@@ -198,6 +198,7 @@ widget-tier avatar and the hero art):
       "icon_image": "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/730/abc123.jpg",
       "game": "CS2",
       "game_icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+      "game_hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg",
       "rarity_pct": 0.31,
       "rarity_basis": "GAME_PLAYERS"
     }
@@ -215,7 +216,14 @@ guarantee. `rarity_pct` is a percentage; `rarity_basis` names what that
 percentage is measured against, and `GAME_PLAYERS` is the only value today.
 Read the basis rather than assuming a denominator: a platform added later may
 measure rarity differently, and a hard-coded "% of players" would then be
-wrong.
+wrong. The block carries two game images: `game_icon_image` is the store's
+small capsule crop (wide and low) and `game_hero_image` is the game's portrait
+cover — the same class of art `library_showcase[]` and `perfect_showcase[]`
+publish as `hero_image`. `game_hero_image` is optional and additive under
+`schema_version: 1`, so a card synced before it landed carries only
+`game_icon_image` and gains the cover on its next natural refresh; prefer the
+cover wherever the art is drawn at size and fall back to the capsule. Both
+follow § Image rules.
 
 `library_showcase[]` entries may carry an optional achievements pair:
 `achieved` (integer ≥ 0, unlocked count) and `total` (integer > 0,

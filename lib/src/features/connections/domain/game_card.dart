@@ -122,6 +122,7 @@ final class RarestAchievement extends Equatable {
     required this.rarityBasis,
     this.iconImage,
     this.gameIconImage,
+    this.gameHeroImage,
   });
 
   final String name;
@@ -134,8 +135,12 @@ final class RarestAchievement extends Equatable {
   /// The achievement's own badge url, or null (envelope image rules).
   final String? iconImage;
 
-  /// The game's art url, or null (envelope image rules).
+  /// The game's small store capsule url, or null (envelope image rules).
   final String? gameIconImage;
+
+  /// The game's portrait cover url, or null (envelope image rules). Absent on
+  /// cards synced before the payload carried it.
+  final String? gameHeroImage;
 
   @override
   List<Object?> get props => [
@@ -145,6 +150,7 @@ final class RarestAchievement extends Equatable {
     rarityBasis,
     iconImage,
     gameIconImage,
+    gameHeroImage,
   ];
 }
 
