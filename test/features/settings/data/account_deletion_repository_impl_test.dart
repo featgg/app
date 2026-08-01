@@ -21,12 +21,14 @@ final class _RecordingReporter implements CrashReporter {
 typedef _RequestFn = Future<DeletionRequestDto> Function();
 typedef _ConfirmFn = Future<DeletionConfirmDto> Function(String code);
 typedef _CancelFn = Future<DeletionCancelDto> Function();
+typedef _StatusFn = Future<DeletionStatusDto> Function();
 
 final class _FakeDataSource implements AccountDeletionDataSource {
   _FakeDataSource({
     _RequestFn? onRequest,
     _ConfirmFn? onConfirm,
     _CancelFn? onCancel,
+    _StatusFn? onStatus,
   }) : _onRequest =
            onRequest ??
            (() async => const DeletionRequestDto(success: true, otpSent: true)),
@@ -39,11 +41,14 @@ final class _FakeDataSource implements AccountDeletionDataSource {
        _onCancel =
            onCancel ??
            (() async =>
-               const DeletionCancelDto(success: true, cancelled: true));
+               const DeletionCancelDto(success: true, cancelled: true)),
+       _onStatus =
+           onStatus ?? (() async => const DeletionStatusDto(requestedAt: null));
 
   final _RequestFn _onRequest;
   final _ConfirmFn _onConfirm;
   final _CancelFn _onCancel;
+  final _StatusFn _onStatus;
 
   @override
   Future<DeletionRequestDto> requestDeletion() => _onRequest();
@@ -53,6 +58,9 @@ final class _FakeDataSource implements AccountDeletionDataSource {
 
   @override
   Future<DeletionCancelDto> cancelDeletion() => _onCancel();
+
+  @override
+  Future<DeletionStatusDto> fetchDeletionStatus() => _onStatus();
 }
 
 FunctionException _fnEx(int status, {String? code, String? message}) {
@@ -225,6 +233,102 @@ void main() {
         (_) => null,
       );
       expect(failure, isA<NetworkFailure>());
+    });
+  });
+
+  group('AccountDeletionRepositoryImpl.fetchDeletionStatus', () {
+    test('a timestamp payload → pending status 7 days out, in UTC', () async {
+      final s = _subject(
+        _FakeDataSource(
+          onStatus: () async =>
+              const DeletionStatusDto(requestedAt: '2026-06-12T10:00:00Z'),
+        ),
+      );
+      final status = (await s.repo.fetchDeletionStatus()).fold(
+        (_) => null,
+        (r) => r,
+      );
+      expect(status, isNotNull);
+      expect(status!.isPending, isTrue);
+      expect(status.requestedAt, DateTime.utc(2026, 6, 12, 10));
+      expect(status.requestedAt!.isUtc, isTrue);
+      expect(status.scheduledAt, DateTime.utc(2026, 6, 19, 10));
+    });
+
+    test(
+      'a null payload → non-pending status with no scheduled target',
+      () async {
+        final s = _subject(_FakeDataSource());
+        final status = (await s.repo.fetchDeletionStatus()).fold(
+          (_) => null,
+          (r) => r,
+        );
+        expect(status, isNotNull);
+        expect(status!.isPending, isFalse);
+        expect(status.scheduledAt, isNull);
+      },
+    );
+
+    test('PostgrestException 401 → AuthFailure, not crash-reported', () async {
+      final s = _subject(
+        _FakeDataSource(
+          onStatus: () async =>
+              throw PostgrestException(message: 'no session', code: '401'),
+        ),
+      );
+      final failure = (await s.repo.fetchDeletionStatus()).fold(
+        (f) => f,
+        (_) => null,
+      );
+      expect(failure, isA<AuthFailure>());
+      expect(s.reporter.reported, isEmpty);
+    });
+
+    test('PostgrestException PGRST301 → AuthFailure', () async {
+      final s = _subject(
+        _FakeDataSource(
+          onStatus: () async => throw PostgrestException(
+            message: 'jwt expired',
+            code: 'PGRST301',
+          ),
+        ),
+      );
+      final failure = (await s.repo.fetchDeletionStatus()).fold(
+        (f) => f,
+        (_) => null,
+      );
+      expect(failure, isA<AuthFailure>());
+    });
+
+    test('a parse fault → UnexpectedFailure and crash-reported', () async {
+      final s = _subject(
+        _FakeDataSource(
+          onStatus: () async =>
+              const DeletionStatusDto(requestedAt: 'not-a-date'),
+        ),
+      );
+      final failure = (await s.repo.fetchDeletionStatus()).fold(
+        (f) => f,
+        (_) => null,
+      );
+      expect(failure, isA<UnexpectedFailure>());
+      expect(s.reporter.reported, isNotEmpty);
+    });
+
+    test('SocketException → NetworkFailure, not crash-reported', () async {
+      // The transport branch must survive the PostgrestException branch being
+      // inserted ahead of it.
+      final s = _subject(
+        _FakeDataSource(
+          onStatus: () async => throw const SocketException('down'),
+        ),
+      );
+      final failure = (await s.repo.fetchDeletionStatus()).fold(
+        (f) => f,
+        (_) => null,
+      );
+      expect(failure, isA<NetworkFailure>());
+      expect(s.reporter.reported, isEmpty);
     });
   });
 }

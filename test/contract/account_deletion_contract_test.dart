@@ -60,6 +60,10 @@ final class _FixtureDataSource implements AccountDeletionDataSource {
     if (f.status == 200) return DeletionCancelDto.fromJson(f.payload);
     throw _asFunctionException(f);
   }
+
+  @override
+  Future<DeletionStatusDto> fetchDeletionStatus() async =>
+      throw UnimplementedError('not covered by a recorded fixture');
 }
 
 FunctionException _asFunctionException(RecordedFixture f) => FunctionException(
