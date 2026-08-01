@@ -27,7 +27,6 @@ final class Profile extends Equatable {
     required this.privacy,
     required this.featuredPlatform,
     this.headerPlatform,
-    this.deletionRequestedAt,
     this.layout = const [],
     this.createdAt,
   });
@@ -54,10 +53,6 @@ final class Profile extends Equatable {
   /// profile reads in the feed, this one about how it reads on its own page.
   final Platform? headerPlatform;
 
-  /// Server-managed read-only marker set when a deletion is pending, or null
-  /// when none is. The client reads but never writes it.
-  final DateTime? deletionRequestedAt;
-
   /// The composed profile layout: an ordered list of rows referencing this
   /// profile's own widget ids.
   /// Server-managed and read-only to the client; empty for every profile that
@@ -68,16 +63,6 @@ final class Profile extends Equatable {
   /// displays; null when the read surface did not include it.
   final DateTime? createdAt;
 
-  /// Grace window the backend applies after a confirmed deletion request.
-  static const Duration deletionGracePeriod = Duration(days: 7);
-
-  /// Whether a deletion is pending for this account.
-  bool get isDeletionPending => deletionRequestedAt != null;
-
-  /// The 7-day deletion target, or null when no deletion is pending.
-  DateTime? get deletionScheduledAt =>
-      deletionRequestedAt?.add(deletionGracePeriod);
-
   Profile copyWith({
     String? displayName,
     // Wrapped in a nullary function so callers can explicitly set null.
@@ -87,7 +72,6 @@ final class Profile extends Equatable {
     ProfilePrivacy? privacy,
     Platform? Function()? featuredPlatform,
     Platform? Function()? headerPlatform,
-    DateTime? Function()? deletionRequestedAt,
   }) => Profile(
     id: id,
     username: username,
@@ -102,9 +86,6 @@ final class Profile extends Equatable {
     headerPlatform: headerPlatform != null
         ? headerPlatform()
         : this.headerPlatform,
-    deletionRequestedAt: deletionRequestedAt != null
-        ? deletionRequestedAt()
-        : this.deletionRequestedAt,
     // Carried, not editable: both are server-managed, and a copy that dropped
     // the layout would silently move the profile off its composed render.
     layout: layout,
@@ -122,7 +103,6 @@ final class Profile extends Equatable {
     privacy,
     featuredPlatform,
     headerPlatform,
-    deletionRequestedAt,
     layout,
     createdAt,
   ];

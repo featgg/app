@@ -19,7 +19,6 @@ final class ProfileDto {
     required this.privacyLevel,
     required this.featuredPlatform,
     this.headerPlatform,
-    this.deletionRequestedAt,
     required this.layout,
     this.createdAt,
   });
@@ -39,8 +38,6 @@ final class ProfileDto {
   final String? featuredPlatform;
   @JsonKey(name: 'header_platform')
   final String? headerPlatform;
-  @JsonKey(name: 'deletion_requested_at')
-  final DateTime? deletionRequestedAt;
 
   /// Raw wire layout array; parsed defensively into rows by [_layoutFromWire].
   /// Defaults to an empty list when the column is absent (older/empty rows).
@@ -64,7 +61,6 @@ Profile profileFromDto(ProfileDto dto) => Profile(
   privacy: _privacyFromWire(dto.privacyLevel),
   featuredPlatform: _platformFromWireOrNull(dto.featuredPlatform),
   headerPlatform: _platformFromWireOrNull(dto.headerPlatform),
-  deletionRequestedAt: dto.deletionRequestedAt,
   layout: _layoutFromWire(dto.layout),
   createdAt: dto.createdAt,
 );
