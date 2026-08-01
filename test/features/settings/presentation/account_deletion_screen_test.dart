@@ -36,6 +36,10 @@ final class _FakeRepo implements AccountDeletionRepository {
 
   @override
   Future<Either<Failure, Unit>> cancelDeletion() async => right(unit);
+
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async =>
+      right(const DeletionStatus());
 }
 
 Future<ProviderContainer> _pump(

@@ -30,6 +30,10 @@ final class _RecordingAccountDeletionRepository
 
   @override
   Future<Either<Failure, Unit>> requestDeletion() async => right(unit);
+
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async =>
+      right(const DeletionStatus());
 }
 
 ProviderContainer _container(AccountDeletionRepository repo) {

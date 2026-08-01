@@ -28,80 +28,21 @@ const _publicProfile = Profile(
   featuredPlatform: null,
 );
 
-final _pendingProfile = Profile(
-  id: 'user-1',
-  username: 'pub',
-  displayName: 'Public User',
-  avatarUrl: null,
-  bio: null,
-  theme: ProfileTheme.crimson,
-  privacy: ProfilePrivacy.public,
-  featuredPlatform: null,
-  deletionRequestedAt: DateTime.now().toUtc(),
-);
-
-/// Profile fake whose `fetchMyProfile` returns a pending profile until
-/// [cleared] is set, then a cleared one. Driven by a flag rather than a call
-/// sequence so the result is deterministic even though both the privacy seam
-/// and the deletion-status seam read this same repository.
-final class _ClearableProfileRepository implements ProfileRepository {
-  bool cleared = false;
-
-  @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async =>
-      right(cleared ? _publicProfile : _pendingProfile);
-
-  @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_publicProfile);
-
-  @override
-  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
-      right(null);
-
-  @override
-  Future<Either<Failure, Unit>> setMyLayout(
-    List<ProfileLayoutRow> rows,
-  ) async => right(unit);
-}
-
-/// Profile fake that starts non-pending and flips to pending once [scheduled]
-/// is set — simulating a deletion scheduled inside the pushed delete-account
-/// flow, observable only on a fresh read of the deletion-status seam.
-final class _SchedulingProfileRepository implements ProfileRepository {
-  bool scheduled = false;
-
-  @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async =>
-      right(scheduled ? _pendingProfile : _publicProfile);
-
-  @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_publicProfile);
-
-  @override
-  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
-      right(null);
-
-  @override
-  Future<Either<Failure, Unit>> setMyLayout(
-    List<ProfileLayoutRow> rows,
-  ) async => right(unit);
-}
-
-/// Recording deletion-repo fake: counts cancel calls and, on cancel, clears the
-/// linked profile fake so the post-invalidation re-read returns a cleared row.
+/// Recording deletion-repo fake: counts cancel calls and reports the pending
+/// state from a mutable flag, so a test can flip it between reads (a deletion
+/// scheduled elsewhere) and a cancel clears it for the post-invalidation
+/// re-read.
 final class _RecordingAccountDeletionRepository
     implements AccountDeletionRepository {
-  _RecordingAccountDeletionRepository({this.onCancel});
+  _RecordingAccountDeletionRepository({this.pending = false});
 
-  final void Function()? onCancel;
+  bool pending;
   int cancelCalls = 0;
 
   @override
   Future<Either<Failure, Unit>> cancelDeletion() async {
     cancelCalls++;
-    onCancel?.call();
+    pending = false;
     return right(unit);
   }
 
@@ -112,6 +53,11 @@ final class _RecordingAccountDeletionRepository
 
   @override
   Future<Either<Failure, Unit>> requestDeletion() async => right(unit);
+
+  @override
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async => right(
+    DeletionStatus(requestedAt: pending ? DateTime.now().toUtc() : null),
+  );
 }
 
 /// Recording profile fake: captures the write and lets the update outcome be
@@ -389,7 +335,11 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _screen(_ClearableProfileRepository(), _RecordingAuthRepository()),
+      _screen(
+        _RecordingProfileRepository(),
+        _RecordingAuthRepository(),
+        deletionRepo: _RecordingAccountDeletionRepository(pending: true),
+      ),
     );
     // The pending banner contains a CooldownCountdown periodic timer, so the
     // tree never quiesces; pump fixed frames instead of pumpAndSettle.
@@ -428,7 +378,11 @@ void main() {
     'the delete-account tile is disabled when a deletion is pending',
     (tester) async {
       await tester.pumpWidget(
-        _screen(_ClearableProfileRepository(), _RecordingAuthRepository()),
+        _screen(
+          _RecordingProfileRepository(),
+          _RecordingAuthRepository(),
+          deletionRepo: _RecordingAccountDeletionRepository(pending: true),
+        ),
       );
       // The pending banner's CooldownCountdown periodic timer keeps the tree
       // busy; pump fixed frames instead of pumpAndSettle.
@@ -450,15 +404,12 @@ void main() {
     'tapping Cancel invokes cancelDeletion and the refreshed read clears the '
     'banner',
     (tester) async {
-      final profileRepo = _ClearableProfileRepository();
-      // On cancel the deletion repo clears the profile fake, so the re-read the
-      // controller triggers via invalidation returns a cleared row.
-      final deletionRepo = _RecordingAccountDeletionRepository(
-        onCancel: () => profileRepo.cleared = true,
-      );
+      // The cancel clears the pending flag, so the re-read the controller
+      // triggers via invalidation reports no pending deletion.
+      final deletionRepo = _RecordingAccountDeletionRepository(pending: true);
       await tester.pumpWidget(
         _screen(
-          profileRepo,
+          _RecordingProfileRepository(),
           _RecordingAuthRepository(),
           deletionRepo: deletionRepo,
         ),
@@ -485,15 +436,15 @@ void main() {
   testWidgets(
     'returning from the delete-account flow refreshes the pending banner',
     (tester) async {
-      final profileRepo = _SchedulingProfileRepository();
+      final deletionRepo = _RecordingAccountDeletionRepository();
       final container = ProviderContainer(
         retry: (count, error) => null,
         overrides: [
-          profileRepositoryProvider.overrideWithValue(profileRepo),
-          authRepositoryProvider.overrideWithValue(_RecordingAuthRepository()),
-          accountDeletionRepositoryProvider.overrideWithValue(
-            _RecordingAccountDeletionRepository(),
+          profileRepositoryProvider.overrideWithValue(
+            _RecordingProfileRepository(),
           ),
+          authRepositoryProvider.overrideWithValue(_RecordingAuthRepository()),
+          accountDeletionRepositoryProvider.overrideWithValue(deletionRepo),
         ],
       );
       addTearDown(container.dispose);
@@ -527,7 +478,7 @@ void main() {
       expect(find.byKey(const Key('accountDeletionBanner')), findsNothing);
 
       // The user schedules a deletion inside the pushed delete-account flow.
-      profileRepo.scheduled = true;
+      deletionRepo.pending = true;
       await tester.tap(find.byKey(const Key('settingsDeleteAccountTile')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('stubDeleteAccountScreen')), findsOneWidget);

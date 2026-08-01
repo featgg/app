@@ -1,53 +1,40 @@
 import 'package:featgg/src/core/error/failure.dart';
-import 'package:featgg/src/features/profile/domain/profile_domain.dart';
+import 'package:featgg/src/features/settings/domain/settings_domain.dart';
 import 'package:featgg/src/features/settings/presentation/settings_presentation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 
-Profile _profile({DateTime? deletionRequestedAt}) => Profile(
-  id: 'user-1',
-  username: 'user',
-  displayName: 'User',
-  avatarUrl: null,
-  bio: null,
-  theme: ProfileTheme.crimson,
-  privacy: ProfilePrivacy.public,
-  featuredPlatform: null,
-  deletionRequestedAt: deletionRequestedAt,
-);
+/// Fake whose `fetchDeletionStatus` outcome is injected; counts the calls.
+final class _FakeAccountDeletionRepository
+    implements AccountDeletionRepository {
+  _FakeAccountDeletionRepository(this._statusResult);
 
-/// Fake whose `fetchMyProfile` outcome is injected.
-final class _FakeProfileRepository implements ProfileRepository {
-  _FakeProfileRepository(this._fetchResult);
-
-  final Either<Failure, Profile> Function() _fetchResult;
-  int fetchCalls = 0;
+  final Either<Failure, DeletionStatus> Function() _statusResult;
+  int statusCalls = 0;
 
   @override
-  Future<Either<Failure, Profile>> fetchMyProfile() async {
-    fetchCalls++;
-    return _fetchResult();
+  Future<Either<Failure, DeletionStatus>> fetchDeletionStatus() async {
+    statusCalls++;
+    return _statusResult();
   }
 
   @override
-  Future<Either<Failure, Profile>> updateMyProfile(ProfileEdit edit) async =>
-      right(_profile());
+  Future<Either<Failure, Unit>> requestDeletion() async => right(unit);
 
   @override
-  Future<Either<Failure, Profile?>> fetchPublicProfile(String userId) async =>
-      right(null);
+  Future<Either<Failure, DeletionSchedule>> confirmDeletion(
+    String code,
+  ) async => right(DeletionSchedule(scheduledAt: DateTime.utc(2026)));
 
   @override
-  Future<Either<Failure, Unit>> setMyLayout(
-    List<ProfileLayoutRow> rows,
-  ) async => right(unit);
+  Future<Either<Failure, Unit>> cancelDeletion() async => right(unit);
 }
 
-ProviderContainer _container(ProfileRepository repo) {
+ProviderContainer _container(AccountDeletionRepository repo) {
   final container = ProviderContainer(
     retry: (count, error) => null,
-    overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+    overrides: [accountDeletionRepositoryProvider.overrideWithValue(repo)],
   );
   addTearDown(container.dispose);
   return container;
@@ -55,11 +42,11 @@ ProviderContainer _container(ProfileRepository repo) {
 
 void main() {
   group('settingsDeletionStatusProvider', () {
-    test('folds a pending profile into a pending DeletionStatus', () async {
+    test('folds a pending status through unchanged', () async {
       final requestedAt = DateTime.utc(2026, 6, 12, 10);
       final container = _container(
-        _FakeProfileRepository(
-          () => right(_profile(deletionRequestedAt: requestedAt)),
+        _FakeAccountDeletionRepository(
+          () => right(DeletionStatus(requestedAt: requestedAt)),
         ),
       );
 
@@ -70,9 +57,9 @@ void main() {
       expect(status.scheduledAt, requestedAt.add(const Duration(days: 7)));
     });
 
-    test('folds a non-pending profile into a non-pending status', () async {
+    test('folds a non-pending status through unchanged', () async {
       final container = _container(
-        _FakeProfileRepository(() => right(_profile())),
+        _FakeAccountDeletionRepository(() => right(const DeletionStatus())),
       );
 
       final status = await container.read(
@@ -84,7 +71,7 @@ void main() {
 
     test('surfaces a Failure as AsyncError on Left', () async {
       final container = _container(
-        _FakeProfileRepository(() => left(const NetworkFailure())),
+        _FakeAccountDeletionRepository(() => left(const NetworkFailure())),
       );
       container.listen(settingsDeletionStatusProvider, (_, _) {});
       await expectLater(
@@ -94,11 +81,13 @@ void main() {
     });
 
     test('does not auto-retry on Left (its own _noRetry policy)', () async {
-      final repo = _FakeProfileRepository(() => left(const NetworkFailure()));
+      final repo = _FakeAccountDeletionRepository(
+        () => left(const NetworkFailure()),
+      );
       // No container-level retry override, so only the provider's own
       // `_noRetry` can suppress Riverpod's default retry.
       final container = ProviderContainer(
-        overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+        overrides: [accountDeletionRepositoryProvider.overrideWithValue(repo)],
       );
       addTearDown(container.dispose);
 
@@ -106,11 +95,25 @@ void main() {
       await Future<void>.microtask(() {});
       await Future<void>.microtask(() {});
 
-      expect(repo.fetchCalls, 1);
+      expect(repo.statusCalls, 1);
       expect(
         container.read(settingsDeletionStatusProvider),
         isA<AsyncError<DeletionStatus>>(),
       );
+    });
+
+    test('resolves without any profile repository override', () async {
+      // The container overrides only the deletion repository;
+      // profileRepositoryProvider is left at its default, which throws. Red the
+      // moment the banner's source is re-wired back through fetchMyProfile().
+      final container = _container(
+        _FakeAccountDeletionRepository(() => right(const DeletionStatus())),
+      );
+
+      final status = await container.read(
+        settingsDeletionStatusProvider.future,
+      );
+      expect(status.isPending, isFalse);
     });
   });
 }
