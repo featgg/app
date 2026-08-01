@@ -146,6 +146,7 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
 
   return SteamCardData(
     perfectShowcase: perfectShowcase,
+    rarestAchievement: _rarestAchievementFromMap(data['rarest_achievement']),
     libraryShowcase: showcaseRaw.whereType<Map<String, dynamic>>().map((e) {
       // The achievement pair is present-together-or-absent: keep it only
       // when both fields are present, so a half-pair degrades to unavailable.
@@ -175,6 +176,34 @@ SteamCardData steamCardDataFromMap(Map<String, dynamic> data) {
         heroImage: heroImage is String ? heroImage : null,
       );
     }).toList(),
+  );
+}
+
+/// Reads the optional `rarest_achievement` block. Every gate degrades the block
+/// to null instead of throwing: a throw here would be caught by the registry
+/// wrapper and blank the *whole* Steam block, taking every other Steam card with
+/// it. A missing name, game or basis leaves nothing the card could state, and a
+/// non-`num` percentage is not a rarity; wrong-typed images degrade to null and
+/// the block survives (feed image rules).
+RarestAchievement? _rarestAchievementFromMap(Object? raw) {
+  if (raw is! Map) return null;
+  final name = raw['name'];
+  final game = raw['game'];
+  final basis = raw['rarity_basis'];
+  final pct = raw['rarity_pct'];
+  if (name is! String || name.isEmpty) return null;
+  if (game is! String || game.isEmpty) return null;
+  if (basis is! String || basis.isEmpty) return null;
+  if (pct is! num) return null;
+  final iconImage = raw['icon_image'];
+  final gameIconImage = raw['game_icon_image'];
+  return RarestAchievement(
+    name: name,
+    game: game,
+    rarityPct: pct,
+    rarityBasis: basis,
+    iconImage: iconImage is String ? iconImage : null,
+    gameIconImage: gameIconImage is String ? gameIconImage : null,
   );
 }
 

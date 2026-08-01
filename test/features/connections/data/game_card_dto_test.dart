@@ -378,6 +378,98 @@ void main() {
     });
   });
 
+  group('gameCardFromDto — Steam rarest_achievement', () {
+    SteamCardData parseWithRarest(Object? rarest) {
+      final raw = Map<String, dynamic>.from(_steamWidgetData);
+      raw['data'] = <String, dynamic>{
+        'library_showcase': [
+          <String, dynamic>{'app_id': 730, 'title': 'CS2', 'hours': 540},
+        ],
+        'recent_games': [
+          <String, dynamic>{'app_id': 730, 'title': 'CS2', 'hours_2weeks': 12},
+        ],
+        'rarest_achievement': ?rarest,
+      };
+      final card = gameCardFromDto(GameCardDto.fromJson(raw));
+      return card.data! as SteamCardData;
+    }
+
+    const validBlock = <String, dynamic>{
+      'name': 'Ashes to Ashes',
+      'icon_image': 'https://cdn.example/badge.jpg',
+      'game': 'CS2',
+      'game_icon_image': 'https://cdn.example/730_capsule.jpg',
+      'rarity_pct': 0.31,
+      'rarity_basis': 'GAME_PLAYERS',
+    };
+
+    test('present block parses into rarestAchievement with all six '
+        'fields', () {
+      final data = parseWithRarest(validBlock);
+      final rarest = data.rarestAchievement;
+
+      expect(rarest, isNotNull);
+      expect(rarest!.name, 'Ashes to Ashes');
+      expect(rarest.game, 'CS2');
+      expect(rarest.rarityPct, 0.31);
+      expect(rarest.rarityBasis, 'GAME_PLAYERS');
+      expect(rarest.iconImage, 'https://cdn.example/badge.jpg');
+      expect(rarest.gameIconImage, 'https://cdn.example/730_capsule.jpg');
+    });
+
+    test('absent block → null, library and recent still parse', () {
+      final data = parseWithRarest(null);
+
+      expect(data.rarestAchievement, isNull);
+      expect(data.libraryShowcase, hasLength(1));
+      expect(data.recentGames, hasLength(1));
+    });
+
+    test('wrong-typed block → null, never throws the Steam block', () {
+      final data = parseWithRarest('not-a-map');
+
+      expect(data.rarestAchievement, isNull);
+      expect(data.libraryShowcase, hasLength(1));
+      expect(data.recentGames, hasLength(1));
+    });
+
+    test('a block missing a required field, or with a non-num rarity_pct, → '
+        'null and the rest of the Steam block survives', () {
+      // The regression that would otherwise blank Main, Recent, Milestone,
+      // Collector and the Achievement Grid all at once: a throw here is caught
+      // by the registry wrapper and drops the WHOLE Steam block.
+      final malformed = <String, Map<String, dynamic>>{
+        'no name': {...validBlock}..remove('name'),
+        'empty name': {...validBlock, 'name': ''},
+        'no game': {...validBlock}..remove('game'),
+        'no basis': {...validBlock}..remove('rarity_basis'),
+        'non-num pct': {...validBlock, 'rarity_pct': 'very rare'},
+        'no pct': {...validBlock}..remove('rarity_pct'),
+      };
+
+      malformed.forEach((label, block) {
+        final data = parseWithRarest(block);
+        expect(data.rarestAchievement, isNull, reason: label);
+        expect(data.libraryShowcase, hasLength(1), reason: label);
+        expect(data.recentGames, hasLength(1), reason: label);
+      });
+    });
+
+    test('non-string images degrade to null, the block is kept', () {
+      final data = parseWithRarest({
+        ...validBlock,
+        'icon_image': 123,
+        'game_icon_image': 456,
+      });
+      final rarest = data.rarestAchievement;
+
+      expect(rarest, isNotNull);
+      expect(rarest!.name, 'Ashes to Ashes');
+      expect(rarest.iconImage, isNull);
+      expect(rarest.gameIconImage, isNull);
+    });
+  });
+
   group('gameCardFromDto — unknown platform', () {
     test('throws FormatException for an unknown platform wire value', () {
       final raw = Map<String, dynamic>.from(_steamWidgetData);

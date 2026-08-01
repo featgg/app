@@ -110,6 +110,44 @@ final class PerfectShowcaseEntry extends Equatable {
   List<Object?> get props => [appId, title, iconImage, heroImage];
 }
 
+/// The rarest achievement the platform published for this account: what it is,
+/// the game it belongs to, and how rare it is. [rarityBasis] is the raw wire
+/// token naming what [rarityPct] is measured against — never localized here, and
+/// never assumed: a platform added later may measure rarity differently.
+final class RarestAchievement extends Equatable {
+  const RarestAchievement({
+    required this.name,
+    required this.game,
+    required this.rarityPct,
+    required this.rarityBasis,
+    this.iconImage,
+    this.gameIconImage,
+  });
+
+  final String name;
+  final String game;
+
+  /// A percentage, not a fraction: `0.31` means 0.31%.
+  final num rarityPct;
+  final String rarityBasis;
+
+  /// The achievement's own badge url, or null (envelope image rules).
+  final String? iconImage;
+
+  /// The game's art url, or null (envelope image rules).
+  final String? gameIconImage;
+
+  @override
+  List<Object?> get props => [
+    name,
+    game,
+    rarityPct,
+    rarityBasis,
+    iconImage,
+    gameIconImage,
+  ];
+}
+
 /// Bedwars block in Minecraft `widget_data.data.game_stats`. `star` is optional.
 final class MinecraftBedwarsStats extends Equatable {
   const MinecraftBedwarsStats({
@@ -181,6 +219,7 @@ final class SteamCardData extends Equatable implements CardData {
     required this.libraryShowcase,
     required this.recentGames,
     this.perfectShowcase = const [],
+    this.rarestAchievement,
   });
 
   final List<LibraryShowcaseEntry> libraryShowcase;
@@ -191,8 +230,17 @@ final class SteamCardData extends Equatable implements CardData {
   /// authoritative total lives in the `games_perfect` envelope stat.
   final List<PerfectShowcaseEntry> perfectShowcase;
 
+  /// The rarest achievement among the games the sync sampled; null when the
+  /// payload resolved none.
+  final RarestAchievement? rarestAchievement;
+
   @override
-  List<Object?> get props => [libraryShowcase, recentGames, perfectShowcase];
+  List<Object?> get props => [
+    libraryShowcase,
+    recentGames,
+    perfectShowcase,
+    rarestAchievement,
+  ];
 }
 
 /// Profile block in RetroAchievements `widget_data.data`. `memberSince` and
