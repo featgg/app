@@ -1049,6 +1049,55 @@ void main() {
     });
   });
 
+  group('addRarestAchievementWidget', () {
+    test('writes type rarest_achievement, a non-null platform, is_enabled and '
+        'a bare v1 envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'ra',
+          'platform': 'steam',
+          'type': 'rarest_achievement',
+          'position': 6,
+          'is_enabled': true,
+          'settings': {'schema_version': kProfileWidgetSettingsVersion},
+        }),
+      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addRarestAchievementWidget(platform: Platform.steam, position: 6);
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'ra');
+        expect(widget.kind, ProfileWidgetKind.rarestAchievement);
+        expect(widget.platform, Platform.steam);
+      });
+
+      // The captured write is the brief's contract: a non-null platform and a
+      // bare envelope (no selection sub-object).
+      expect(source.lastInsert!['type'], 'rarest_achievement');
+      expect(source.lastInsert!['platform'], 'steam');
+      expect(source.lastInsert!['position'], 6);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings.keys, ['schema_version']);
+    });
+
+    test('an unauthenticated add → Left(AuthFailure)', () async {
+      final result = await _repo(
+        _FakeDataSource(),
+        _RecordingReporter(),
+        userId: null,
+      ).addRarestAchievementWidget(platform: Platform.steam, position: 0);
+
+      result.fold(
+        (f) => expect(f, isA<AuthFailure>()),
+        (_) => fail('want Left'),
+      );
+    });
+  });
+
   group('mutations write the expected values', () {
     test(
       'setShowcaseSelection rewrites the envelope preserving the selection',

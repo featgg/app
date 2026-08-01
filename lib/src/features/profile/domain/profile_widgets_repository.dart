@@ -97,6 +97,15 @@ abstract interface class ProfileWidgetsRepository {
     required int position,
   });
 
+  /// Inserts a rarest-achievement widget bound to [platform] at [position],
+  /// enabled. Platform-bound (the platform whose achievement rarity it
+  /// surfaces); the settings envelope is bare — no per-widget selection
+  /// sub-object.
+  Future<Either<Failure, ProfileWidget>> addRarestAchievementWidget({
+    required Platform platform,
+    required int position,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 
