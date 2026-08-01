@@ -375,6 +375,85 @@ void main() {
     });
   });
 
+  group('Recent', () {
+    final widget = goldenWidget(
+      id: 'recent',
+      kind: ProfileWidgetKind.recent,
+      platform: Platform.steam,
+    );
+    // File-local: the harness's library fixture cannot express a recent entry,
+    // and only this card reads one.
+    Map<Platform, GameCard?> cards({String? heroImage = goldenArtUrlA}) =>
+        _steam(
+          data: SteamCardData(
+            libraryShowcase: [
+              goldenLibraryEntry(
+                appId: 730,
+                title: 'Counter-Strike',
+                hours: 900,
+              ),
+            ],
+            recentGames: [
+              RecentGameEntry(
+                appId: 730,
+                title: 'Counter-Strike',
+                hours2Weeks: 12,
+                heroImage: heroImage,
+              ),
+            ],
+          ),
+        );
+
+    goldenTest('full bleeds the cover under the game name and both figures', (
+      tester,
+    ) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards(),
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/recent_full.png'),
+      );
+    });
+
+    goldenTest('half bleeds the same cover at the pair aspect with one datum', (
+      tester,
+    ) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.half),
+        width: goldenHalfWidth,
+        cards: cards(),
+        art: const {goldenArtUrlA: goldenArtColorA},
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/recent_half.png'),
+      );
+    });
+
+    goldenTest('no cover renders the framed ground with the game and the '
+        'platform', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards(heroImage: null),
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/recent_full_no_art.png'),
+      );
+    });
+  });
+
   group('Collection', () {
     final widget = goldenWidget(
       id: 'collection',

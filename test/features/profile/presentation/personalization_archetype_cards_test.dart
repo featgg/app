@@ -739,6 +739,203 @@ void main() {
     );
   });
 
+  ProfileWidget recentWidget() => _widget(
+    id: 'rc',
+    kind: ProfileWidgetKind.recent,
+    platform: Platform.steam,
+  );
+
+  Map<Platform, GameCard?> steamRecent({
+    List<RecentGameEntry> recent = const [],
+    List<LibraryShowcaseEntry> library = const [],
+  }) => {
+    Platform.steam: _cardData(
+      Platform.steam,
+      SteamCardData(libraryShowcase: library, recentGames: recent),
+    ),
+  };
+
+  testWidgets('RecentCard with a cover renders bleed and names the game', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RecentCard(
+          widget: recentWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRecent(
+          recent: const [
+            RecentGameEntry(
+              appId: 730,
+              title: 'Counter-Strike',
+              hours2Weeks: 12,
+              heroImage: _coverA,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text('Counter-Strike'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text(formatCardValue(12, _en)),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('RecentCard with no cover renders the framed ground, naming the '
+      'game and the platform', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RecentCard(
+          widget: recentWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRecent(
+          recent: const [
+            RecentGameEntry(appId: 730, title: 'CS', hours2Weeks: 12),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // With no art nothing else on the card can say which account the figure
+    // came from, so the platform keeps its own line beside the game's name.
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.text('CS'),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text(platformDescriptors[Platform.steam]!.shortName),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('RecentCard full places the all-time figure beside the recent '
+      'one only for the same game', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RecentCard(
+          widget: recentWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRecent(
+          recent: const [
+            RecentGameEntry(appId: 730, title: 'CS', hours2Weeks: 12),
+          ],
+          library: const [
+            LibraryShowcaseEntry(appId: 730, title: 'CS', hours: 900),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.ancestor(
+        of: find.text(formatCardValue(900, _en)),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('RecentCard with no recent activity renders the neutral no-data '
+      'card', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RecentCard(
+          widget: recentWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        // The library still carries a game: a stale card must degrade rather
+        // than fall back to another game's cover and name.
+        cards: steamRecent(
+          library: const [
+            LibraryShowcaseEntry(
+              appId: 570,
+              title: 'Dota 2',
+              hours: 1500,
+              heroImage: _coverB,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.byType(Text),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('RecentCard resolves through the injected public source', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: personalizationCardFor(
+          recentWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRecent(
+          recent: const [
+            RecentGameEntry(
+              appId: 730,
+              title: 'Counter-Strike',
+              hours2Weeks: 12,
+              heroImage: _coverA,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Owner fetch is always null in the split repo, so a hit proves the card
+    // binds to the injected public source — the shipped visitor render.
+    expect(find.byType(RecentCard), findsOneWidget);
+    expect(_artFor(_coverA), findsOneWidget);
+  });
+
   Map<Platform, GameCard?> lolRankCards() => {
     Platform.leagueOfLegends: _cardData(
       Platform.leagueOfLegends,

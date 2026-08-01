@@ -11,6 +11,7 @@ import 'cards/main_card.dart';
 import 'cards/milestone_card.dart';
 import 'cards/platform_card.dart';
 import 'cards/rank_card.dart';
+import 'cards/recent_card.dart';
 
 export 'cards/achievement_grid_card.dart';
 export 'cards/art_card.dart';
@@ -22,6 +23,7 @@ export 'cards/main_card.dart';
 export 'cards/milestone_card.dart';
 export 'cards/platform_card.dart';
 export 'cards/rank_card.dart';
+export 'cards/recent_card.dart';
 
 /// Builds the archetype card for [widget] at [size]. A full-only archetype in a
 /// half slot renders full within its column. Shared by the read view and the
@@ -58,6 +60,11 @@ Widget personalizationCardFor(
       cardSource: cardSource,
     ),
     ProfileArchetype.main => MainCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.recent => RecentCard(
       widget: widget,
       size: effectiveSize,
       cardSource: cardSource,

@@ -323,6 +323,36 @@ final class ProfileWidgetsRepositoryImpl implements ProfileWidgetsRepository {
   }
 
   @override
+  Future<Either<Failure, ProfileWidget>> addRecentWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    try {
+      final userId = _currentUserId();
+      if (userId == null) return left(const AuthFailure());
+      final wireValue =
+          platformDescriptors[platform]?.wireValue ?? platform.name;
+      final dto = await _source.insertWidget({
+        'platform': wireValue,
+        'type': profileWidgetKindToWire(ProfileWidgetKind.recent),
+        'position': await _freePosition(userId, position),
+        'is_enabled': true,
+        // Bare envelope: the recent card renders what the platform published
+        // lately, so it carries no per-widget selection sub-object.
+        'settings': {'schema_version': kProfileWidgetSettingsVersion},
+      });
+      final widget = profileWidgetFromDto(dto);
+      if (widget == null) {
+        // The just-written row failed to map — a fault, not control flow.
+        throw const FormatException('inserted widget row did not map');
+      }
+      return right(widget);
+    } catch (e, st) {
+      return left(_handleError(e, st));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> removeWidget(String id) async {
     try {
       final userId = _currentUserId();

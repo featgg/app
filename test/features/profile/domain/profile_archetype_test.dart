@@ -39,6 +39,13 @@ void main() {
       );
     });
 
+    test('recent → the recent archetype', () {
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.recent)),
+        ProfileArchetype.recent,
+      );
+    });
+
     test('collection and game_collector → collection, completionist → '
         'achievement grid', () {
       expect(
@@ -95,6 +102,15 @@ void main() {
       }
     });
 
+    test('recent supports full and half', () {
+      // One datum with its own subject is legal as a half; the full variant is
+      // where the all-time figure earns its width.
+      expect(supportedSizes(ProfileArchetype.recent), {
+        ProfileCardSize.full,
+        ProfileCardSize.half,
+      });
+    });
+
     test('rank supports both full and half (not half-only)', () {
       expect(supportedSizes(ProfileArchetype.rank), {
         ProfileCardSize.full,
@@ -119,6 +135,7 @@ void main() {
         ProfileArchetype.platform,
         ProfileArchetype.milestone,
         ProfileArchetype.main,
+        ProfileArchetype.recent,
       ]) {
         expect(
           cardFormat(archetype),
@@ -202,6 +219,10 @@ void main() {
       );
       expect(
         cardCategory(ProfileWidgetKind.main),
+        ProfileCardCategory.whatIPlay,
+      );
+      expect(
+        cardCategory(ProfileWidgetKind.recent),
         ProfileCardCategory.whatIPlay,
       );
       expect(

@@ -64,6 +64,18 @@ void main() {
       expect(first.heroImage, isNotNull);
     });
 
+    test('steam_v1 → the recent entry keeps the cover art it was recorded '
+        'with', () {
+      final card = _cardFrom(loadRecordedFixture('$_dir/steam_v1.json'));
+      final steam = card.data! as SteamCardData;
+
+      // The Recent card bleeds over this url; a mapper that drops the field
+      // takes the card's picture with it.
+      final entry = steam.recentGames.first;
+      expect(entry.heroImage, isNotNull);
+      expect(entry.iconImage, isNotNull);
+    });
+
     test('wow_retail_v1 → WowRetailCardData; best-run completedTimestamp '
         'derives from epoch ms', () {
       final card = _cardFrom(loadRecordedFixture('$_dir/wow_retail_v1.json'));

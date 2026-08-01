@@ -12,6 +12,7 @@ import '../domain/game_collector_value_resolver.dart';
 import '../domain/main_value_resolver.dart';
 import '../domain/profile_widget.dart';
 import '../domain/rank_value_resolver.dart';
+import '../domain/recent_value_resolver.dart';
 import '../domain/showcase_selection.dart';
 import 'collection_picker.dart';
 import 'featured_platform_provider.dart';
@@ -42,6 +43,7 @@ final Set<Platform> _catalogUniverse = {
   Platform.steam,
   ...kRankPlatforms,
   ...kMainPlatforms,
+  ...kRecentPlatforms,
 };
 
 /// Showcase text sits on the dark art scrim in BOTH themes, so its neutral
@@ -154,6 +156,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
             hasData: resolveMain(cardFor(platform)) != null,
             reason: l10n.addCatalogReasonMainNoData,
             nextPosition: nextPosition,
+          ),
+      for (final platform in kRecentPlatforms)
+        if (linked.contains(platform))
+          _recentRow(
+            l10n,
+            platform,
+            resolveRecent(cardFor(platform)) != null,
+            nextPosition,
           ),
     ];
     final howGoodIAmRows = [
@@ -291,6 +301,38 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       onAcquire: (controller) => kind == ProfileWidgetKind.rank
           ? controller.addRank(platform: platform, position: nextPosition)
           : controller.addMain(platform: platform, position: nextPosition),
+    );
+  }
+
+  /// The Recent row for [platform]: added when already placed, disabled with a
+  /// reason when the platform published no recent activity, otherwise a
+  /// single-tap offer. Labelled by card name rather than by platform — the
+  /// group's Main rows already carry the platform names, so a second one would
+  /// be ambiguous.
+  Widget _recentRow(
+    AppLocalizations l10n,
+    Platform platform,
+    bool hasData,
+    int nextPosition,
+  ) {
+    final label = l10n.addCatalogRowRecent;
+    if (widget.existing.any(
+      (w) => w.kind == ProfileWidgetKind.recent && w.platform == platform,
+    )) {
+      return _addedRow(Key('recentAddedRow_${platform.name}'), label);
+    }
+    if (!hasData) {
+      return _disabledRow(
+        Key('recentDisabledRow_${platform.name}'),
+        label,
+        l10n.addCatalogReasonRecentNoData,
+      );
+    }
+    return _AddRow(
+      rowKey: Key('recentAddRow_${platform.name}'),
+      label: label,
+      onAcquire: (controller) =>
+          controller.addRecent(platform: platform, position: nextPosition),
     );
   }
 

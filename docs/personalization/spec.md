@@ -142,7 +142,7 @@ Card by card:
 | Card | Question it answers | Sizes | Origin | Notes |
 |---|---|---|---|---|
 | Main | what I play the most | full, half | auto | the platform's top or primary game, character or mode, derived from published data |
-| Recent | what I am playing lately | set by the registry when the card lands (#229) | auto | the game and its recent playtime |
+| Recent | what I am playing lately | full, half | auto | the game and its recent playtime |
 | Rank | how good I am | full, half | auto | current standing on one platform; the full variant carries a larger crest |
 | Personal Best | the best I have ever done | full, half | auto | the peak figure with the mode or context it belongs to (#227) |
 | Milestone | what I conquered | full, half | curated pick, auto data | one chosen game's progress |
@@ -188,6 +188,7 @@ The table lists sources, not per-card guarantees; per-card availability is the r
 | `completionist` | Achievement shelf |
 | `rank` | Rank |
 | `main` | Main |
+| `recent` | Recent |
 | `passport` | Identity |
 | `art` | Art |
 

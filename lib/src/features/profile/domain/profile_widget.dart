@@ -18,6 +18,7 @@ enum ProfileWidgetKind {
   passport,
   rank,
   main,
+  recent,
   art,
 }
 
@@ -49,8 +50,9 @@ final class ProfileWidget extends Equatable {
 
   /// Non-null for [ProfileWidgetKind.platform], [ProfileWidgetKind.showcase],
   /// [ProfileWidgetKind.gameCollector], [ProfileWidgetKind.completionist],
-  /// [ProfileWidgetKind.rank], and [ProfileWidgetKind.main] (the single source
-  /// platform the card draws from); null otherwise.
+  /// [ProfileWidgetKind.rank], [ProfileWidgetKind.main], and
+  /// [ProfileWidgetKind.recent] (the single source platform the card draws
+  /// from); null otherwise.
   final Platform? platform;
   final int position;
   final bool isEnabled;

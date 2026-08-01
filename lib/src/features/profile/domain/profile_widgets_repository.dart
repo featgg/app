@@ -89,6 +89,14 @@ abstract interface class ProfileWidgetsRepository {
     required int position,
   });
 
+  /// Inserts a recent widget bound to [platform] at [position], enabled.
+  /// Platform-bound (the platform whose recent activity it surfaces); the
+  /// settings envelope is bare — no per-widget selection sub-object.
+  Future<Either<Failure, ProfileWidget>> addRecentWidget({
+    required Platform platform,
+    required int position,
+  });
+
   /// Deletes the owner's widget [id].
   Future<Either<Failure, Unit>> removeWidget(String id);
 

@@ -127,6 +127,7 @@ void main() {
       expect(profileWidgetKindToWire(ProfileWidgetKind.passport), 'passport');
       expect(profileWidgetKindToWire(ProfileWidgetKind.rank), 'rank');
       expect(profileWidgetKindToWire(ProfileWidgetKind.main), 'main');
+      expect(profileWidgetKindToWire(ProfileWidgetKind.recent), 'recent');
       expect(profileWidgetKindToWire(ProfileWidgetKind.art), 'art');
     });
   });
@@ -184,6 +185,34 @@ void main() {
       final widget = profileWidgetFromDto(
         ProfileWidgetDto.fromJson(
           _row(type: 'main', platform: 'not_a_platform'),
+        ),
+      );
+      expect(widget, isNull);
+    });
+  });
+
+  group('recent binding (platform-BOUND, bare envelope)', () {
+    test('a non-null recent row round-trips to the kind with its platform', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'recent', platform: 'steam')),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.recent);
+      expect(widget.platform, Platform.steam);
+    });
+
+    test('a null-platform recent row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(_row(type: 'recent', platform: null)),
+      );
+      expect(widget, isNull);
+    });
+
+    test('an unknown-platform recent row → null (binding rule)', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'recent', platform: 'not_a_platform'),
         ),
       );
       expect(widget, isNull);
