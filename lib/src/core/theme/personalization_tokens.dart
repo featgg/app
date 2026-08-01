@@ -396,9 +396,18 @@ abstract final class PersonalizationLayout {
   /// pointer tracking along it settles instead of flickering between them.
   static const double dropHysteresis = AppSpacing.smMd;
 
-  /// How far the pair landing bar is held off the target card's ends, so it
-  /// reads as a bar rather than as a border on the card.
-  static const double editorMarkBarInset = AppSpacing.md;
+  /// How far past the target card's side the pair landing bar is set. The mark
+  /// names the edge the carried card lands on, so it sits in the channel beside
+  /// the card rather than on its art — and with the bar's own width this leaves
+  /// it clear of the card and inside that channel whether the channel is the
+  /// column's side padding, the gutter between a pair, or an orphan's free half.
+  static const double editorMarkBarOutset = AppSpacing.sm;
+
+  /// The pair landing bar's length as a fraction of the card it marks. A
+  /// proportion rather than a fixed inset: the same mark has to read the same
+  /// beside a half card and beside a full one, and a fixed inset is a tenth of
+  /// one and a twentieth of the other.
+  static const double editorMarkBarHeightFactor = 0.76;
 
   /// The landing indicator breathes while a card is in the air: during a drag
   /// the eye is on the card under the finger, and motion is what peripheral
