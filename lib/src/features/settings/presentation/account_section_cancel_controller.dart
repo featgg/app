@@ -6,10 +6,10 @@ import 'settings_deletion_status_provider.dart';
 part 'account_section_cancel_controller.g.dart';
 
 /// Cancels a pending deletion from the Account section banner and refreshes the
-/// profile-derived pending read so the banner clears on the next read.
+/// deletion-status read so the banner clears on the next read.
 ///
 /// A focused controller separate from the multi-step `AccountDeletionController`:
-/// the banner acts on pending state read from the profile, not on that flow's
+/// the banner acts on the pending state that read reports, not on that flow's
 /// `DeletionStep` state, and must invalidate `settingsDeletionStatusProvider`.
 /// Reuses the same `cancelDeletion` Either path — no duplicated backend logic.
 @riverpod
