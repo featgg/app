@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -5,9 +6,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/core/theme/personalization_tokens.dart';
 import 'package:featgg/src/features/profile/domain/art_framing.dart';
+import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/domain/profile_archetype.dart';
 import 'package:featgg/src/features/profile/presentation/art_framing_control.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_card_shell.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -180,6 +183,15 @@ Future<void> _enterMode(WidgetTester tester) async {
 /// Whether some card is in framing mode right now — the confirm mark is only
 /// ever drawn on the active card.
 Finder get _activeMark => find.byIcon(Icons.check);
+
+/// WCAG 2.x contrast ratio between two opaque colors.
+double _contrastRatio(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final lighter = math.max(la, lb);
+  final darker = math.min(la, lb);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 /// Drives a pointer the way a finger does — many small moves — because a
 /// gesture that has to win an arena resolves on the movement between events,
@@ -1050,5 +1062,56 @@ void main() {
       expect(find.byType(ArtFramingBadge), findsNothing);
       expect(find.text('412'), findsWidgets);
     });
+  });
+
+  group('the confirm mark', () {
+    // The confirm is the one mark painted on the accent itself, so its glyph is
+    // the only one whose legibility depends on the theme. A glyph the reader
+    // cannot see leaves the mark an empty square with no way out of the mode.
+    for (final theme in ProfileTheme.values) {
+      testWidgets('${theme.name} draws its glyph against its own fill', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PersonalizationTheme(
+              palette: paletteForTheme(theme),
+              child: ArtFramingBadge(
+                icon: Icons.check,
+                filled: true,
+                label: 'confirm',
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+
+        final fill =
+            (tester
+                        .widget<Container>(
+                          find.descendant(
+                            of: find.byType(ArtFramingBadge),
+                            matching: find.byType(Container),
+                          ),
+                        )
+                        .decoration!
+                    as BoxDecoration)
+                .color!;
+        final glyph = tester
+            .widget<Icon>(
+              find.descendant(
+                of: find.byType(ArtFramingBadge),
+                matching: find.byType(Icon),
+              ),
+            )
+            .color!;
+
+        expect(
+          _contrastRatio(glyph, fill),
+          greaterThanOrEqualTo(3.0),
+          reason: 'confirm glyph on the ${theme.name} accent',
+        );
+      });
+    }
   });
 }
