@@ -177,6 +177,8 @@ void main() {
           expect(l10n.accountDeletionPendingBody, isNotEmpty);
           expect(l10n.accountCancelDeletionButton, isNotEmpty);
           expect(l10n.accountDeletionCancelled, isNotEmpty);
+          expect(l10n.accountDeletionStatusUnavailableTitle, isNotEmpty);
+          expect(l10n.accountDeletionStatusUnavailableBody, isNotEmpty);
           // Countdown is an ICU plural — both =1 and other forms resolve, and
           // are structurally distinct (=1 spells out one day, other interpolates).
           expect(l10n.accountDeletionCountdown(1), isNotEmpty);
@@ -188,6 +190,31 @@ void main() {
         }
       },
     );
+
+    test('account deletion-status keys load per-locale copy', () async {
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+      final es = await AppLocalizations.delegate.load(const Locale('es'));
+      final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+
+      // Structural, never literal: each locale ARB was filled in rather than
+      // falling back to the template.
+      expect(
+        es.accountDeletionStatusUnavailableTitle,
+        isNot(en.accountDeletionStatusUnavailableTitle),
+      );
+      expect(
+        pt.accountDeletionStatusUnavailableTitle,
+        isNot(en.accountDeletionStatusUnavailableTitle),
+      );
+      expect(
+        es.accountDeletionStatusUnavailableBody,
+        isNot(en.accountDeletionStatusUnavailableBody),
+      );
+      expect(
+        pt.accountDeletionStatusUnavailableBody,
+        isNot(en.accountDeletionStatusUnavailableBody),
+      );
+    });
 
     test('new connections keys differ across locales', () async {
       final en = await AppLocalizations.delegate.load(const Locale('en'));

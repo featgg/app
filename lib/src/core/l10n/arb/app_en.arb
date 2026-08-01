@@ -224,7 +224,7 @@
   },
   "asyncRetry": "Retry",
   "@asyncRetry": {
-    "description": "Label for the Retry action in the AsyncValueWidget error state."
+    "description": "Label for a Retry action in an error state."
   },
   "errorAlreadyLinked": "This account is already linked to another profile.",
   "@errorAlreadyLinked": {
@@ -1005,6 +1005,14 @@
   "accountDeletionCancelled": "Account deletion cancelled.",
   "@accountDeletionCancelled": {
     "description": "Transient snackbar confirmation shown after the banner's cancel succeeds."
+  },
+  "accountDeletionStatusUnavailableTitle": "Deletion status unavailable",
+  "@accountDeletionStatusUnavailableTitle": {
+    "description": "Heading of the account-section notice shown when the pending-deletion status could not be read. States that the status is unknown — never that a deletion is or is not pending."
+  },
+  "accountDeletionStatusUnavailableBody": "We couldn't check whether your account has a deletion scheduled. Try again to see the current status.",
+  "@accountDeletionStatusUnavailableBody": {
+    "description": "Body of that notice: the app could not determine whether a deletion is scheduled, and the retry action re-reads the status."
   },
   "dataMenuItemLeagueRank": "Rank",
   "@dataMenuItemLeagueRank": {
