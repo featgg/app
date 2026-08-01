@@ -30,9 +30,10 @@ class PersonalizationCardGround extends StatelessWidget {
 
 /// Renders real platform art at [imageUrl] over the procedural [placeholder], or
 /// the placeholder alone when the url is null. Loading and error both fall back
-/// to the placeholder, so a payload never yields a broken-image glyph (feed
-/// image rules). The single place a personalization card wires art, so every
-/// card's null / loading / error fill is identical.
+/// to the placeholder — the theme's ground exactly as the theme draws it,
+/// whatever size the owner set the picture to — so a payload never yields a
+/// broken-image glyph (feed image rules). The single place a personalization
+/// card wires art, so every card's null / loading / error fill is identical.
 Widget personalizationArtOrPlaceholder({
   required String? imageUrl,
   required Widget placeholder,
@@ -41,30 +42,43 @@ Widget personalizationArtOrPlaceholder({
   final url = imageUrl;
   if (url == null) return placeholder;
   final anchor = artFramingAlignment(framing);
-  final picture = CachedNetworkImage(
+  return CachedNetworkImage(
     imageUrl: url,
     fit: BoxFit.cover,
     // The framing decides which part of an oversized picture survives the crop.
     // The fit covers the frame at every setting, so no framing can shrink the
     // art below its frame and expose the ground behind it.
     alignment: anchor,
+    // Null at the covering size, which is the whole widget drawn exactly as it
+    // always was — no wrapper at all, so nothing already on a profile can
+    // render differently. Above it the size reaches the picture that resolved
+    // and nothing else: a size describes a picture, so the two fallbacks below
+    // are not its to enlarge.
+    imageBuilder: framing.scale == ArtFraming.coverScale
+        ? null
+        // Enlarged about the very point the crop is anchored on, so one value
+        // drives both and the window can only ever be a sub-rect of the
+        // picture. The clip is not decoration: a transform does not clip, and
+        // most of this helper's call sites are outside a card shell, so it
+        // cannot lean on an ancestor to keep an enlarged picture inside its
+        // frame.
+        : (_, provider) => ClipRect(
+            child: Transform.scale(
+              scale: framing.scale,
+              alignment: anchor,
+              // The builder replaces the picture rather than wrapping it, so
+              // the fit, the anchor and the sampling it is drawn with have to
+              // be restated here — they are the ones it takes unenlarged.
+              child: Image(
+                image: provider,
+                fit: BoxFit.cover,
+                alignment: anchor,
+                filterQuality: FilterQuality.low,
+              ),
+            ),
+          ),
     placeholder: (_, _) => placeholder,
     errorWidget: (_, _, _) => placeholder,
-  );
-  // At the covering size the picture is drawn exactly as it always was — no
-  // wrapper at all, so nothing already on a profile can render differently.
-  if (framing.scale == ArtFraming.coverScale) return picture;
-  // Enlarged about the very point the crop is anchored on, so one value drives
-  // both and the window can only ever be a sub-rect of the picture. The clip is
-  // not decoration: a transform does not clip, and most of this helper's call
-  // sites are outside a card shell, so it cannot lean on an ancestor to keep an
-  // enlarged picture inside its frame.
-  return ClipRect(
-    child: Transform.scale(
-      scale: framing.scale,
-      alignment: anchor,
-      child: picture,
-    ),
   );
 }
 

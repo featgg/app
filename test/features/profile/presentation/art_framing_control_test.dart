@@ -406,11 +406,38 @@ void main() {
     testWidgets('a card with no size chosen renders as it always did', (
       tester,
     ) async {
+      // On a picture that resolved, so the claim is about the covering size and
+      // not about a card that has nothing to wrap yet.
+      final url = await _seedArt(tester, width: 1600, height: 900);
       await tester.pumpWidget(
-        _page(framing: const ArtFraming(x: 0.25, y: 0.75)),
+        _page(art: url, framing: const ArtFraming(x: 0.25, y: 0.75)),
       );
+      await tester.pump();
 
       expect(_artTransforms(tester), isEmpty);
+    });
+
+    testWidgets('only the picture that arrived is drawn larger', (
+      tester,
+    ) async {
+      // A size describes a picture. While one is loading, and forever if it
+      // fails, the card is showing the theme's own ground instead — and the
+      // fallback is that ground as the theme draws it, not a gradient blown up
+      // and pushed off centre by a setting that was never about it.
+      const framing = ArtFraming(x: 0.25, y: 0.75, scale: 2);
+      // Seeded before anything is mounted: the default url is served by
+      // nothing, so a card pointed at it is the card that never resolves.
+      final url = await _seedArt(tester, width: 1600, height: 900);
+
+      await tester.pumpWidget(_page(framing: framing));
+      await tester.pump();
+
+      expect(_artTransforms(tester), isEmpty);
+
+      await tester.pumpWidget(_page(framing: framing, art: url));
+      await tester.pump();
+
+      expect(_artTransforms(tester), hasLength(1));
     });
 
     testWidgets(
@@ -420,9 +447,14 @@ void main() {
         // What binds the pure geometry to the tree that actually paints: the
         // enlargement is anchored on the very alignment the crop uses, so the
         // two can never disagree about where the picture is held.
+        final url = await _seedArt(tester, width: 1600, height: 900);
         await tester.pumpWidget(
-          _page(framing: const ArtFraming(x: 0.25, y: 0.75, scale: 2)),
+          _page(
+            art: url,
+            framing: const ArtFraming(x: 0.25, y: 0.75, scale: 2),
+          ),
         );
+        await tester.pump();
 
         final transform = _artTransforms(tester).single;
 
@@ -433,16 +465,19 @@ void main() {
 
     testWidgets('the size survives the card changing size', (tester) async {
       const framing = ArtFraming(x: 0.25, y: 0.75, scale: 2);
+      final url = await _seedArt(tester, width: 1600, height: 900);
 
-      await tester.pumpWidget(_page(framing: framing));
+      await tester.pumpWidget(_page(art: url, framing: framing));
+      await tester.pump();
       final full = _paintedAlignment(tester);
       final fullScale = _artTransforms(
         tester,
       ).single.transform.getMaxScaleOnAxis();
 
       await tester.pumpWidget(
-        _page(framing: framing, size: ProfileCardSize.half),
+        _page(art: url, framing: framing, size: ProfileCardSize.half),
       );
+      await tester.pump();
 
       expect(_paintedAlignment(tester), full);
       expect(
@@ -453,9 +488,11 @@ void main() {
 
     testWidgets('a visitor sees the size the owner chose', (tester) async {
       // No editing scope at all — the read path every visitor gets.
+      final url = await _seedArt(tester, width: 1600, height: 900);
       await tester.pumpWidget(
-        _page(framing: const ArtFraming(x: 1, y: 0, scale: 2)),
+        _page(art: url, framing: const ArtFraming(x: 1, y: 0, scale: 2)),
       );
+      await tester.pump();
 
       expect(
         _artTransforms(tester).single.transform.getMaxScaleOnAxis(),
