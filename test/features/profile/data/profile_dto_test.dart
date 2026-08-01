@@ -9,7 +9,6 @@ Map<String, dynamic> _fullRow({
   String themeId = 'crimson',
   Object? featuredPlatform,
   Object? headerPlatform,
-  Object? deletionRequestedAt,
   List<dynamic>? layout,
   Object? createdAt,
 }) => {
@@ -22,7 +21,6 @@ Map<String, dynamic> _fullRow({
   'privacy_level': privacyLevel,
   'featured_platform': featuredPlatform,
   'header_platform': headerPlatform,
-  'deletion_requested_at': deletionRequestedAt,
   'layout': ?layout,
   'created_at': ?createdAt,
 };
@@ -88,29 +86,6 @@ void main() {
       final dto = ProfileDto.fromJson(_fullRow(privacyLevel: 'restricted'));
 
       expect(() => profileFromDto(dto), throwsA(isA<FormatException>()));
-    });
-
-    test('maps an ISO-8601 deletion_requested_at to the matching DateTime', () {
-      final dto = ProfileDto.fromJson(
-        _fullRow(deletionRequestedAt: '2026-06-12T10:00:00Z'),
-      );
-      final profile = profileFromDto(dto);
-
-      expect(profile.deletionRequestedAt, DateTime.utc(2026, 6, 12, 10));
-    });
-
-    test('a null or absent deletion_requested_at maps to null', () {
-      // Explicit null.
-      expect(
-        profileFromDto(ProfileDto.fromJson(_fullRow())).deletionRequestedAt,
-        isNull,
-      );
-      // Key absent entirely.
-      final row = _fullRow()..remove('deletion_requested_at');
-      expect(
-        profileFromDto(ProfileDto.fromJson(row)).deletionRequestedAt,
-        isNull,
-      );
     });
 
     test('maps each theme_id wire token to the matching ProfileTheme', () {

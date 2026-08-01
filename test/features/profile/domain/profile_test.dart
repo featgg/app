@@ -13,7 +13,7 @@ ProfileEdit _edit({String displayName = 'Valid Name', String? bio}) =>
       headerPlatform: null,
     );
 
-Profile _profile({DateTime? deletionRequestedAt}) => Profile(
+Profile _profile() => Profile(
   id: 'user-1',
   username: 'user',
   displayName: 'User',
@@ -22,7 +22,6 @@ Profile _profile({DateTime? deletionRequestedAt}) => Profile(
   theme: ProfileTheme.crimson,
   privacy: ProfilePrivacy.public,
   featuredPlatform: null,
-  deletionRequestedAt: deletionRequestedAt,
   layout: const [
     FullRow('a'),
     PairRow(left: 'b', right: 'c'),
@@ -41,24 +40,6 @@ void main() {
       expect(copied.displayName, 'Renamed');
       expect(copied.layout, _profile().layout);
       expect(copied.createdAt, _profile().createdAt);
-    });
-  });
-
-  group('Profile deletion markers', () {
-    test('a null marker is not pending and has no scheduled target', () {
-      final profile = _profile();
-      expect(profile.isDeletionPending, isFalse);
-      expect(profile.deletionScheduledAt, isNull);
-    });
-
-    test('a marker is pending and schedules 7 days out', () {
-      final requestedAt = DateTime.utc(2026, 6, 12, 10);
-      final profile = _profile(deletionRequestedAt: requestedAt);
-      expect(profile.isDeletionPending, isTrue);
-      expect(
-        profile.deletionScheduledAt,
-        requestedAt.add(const Duration(days: 7)),
-      );
     });
   });
 
