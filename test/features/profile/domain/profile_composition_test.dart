@@ -63,50 +63,57 @@ void main() {
     });
   });
 
-  group('moveToGap (drag out of a pair into a gap → own row)', () {
+  group('moveToGap (a move keeps the size, it does not resize)', () {
     test(
-      'a half-capable card dragged to a gap becomes its own full row and the '
-      'ex-partner stays a centered orphan',
+      'a half card dropped into a gap keeps its size and lands as a centered '
+      'orphan',
       () {
-        // AC1: pull 'ms' out of the pair; 'main' is untouched below.
+        // Pull 'ms' out of the pair; 'main' is untouched below. 'ms' supports
+        // full, so a rule reading the registry would promote it — the size
+        // comes from the row it sat in, which was a pair slot.
         const rows = [PairRow(left: 'ms', right: 'rankA'), FullRow('main')];
         // Drop into the gap after the last row (index 2).
-        final result = moveToGap(rows, 'ms', 2, supportsFull: _supportsFull);
+        final result = moveToGap(rows, 'ms', 2);
 
         expect(result, const [
           PairRow(right: 'rankA'), // ex-partner orphaned in place
           FullRow('main'), // untouched row did not move
-          FullRow('ms'), // dragged card is now its own full row
+          PairRow(left: 'ms'), // dragged card still half, now centered
         ]);
       },
     );
 
-    test('decrements the target index when the removed full row sat before the '
-        'gap', () {
-      const rows = [FullRow('x'), FullRow('y')];
-      // Ask to insert at gap index 2 (end). Removing 'x' (row 0) shifts it to 1.
-      final result = moveToGap(rows, 'x', 2, supportsFull: _supportsFull);
-      expect(result, const [FullRow('y'), FullRow('x')]);
+    test('a full card dropped into a gap stays full, and the target index '
+        'decrements when the removed row sat before the gap', () {
+      const rows = [FullRow('main'), FullRow('x')];
+      // Ask to insert at gap index 2 (end). Removing 'main' (row 0) shifts it
+      // to 1.
+      final result = moveToGap(rows, 'main', 2);
+      expect(result, const [FullRow('x'), FullRow('main')]);
     });
 
-    test('a full-only card dropped in a gap lands as a single-slot pair', () {
+    test('the row the card sat in decides the size, not the registry', () {
+      // 'id' is full-only and sits in a full row → stays full.
       const rows = [FullRow('main'), FullRow('id')];
-      // Move the full-only 'id' up into the first gap.
-      final result = moveToGap(rows, 'id', 0, supportsFull: _supportsFull);
-      expect(result.first, const FullRow('id'));
+      expect(moveToGap(rows, 'id', 0).first, const FullRow('id'));
 
-      // A card that supports neither... here 'rankA' is half-only → orphan pair.
+      // 'rankA' is half-only and sits in a pair slot → centered orphan.
       const halfRows = [
         FullRow('main'),
         PairRow(left: 'rankA', right: 'rankB'),
       ];
-      final orphaned = moveToGap(
-        halfRows,
-        'rankA',
-        0,
-        supportsFull: _supportsFull,
+      expect(
+        moveToGap(halfRows, 'rankA', 0).first,
+        const PairRow(left: 'rankA'),
       );
-      expect(orphaned.first, const PairRow(left: 'rankA'));
+    });
+
+    test('a layout that no longer holds the card is returned untouched', () {
+      // The delete affordance stays live while a card is in the air, so the
+      // release can arrive after the card is gone; re-inserting it would
+      // resurrect a row for a widget that no longer exists.
+      const rows = [FullRow('main'), PairRow(left: 'ms', right: 'rankA')];
+      expect(moveToGap(rows, 'gone', 1), rows);
     });
   });
 
@@ -161,41 +168,6 @@ void main() {
     test('an id that is not placed is a no-op', () {
       const rows = [FullRow('ms')];
       expect(toggleSize(rows, 'absent'), const [FullRow('ms')]);
-    });
-  });
-
-  group('pairableRowIndices (glow set)', () {
-    test('a half-capable card glows every row with a half-capable partner and '
-        'room', () {
-      // AC4: dragging 'rankB' (half). Row 0 full 'main' (half-capable) → glows;
-      // row 1 full 'id' (full-only) → no glow; row 2 already-full pair → no glow.
-      const rows = [
-        FullRow('main'),
-        FullRow('id'),
-        PairRow(left: 'rankA', right: 'ms'),
-      ];
-      final glow = pairableRowIndices(
-        rows,
-        'rankB',
-        supportsHalf: _supportsHalf,
-      );
-      expect(glow, {0});
-    });
-
-    test('a full-only dragged card glows nothing', () {
-      const rows = [FullRow('main'), PairRow(left: 'ms')];
-      final glow = pairableRowIndices(rows, 'id', supportsHalf: _supportsHalf);
-      expect(glow, isEmpty);
-    });
-
-    test('an orphan row glows for a half-capable card', () {
-      const rows = [PairRow(left: 'ms')];
-      final glow = pairableRowIndices(
-        rows,
-        'rankA',
-        supportsHalf: _supportsHalf,
-      );
-      expect(glow, {0});
     });
   });
 
@@ -290,28 +262,23 @@ void main() {
       expect(pairTargetAt(rows, 0, 'rankA', supportsHalf: _supportsHalf), null);
     });
 
-    test('is non-null exactly on the rows pairableRowIndices lights', () {
-      // The glow promises what a drop delivers, so the two must never disagree.
+    test('offers a target exactly on the rows that have room for one', () {
+      // The one indicator promises what a drop delivers, so which rows offer a
+      // target is the whole of what the editor may mark.
       const rows = [
         FullRow('main'), // half-capable, has room
         FullRow('id'), // full-only target
         PairRow(left: 'rankA', right: 'ms'), // no room for a third
         PairRow(left: 'note'), // orphan with an empty half
       ];
-      final glow = pairableRowIndices(
-        rows,
-        'rankB',
-        supportsHalf: _supportsHalf,
-      );
 
-      for (var i = 0; i < rows.length; i++) {
-        expect(
-          pairTargetAt(rows, i, 'rankB', supportsHalf: _supportsHalf) != null,
-          glow.contains(i),
-          reason: 'row $i',
-        );
-      }
-      expect(glow, {0, 3});
+      final offering = {
+        for (var i = 0; i < rows.length; i++)
+          if (pairTargetAt(rows, i, 'rankB', supportsHalf: _supportsHalf) !=
+              null)
+            i,
+      };
+      expect(offering, {0, 3});
     });
   });
 
@@ -326,13 +293,9 @@ void main() {
       ];
 
       // 1) Pull 'rankB' out into the last gap → its own row; 'rankA' orphaned.
-      // 'rankB' is half-only, so its own row is a centered orphan, not full.
-      final afterMove = moveToGap(
-        start,
-        'rankB',
-        3,
-        supportsFull: _supportsFull,
-      );
+      // It lands as a centered orphan because it was half where it sat, which
+      // a move preserves.
+      final afterMove = moveToGap(start, 'rankB', 3);
       expect(afterMove, const [
         FullRow('note'),
         PairRow(left: 'rankA'),
@@ -404,7 +367,7 @@ void main() {
   test('mutations return new lists and never mutate the input', () {
     const rows = [FullRow('ms'), FullRow('main')];
     final before = [...rows];
-    moveToGap(rows, 'ms', 2, supportsFull: _supportsFull);
+    moveToGap(rows, 'ms', 2);
     toggleSize(rows, 'ms');
     pairBeside(rows, 'ms', 'main', DropSide.left);
     normalizeLayout(rows, {'main'});
