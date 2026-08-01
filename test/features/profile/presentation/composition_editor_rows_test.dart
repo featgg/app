@@ -345,7 +345,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('the pair mark is a bar on the drop side of the target card', (
+  testWidgets('the pair mark sits beside the target card, never over it', (
     tester,
   ) async {
     await _openEditor(tester, const [_rank, _main, _showcase]);
@@ -357,22 +357,72 @@ void main() {
 
     final card = tester.getRect(find.byKey(personalizationCardKey('r')));
     final mark = tester.getRect(_pairMark('r'));
-    // A bar, not a border or a ring: taller than it is wide, held off the
-    // card's ends, drawn inside it, and on the side the release would land.
+    // A bar, not a border or a ring: taller than it is wide, shorter than the
+    // card, and drawn in the channel beside the card on the side the release
+    // would land — clear of the art, and near enough to belong to that card.
     expect(mark.width, lessThan(mark.height));
     expect(mark.height, lessThan(card.height));
-    expect(card.contains(mark.topLeft), isTrue);
-    expect(card.contains(mark.bottomRight), isTrue);
-    expect(mark.center.dx, lessThan(card.center.dx));
+    expect(mark.overlaps(card), isFalse);
+    expect(mark.right, lessThanOrEqualTo(card.left));
+    expect(
+      card.left - mark.right,
+      lessThan(PersonalizationLayout.columnSidePadding),
+    );
 
     await gesture.moveTo(Offset(card.right - 8, card.center.dy));
     await tester.pump();
     expect(
-      tester.getRect(_pairMark('r')).center.dx,
-      greaterThan(
-        tester.getRect(find.byKey(personalizationCardKey('r'))).center.dx,
+      tester.getRect(_pairMark('r')).left,
+      greaterThanOrEqualTo(
+        tester.getRect(find.byKey(personalizationCardKey('r'))).right,
       ),
     );
+
+    // getRect reads a render object's transform and size, not painted pixels,
+    // so every expectation above would still hold with the bar clipped out of
+    // existence by the slot it is drawn outside of.
+    final slot = tester.widget<Stack>(
+      find.ancestor(of: _pairMark('r'), matching: find.byType(Stack)).first,
+    );
+    expect(slot.clipBehavior, Clip.none);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('the mark keeps the same proportion of a half target and a full '
+      'one', (tester) async {
+    final container = await _openEditor(tester, const [
+      _rank,
+      _main,
+      _showcase,
+    ]);
+    container
+        .read(profileCompositionProvider.notifier)
+        .onPairDrop('r', 'm', DropSide.right);
+    await tester.pumpAndSettle();
+    expect(_working(container), const [
+      PairRow(left: 'm', right: 'r'),
+      FullRow('s'),
+    ]);
+
+    // One drag that meets both target sizes: 'r' may pair with its own partner
+    // (a half) and with the row below (a full).
+    final gesture = await _lift(tester, 'r');
+
+    final half = tester.getRect(find.byKey(personalizationCardKey('m')));
+    await gesture.moveTo(Offset(half.left + 8, half.center.dy));
+    await tester.pump();
+    final halfRatio = tester.getRect(_pairMark('m')).height / half.height;
+
+    final full = tester.getRect(find.byKey(personalizationCardKey('s')));
+    await gesture.moveTo(Offset(full.left + 8, full.center.dy));
+    await tester.pump();
+    final fullRatio = tester.getRect(_pairMark('s')).height / full.height;
+
+    // The owner must read one object whatever it marks; a mark held off the
+    // ends by a fixed amount is a different fraction of every card height.
+    expect(fullRatio, closeTo(halfRatio, 0.005));
 
     await gesture.up();
     await tester.pumpAndSettle();

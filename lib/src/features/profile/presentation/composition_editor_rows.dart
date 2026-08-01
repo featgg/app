@@ -436,26 +436,38 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
 
     final slot = Stack(
       key: _slotKey(rowIndex, slotIndex),
+      // The landing bar is drawn in the channel beside the slot, so the stack
+      // must not clip: what it marks is the row edge, not the card.
+      clipBehavior: Clip.none,
       children: [
         // Owner cards (cardSource null); member-since is unused in edit mode.
         personalizationCardFor(widget, size: size),
         if (marked)
           Positioned(
-            top: PersonalizationLayout.editorMarkBarInset,
-            bottom: PersonalizationLayout.editorMarkBarInset,
-            left: _acquiredSide == DropSide.left ? AppSpacing.xs : null,
-            right: _acquiredSide == DropSide.right ? AppSpacing.xs : null,
+            top: 0,
+            bottom: 0,
+            left: _acquiredSide == DropSide.left
+                ? -PersonalizationLayout.editorMarkBarOutset
+                : null,
+            right: _acquiredSide == DropSide.right
+                ? -PersonalizationLayout.editorMarkBarOutset
+                : null,
             width: AppSpacing.hairline * 2,
             child: IgnorePointer(
-              child: _Pulse(
-                animation: _pulse,
-                child: DecoratedBox(
-                  key: Key('compositionMark_pair_$cardId'),
-                  decoration: BoxDecoration(
-                    color: palette.accent,
-                    borderRadius: BorderRadius.circular(AppRadii.full),
+              child: Center(
+                child: FractionallySizedBox(
+                  heightFactor: PersonalizationLayout.editorMarkBarHeightFactor,
+                  child: _Pulse(
+                    animation: _pulse,
+                    child: DecoratedBox(
+                      key: Key('compositionMark_pair_$cardId'),
+                      decoration: BoxDecoration(
+                        color: palette.accent,
+                        borderRadius: BorderRadius.circular(AppRadii.full),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
-                  child: const SizedBox.expand(),
                 ),
               ),
             ),
