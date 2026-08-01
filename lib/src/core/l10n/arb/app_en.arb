@@ -1182,9 +1182,13 @@
   "@cardStatHoursPlayed": {
     "description": "Card datum label for the hoursPlayed stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
   },
-  "cardStatHours2Weeks": "2 weeks",
+  "cardStatHours2Weeks": "Recent",
   "@cardStatHours2Weeks": {
-    "description": "Card datum label for the hours2Weeks stat on the Recent card. Names the window the platform publishes, not the unit — the value is hours. Measured by the label-width guard, which caps how long it may get."
+    "description": "Card datum label for the hours2Weeks stat on the Recent card. Names which playtime the figure is, not the unit — the value beside it carries the unit. Measured by the label-width guard, which caps how long it may get."
+  },
+  "cardStatHoursTotal": "Total",
+  "@cardStatHoursTotal": {
+    "description": "Card datum label for the Recent card's all-time playtime figure, shown beside the recent one so a reader can tell the two apart. Measured by the same label-width guard."
   },
   "cardStatNetworkLevel": "Network",
   "@cardStatNetworkLevel": {
@@ -1273,6 +1277,15 @@
   "cardStatVeterancyYears": "Veterancy",
   "@cardStatVeterancyYears": {
     "description": "Card datum label for the veterancyYears stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."
+  },
+  "cardValueHours": "{value} h",
+  "@cardValueHours": {
+    "description": "A playtime value with its unit, for a card whose labels spend their width naming which playtime each number is.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
   },
   "personalizationStatRank": "Rank",
   "@personalizationStatRank": {

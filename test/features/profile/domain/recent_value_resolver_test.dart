@@ -150,9 +150,11 @@ void main() {
         ),
       );
 
+      // Keyed apart from the recent figure: two hour numbers on one card need
+      // two labels, and a shared key can only resolve to one.
       expect(matched!.stats, const [
         CardStat(key: 'hours_2weeks', value: 12),
-        CardStat(key: 'hours_played', value: 900),
+        CardStat(key: 'hours_total', value: 900),
       ]);
 
       final unmatched = resolveRecent(

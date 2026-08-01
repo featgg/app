@@ -6,6 +6,7 @@ import '../../../connections/domain/game_card.dart';
 import '../../../connections/domain/platform_descriptor.dart';
 import '../../domain/completionist_value_resolver.dart';
 import '../../domain/game_collector_value_resolver.dart';
+import '../../domain/recent_value_resolver.dart';
 import '../../domain/showcase_selection.dart';
 import '../../domain/showcase_value_resolver.dart';
 import '../personalization_card_shell.dart';
@@ -149,6 +150,25 @@ List<PersonalizationStat> completionistStats(
   ];
 }
 
+/// The Recent datum: recent playtime, and the same game's all-time playtime
+/// when the library carries it. The value names the unit here rather than the
+/// label, because this card's labels have to say *which* playtime each number
+/// is, and at the width a label gets neither can also carry the word "hours".
+List<PersonalizationStat> recentStats(
+  ResolvedRecent? resolved,
+  AppLocalizations l10n,
+) {
+  if (resolved == null) return const [];
+  return [
+    for (final stat in resolved.stats)
+      if (cardStatLabel(l10n, stat.key) case final label?)
+        PersonalizationStat(
+          value: l10n.cardValueHours(formatStatValue(stat, l10n)),
+          label: label,
+        ),
+  ];
+}
+
 /// The uppercased first character of a perfect-game [title] for its letter tile,
 /// or null for an empty title (that tile is skipped). Reads the first Unicode
 /// code point so an astral leading character is not split mid-surrogate.
@@ -178,6 +198,7 @@ const List<String> cardStatKeys = [
   'games_owned',
   'hours_played',
   'hours_2weeks',
+  'hours_total',
   'network_level',
   'bedwars_wins',
   'bedwars_kills',
@@ -210,6 +231,7 @@ String? cardStatLabel(AppLocalizations l10n, String key) => switch (key) {
   'games_owned' => l10n.cardStatGamesOwned,
   'hours_played' => l10n.cardStatHoursPlayed,
   'hours_2weeks' => l10n.cardStatHours2Weeks,
+  'hours_total' => l10n.cardStatHoursTotal,
   'network_level' => l10n.cardStatNetworkLevel,
   'bedwars_wins' => l10n.cardStatBedwarsWins,
   'bedwars_kills' => l10n.cardStatBedwarsKills,

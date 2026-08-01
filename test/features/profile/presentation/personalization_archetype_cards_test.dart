@@ -795,7 +795,7 @@ void main() {
     );
     expect(
       find.ancestor(
-        of: find.text(formatCardValue(12, _en)),
+        of: find.text(_en.cardValueHours(formatCardValue(12, _en))),
         matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
@@ -863,11 +863,97 @@ void main() {
 
     expect(
       find.ancestor(
-        of: find.text(formatCardValue(900, _en)),
+        of: find.text(_en.cardValueHours(formatCardValue(900, _en))),
         matching: find.byType(PersonalizationDatum),
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('RecentCard full tells the recent figure apart from the all-time '
+      'one', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RecentCard(
+          widget: recentWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRecent(
+          recent: const [
+            RecentGameEntry(appId: 730, title: 'CS', hours2Weeks: 12),
+          ],
+          library: const [
+            LibraryShowcaseEntry(appId: 730, title: 'CS', hours: 900),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Two hour figures on one card must not share a label: without distinct
+    // labels the reader cannot tell which number is the recent one.
+    expect(
+      _en.cardStatHoursTotal.toUpperCase(),
+      isNot(_en.cardStatHours2Weeks.toUpperCase()),
+    );
+    for (final label in [
+      _en.cardStatHours2Weeks.toUpperCase(),
+      _en.cardStatHoursTotal.toUpperCase(),
+    ]) {
+      expect(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(PersonalizationDatum),
+        ),
+        findsOneWidget,
+      );
+    }
+  });
+
+  testWidgets('RecentCard half states the unit and the recency on its one '
+      'datum', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: RecentCard(
+          widget: recentWidget(),
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
+        cards: steamRecent(
+          recent: const [
+            RecentGameEntry(
+              appId: 730,
+              title: 'CS',
+              hours2Weeks: 12,
+              heroImage: _coverA,
+            ),
+          ],
+          library: const [
+            LibraryShowcaseEntry(appId: 730, title: 'CS', hours: 900),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A half card carries exactly one datum, so that datum alone has to say
+    // both what the number is and which playtime it is.
+    expect(
+      find.ancestor(
+        of: find.text(_en.cardValueHours(formatCardValue(12, _en))),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.text(_en.cardStatHours2Weeks.toUpperCase()),
+        matching: find.byType(PersonalizationDatum),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(_en.cardStatHoursTotal.toUpperCase()), findsNothing);
   });
 
   testWidgets('RecentCard with no recent activity renders the neutral no-data '
