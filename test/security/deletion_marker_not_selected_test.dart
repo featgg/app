@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Security gate: the app must never request the account's pending-deletion
-/// marker column from the data API. The signed-in user's pending-deletion state
-/// is read through the owner-scoped status operation instead (see
-/// `docs/integration/profile.md` § Deletion status), so the column name has no
-/// reason to appear anywhere in `lib/` — not in a column list, not in a DTO key,
-/// not in generated output.
+/// marker column from the data API. That column is visible to every client that
+/// can see the row, so reading it here is what keeps the service from narrowing
+/// the grant. The signed-in user's pending-deletion state comes from the
+/// owner-scoped status operation instead, so the column name has no reason to
+/// appear anywhere in `lib/` — not in a column list, not in a DTO key, not in
+/// generated output.
 ///
 /// Unlike the sibling isolation gate, comment lines are NOT skipped: a comment
 /// naming the column is the seed of the next column list that requests it.
