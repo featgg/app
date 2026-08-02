@@ -10,6 +10,7 @@ import '../../connections/domain/platform_descriptor.dart';
 import '../domain/completionist_value_resolver.dart';
 import '../domain/game_collector_value_resolver.dart';
 import '../domain/main_value_resolver.dart';
+import '../domain/personal_best_value_resolver.dart';
 import '../domain/profile_widget.dart';
 import '../domain/rank_value_resolver.dart';
 import '../domain/rarest_achievement_value_resolver.dart';
@@ -43,6 +44,7 @@ Future<void> showShowcasePicker(
 final Set<Platform> _catalogUniverse = {
   Platform.steam,
   ...kRankPlatforms,
+  ...kPersonalBestPlatforms,
   ...kMainPlatforms,
   ...kRecentPlatforms,
   ...kRarestAchievementPlatforms,
@@ -178,6 +180,16 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
             hasData: resolveRank(cardFor(platform)) != null,
             reason: l10n.addCatalogReasonRankNoData,
             nextPosition: nextPosition,
+          ),
+      // Driven by the platform set, so a platform publishing no best-ever
+      // figure gets no row at all rather than a disabled one.
+      for (final platform in kPersonalBestPlatforms)
+        if (linked.contains(platform))
+          _personalBestRow(
+            l10n,
+            platform,
+            resolvePersonalBest(cardFor(platform)) != null,
+            nextPosition,
           ),
     ];
     // The Steam-derived rows render only when Steam is linked.
@@ -345,6 +357,40 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       label: label,
       onAcquire: (controller) =>
           controller.addRecent(platform: platform, position: nextPosition),
+    );
+  }
+
+  /// The Personal Best row for [platform]: added when already placed, disabled
+  /// with a reason when the platform published no peak figure, otherwise a
+  /// single-tap offer. Labelled by card name rather than by platform — the
+  /// group's Rank rows already carry the platform names, so a second one would
+  /// be ambiguous.
+  Widget _personalBestRow(
+    AppLocalizations l10n,
+    Platform platform,
+    bool hasData,
+    int nextPosition,
+  ) {
+    final label = l10n.addCatalogRowPersonalBest;
+    if (widget.existing.any(
+      (w) => w.kind == ProfileWidgetKind.personalBest && w.platform == platform,
+    )) {
+      return _addedRow(Key('personalBestAddedRow_${platform.name}'), label);
+    }
+    if (!hasData) {
+      return _disabledRow(
+        Key('personalBestDisabledRow_${platform.name}'),
+        label,
+        l10n.addCatalogReasonPersonalBestNoData,
+      );
+    }
+    return _AddRow(
+      rowKey: Key('personalBestAddRow_${platform.name}'),
+      label: label,
+      onAcquire: (controller) => controller.addPersonalBest(
+        platform: platform,
+        position: nextPosition,
+      ),
     );
   }
 

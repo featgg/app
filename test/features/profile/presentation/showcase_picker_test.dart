@@ -9,6 +9,7 @@ import 'package:featgg/src/features/connections/domain/connections_repository.da
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/profile/domain/art_selection.dart';
 import 'package:featgg/src/features/profile/domain/collection_selection.dart';
+import 'package:featgg/src/features/profile/domain/personal_best_value_resolver.dart';
 import 'package:featgg/src/features/profile/domain/profile_widget.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dart';
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
@@ -43,6 +44,8 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   int? lastRecentPosition;
   Platform? lastRarestPlatform;
   int? lastRarestPosition;
+  Platform? lastPersonalBestPlatform;
+  int? lastPersonalBestPosition;
   Platform? lastArtSource;
   int? lastArtPosition;
 
@@ -205,6 +208,24 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
       ProfileWidget(
         id: 'new',
         kind: ProfileWidgetKind.recent,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addPersonalBestWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    lastPersonalBestPlatform = platform;
+    lastPersonalBestPosition = position;
+    return right(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.personalBest,
         platform: platform,
         position: position,
         isEnabled: true,
@@ -422,11 +443,14 @@ GameCard _gw2Card() => _card(
   ),
 );
 
-GameCard _chessCard() => _card(
+/// A Chess card. [primaryMode] pointing outside the ratings map is the
+/// documented subset case, and the payload then publishes no figure the Rank or
+/// Personal Best rows can offer.
+GameCard _chessCard({String primaryMode = 'RAPID'}) => _card(
   Platform.chess,
-  const ChessCardData(
-    primaryMode: 'RAPID',
-    ratings: {'rapid': ChessModeRating(current: 1500, best: 1600)},
+  ChessCardData(
+    primaryMode: primaryMode,
+    ratings: const {'rapid': ChessModeRating(current: 1500, best: 1600)},
   ),
 );
 
@@ -493,6 +517,15 @@ ProfileWidget _artWidget(Platform source, {required int position}) =>
       position: position,
       isEnabled: true,
       artSelection: ArtSelection(source: source),
+    );
+
+ProfileWidget _personalBestWidget(Platform platform, {required int position}) =>
+    ProfileWidget(
+      id: 'personal-best-${platform.name}',
+      kind: ProfileWidgetKind.personalBest,
+      platform: platform,
+      position: position,
+      isEnabled: true,
     );
 
 ProfileWidget _rarestWidget(Platform platform, {required int position}) =>
@@ -955,6 +988,121 @@ void main() {
 
     expect(find.byKey(const Key('recentAddedRow_steam')), findsOneWidget);
     expect(find.byKey(const Key('recentAddRow_steam')), findsNothing);
+  });
+
+  testWidgets('Personal Best row: the How good I am group offers it when the '
+      'platform publishes a peak, and the tap writes the widget', (
+    tester,
+  ) async {
+    final widgetsRepo = _RecordingWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({Platform.chess: _chessCard()}),
+        widgetsRepo: widgetsRepo,
+        connected: const [Platform.chess],
+        // A widget at position 2 proves the insert lands at max+1.
+        existing: [_platformWidget(position: 2)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // The nearest Column above the header is the group itself, so a row
+    // matching under it proves membership rather than mere presence.
+    final howGoodGroup = find
+        .ancestor(
+          of: find.byKey(const Key('catalogGroupHowGoodIAm')),
+          matching: find.byType(Column),
+        )
+        .first;
+    expect(
+      find.descendant(
+        of: howGoodGroup,
+        matching: find.byKey(const Key('personalBestAddRow_chess')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(
+      find.byKey(const Key('personalBestAddRow_chess')),
+    );
+    await tester.tap(find.byKey(const Key('personalBestAddRow_chess')));
+    await tester.pumpAndSettle();
+
+    expect(widgetsRepo.lastPersonalBestPlatform, Platform.chess);
+    expect(widgetsRepo.lastPersonalBestPosition, 3);
+    expect(find.byKey(const Key('personalBestAddRow_chess')), findsNothing);
+  });
+
+  testWidgets('Personal Best row: no published peak disables the row with its '
+      'reason', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        // The primary mode is absent from the ratings map: the card is not
+        // offered just because the account plays.
+        cardsRepo: _MapCardsRepository({
+          Platform.chess: _chessCard(primaryMode: 'BULLET'),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.chess],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(
+      find.byKey(const Key('personalBestDisabledRow_chess')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('personalBestAddRow_chess')), findsNothing);
+  });
+
+  testWidgets('Personal Best row: an already-placed card reads as added', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({Platform.chess: _chessCard()}),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.chess],
+        existing: [_personalBestWidget(Platform.chess, position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('personalBestAddedRow_chess')), findsOneWidget);
+    expect(find.byKey(const Key('personalBestAddRow_chess')), findsNothing);
+  });
+
+  testWidgets('Personal Best row: a platform that publishes no peak figure is '
+      'offered no row at all', (tester) async {
+    // The catalog loop is driven by the platform set, so a platform with no
+    // best-ever figure does not even get a disabled row — the issue's
+    // "platforms with no best-ever figure do not offer the card".
+    expect(kPersonalBestPlatforms, {Platform.chess});
+
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _steamCard([_entry(730)]),
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    for (final key in const [
+      'personalBestAddRow_steam',
+      'personalBestDisabledRow_steam',
+      'personalBestAddedRow_steam',
+    ]) {
+      expect(find.byKey(Key(key)), findsNothing, reason: key);
+    }
   });
 
   testWidgets('Rarest row: the What I achieved group offers it when Steam '

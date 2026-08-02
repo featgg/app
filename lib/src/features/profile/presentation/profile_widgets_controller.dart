@@ -92,6 +92,15 @@ class ProfileWidgetsController extends _$ProfileWidgetsController {
         (repo) => repo.addRankWidget(platform: platform, position: position),
       );
 
+  /// Adds a personal-best widget bound to [platform] at [position].
+  Future<void> addPersonalBest({
+    required Platform platform,
+    required int position,
+  }) => _run(
+    (repo) =>
+        repo.addPersonalBestWidget(platform: platform, position: position),
+  );
+
   /// Adds a main widget bound to [platform] at [position].
   Future<void> addMain({required Platform platform, required int position}) =>
       _run(

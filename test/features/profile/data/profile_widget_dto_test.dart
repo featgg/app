@@ -126,6 +126,10 @@ void main() {
       );
       expect(profileWidgetKindToWire(ProfileWidgetKind.passport), 'passport');
       expect(profileWidgetKindToWire(ProfileWidgetKind.rank), 'rank');
+      expect(
+        profileWidgetKindToWire(ProfileWidgetKind.personalBest),
+        'personal_best',
+      );
       expect(profileWidgetKindToWire(ProfileWidgetKind.main), 'main');
       expect(profileWidgetKindToWire(ProfileWidgetKind.recent), 'recent');
       expect(
@@ -220,6 +224,35 @@ void main() {
         ),
       );
       expect(widget, isNull);
+    });
+  });
+
+  group('personal_best binding (platform-BOUND, bare envelope)', () {
+    test('a personal_best row round-trips to the kind with its platform', () {
+      final widget = profileWidgetFromDto(
+        ProfileWidgetDto.fromJson(
+          _row(type: 'personal_best', platform: 'chess'),
+        ),
+      );
+
+      expect(widget, isNotNull);
+      expect(widget!.kind, ProfileWidgetKind.personalBest);
+      expect(widget.platform, Platform.chess);
+    });
+
+    test('a personal_best row with an absent or unknown platform is '
+        'dropped', () {
+      for (final platform in const [null, 'not_a_platform']) {
+        expect(
+          profileWidgetFromDto(
+            ProfileWidgetDto.fromJson(
+              _row(type: 'personal_best', platform: platform),
+            ),
+          ),
+          isNull,
+          reason: 'platform: $platform',
+        );
+      }
     });
   });
 

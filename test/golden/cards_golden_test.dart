@@ -277,6 +277,74 @@ void main() {
     });
   });
 
+  group('Personal Best', () {
+    final widget = goldenWidget(
+      id: 'personalBest',
+      kind: ProfileWidgetKind.personalBest,
+      platform: Platform.chess,
+    );
+    // File-local: only this card reads a Chess peak. The blitz block peaks
+    // higher than the primary mode, so the reference also pins which mode the
+    // card answers with.
+    Map<Platform, GameCard?> cards({String primaryMode = 'RAPID'}) => {
+      Platform.chess: goldenCard(
+        Platform.chess,
+        title: 'chess-card',
+        data: ChessCardData(
+          primaryMode: primaryMode,
+          ratings: const {
+            'rapid': ChessModeRating(current: 1874, best: 2010),
+            'blitz': ChessModeRating(current: 2180, best: 2240),
+          },
+        ),
+      ),
+    };
+
+    goldenTest('full renders the peak over the theme ground with the mode '
+        'named, beside the live figure', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards(),
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/personal_best_full.png'),
+      );
+    });
+
+    goldenTest('half keeps the one datum at the pair aspect', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.half),
+        width: goldenHalfWidth,
+        cards: cards(),
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/personal_best_half.png'),
+      );
+    });
+
+    goldenTest('a payload with no peak keeps the ground and empties the datum '
+        'instead of falling back', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: _card(widget, ProfileCardSize.full),
+        width: goldenFullWidth,
+        cards: cards(primaryMode: 'BULLET'),
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/personal_best_full_no_data.png'),
+      );
+    });
+  });
+
   group('Main', () {
     final widget = goldenWidget(
       id: 'main',

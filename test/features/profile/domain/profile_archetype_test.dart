@@ -46,6 +46,13 @@ void main() {
       );
     });
 
+    test('personal_best maps to its own archetype', () {
+      expect(
+        archetypeForWidget(_widget(ProfileWidgetKind.personalBest)),
+        ProfileArchetype.personalBest,
+      );
+    });
+
     test('rarest_achievement maps to its own archetype', () {
       expect(
         archetypeForWidget(_widget(ProfileWidgetKind.rarestAchievement)),
@@ -118,6 +125,15 @@ void main() {
       });
     });
 
+    test('personal best supports full and half', () {
+      // One peak figure with its mode named is legal as a half; the full
+      // variant is where the live figure that explains it earns its width.
+      expect(supportedSizes(ProfileArchetype.personalBest), {
+        ProfileCardSize.full,
+        ProfileCardSize.half,
+      });
+    });
+
     test('rarest achievement supports full and half', () {
       // One subject line, one context line and one figure: the shape a half
       // already carries, while the full variant gives a long achievement name
@@ -168,6 +184,8 @@ void main() {
       for (final archetype in const [
         ProfileArchetype.identity,
         ProfileArchetype.rank,
+        // No platform publishes art for a peak rating, so it is framed.
+        ProfileArchetype.personalBest,
         ProfileArchetype.collection,
         ProfileArchetype.achievementGrid,
       ]) {
@@ -265,6 +283,15 @@ void main() {
         ProfileCardCategory.whatIOwn,
       );
       expect(cardCategory(ProfileWidgetKind.art), ProfileCardCategory.art);
+    });
+
+    test('personal best answers "how good I am"', () {
+      // Without its own arm the `_ => null` default would swallow it and a
+      // fresh composition would seed it last instead of beside Rank.
+      expect(
+        cardCategory(ProfileWidgetKind.personalBest),
+        ProfileCardCategory.howGoodIAm,
+      );
     });
 
     test('rarest achievement answers "what I achieved"', () {

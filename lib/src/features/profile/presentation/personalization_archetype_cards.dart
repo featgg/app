@@ -9,6 +9,7 @@ import 'cards/collection_card.dart';
 import 'cards/identity_card.dart';
 import 'cards/main_card.dart';
 import 'cards/milestone_card.dart';
+import 'cards/personal_best_card.dart';
 import 'cards/platform_card.dart';
 import 'cards/rank_card.dart';
 import 'cards/rarest_achievement_card.dart';
@@ -22,6 +23,7 @@ export 'cards/collection_card.dart';
 export 'cards/identity_card.dart';
 export 'cards/main_card.dart';
 export 'cards/milestone_card.dart';
+export 'cards/personal_best_card.dart';
 export 'cards/platform_card.dart';
 export 'cards/rank_card.dart';
 export 'cards/rarest_achievement_card.dart';
@@ -57,6 +59,11 @@ Widget personalizationCardFor(
       cardSource: cardSource,
     ),
     ProfileArchetype.rank => RankCard(
+      widget: widget,
+      size: effectiveSize,
+      cardSource: cardSource,
+    ),
+    ProfileArchetype.personalBest => PersonalBestCard(
       widget: widget,
       size: effectiveSize,
       cardSource: cardSource,

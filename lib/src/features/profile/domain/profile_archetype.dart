@@ -9,6 +9,7 @@ enum ProfileArchetype {
   platform,
   milestone,
   rank,
+  personalBest,
   main,
   recent,
   collection,
@@ -32,6 +33,7 @@ ProfileArchetype archetypeForWidget(ProfileWidget w) => switch (w.kind) {
   ProfileWidgetKind.showcase => ProfileArchetype.milestone,
   ProfileWidgetKind.platform => ProfileArchetype.platform,
   ProfileWidgetKind.rank => ProfileArchetype.rank,
+  ProfileWidgetKind.personalBest => ProfileArchetype.personalBest,
   ProfileWidgetKind.main => ProfileArchetype.main,
   ProfileWidgetKind.recent => ProfileArchetype.recent,
   ProfileWidgetKind.collection ||
@@ -57,6 +59,9 @@ ProfileCardFormat cardFormat(ProfileArchetype a) => switch (a) {
   ProfileArchetype.milestone => ProfileCardFormat.bleed,
   // No platform publishes rank-crest art, so a rank never has a subject image.
   ProfileArchetype.rank => ProfileCardFormat.framed,
+  // A peak rating has no picture: the platform publishes art for games and
+  // characters, never for a number an account once reached.
+  ProfileArchetype.personalBest => ProfileCardFormat.framed,
   // The top game / character cover.
   ProfileArchetype.main => ProfileCardFormat.bleed,
   // The recently-played game's cover, published on the recent-activity entry.
@@ -102,7 +107,8 @@ ProfileCardCategory? cardCategory(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.passport => ProfileCardCategory.whoIAm,
   ProfileWidgetKind.main ||
   ProfileWidgetKind.recent => ProfileCardCategory.whatIPlay,
-  ProfileWidgetKind.rank => ProfileCardCategory.howGoodIAm,
+  ProfileWidgetKind.rank ||
+  ProfileWidgetKind.personalBest => ProfileCardCategory.howGoodIAm,
   ProfileWidgetKind.showcase ||
   ProfileWidgetKind.completionist ||
   ProfileWidgetKind.rarestAchievement => ProfileCardCategory.whatIAchieved,
@@ -141,6 +147,12 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   // Rank supports both sizes: a compact crest as a half, or a larger
   // crest as a full — size follows placement, not the archetype.
   ProfileArchetype.rank => const {ProfileCardSize.full, ProfileCardSize.half},
+  // One peak figure with the mode it belongs to is legal as a half; the full
+  // variant is where the live figure that explains it earns its width.
+  ProfileArchetype.personalBest => const {
+    ProfileCardSize.full,
+    ProfileCardSize.half,
+  },
   ProfileArchetype.main => const {ProfileCardSize.full, ProfileCardSize.half},
   // One datum with its own subject is legal as a half; placed full it has one
   // supporting figure worth the extra width.

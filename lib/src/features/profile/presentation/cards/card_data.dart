@@ -6,6 +6,7 @@ import '../../../connections/domain/game_card.dart';
 import '../../../connections/domain/platform_descriptor.dart';
 import '../../domain/completionist_value_resolver.dart';
 import '../../domain/game_collector_value_resolver.dart';
+import '../../domain/personal_best_value_resolver.dart';
 import '../../domain/rarest_achievement_value_resolver.dart';
 import '../../domain/recent_value_resolver.dart';
 import '../../domain/showcase_selection.dart';
@@ -221,6 +222,33 @@ List<PersonalizationStat> rarestAchievementStats(
   ];
 }
 
+/// The Personal Best datum: the peak figure labelled by the mode it belongs to,
+/// and the live figure that explains it. Empty for a null resolve (the neutral
+/// no-data card).
+///
+/// The hero label prefixes the mode token rather than the platform: it is what
+/// places the figure, and the two together are what the label-width guard
+/// measures.
+List<PersonalizationStat> personalBestStats(
+  ResolvedPersonalBest? resolved,
+  AppLocalizations l10n,
+) {
+  if (resolved == null) return const [];
+  final peakNoun = cardStatLabel(l10n, 'peak_rating');
+  final currentNoun = cardStatLabel(l10n, 'rating');
+  if (peakNoun == null || currentNoun == null) return const [];
+  return [
+    PersonalizationStat(
+      value: formatCardValue(resolved.best, l10n),
+      label: '${resolved.scope} $peakNoun',
+    ),
+    PersonalizationStat(
+      value: formatCardValue(resolved.current, l10n),
+      label: currentNoun,
+    ),
+  ];
+}
+
 /// The uppercased first character of a perfect-game [title] for its letter tile,
 /// or null for an empty title (that tile is skipped). Reads the first Unicode
 /// code point so an astral leading character is not split mid-surrogate.
@@ -275,6 +303,7 @@ const List<String> cardStatKeys = [
   'veterancy_years',
   'rarity',
   'rarity_game_players',
+  'peak_rating',
 ];
 
 /// A card's label for [key]: the terse noun, without the platform. Distinct
@@ -313,6 +342,11 @@ String? cardStatLabel(AppLocalizations l10n, String key) => switch (key) {
   // concept without claiming what the percentage is measured against.
   'rarity' => l10n.cardStatRarity,
   'rarity_game_players' => l10n.cardStatRarityGamePlayers,
+  // Deliberately outside the platform-carrying set: this label is rendered
+  // behind a data-derived mode prefix, and the mode tokens are jargon a single
+  // platform owns, so they name their own platform the way the other
+  // exceptions do.
+  'peak_rating' => l10n.cardStatPeakRating,
   _ => null,
 };
 

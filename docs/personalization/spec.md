@@ -187,6 +187,7 @@ The table lists sources, not per-card guarantees; per-card availability is the r
 | `game_collector` | Collector |
 | `completionist` | Achievement shelf |
 | `rank` | Rank |
+| `personal_best` | Personal Best |
 | `main` | Main |
 | `recent` | Recent |
 | `rarest_achievement` | Rarest Achievement |

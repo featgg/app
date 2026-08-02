@@ -1223,6 +1223,171 @@ void main() {
     expect(_artFor(_coverA), findsOneWidget);
   });
 
+  ProfileWidget personalBestWidget() => _widget(
+    id: 'pb',
+    kind: ProfileWidgetKind.personalBest,
+    platform: Platform.chess,
+  );
+
+  /// A Chess card whose primary mode is rapid, with a blitz block peaking
+  /// higher — so a card reading the maximum across modes states the wrong
+  /// number. [heroImage] is the mis-wired-art case, not a normal payload.
+  Map<Platform, GameCard?> chessPeak({
+    String primaryMode = 'RAPID',
+    String? heroImage,
+  }) => {
+    Platform.chess: GameCard(
+      schemaVersion: 1,
+      platform: Platform.chess,
+      title: 'chess-card',
+      subtitle: null,
+      iconImage: null,
+      heroImage: heroImage,
+      profileUrl: null,
+      stats: const [],
+      lastUpdated: DateTime.utc(2026, 6, 1),
+      data: ChessCardData(
+        primaryMode: primaryMode,
+        ratings: const {
+          'rapid': ChessModeRating(current: 1874, best: 2010),
+          'blitz': ChessModeRating(current: 2180, best: 2240),
+        },
+      ),
+    ),
+  };
+
+  /// The hero label as the card builds it: the payload's own mode token in
+  /// front of the localized noun, never a spelled-out translation.
+  String peakLabel(String mode) =>
+      '$mode ${cardStatLabel(_en, 'peak_rating')!}'.toUpperCase();
+
+  testWidgets('PersonalBestCard names the peak figure and the mode it belongs '
+      'to in the datum', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: PersonalBestCard(
+          widget: personalBestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: chessPeak(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final text in [formatCardValue(2010, _en), peakLabel('RAPID')]) {
+      expect(
+        find.ancestor(
+          of: find.text(text),
+          matching: find.byType(PersonalizationDatum),
+        ),
+        findsOneWidget,
+        reason: text,
+      );
+    }
+    // The blitz peak is higher and is not this player's answer.
+    expect(find.text(formatCardValue(2240, _en)), findsNothing);
+  });
+
+  testWidgets('PersonalBestCard renders framed even though the platform card '
+      'carries a hero image', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: PersonalBestCard(
+          widget: personalBestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: chessPeak(heroImage: _heroUrl),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The registry owns the format, so a mis-wired art url cannot flip this
+    // card into the bleed chassis.
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('a payload with no peak renders the neutral no-data card', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: PersonalBestCard(
+          widget: personalBestWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        // The primary mode is absent from the ratings map, the documented
+        // subset case.
+        cards: chessPeak(primaryMode: 'BULLET'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    // No figure at all: a resolver regression must not fall back to a stale or
+    // borrowed number from another mode.
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.byType(Text),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('the half variant carries one datum and the full variant adds '
+      'the live figure', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: Column(
+          children: [
+            personalizationCardFor(
+              _widget(
+                id: 'pbFull',
+                kind: ProfileWidgetKind.personalBest,
+                platform: Platform.chess,
+              ),
+              size: ProfileCardSize.full,
+              cardSource: _publicSource(),
+            ),
+            personalizationCardFor(
+              _widget(
+                id: 'pbHalf',
+                kind: ProfileWidgetKind.personalBest,
+                platform: Platform.chess,
+              ),
+              size: ProfileCardSize.half,
+              cardSource: _publicSource(),
+            ),
+          ],
+        ),
+        cards: chessPeak(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PersonalBestCard), findsNWidgets(2));
+    // The peak is on both; the live figure is the full variant's alone.
+    expect(find.text(formatCardValue(2010, _en)), findsNWidgets(2));
+    expect(find.text(formatCardValue(1874, _en)), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(personalizationCardKey('pbHalf')),
+        matching: find.text(formatCardValue(1874, _en)),
+      ),
+      findsNothing,
+    );
+  });
+
   ProfileWidget rarestWidget() => _widget(
     id: 'ra',
     kind: ProfileWidgetKind.rarestAchievement,
