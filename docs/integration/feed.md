@@ -476,7 +476,7 @@ Platform value: `league_of_legends`.
     "top_mastery": [
       { "champion_id": 157, "champion_name": "Yasuo", "level": 7, "points": 412000,
         "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/champion/Yasuo.png",
-        "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg" },
+        "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/centered/Yasuo_0.jpg" },
       { "champion_id": 99,  "champion_name": "Jinx",  "level": 6, "points": 198000,
         "icon_image": null, "hero_image": null }
     ],
