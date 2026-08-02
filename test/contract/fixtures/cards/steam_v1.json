@@ -58,9 +58,11 @@
       ],
       "rarest_achievement": {
         "name": "Ashes to Ashes",
+        "description": "Win a round with only a knife.",
         "icon_image": "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/730/abc123.jpg",
         "game": "Counter-Strike 2",
         "game_icon_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/capsule_184x69.jpg",
+        "game_hero_image": "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/730/library_600x900.jpg",
         "rarity_pct": 0.31,
         "rarity_basis": "GAME_PLAYERS"
       }
