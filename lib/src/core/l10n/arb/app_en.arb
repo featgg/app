@@ -1164,7 +1164,7 @@
   },
   "personalizationMainFallbackTitle": "Main",
   "@personalizationMainFallbackTitle": {
-    "description": "Main-card title used when the payload names no subject. Platform-neutral: every platform this card serves reaches it, so it must not borrow one game's vocabulary."
+    "description": "Main-card title used when the payload names no subject. Every platform this card serves reaches it, so the wording is platform-neutral."
   },
   "personalizationCollectionTitle": "Collection",
   "@personalizationCollectionTitle": {
