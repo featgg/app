@@ -461,12 +461,10 @@ Platform value: `league_of_legends`.
 }
 ```
 
-`widget_data` (envelope images plus the `data` block):
+`widget_data` `data` block:
 
 ```json
 {
-  "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/profileicon/23.png",
-  "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg",
   "data": {
     "rank": {
       "tier": "GOLD",
@@ -488,7 +486,7 @@ Platform value: `league_of_legends`.
     },
     "summoner": {
       "level": 312,
-      "profile_icon_id": 23
+      "profile_icon_id": 4895
     }
   }
 }
