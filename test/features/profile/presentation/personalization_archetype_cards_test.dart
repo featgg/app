@@ -619,8 +619,8 @@ void main() {
           cardSource: _publicSource(),
         ),
         cards: {
-          // League has no champion-name map in v1, so the resolver leaves the
-          // title null and the card shows the generic key.
+          // The payload named no champion, so the resolver leaves the title
+          // null and the card shows the generic key.
           Platform.leagueOfLegends: _cardData(
             Platform.leagueOfLegends,
             const LeagueOfLegendsCardData(
@@ -636,6 +636,54 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
     expect(find.text(l10n.personalizationMainTopChampion), findsOneWidget);
+  });
+
+  testWidgets('MainCard names the champion when the payload carries the name', (
+    tester,
+  ) async {
+    final widget = _widget(
+      id: 'm',
+      kind: ProfileWidgetKind.main,
+      platform: Platform.leagueOfLegends,
+    );
+
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: widget,
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: {
+          Platform.leagueOfLegends: _cardData(
+            Platform.leagueOfLegends,
+            const LeagueOfLegendsCardData(
+              topMastery: [
+                LolMasteryEntry(
+                  championId: 157,
+                  championName: 'Yasuo',
+                  level: 7,
+                  points: 412000,
+                ),
+              ],
+            ),
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // The name lands in the datum's subject slot and displaces the generic
+    // rather than sitting beside it.
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.text('Yasuo'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.personalizationMainTopChampion), findsNothing);
   });
 
   testWidgets('MainCard with a Steam cover renders bleed', (tester) async {

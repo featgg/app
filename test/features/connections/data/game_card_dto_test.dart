@@ -694,7 +694,12 @@ void main() {
           'losses': 94,
         },
         'top_mastery': [
-          {'champion_id': 157, 'level': 7, 'points': 850000},
+          {
+            'champion_id': 157,
+            'champion_name': 'Yasuo',
+            'level': 7,
+            'points': 850000,
+          },
           {'champion_id': 64, 'level': 6, 'points': 350000},
         ],
         'challenges_details': {'total_points': 45000, 'level': 'GOLD'},
@@ -727,8 +732,11 @@ void main() {
 
       expect(data.topMastery, hasLength(2));
       expect(data.topMastery[0].championId, 157);
+      expect(data.topMastery[0].championName, 'Yasuo');
       expect(data.topMastery[0].level, 7);
       expect(data.topMastery[0].points, 850000);
+      // A sibling entry without the optional name stays unnamed.
+      expect(data.topMastery[1].championName, isNull);
 
       expect(data.challenges, isNotNull);
       expect(data.challenges!.totalPoints, 45000);
@@ -762,6 +770,29 @@ void main() {
 
       final data = card.data! as LeagueOfLegendsCardData;
       expect(data.topMastery, isEmpty);
+    });
+
+    test('a champion_name that is not a usable string is ignored and the '
+        'block survives', () {
+      for (final unusable in <Object>[123, '', '   ']) {
+        final raw = Map<String, dynamic>.from(lolWidgetData);
+        final dataBlock = Map<String, dynamic>.from(
+          raw['data'] as Map<String, dynamic>,
+        );
+        final mastery = List<dynamic>.from(dataBlock['top_mastery'] as List);
+        mastery[0] = Map<String, dynamic>.from(
+          mastery[0] as Map<String, dynamic>,
+        )..['champion_name'] = unusable;
+        dataBlock['top_mastery'] = mastery;
+        raw['data'] = dataBlock;
+
+        final card = gameCardFromDto(GameCardDto.fromJson(raw));
+
+        expect(card.data, isA<LeagueOfLegendsCardData>(), reason: '$unusable');
+        final data = card.data! as LeagueOfLegendsCardData;
+        expect(data.topMastery[0].championName, isNull, reason: '$unusable');
+        expect(data.topMastery[0].points, 850000, reason: '$unusable');
+      }
     });
 
     test('malformed data degrades to envelope-only (null data)', () {

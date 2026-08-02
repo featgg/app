@@ -1164,7 +1164,7 @@
   },
   "personalizationMainTopChampion": "Top champion",
   "@personalizationMainTopChampion": {
-    "description": "Generic Main-card title used when the payload carries no main name (e.g. League of Legends, which has no champion-name lookup)."
+    "description": "Generic Main-card title used when the payload carries no main name — for example a League champion the payload could not name."
   },
   "personalizationCollectionTitle": "Collection",
   "@personalizationCollectionTitle": {

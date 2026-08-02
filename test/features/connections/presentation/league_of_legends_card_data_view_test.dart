@@ -74,5 +74,45 @@ void main() {
       expect(find.byKey(const Key('lolChallengesHeading')), findsNothing);
       expect(find.byKey(const Key('lolTopMasteryHeading')), findsNothing);
     });
+
+    testWidgets('a named champion replaces the numeric id in the mastery row', (
+      tester,
+    ) async {
+      const data = LeagueOfLegendsCardData(
+        topMastery: [
+          LolMasteryEntry(
+            championId: 157,
+            championName: 'Yasuo',
+            level: 7,
+            points: 850000,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _wrap(const LeagueOfLegendsCardDataView(data: data)),
+      );
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      expect(find.text('Yasuo'), findsOneWidget);
+      expect(find.text('${l10n.connectionsLolChampion} 157'), findsNothing);
+    });
+
+    testWidgets('an unnamed champion still renders the labelled numeric id', (
+      tester,
+    ) async {
+      const data = LeagueOfLegendsCardData(
+        topMastery: [
+          LolMasteryEntry(championId: 157, level: 7, points: 850000),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _wrap(const LeagueOfLegendsCardDataView(data: data)),
+      );
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      expect(find.text('${l10n.connectionsLolChampion} 157'), findsOneWidget);
+    });
   });
 }

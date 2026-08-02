@@ -203,7 +203,37 @@ void main() {
   });
 
   group('resolveMain — League of Legends', () {
-    test('top mastery → title null (generic in v1) + mastery_points', () {
+    test('the named top champion is the title, paired with its own points', () {
+      final resolved = resolveMain(
+        _card(
+          Platform.leagueOfLegends,
+          data: const LeagueOfLegendsCardData(
+            topMastery: [
+              LolMasteryEntry(
+                championId: 157,
+                championName: 'Yasuo',
+                level: 7,
+                points: 412000,
+              ),
+              LolMasteryEntry(
+                championId: 99,
+                championName: 'Jinx',
+                level: 6,
+                points: 198000,
+              ),
+            ],
+            summoner: LolSummoner(level: 320, profileIconId: 1),
+          ),
+        ),
+      );
+
+      expect(resolved, isNotNull);
+      expect(resolved!.title, 'Yasuo');
+      expect(_stat(resolved, 'mastery_points')?.value, 412000);
+      expect(_stat(resolved, 'summoner_level')?.value, 320);
+    });
+
+    test('an unnamed top champion leaves the title null', () {
       final resolved = resolveMain(
         _card(
           Platform.leagueOfLegends,
@@ -219,7 +249,6 @@ void main() {
       expect(resolved, isNotNull);
       expect(resolved!.title, isNull);
       expect(_stat(resolved, 'mastery_points')?.value, 250000);
-      expect(_stat(resolved, 'summoner_level')?.value, 320);
     });
 
     test('empty mastery → null', () {

@@ -103,15 +103,16 @@ ResolvedMain? resolveMain(GameCard? card) {
       return ResolvedMain(title: title, subtitle: subtitle, stats: stats);
     case LeagueOfLegendsCardData(:final topMastery, :final summoner):
       if (topMastery.isEmpty) return null;
-      // No champion-name map in v1, so the title is left null (presentation shows
-      // a generic); mastery points are the honest headline number.
+      final top = topMastery.first;
+      // The name is absent whenever the payload could not resolve the champion,
+      // and a null title is what makes the card fall back to its generic.
       final stats = <CardStat>[
-        CardStat(key: 'mastery_points', value: topMastery.first.points),
+        CardStat(key: 'mastery_points', value: top.points),
       ];
       if (summoner != null) {
         stats.add(CardStat(key: 'summoner_level', value: summoner.level));
       }
-      return ResolvedMain(stats: stats);
+      return ResolvedMain(title: top.championName, stats: stats);
     case ChessCardData(:final primaryMode, :final ratings):
       final mode = ratings[primaryMode.toLowerCase()];
       return ResolvedMain(
