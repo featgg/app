@@ -1,9 +1,13 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featgg/src/core/l10n/generated/app_localizations.dart';
 import 'package:featgg/src/features/connections/domain/game_card.dart';
 import 'package:featgg/src/features/connections/presentation/league_of_legends_card_data_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+// Fixture-controlled art url — structural, asserted by value, never copy.
+const _championIcon = 'https://cdn.test/champion-icon.png';
 
 Widget _wrap(Widget child) => MaterialApp(
   localizationsDelegates: const [
@@ -113,6 +117,60 @@ void main() {
       final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
       expect(find.text('${l10n.connectionsLolChampion} 157'), findsOneWidget);
+    });
+
+    testWidgets('a mastery row draws the champion icon the payload carries', (
+      tester,
+    ) async {
+      const data = LeagueOfLegendsCardData(
+        topMastery: [
+          LolMasteryEntry(
+            championId: 157,
+            championName: 'Yasuo',
+            level: 7,
+            points: 850000,
+            iconImage: _championIcon,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _wrap(const LeagueOfLegendsCardDataView(data: data)),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('lolMasteryEntry_0')),
+          matching: find.byWidgetPredicate(
+            (w) => w is CachedNetworkImage && w.imageUrl == _championIcon,
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a mastery row with no icon keeps its placeholder and its '
+        'champion name', (tester) async {
+      const data = LeagueOfLegendsCardData(
+        topMastery: [
+          LolMasteryEntry(
+            championId: 157,
+            championName: 'Yasuo',
+            level: 7,
+            points: 850000,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _wrap(const LeagueOfLegendsCardDataView(data: data)),
+      );
+
+      // The slot stays reserved so a list mixing entries stays aligned, and it
+      // is never a broken-image tile.
+      expect(find.byType(CachedNetworkImage), findsNothing);
+      expect(find.byKey(const Key('lolMasteryEntry_0')), findsOneWidget);
+      expect(find.text('Yasuo'), findsOneWidget);
     });
   });
 }

@@ -17,6 +17,11 @@ GameCard _card(Platform platform, {CardData? data, String title = 'card'}) =>
       data: data,
     );
 
+// Fixture-controlled art urls — structural, asserted by value, never copy.
+const _portraitA = 'https://cdn.test/champion-a.jpg';
+const _portraitB = 'https://cdn.test/champion-b.jpg';
+const _iconA = 'https://cdn.test/champion-a-icon.png';
+
 CardStat? _stat(ResolvedMain r, String key) {
   for (final s in r.stats) {
     if (s.key == key) return s;
@@ -249,6 +254,61 @@ void main() {
       expect(resolved, isNotNull);
       expect(resolved!.title, isNull);
       expect(_stat(resolved, 'mastery_points')?.value, 250000);
+    });
+
+    test("the top champion's own portrait is the main's art", () {
+      final resolved = resolveMain(
+        _card(
+          Platform.leagueOfLegends,
+          data: const LeagueOfLegendsCardData(
+            topMastery: [
+              LolMasteryEntry(
+                championId: 157,
+                championName: 'Yasuo',
+                level: 7,
+                points: 412000,
+                heroImage: _portraitA,
+              ),
+              LolMasteryEntry(
+                championId: 99,
+                championName: 'Jinx',
+                level: 6,
+                points: 198000,
+                heroImage: _portraitB,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Subject, figure and art all come from the same entry.
+      expect(resolved, isNotNull);
+      expect(resolved!.heroImage, _portraitA);
+    });
+
+    test('a top champion with no portrait resolves no art even when it has an '
+        'icon', () {
+      final resolved = resolveMain(
+        _card(
+          Platform.leagueOfLegends,
+          data: const LeagueOfLegendsCardData(
+            topMastery: [
+              LolMasteryEntry(
+                championId: 157,
+                championName: 'Yasuo',
+                level: 7,
+                points: 412000,
+                iconImage: _iconA,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // A square icon stretched across a card is not the meaningful image the
+      // card asks for, so the card falls to its ground instead.
+      expect(resolved, isNotNull);
+      expect(resolved!.heroImage, isNull);
     });
 
     test('empty mastery → null', () {

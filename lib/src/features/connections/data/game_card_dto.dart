@@ -306,9 +306,11 @@ RetroAchievementsCardData retroAchievementsCardDataFromMap(
 
 /// Parses the raw `widget_data.data` map for League of Legends into a
 /// [LeagueOfLegendsCardData] entity. `rank` is null when absent or null (unranked).
-/// `top_mastery` defaults to empty when absent. `challenges_details` and
-/// `summoner` are parsed when present. Throws on malformed required leaves;
-/// the registry wrapper catches and returns null (envelope-only).
+/// `top_mastery` defaults to empty when absent; each entry's champion icon and
+/// portrait are null when the payload carries no usable url for them.
+/// `challenges_details` and `summoner` are parsed when present. Throws on
+/// malformed required leaves; the registry wrapper catches and returns null
+/// (envelope-only).
 LeagueOfLegendsCardData leagueOfLegendsCardDataFromMap(
   Map<String, dynamic> data,
 ) {
@@ -327,13 +329,24 @@ LeagueOfLegendsCardData leagueOfLegendsCardDataFromMap(
   final masteryRaw = data['top_mastery'] as List<dynamic>? ?? [];
   final topMastery = masteryRaw.whereType<Map<String, dynamic>>().map((e) {
     // A throw here blanks the whole block, so anything that is not a usable
-    // string leaves the entry unnamed rather than failing every League card.
+    // string leaves the entry unnamed or art-less rather than failing every
+    // League card. A blank url is rejected too: a non-null art value flips the
+    // Main card to bleed, and a bleed chassis over the theme ground is worse
+    // than the framed card the entry actually warrants.
     final name = e['champion_name'];
+    final iconImage = e['icon_image'];
+    final heroImage = e['hero_image'];
     return LolMasteryEntry(
       championId: (e['champion_id'] as num).toInt(),
       level: (e['level'] as num).toInt(),
       points: (e['points'] as num).toInt(),
       championName: name is String && name.trim().isNotEmpty ? name : null,
+      iconImage: iconImage is String && iconImage.trim().isNotEmpty
+          ? iconImage
+          : null,
+      heroImage: heroImage is String && heroImage.trim().isNotEmpty
+          ? heroImage
+          : null,
     );
   }).toList();
 

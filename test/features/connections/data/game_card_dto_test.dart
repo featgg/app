@@ -669,13 +669,17 @@ void main() {
   });
 
   group('gameCardFromDto — League of Legends widget_data example', () {
+    const lolSummonerIcon = 'https://cdn.test/lol/profileicon/23.png';
+    const lolChampionPortrait = 'https://cdn.test/lol/loading/Yasuo_0.jpg';
+    const lolChampionIcon = 'https://cdn.test/lol/champion/Yasuo.png';
+
     const lolWidgetData = {
       'schema_version': 1,
       'platform': 'league_of_legends',
       'title': 'TestPlayer#NA1',
       'subtitle': 'na1',
-      'icon_image': null,
-      'hero_image': null,
+      'icon_image': lolSummonerIcon,
+      'hero_image': lolChampionPortrait,
       'profile_url': null,
       'stats': [
         {'key': 'rank_lp', 'value': 85, 'unit': 'count'},
@@ -699,8 +703,18 @@ void main() {
             'champion_name': 'Yasuo',
             'level': 7,
             'points': 850000,
+            'icon_image': lolChampionIcon,
+            'hero_image': lolChampionPortrait,
           },
-          {'champion_id': 64, 'level': 6, 'points': 350000},
+          // The art keys are always published, carrying null when the champion
+          // has none — unlike champion_name, which is omitted outright.
+          {
+            'champion_id': 64,
+            'level': 6,
+            'points': 350000,
+            'icon_image': null,
+            'hero_image': null,
+          },
         ],
         'challenges_details': {'total_points': 45000, 'level': 'GOLD'},
         'summoner': {'level': 312, 'profile_icon_id': 4568},
@@ -715,8 +729,8 @@ void main() {
       expect(card.platform, Platform.leagueOfLegends);
       expect(card.title, 'TestPlayer#NA1');
       expect(card.subtitle, 'na1');
-      expect(card.iconImage, isNull);
-      expect(card.heroImage, isNull);
+      expect(card.iconImage, lolSummonerIcon);
+      expect(card.heroImage, lolChampionPortrait);
       expect(card.profileUrl, isNull);
       expect(card.stats, hasLength(5));
 
@@ -745,6 +759,53 @@ void main() {
       expect(data.summoner, isNotNull);
       expect(data.summoner!.level, 312);
       expect(data.summoner!.profileIconId, 4568);
+    });
+
+    test(
+      'each mastery entry carries the champion art the payload published',
+      () {
+        final card = gameCardFromDto(
+          GameCardDto.fromJson(Map<String, dynamic>.from(lolWidgetData)),
+        );
+
+        final data = card.data! as LeagueOfLegendsCardData;
+        expect(data.topMastery[0].iconImage, lolChampionIcon);
+        expect(data.topMastery[0].heroImage, lolChampionPortrait);
+        // A null art value means "not available" and is distinct from a url.
+        expect(data.topMastery[1].iconImage, isNull);
+        expect(data.topMastery[1].heroImage, isNull);
+      },
+    );
+
+    test('a per-entry image value that is not a usable string is ignored and '
+        'the block survives', () {
+      for (final key in const ['icon_image', 'hero_image']) {
+        for (final unusable in <Object>[123, true, '', '   ']) {
+          final raw = Map<String, dynamic>.from(lolWidgetData);
+          final dataBlock = Map<String, dynamic>.from(
+            raw['data'] as Map<String, dynamic>,
+          );
+          final mastery = List<dynamic>.from(dataBlock['top_mastery'] as List);
+          mastery[0] = Map<String, dynamic>.from(
+            mastery[0] as Map<String, dynamic>,
+          )..[key] = unusable;
+          dataBlock['top_mastery'] = mastery;
+          raw['data'] = dataBlock;
+
+          final card = gameCardFromDto(GameCardDto.fromJson(raw));
+          final reason = '$key = $unusable';
+
+          expect(card.data, isA<LeagueOfLegendsCardData>(), reason: reason);
+          final data = card.data! as LeagueOfLegendsCardData;
+          final entry = data.topMastery[0];
+          expect(
+            key == 'icon_image' ? entry.iconImage : entry.heroImage,
+            isNull,
+            reason: reason,
+          );
+          expect(entry.points, 850000, reason: reason);
+        }
+      }
     });
 
     test('unranked rank parses to null', () {

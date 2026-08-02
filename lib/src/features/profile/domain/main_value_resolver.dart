@@ -24,8 +24,9 @@ final class ResolvedMain extends Equatable {
   /// Stable-keyed headline stats resolved by the shared stat-label map.
   final List<CardStat> stats;
 
-  /// Steam top-game cover art url; null on non-Steam mains (no per-main image
-  /// field) and when the top game carries no art (feed image rules).
+  /// The main subject's own art url — the top game's cover or the top
+  /// champion's portrait; null on a platform that publishes no per-main image
+  /// and when the subject carries none (feed image rules).
   final String? heroImage;
 
   bool get isEmpty => title == null && subtitle == null && stats.isEmpty;
@@ -112,7 +113,11 @@ ResolvedMain? resolveMain(GameCard? card) {
       if (summoner != null) {
         stats.add(CardStat(key: 'summoner_level', value: summoner.level));
       }
-      return ResolvedMain(title: top.championName, stats: stats);
+      return ResolvedMain(
+        title: top.championName,
+        stats: stats,
+        heroImage: top.heroImage,
+      );
     case ChessCardData(:final primaryMode, :final ratings):
       final mode = ratings[primaryMode.toLowerCase()];
       return ResolvedMain(
