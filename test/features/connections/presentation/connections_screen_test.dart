@@ -42,6 +42,9 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
 
   final Either<Failure, List<Connection>> connectionsResult;
 
+  /// Platforms an unlink actually reached the repository for.
+  final unlinkCalls = <Platform>[];
+
   @override
   Future<Either<Failure, List<Connection>>> fetchMyConnections() async =>
       connectionsResult;
@@ -53,7 +56,10 @@ final class _FakeConnectionsRepository implements ConnectionsRepository {
   }) async => right(unit);
 
   @override
-  Future<Either<Failure, Unit>> unlink(Platform platform) async => right(unit);
+  Future<Either<Failure, Unit>> unlink(Platform platform) async {
+    unlinkCalls.add(platform);
+    return right(unit);
+  }
 
   @override
   Future<Either<Failure, SyncResult>> refresh(Platform platform) async =>
@@ -121,17 +127,16 @@ final class _CooldownActionsController extends ConnectionActionsController {
 // Pump helper
 // ---------------------------------------------------------------------------
 
-Future<void> _pump(
+Future<_FakeConnectionsRepository> _pump(
   WidgetTester tester, {
   required Either<Failure, List<Connection>> connections,
   bool onCooldown = false,
 }) async {
+  final repository = _FakeConnectionsRepository(connectionsResult: connections);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        connectionsRepositoryProvider.overrideWithValue(
-          _FakeConnectionsRepository(connectionsResult: connections),
-        ),
+        connectionsRepositoryProvider.overrideWithValue(repository),
         cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository()),
         if (onCooldown)
           connectionActionsControllerProvider(
@@ -150,6 +155,7 @@ Future<void> _pump(
       ),
     ),
   );
+  return repository;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,17 +240,32 @@ void main() {
       expect(find.byKey(const Key('steamLinkButton')), findsOneWidget);
     });
 
-    testWidgets('shows a Minecraft link form when no Minecraft connection '
-        'exists', (tester) async {
+    testWidgets('the connect list offers exactly the offered platforms', (
+      tester,
+    ) async {
       await _pump(tester, connections: right([]));
       await tester.pump();
       await tester.pump();
 
-      expect(
-        find.byKey(const Key('linkForm_minecraftHypixel')),
-        findsOneWidget,
+      for (final platform in offeredPlatforms) {
+        expect(
+          find.byKey(Key('linkForm_${platform.name}')),
+          findsOneWidget,
+          reason: '${platform.name} is offered but renders no link form',
+        );
+      }
+      final notOffered = platformDescriptors.keys.toSet().difference(
+        offeredPlatforms,
       );
-      expect(find.byKey(const Key('minecraftLinkButton')), findsOneWidget);
+      // the assertion below must have work to do
+      expect(notOffered, isNotEmpty);
+      for (final platform in notOffered) {
+        expect(
+          find.byKey(Key('linkForm_${platform.name}')),
+          findsNothing,
+          reason: '${platform.name} is not offered but renders a link form',
+        );
+      }
     });
 
     testWidgets('renders a Minecraft connection tile and its card slot', (
@@ -267,8 +288,47 @@ void main() {
       );
       // Card rendering moved to the profile feature; connections shows no slot.
       expect(find.byKey(const Key('card_minecraftHypixel')), findsNothing);
-      // A connected platform is not offered its link form again.
+      // No link form: this platform is not offered at all, connected or not.
       expect(find.byKey(const Key('linkForm_minecraftHypixel')), findsNothing);
+    });
+
+    testWidgets('a linked platform that is no longer offered stays listed, '
+        'refreshable and unlinkable', (tester) async {
+      final conn = Connection(
+        platform: Platform.minecraftHypixel,
+        status: ConnectionStatus.active,
+        createdAt: DateTime(2026),
+        remoteId: 'TestPlayer',
+      );
+      final repo = await _pump(tester, connections: right([conn]));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('connection_minecraftHypixel')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const Key('refreshButton_minecraftHypixel')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      final unlinkButton = find.byKey(
+        const Key('unlinkButton_minecraftHypixel'),
+      );
+      expect(tester.widget<IconButton>(unlinkButton).onPressed, isNotNull);
+
+      await tester.tap(unlinkButton);
+      await tester.pump(); // unlink future starts
+      await tester.pump(); // controller state settles, listener fires
+
+      expect(repo.unlinkCalls, contains(Platform.minecraftHypixel));
+
+      await tester.pump(const Duration(milliseconds: 750)); // snackbar entry
+      expect(find.byType(SnackBar), findsOneWidget);
     });
 
     testWidgets('shows a RetroAchievements link form when no RA connection '

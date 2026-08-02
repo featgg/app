@@ -19,6 +19,11 @@ import 'wow_retail_link_form.dart';
 /// link-form builder. Lives here (its only consumer) so the screen can select
 /// a form without a switch. A later platform adds one entry here alongside its
 /// descriptor, card-parser, and card-view registry entries.
+///
+/// It stays complete for every registered platform; which of them the screen
+/// actually offers is [offeredPlatforms]' call. An entry that renders for
+/// nobody today is therefore deliberate, not dead — it is what makes offering
+/// its platform again a one-line change.
 const Map<Platform, Widget Function({Key? key})> _linkFormRegistry = {
   Platform.steam: SteamLinkForm.new,
   Platform.minecraftHypixel: MinecraftLinkForm.new,
@@ -109,7 +114,8 @@ class _ConnectionsBody extends ConsumerWidget {
                 child: _ConnectionTile(connection: c),
               ),
             for (final descriptor in platformDescriptors.values)
-              if (!connectedPlatforms.contains(descriptor.platform)) ...[
+              if (offeredPlatforms.contains(descriptor.platform) &&
+                  !connectedPlatforms.contains(descriptor.platform)) ...[
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   l10n.connectionsConnectPlatform(descriptor.displayName),

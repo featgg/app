@@ -40,7 +40,9 @@ final class PlatformDescriptor {
   final String syncFunctionName;
 }
 
-/// All registered platform descriptors. Each story adds one entry here
+/// All registered platform descriptors — everything the app can parse, render,
+/// list and unlink. Registration is not an offer: which of these the connect
+/// flow proposes is [offeredPlatforms]' call. Each story adds one entry here
 /// (alongside the data-layer card-parser registry and presentation widget
 /// registry) — additive and conflict-free across parallel worktrees.
 const Map<Platform, PlatformDescriptor> platformDescriptors = {
@@ -93,4 +95,24 @@ const Map<Platform, PlatformDescriptor> platformDescriptors = {
     wireValue: 'gw2',
     syncFunctionName: 'sync-gw2',
   ),
+};
+
+/// The platforms the connect flow proposes right now. This answers "can
+/// someone link this today?", which is not the question [platformDescriptors]
+/// answers — that one is "does the app know this platform at all?", and it
+/// stays true for everything the app must keep parsing, rendering, listing and
+/// unlinking. Withdrawing a platform here stops new links without making the
+/// app forget it: an account already linked to it keeps its tile, its refresh
+/// and its unlink.
+///
+/// Minecraft (Hypixel) is absent by intent, not by omission. Its descriptor,
+/// link form and request builder all stay wired, so offering it again is a
+/// one-line change here and nowhere else.
+const Set<Platform> offeredPlatforms = {
+  Platform.steam,
+  Platform.retroachievements,
+  Platform.leagueOfLegends,
+  Platform.wowRetail,
+  Platform.chess,
+  Platform.gw2,
 };
