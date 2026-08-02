@@ -13,7 +13,9 @@
       "Edit",
       "Write",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Skill(codex-triage)",
+      "Skill(codex-triage *)"
     ],
     "ask": [
       "Bash(git reset *)",
