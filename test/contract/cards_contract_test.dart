@@ -95,6 +95,23 @@ void main() {
       expect(rarest.rarityBasis, rawRarest['rarity_basis']);
     });
 
+    test("steam_v1 → the rarest block's game art maps exactly what was "
+        'recorded', () {
+      final fixture = loadRecordedFixture('$_dir/steam_v1.json');
+      final steam = _cardFrom(fixture).data! as SteamCardData;
+
+      final rawRarest =
+          (fixture.payload['data']
+                  as Map<String, dynamic>)['rarest_achievement']
+              as Map<String, dynamic>;
+      final rarest = steam.rarestAchievement!;
+      // Both slots are pinned to the recording: the card prefers the cover and
+      // falls back to the capsule, so a mapper that drops either one changes
+      // which picture the card bleeds.
+      expect(rarest.gameIconImage, rawRarest['game_icon_image']);
+      expect(rarest.gameHeroImage, rawRarest['game_hero_image']);
+    });
+
     test('wow_retail_v1 → WowRetailCardData; best-run completedTimestamp '
         'derives from epoch ms', () {
       final card = _cardFrom(loadRecordedFixture('$_dir/wow_retail_v1.json'));

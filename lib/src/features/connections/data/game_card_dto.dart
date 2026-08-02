@@ -197,6 +197,7 @@ RarestAchievement? _rarestAchievementFromMap(Object? raw) {
   if (pct is! num) return null;
   final iconImage = raw['icon_image'];
   final gameIconImage = raw['game_icon_image'];
+  final gameHeroImage = raw['game_hero_image'];
   return RarestAchievement(
     name: name,
     game: game,
@@ -204,6 +205,7 @@ RarestAchievement? _rarestAchievementFromMap(Object? raw) {
     rarityBasis: basis,
     iconImage: iconImage is String ? iconImage : null,
     gameIconImage: gameIconImage is String ? gameIconImage : null,
+    gameHeroImage: gameHeroImage is String ? gameHeroImage : null,
   );
 }
 

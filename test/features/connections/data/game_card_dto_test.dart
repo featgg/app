@@ -399,11 +399,12 @@ void main() {
       'icon_image': 'https://cdn.example/badge.jpg',
       'game': 'CS2',
       'game_icon_image': 'https://cdn.example/730_capsule.jpg',
+      'game_hero_image': 'https://cdn.example/730_library_600x900.jpg',
       'rarity_pct': 0.31,
       'rarity_basis': 'GAME_PLAYERS',
     };
 
-    test('present block parses into rarestAchievement with all six '
+    test('present block parses into rarestAchievement with all seven '
         'fields', () {
       final data = parseWithRarest(validBlock);
       final rarest = data.rarestAchievement;
@@ -415,6 +416,19 @@ void main() {
       expect(rarest.rarityBasis, 'GAME_PLAYERS');
       expect(rarest.iconImage, 'https://cdn.example/badge.jpg');
       expect(rarest.gameIconImage, 'https://cdn.example/730_capsule.jpg');
+      expect(
+        rarest.gameHeroImage,
+        'https://cdn.example/730_library_600x900.jpg',
+      );
+    });
+
+    test('a block published without the cover parses with a null cover', () {
+      final data = parseWithRarest({...validBlock}..remove('game_hero_image'));
+      final rarest = data.rarestAchievement;
+
+      expect(rarest, isNotNull);
+      expect(rarest!.gameIconImage, 'https://cdn.example/730_capsule.jpg');
+      expect(rarest.gameHeroImage, isNull);
     });
 
     test('absent block → null, library and recent still parse', () {
@@ -460,6 +474,7 @@ void main() {
         ...validBlock,
         'icon_image': 123,
         'game_icon_image': 456,
+        'game_hero_image': 789,
       });
       final rarest = data.rarestAchievement;
 
@@ -467,6 +482,7 @@ void main() {
       expect(rarest!.name, 'Ashes to Ashes');
       expect(rarest.iconImage, isNull);
       expect(rarest.gameIconImage, isNull);
+      expect(rarest.gameHeroImage, isNull);
     });
   });
 
