@@ -635,7 +635,7 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    expect(find.text(l10n.personalizationMainTopChampion), findsOneWidget);
+    expect(find.text(l10n.personalizationMainFallbackTitle), findsOneWidget);
   });
 
   testWidgets('MainCard names the champion when the payload carries the name', (
@@ -683,7 +683,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text(l10n.personalizationMainTopChampion), findsNothing);
+    expect(find.text(l10n.personalizationMainFallbackTitle), findsNothing);
   });
 
   testWidgets('MainCard with a Steam cover renders bleed', (tester) async {

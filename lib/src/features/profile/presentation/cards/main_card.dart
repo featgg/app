@@ -42,7 +42,7 @@ class MainCard extends ConsumerWidget {
       size: size,
       art: resolved?.heroImage,
       framing: ArtFramingTarget(widgetId: widget.id, framing: widget.framing),
-      subject: resolved?.title ?? l10n.personalizationMainTopChampion,
+      subject: resolved?.title ?? l10n.personalizationMainFallbackTitle,
       detail: resolved?.subtitle,
       stats: statsFromResolved(
         resolved?.stats ?? const [],

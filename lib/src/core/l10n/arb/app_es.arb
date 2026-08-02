@@ -278,7 +278,7 @@
   "passportLabel": "Pasaporte",
   "personalizationStatPlatforms": "Plataformas",
   "personalizationStatMemberSince": "Miembro desde",
-  "personalizationMainTopChampion": "Mejor campeón",
+  "personalizationMainFallbackTitle": "Principal",
   "personalizationCollectionTitle": "Colección",
   "personalizationStatGames": "Juegos",
   "personalizationStatPerfect": "Perfecto",
