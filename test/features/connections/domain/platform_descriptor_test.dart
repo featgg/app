@@ -68,4 +68,15 @@ void main() {
       }
     });
   });
+
+  group('offeredPlatforms', () {
+    test('offers every registered platform except Minecraft (Hypixel)', () {
+      expect(
+        offeredPlatforms,
+        platformDescriptors.keys.toSet().difference({
+          Platform.minecraftHypixel,
+        }),
+      );
+    });
+  });
 }
