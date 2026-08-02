@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
@@ -6,7 +7,8 @@ import '../domain/game_card.dart';
 
 /// Renders the League of Legends `data` block: ranked standing (or unranked
 /// label), wins/losses, summoner level, challenges summary, and the top mastery
-/// list, naming each champion the payload named.
+/// list, naming each champion the payload named and drawing the icon it
+/// published for it.
 class LeagueOfLegendsCardDataView extends StatelessWidget {
   const LeagueOfLegendsCardDataView({super.key, required this.data});
 
@@ -171,6 +173,8 @@ class _MasteryRow extends StatelessWidget {
   final TextTheme textTheme;
   final ColorScheme colorScheme;
 
+  static const double _iconSize = AppSpacing.xl;
+
   @override
   Widget build(BuildContext context) {
     // The labelled id is a fallback, not a label: it is all the row can say
@@ -181,6 +185,8 @@ class _MasteryRow extends StatelessWidget {
 
     return Row(
       children: [
+        _ChampionIcon(iconUrl: entry.iconImage, colorScheme: colorScheme),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             champion,
@@ -200,4 +206,52 @@ class _MasteryRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ChampionIcon extends StatelessWidget {
+  const _ChampionIcon({required this.iconUrl, required this.colorScheme});
+
+  final String? iconUrl;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget image;
+    if (iconUrl != null) {
+      image = CachedNetworkImage(
+        imageUrl: iconUrl!,
+        width: _MasteryRow._iconSize,
+        height: _MasteryRow._iconSize,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => _placeholder(),
+        errorWidget: (_, _, _) => _placeholder(),
+      );
+    } else {
+      image = _placeholder();
+    }
+    // The slot is reserved even with no icon, so a list mixing entries with and
+    // without art stays aligned.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+      child: SizedBox(
+        width: _MasteryRow._iconSize,
+        height: _MasteryRow._iconSize,
+        child: image,
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    width: _MasteryRow._iconSize,
+    height: _MasteryRow._iconSize,
+    decoration: BoxDecoration(
+      color: colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+    ),
+    child: Icon(
+      Icons.person_outline,
+      color: colorScheme.onSurfaceVariant,
+      size: _MasteryRow._iconSize * 0.5,
+    ),
+  );
 }

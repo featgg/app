@@ -266,7 +266,7 @@ yet", not an error. Each platform's `data` field inventory and stable
 | Platform            | icon_image / hero_image                           | profile_url | subtitle     | Notes |
 | ------------------- | ------------------------------------------------- | ----------- | ------------ | ----- |
 | `steam`             | both shown                                        | URL shown   | `null`       | Complete worked example above. |
-| `league_of_legends` | both `null` (v1)                                  | `null`      | region token | Images deferred; `title` is `GameName#TAG`. |
+| `league_of_legends` | both shown                                        | `null`      | region token | Icon is the summoner's profile icon; hero is the top-mastery champion's portrait. `title` is `GameName#TAG`. |
 | `wow_retail`        | render (attributed) when available, else `null`   | `null`      | realm-REGION | When `last_updated` is >30 days old, show the owner a "stale — tap to refresh" state (not the data) and hide the card from other viewers. |
 | `minecraft_hypixel` | both `null` (v1)                                  | `null`      | `null`       | Skin render deferred to a later image surface. |
 | `chess`             | avatar shown, hero `null`                         | URL shown   | country token| Cleanest avatar case. |
@@ -474,8 +474,11 @@ Platform value: `league_of_legends`.
       "losses": 155
     },
     "top_mastery": [
-      { "champion_id": 157, "champion_name": "Yasuo", "level": 7, "points": 412000 },
-      { "champion_id": 99,  "champion_name": "Jinx",  "level": 6, "points": 198000 }
+      { "champion_id": 157, "champion_name": "Yasuo", "level": 7, "points": 412000,
+        "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/champion/Yasuo.png",
+        "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg" },
+      { "champion_id": 99,  "champion_name": "Jinx",  "level": 6, "points": 198000,
+        "icon_image": null, "hero_image": null }
     ],
     "challenges_details": {
       "total_points": 32400,
@@ -491,7 +494,9 @@ Platform value: `league_of_legends`.
 
 `widget_data` adds three stats beyond `feed_preview`: `mastery_points` (unit `points`), `challenge_points` (unit `points`), `summoner_level` (unit `count`).
 
-`rank` is `null` when the summoner is unranked; otherwise `tier` is one of `IRON` | `BRONZE` | `SILVER` | `GOLD` | `PLATINUM` | `EMERALD` | `DIAMOND` | `MASTER` | `GRANDMASTER` | `CHALLENGER`, and `division` is one of `I` | `II` | `III` | `IV`. `summoner.profile_icon_id` is a numeric ID — NOT a URL. `champion_name` is optional and additive under `schema_version: 1`; it is **omitted** from an entry when the champion's name cannot be resolved — never `null`, never an empty string, never a placeholder — so treat absence as "not available" and render the entry without a name. `icon_image` is `null` and `hero_image` is `null` in v1 — images deferred. Title is `GameName#TAG`; subtitle is the region token.
+`rank` is `null` when the summoner is unranked; otherwise `tier` is one of `IRON` | `BRONZE` | `SILVER` | `GOLD` | `PLATINUM` | `EMERALD` | `DIAMOND` | `MASTER` | `GRANDMASTER` | `CHALLENGER`, and `division` is one of `I` | `II` | `III` | `IV`. `summoner.profile_icon_id` is a numeric ID — NOT a URL. `champion_name` is optional and additive under `schema_version: 1`; it is **omitted** from an entry when the champion's name cannot be resolved — never `null`, never an empty string, never a placeholder — so treat absence as "not available" and render the entry without a name. On the envelope, `icon_image` is the summoner's profile icon (a square avatar) and `hero_image` is the top-mastery champion's portrait; both are absolute `https://` URLs or `null` per § Image rules. Title is `GameName#TAG`; subtitle is the region token.
+
+Each `top_mastery[]` entry additionally carries its own `icon_image` (the champion's square icon) and `hero_image` (the champion's portrait). Both keys are **always present** on every entry and hold either a URL or `null` — deliberately unlike the sibling `champion_name`, which is **omitted** from the entry instead. The two rules both mean "not available"; neither is implied by the other, so read each field as it is published. The pair follows § Image rules and is additive under `schema_version: 1`, so a card synced before it landed carries neither and gains both on its next natural refresh.
 
 #### wow_retail
 

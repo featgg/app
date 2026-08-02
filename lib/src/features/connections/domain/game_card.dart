@@ -356,6 +356,8 @@ final class LolMasteryEntry extends Equatable {
     required this.level,
     required this.points,
     this.championName,
+    this.iconImage,
+    this.heroImage,
   });
 
   /// Numeric champion id.
@@ -367,8 +369,21 @@ final class LolMasteryEntry extends Equatable {
   /// name is dropped upstream when it cannot be resolved, never blanked.
   final String? championName;
 
+  /// The champion's square icon url, or null (envelope image rules).
+  final String? iconImage;
+
+  /// The champion's portrait url, or null (envelope image rules).
+  final String? heroImage;
+
   @override
-  List<Object?> get props => [championId, level, points, championName];
+  List<Object?> get props => [
+    championId,
+    level,
+    points,
+    championName,
+    iconImage,
+    heroImage,
+  ];
 }
 
 /// Challenges summary for a League of Legends summoner.

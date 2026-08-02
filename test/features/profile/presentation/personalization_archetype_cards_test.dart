@@ -787,6 +787,159 @@ void main() {
     );
   });
 
+  ProfileWidget lolMainWidget() => _widget(
+    id: 'm',
+    kind: ProfileWidgetKind.main,
+    platform: Platform.leagueOfLegends,
+  );
+
+  /// A League card whose top-mastery champion is named and optionally carries
+  /// the portrait the payload publishes for it.
+  Map<Platform, GameCard?> lolMain({String? heroImage}) => {
+    Platform.leagueOfLegends: _cardData(
+      Platform.leagueOfLegends,
+      LeagueOfLegendsCardData(
+        topMastery: [
+          LolMasteryEntry(
+            championId: 157,
+            championName: 'Yasuo',
+            level: 7,
+            points: 412000,
+            heroImage: heroImage,
+          ),
+        ],
+      ),
+    ),
+  };
+
+  testWidgets('MainCard bleeds the champion portrait the payload carries', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: lolMainWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: lolMain(heroImage: _coverA),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Real art for the card's own subject, so the picture is the card and the
+    // champion keeps its name in the datum over it.
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(PersonalizationDatum),
+        matching: find.text('Yasuo'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('MainCard half bleeds the same portrait at the pair aspect', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: lolMainWidget(),
+          size: ProfileCardSize.half,
+          cardSource: _publicSource(),
+        ),
+        cards: lolMain(heroImage: _coverA),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The flip is a property of the art, not of the size the card sits at.
+    expect(_artFor(_coverA), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is PersonalizationDatum && w.format == ProfileCardFormat.bleed,
+      ),
+      findsOneWidget,
+    );
+    expect(_cardAspect(tester, 'm'), PersonalizationLayout.cardHalfAspect);
+  });
+
+  testWidgets('MainCard with no champion portrait stays framed and paints no '
+      'picture', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: lolMainWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: lolMain(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(PersonalizationCardGround), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is PersonalizationDatum && w.format == ProfileCardFormat.framed,
+      ),
+      findsOneWidget,
+    );
+  });
+
+  // Read from the card's own label lookup, never spelled out: a copy edit must
+  // not break the assertion, only the prefix rule may.
+  String masteryNoun() => cardStatLabel(_en, 'mastery_points')!;
+  String lolPrefixed() =>
+      '${platformDescriptors[Platform.leagueOfLegends]!.shortName} '
+              '${masteryNoun()}'
+          .toUpperCase();
+
+  Future<void> pumpLolMain(
+    WidgetTester tester,
+    Map<Platform, GameCard?> cards,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        card: MainCard(
+          widget: lolMainWidget(),
+          size: ProfileCardSize.full,
+          cardSource: _publicSource(),
+        ),
+        cards: cards,
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('the Main hero stat names the platform while the card carries '
+      'no art', (tester) async {
+    await pumpLolMain(tester, lolMain());
+
+    // Framed, so nothing but the label can say which game the figure is from.
+    expect(find.text(lolPrefixed()), findsOneWidget);
+    expect(find.text(masteryNoun().toUpperCase()), findsNothing);
+  });
+
+  testWidgets('the Main hero stat drops the platform name once the card '
+      'carries art', (tester) async {
+    await pumpLolMain(tester, lolMain(heroImage: _coverA));
+
+    // With the portrait behind it the picture already says which game, and the
+    // prefix would only spend width the noun needs.
+    expect(find.text(masteryNoun().toUpperCase()), findsOneWidget);
+    expect(find.text(lolPrefixed()), findsNothing);
+  });
+
   ProfileWidget recentWidget() => _widget(
     id: 'rc',
     kind: ProfileWidgetKind.recent,

@@ -1,0 +1,34 @@
+{
+  "payload": {
+    "schema_version": 1,
+    "platform": "league_of_legends",
+    "title": "PlayerName#TAG",
+    "subtitle": "euw1",
+    "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/profileicon/23.png",
+    "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg",
+    "profile_url": null,
+    "stats": [
+      { "key": "rank_lp", "value": 75, "unit": "lp" },
+      { "key": "winrate", "value": 52.3, "unit": "percent" },
+      { "key": "mastery_points", "value": 250000, "unit": "points" },
+      { "key": "challenge_points", "value": 4200, "unit": "points" },
+      { "key": "summoner_level", "value": 142, "unit": "count" }
+    ],
+    "last_updated": "2026-06-03T12:00:00Z",
+    "data": {
+      "rank": { "tier": "GOLD", "division": "II", "lp": 75, "wins": 120, "losses": 110 },
+      "top_mastery": [
+        {
+          "champion_id": 157,
+          "champion_name": "Yasuo",
+          "level": 7,
+          "points": 250000,
+          "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/champion/Yasuo.png",
+          "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg"
+        }
+      ],
+      "challenges_details": { "total_points": 4200, "level": "GOLD" },
+      "summoner": { "level": 142, "profile_icon_id": 23 }
+    }
+  }
+}

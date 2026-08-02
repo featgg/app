@@ -112,6 +112,28 @@ void main() {
       expect(rarest.gameHeroImage, rawRarest['game_hero_image']);
     });
 
+    test('league_of_legends_v1 → envelope and per-entry champion art map '
+        'exactly what was recorded', () {
+      final fixture = loadRecordedFixture('$_dir/league_of_legends_v1.json');
+      final card = _cardFrom(fixture);
+      expect(card.platform, Platform.leagueOfLegends);
+
+      // The envelope art is the summoner icon and the champion portrait; a
+      // wire rename on either blanks the surfaces that bleed them.
+      expect(card.iconImage, fixture.payload['icon_image']);
+      expect(card.heroImage, fixture.payload['hero_image']);
+
+      final lol = card.data! as LeagueOfLegendsCardData;
+      final rawEntry =
+          ((fixture.payload['data'] as Map<String, dynamic>)['top_mastery']
+                      as List<dynamic>)
+                  .first
+              as Map<String, dynamic>;
+      final entry = lol.topMastery.first;
+      expect(entry.iconImage, rawEntry['icon_image']);
+      expect(entry.heroImage, rawEntry['hero_image']);
+    });
+
     test('wow_retail_v1 → WowRetailCardData; best-run completedTimestamp '
         'derives from epoch ms', () {
       final card = _cardFrom(loadRecordedFixture('$_dir/wow_retail_v1.json'));
