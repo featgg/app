@@ -325,16 +325,17 @@ LeagueOfLegendsCardData leagueOfLegendsCardDataFromMap(
   }
 
   final masteryRaw = data['top_mastery'] as List<dynamic>? ?? [];
-  final topMastery = masteryRaw
-      .whereType<Map<String, dynamic>>()
-      .map(
-        (e) => LolMasteryEntry(
-          championId: (e['champion_id'] as num).toInt(),
-          level: (e['level'] as num).toInt(),
-          points: (e['points'] as num).toInt(),
-        ),
-      )
-      .toList();
+  final topMastery = masteryRaw.whereType<Map<String, dynamic>>().map((e) {
+    // A throw here blanks the whole block, so anything that is not a usable
+    // string leaves the entry unnamed rather than failing every League card.
+    final name = e['champion_name'];
+    return LolMasteryEntry(
+      championId: (e['champion_id'] as num).toInt(),
+      level: (e['level'] as num).toInt(),
+      points: (e['points'] as num).toInt(),
+      championName: name is String && name.trim().isNotEmpty ? name : null,
+    );
+  }).toList();
 
   final challengesRaw = data['challenges_details'] as Map<String, dynamic>?;
   LolChallenges? challenges;

@@ -474,8 +474,8 @@ Platform value: `league_of_legends`.
       "losses": 155
     },
     "top_mastery": [
-      { "champion_id": 157, "level": 7, "points": 412000 },
-      { "champion_id": 99,  "level": 6, "points": 198000 }
+      { "champion_id": 157, "champion_name": "Yasuo", "level": 7, "points": 412000 },
+      { "champion_id": 99,  "champion_name": "Jinx",  "level": 6, "points": 198000 }
     ],
     "challenges_details": {
       "total_points": 32400,
@@ -491,7 +491,7 @@ Platform value: `league_of_legends`.
 
 `widget_data` adds three stats beyond `feed_preview`: `mastery_points` (unit `points`), `challenge_points` (unit `points`), `summoner_level` (unit `count`).
 
-`rank` is `null` when the summoner is unranked; otherwise `tier` is one of `IRON` | `BRONZE` | `SILVER` | `GOLD` | `PLATINUM` | `EMERALD` | `DIAMOND` | `MASTER` | `GRANDMASTER` | `CHALLENGER`, and `division` is one of `I` | `II` | `III` | `IV`. `summoner.profile_icon_id` is a numeric ID — NOT a URL. `icon_image` is `null` and `hero_image` is `null` in v1 — images deferred. Title is `GameName#TAG`; subtitle is the region token.
+`rank` is `null` when the summoner is unranked; otherwise `tier` is one of `IRON` | `BRONZE` | `SILVER` | `GOLD` | `PLATINUM` | `EMERALD` | `DIAMOND` | `MASTER` | `GRANDMASTER` | `CHALLENGER`, and `division` is one of `I` | `II` | `III` | `IV`. `summoner.profile_icon_id` is a numeric ID — NOT a URL. `champion_name` is optional and additive under `schema_version: 1`; it is **omitted** from an entry when the champion's name cannot be resolved — never `null`, never an empty string, never a placeholder — so treat absence as "not available" and render the entry without a name. `icon_image` is `null` and `hero_image` is `null` in v1 — images deferred. Title is `GameName#TAG`; subtitle is the region token.
 
 #### wow_retail
 

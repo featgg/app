@@ -5,8 +5,8 @@ import '../../../core/theme/tokens.dart';
 import '../domain/game_card.dart';
 
 /// Renders the League of Legends `data` block: ranked standing (or unranked
-/// label), wins/losses, summoner level, challenges summary, and top mastery
-/// list with numeric champion ids (name lookup is out of scope for v1).
+/// label), wins/losses, summoner level, challenges summary, and the top mastery
+/// list, naming each champion the payload named.
 class LeagueOfLegendsCardDataView extends StatelessWidget {
   const LeagueOfLegendsCardDataView({super.key, required this.data});
 
@@ -173,11 +173,17 @@ class _MasteryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The labelled id is a fallback, not a label: it is all the row can say
+    // when the payload named no champion, and it beats saying nothing.
+    final champion =
+        entry.championName ??
+        '${l10n.connectionsLolChampion} ${entry.championId}';
+
     return Row(
       children: [
         Expanded(
           child: Text(
-            '${l10n.connectionsLolChampion} ${entry.championId}',
+            champion,
             style: textTheme.bodySmall,
             overflow: TextOverflow.ellipsis,
           ),

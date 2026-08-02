@@ -355,15 +355,20 @@ final class LolMasteryEntry extends Equatable {
     required this.championId,
     required this.level,
     required this.points,
+    this.championName,
   });
 
-  /// Numeric champion id; no name lookup in v1.
+  /// Numeric champion id.
   final int championId;
   final int level;
   final int points;
 
+  /// The champion's published name, or null when the payload omitted it — the
+  /// name is dropped upstream when it cannot be resolved, never blanked.
+  final String? championName;
+
   @override
-  List<Object?> get props => [championId, level, points];
+  List<Object?> get props => [championId, level, points, championName];
 }
 
 /// Challenges summary for a League of Legends summoner.
