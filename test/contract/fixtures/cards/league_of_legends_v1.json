@@ -5,7 +5,7 @@
     "title": "PlayerName#TAG",
     "subtitle": "euw1",
     "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/profileicon/23.png",
-    "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg",
+    "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/centered/Yasuo_0.jpg",
     "profile_url": null,
     "stats": [
       { "key": "rank_lp", "value": 75, "unit": "lp" },
@@ -24,7 +24,7 @@
           "level": 7,
           "points": 250000,
           "icon_image": "https://ddragon.leagueoflegends.com/cdn/16.15.1/img/champion/Yasuo.png",
-          "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/Yasuo_0.jpg"
+          "hero_image": "https://ddragon.leagueoflegends.com/cdn/img/champion/centered/Yasuo_0.jpg"
         }
       ],
       "challenges_details": { "total_points": 4200, "level": "GOLD" },
