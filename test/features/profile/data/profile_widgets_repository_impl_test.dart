@@ -1049,6 +1049,55 @@ void main() {
     });
   });
 
+  group('addPersonalBestWidget', () {
+    test('writes type personal_best, a non-null platform, is_enabled and a '
+        'bare v1 envelope', () async {
+      final source = _FakeDataSource(
+        onInsert: (row) async => _dto({
+          'id': 'pb',
+          'platform': 'chess',
+          'type': 'personal_best',
+          'position': 8,
+          'is_enabled': true,
+          'settings': {'schema_version': kProfileWidgetSettingsVersion},
+        }),
+      );
+      final result = await _repo(
+        source,
+        _RecordingReporter(),
+      ).addPersonalBestWidget(platform: Platform.chess, position: 8);
+
+      result.fold((f) => fail('want Right, got $f'), (widget) {
+        expect(widget.id, 'pb');
+        expect(widget.kind, ProfileWidgetKind.personalBest);
+        expect(widget.platform, Platform.chess);
+      });
+
+      // The captured write is the brief's contract: a non-null platform and a
+      // bare envelope (no selection sub-object).
+      expect(source.lastInsert!['type'], 'personal_best');
+      expect(source.lastInsert!['platform'], 'chess');
+      expect(source.lastInsert!['position'], 8);
+      expect(source.lastInsert!['is_enabled'], true);
+      final settings = source.lastInsert!['settings'] as Map<String, dynamic>;
+      expect(settings['schema_version'], kProfileWidgetSettingsVersion);
+      expect(settings.keys, ['schema_version']);
+    });
+
+    test('an unauthenticated add → Left(AuthFailure)', () async {
+      final result = await _repo(
+        _FakeDataSource(),
+        _RecordingReporter(),
+        userId: null,
+      ).addPersonalBestWidget(platform: Platform.chess, position: 0);
+
+      result.fold(
+        (f) => expect(f, isA<AuthFailure>()),
+        (_) => fail('want Left'),
+      );
+    });
+  });
+
   group('addRarestAchievementWidget', () {
     test('writes type rarest_achievement, a non-null platform, is_enabled and '
         'a bare v1 envelope', () async {

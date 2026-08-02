@@ -275,6 +275,12 @@ final class _FakeWidgetsRepository implements ProfileWidgetsRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, ProfileWidget>> addPersonalBestWidget({
+    required Platform platform,
+    required int position,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<Either<Failure, Unit>> setCollectionSelection(
     String id,
     CollectionSelection selection,

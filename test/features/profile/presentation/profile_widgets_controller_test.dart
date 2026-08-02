@@ -38,6 +38,8 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
   int? lastRecentPosition;
   Platform? lastRarestPlatform;
   int? lastRarestPosition;
+  Platform? lastPersonalBestPlatform;
+  int? lastPersonalBestPosition;
 
   Either<Failure, T> _result<T>(T value) =>
       failure == null ? right(value) : left(failure!);
@@ -216,6 +218,25 @@ final class _RecordingRepository implements ProfileWidgetsRepository {
       ProfileWidget(
         id: 'new',
         kind: ProfileWidgetKind.recent,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addPersonalBestWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    mutations.add('addPersonalBest');
+    lastPersonalBestPlatform = platform;
+    lastPersonalBestPosition = position;
+    return _result(
+      ProfileWidget(
+        id: 'new',
+        kind: ProfileWidgetKind.personalBest,
         platform: platform,
         position: position,
         isEnabled: true,
@@ -462,6 +483,29 @@ void main() {
       expect(repo.mutations, ['addRecent']);
       expect(repo.lastRecentPlatform, Platform.steam);
       expect(repo.lastRecentPosition, 5);
+      expect(repo.fetchCalls, greaterThan(fetchesBefore));
+      expect(
+        container.read(profileWidgetsControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('addPersonalBest forwards platform and position and invalidates the '
+        'read', () async {
+      final repo = _RecordingRepository();
+      final container = _container(repo);
+      container.listen(ownerProfileWidgetsProvider, (_, _) {});
+      await _primeRead(container);
+      final fetchesBefore = repo.fetchCalls;
+
+      await container
+          .read(profileWidgetsControllerProvider.notifier)
+          .addPersonalBest(platform: Platform.chess, position: 9);
+      await container.read(ownerProfileWidgetsProvider.future);
+
+      expect(repo.mutations, ['addPersonalBest']);
+      expect(repo.lastPersonalBestPlatform, Platform.chess);
+      expect(repo.lastPersonalBestPosition, 9);
       expect(repo.fetchCalls, greaterThan(fetchesBefore));
       expect(
         container.read(profileWidgetsControllerProvider).hasError,

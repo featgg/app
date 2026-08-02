@@ -153,6 +153,41 @@ void main() {
     );
   });
 
+  testWidgets('the mode-qualified peak label fits, in every language', (
+    tester,
+  ) async {
+    // The case both loops above miss: a hero label can also carry a prefix that
+    // comes from the payload rather than from the platform vocabulary, and
+    // nothing here measured one. Every mode token the payload can publish is
+    // measured, not the longest — a noun sized to one of them and overflowing
+    // on another is a truncated label on somebody's profile.
+    const modes = ['RAPID', 'BLITZ', 'BULLET', 'DAILY'];
+
+    final failures = <String>[];
+    for (final tag in ['en', 'es', 'pt']) {
+      final l10n = await AppLocalizations.delegate.load(Locale(tag));
+      final noun = cardStatLabel(l10n, 'peak_rating')!;
+      for (final mode in modes) {
+        final label = '$mode $noun';
+        final width = _labelWidth(label);
+        if (width > _labelBudget) {
+          failures.add(
+            '$tag/$mode: "${label.toUpperCase()}" '
+            '${width.toStringAsFixed(1)}pt',
+          );
+        }
+      }
+    }
+
+    expect(
+      failures,
+      isEmpty,
+      reason:
+          'over the ${_labelBudget.toStringAsFixed(1)}pt a label gets:\n'
+          '${failures.join('\n')}',
+    );
+  });
+
   testWidgets('the short names are load-bearing, not cosmetic', (tester) async {
     // Without this the test above would pass for a vocabulary that changed
     // nothing. Not every brand name overflows — Chess.com fits as it is — so

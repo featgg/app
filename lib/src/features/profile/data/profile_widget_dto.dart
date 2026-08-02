@@ -69,6 +69,7 @@ ProfileWidget? profileWidgetFromDto(ProfileWidgetDto dto) {
       kind == ProfileWidgetKind.gameCollector ||
       kind == ProfileWidgetKind.completionist ||
       kind == ProfileWidgetKind.rank ||
+      kind == ProfileWidgetKind.personalBest ||
       kind == ProfileWidgetKind.main ||
       kind == ProfileWidgetKind.recent ||
       kind == ProfileWidgetKind.rarestAchievement) {
@@ -286,6 +287,7 @@ String profileWidgetKindToWire(ProfileWidgetKind kind) => switch (kind) {
   ProfileWidgetKind.completionist => 'completionist',
   ProfileWidgetKind.passport => 'passport',
   ProfileWidgetKind.rank => 'rank',
+  ProfileWidgetKind.personalBest => 'personal_best',
   ProfileWidgetKind.main => 'main',
   ProfileWidgetKind.recent => 'recent',
   ProfileWidgetKind.rarestAchievement => 'rarest_achievement',
@@ -303,6 +305,7 @@ ProfileWidgetKind? _kindFromWire(String value) => switch (value) {
   'completionist' => ProfileWidgetKind.completionist,
   'passport' => ProfileWidgetKind.passport,
   'rank' => ProfileWidgetKind.rank,
+  'personal_best' => ProfileWidgetKind.personalBest,
   'main' => ProfileWidgetKind.main,
   'recent' => ProfileWidgetKind.recent,
   'rarest_achievement' => ProfileWidgetKind.rarestAchievement,

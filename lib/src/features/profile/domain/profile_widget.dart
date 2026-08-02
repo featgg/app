@@ -17,6 +17,7 @@ enum ProfileWidgetKind {
   completionist,
   passport,
   rank,
+  personalBest,
   main,
   recent,
   rarestAchievement,
@@ -51,9 +52,10 @@ final class ProfileWidget extends Equatable {
 
   /// Non-null for [ProfileWidgetKind.platform], [ProfileWidgetKind.showcase],
   /// [ProfileWidgetKind.gameCollector], [ProfileWidgetKind.completionist],
-  /// [ProfileWidgetKind.rank], [ProfileWidgetKind.main],
-  /// [ProfileWidgetKind.recent], and [ProfileWidgetKind.rarestAchievement] (the
-  /// single source platform the card draws from); null otherwise.
+  /// [ProfileWidgetKind.rank], [ProfileWidgetKind.personalBest],
+  /// [ProfileWidgetKind.main], [ProfileWidgetKind.recent], and
+  /// [ProfileWidgetKind.rarestAchievement] (the single source platform the card
+  /// draws from); null otherwise.
   final Platform? platform;
   final int position;
   final bool isEnabled;

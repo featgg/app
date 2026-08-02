@@ -60,6 +60,9 @@ snake_case). Any other value is rejected as an invalid value for the field.
   one connected platform (League tier, Mythic+ rating, Chess mode rating,
   RetroAchievements rank). Reads only already-published card data. Rendered at
   full or half size (the full variant shows a larger crest and a wider stat cap).
+- `personal_best` — a platform-bound card showing the owner's peak figure on one
+  connected platform, and the mode or context it belongs to. Reads only
+  already-published card data. Client rendering is Chess-first.
 - `main` — a platform-bound card showing the owner's primary game / character /
   mode on one connected platform (Steam top game, WoW character, GW2 main, League
   top mastery, Chess primary mode). Reads only already-published card data.
@@ -76,8 +79,8 @@ snake_case). Any other value is rejected as an invalid value for the field.
   when absent.
 
 `showcase`, `collection`, `game_collector`, `completionist`, `passport`,
-`rank`, `main`, `recent`, `rarest_achievement`, and `art` are the kinds the
-client writes today.
+`rank`, `personal_best`, `main`, `recent`, `rarest_achievement`, and `art` are
+the kinds the client writes today.
 
 `template`, `composed_card` and `data_menu` are **client-retired**: the client
 no longer writes them and no longer reads them — a row carrying one of those
@@ -111,6 +114,8 @@ Whether `platform` is required or must be null depends on `type`:
   platform, not a single source).
 - `type = rank` → `platform` **must be a non-null** value from the list above
   (the platform whose competitive standing it renders).
+- `type = personal_best` → `platform` **must be a non-null** value from the list
+  above (the platform whose peak figure it renders).
 - `type = main` → `platform` **must be a non-null** value from the list above
   (the platform whose primary game/character/mode it renders).
 - `type = recent` → `platform` **must be a non-null** value from the list above
@@ -123,8 +128,8 @@ Whether `platform` is required or must be null depends on `type`:
 A write that breaks this rule is rejected (the row is not created), distinct
 from the invalid-`type` rejection above.
 
-Per-kind rendered size (Rank, Main, Recent and Rarest Achievement are each full
-or half) is
+Per-kind rendered size (Rank, Personal Best, Main, Recent and Rarest Achievement
+are each full or half) is
 client-enforced, not server-validated — the client offers only legal sizes.
 
 - **Constraints (surface as the SDK error on violation).**

@@ -1294,6 +1294,10 @@
   "@cardStatRarityGamePlayers": {
     "description": "Card datum label for a rarity measured against the game's players: the value reads as the percentage of players who hold the achievement. Terse on purpose — a supporting label gets about a third of a datum row."
   },
+  "cardStatPeakRating": "Peak",
+  "@cardStatPeakRating": {
+    "description": "Card datum label for a peak rating. Terse on purpose: this label carries a data-derived mode prefix in front of it, and the pair is measured by the label-width guard at the narrowest supported width."
+  },
   "cardValueRarityBelow": "<{value}",
   "@cardValueRarityBelow": {
     "description": "A rarity finer than the card states, shown as a bound rather than as a rounded zero.",
@@ -1391,6 +1395,14 @@
   "addCatalogReasonRarestNoData": "No rare achievement yet.",
   "@addCatalogReasonRarestNoData": {
     "description": "Reason on a disabled add-card catalog Rarest Achievement row when the linked platform's card publishes no achievement rarity."
+  },
+  "addCatalogRowPersonalBest": "Personal best",
+  "@addCatalogRowPersonalBest": {
+    "description": "Label of the add-card catalog's Personal Best row, named by card rather than by platform because the group's Rank rows are already labelled by platform."
+  },
+  "addCatalogReasonPersonalBestNoData": "No peak figure yet.",
+  "@addCatalogReasonPersonalBestNoData": {
+    "description": "Reason on a disabled add-card catalog Personal Best row when the linked platform's card publishes no peak figure."
   },
   "addCatalogRowArt": "Art card",
   "@addCatalogRowArt": {

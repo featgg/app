@@ -81,6 +81,14 @@ abstract interface class ProfileWidgetsRepository {
     required int position,
   });
 
+  /// Inserts a personal-best widget bound to [platform] at [position], enabled.
+  /// Platform-bound (the platform whose peak figure it surfaces); the settings
+  /// envelope is bare — no per-widget selection sub-object.
+  Future<Either<Failure, ProfileWidget>> addPersonalBestWidget({
+    required Platform platform,
+    required int position,
+  });
+
   /// Inserts a main widget bound to [platform] at [position], enabled.
   /// Platform-bound (the primary game/character/mode it surfaces); the settings
   /// envelope is bare — no per-widget selection sub-object.
