@@ -67,7 +67,17 @@ enum _Step { catalog, milestone, collection }
 /// to decide whether it belongs on screen. [platform] is null for the cards that
 /// are no single platform's — Identity draws on every linked account and Art on
 /// none — so filtering to a platform leaves them out.
-typedef _Entry = ({String label, Platform? platform, Widget row});
+/// [cardName] is the card's own name, for the rows whose visible [label] is
+/// something else. Rank and Main are labelled by platform on purpose — their
+/// category already names the card — but they are still Rank and Main to an
+/// owner searching for them, so the name has to be searchable even where it is
+/// not drawn.
+typedef _Entry = ({
+  String label,
+  String? cardName,
+  Platform? platform,
+  Widget row,
+});
 
 class _CatalogSheet extends ConsumerStatefulWidget {
   const _CatalogSheet({required this.existing});
@@ -92,6 +102,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// write is pending, and a lifecycle owned by the row would be disposed with
   /// it — leaving the sheet open and the card addable a second time.
   Key? _acquiring;
+
+  /// What the owner typed, folded and trimmed. Narrows on top of the platform
+  /// chip rather than instead of it, so the two read as one filter.
+  String _query = '';
+
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -268,12 +290,65 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           key: const Key('addCatalogTitle'),
           style: textTheme.titleLarge,
         ),
+        _searchField(l10n),
         _platformFilter(l10n, groups),
         for (final (key, header, entries) in groups)
           _group(key, header, entries),
-        if (_catalogUniverse.any((platform) => !linked.contains(platform)))
+        if (groups.every((group) => _visible(group.$3).isEmpty))
+          _noMatches(l10n)
+        else if (_catalogUniverse.any((platform) => !linked.contains(platform)))
           _footer(l10n),
       ],
+    );
+  }
+
+  /// One field over the whole catalog. Kept above the chips so the two read as
+  /// one narrowing control rather than as competing entry points.
+  Widget _searchField(AppLocalizations l10n) => Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.sm),
+    child: TextField(
+      key: const Key('catalogSearchField'),
+      controller: _search,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        isDense: true,
+        prefixIcon: const Icon(Icons.search, size: AppSpacing.md),
+        hintText: l10n.addCatalogSearchHint,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+        ),
+        suffixIcon: _query.isEmpty
+            ? null
+            : IconButton(
+                key: const Key('catalogSearchClear'),
+                icon: const Icon(Icons.close, size: AppSpacing.md),
+                tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+                onPressed: () {
+                  _search.clear();
+                  setState(() => _query = '');
+                },
+              ),
+      ),
+      onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+    ),
+  );
+
+  /// What a narrowed catalog says when it has nothing left. It replaces the
+  /// connect-more footer rather than sitting beside it: an owner who filtered
+  /// their way to nothing is not looking for another account to link.
+  Widget _noMatches(AppLocalizations l10n) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Text(
+        l10n.addCatalogNoMatches,
+        key: const Key('catalogNoMatches'),
+        textAlign: TextAlign.center,
+        style: textTheme.bodyMedium?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 
@@ -347,13 +422,31 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// Keeps the entries the active filter admits. A platform-less card belongs to
   /// no platform, so narrowing to one leaves it out rather than pinning it to
   /// every list.
+
+  /// Keeps the entries both filters admit. A platform-less card belongs to no
+  /// platform, so narrowing to one leaves it out rather than pinning it to every
+  /// list. The query matches the row's own label and its platform's name, so
+  /// typing either a card name or a platform name finds the row.
   List<_Entry> _visible(List<_Entry> entries) {
     final platform = _platform;
-    if (platform == null) return entries;
+    final query = _query;
+    if (platform == null && query.isEmpty) return entries;
     return [
       for (final entry in entries)
-        if (entry.platform == platform) entry,
+        if ((platform == null || entry.platform == platform) &&
+            (query.isEmpty || _matches(entry, query)))
+          entry,
     ];
+  }
+
+  bool _matches(_Entry entry, String query) {
+    if (entry.label.toLowerCase().contains(query)) return true;
+    // The card's own name, where the row is labelled by something else — an
+    // owner looking for Rank types "rank", not the platform it belongs to.
+    final cardName = entry.cardName;
+    if (cardName != null && cardName.toLowerCase().contains(query)) return true;
+    final platform = entry.platform;
+    return platform != null && _brand(platform).toLowerCase().contains(query);
   }
 
   /// A group renders its header only when the filter leaves it something to
@@ -382,8 +475,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.passportLabel;
-    ({String label, Platform? platform, Widget row}) entry(Widget row) =>
-        (label: label, platform: null, row: row);
+    _Entry entry(Widget row) =>
+        (label: label, cardName: null, platform: null, row: row);
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.passport)) {
       return entry(_addedRow(const Key('passportAddedRow'), label));
     }
@@ -421,7 +514,11 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   }) {
     final label = _brand(platform);
     final prefix = kind == ProfileWidgetKind.rank ? 'rank' : 'main';
-    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
+    final cardName = kind == ProfileWidgetKind.rank
+        ? l10n.addCatalogRowRank
+        : l10n.addCatalogRowMain;
+    _Entry entry(Widget row) =>
+        (label: label, cardName: cardName, platform: platform, row: row);
     if (widget.existing.any((w) => w.kind == kind && w.platform == platform)) {
       return entry(_addedRow(Key('${prefix}AddedRow_${platform.name}'), label));
     }
@@ -460,7 +557,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowRecent;
-    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
+    _Entry entry(Widget row) =>
+        (label: label, cardName: null, platform: platform, row: row);
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.recent && w.platform == platform,
     )) {
@@ -500,7 +598,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowPersonalBest;
-    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
+    _Entry entry(Widget row) =>
+        (label: label, cardName: null, platform: platform, row: row);
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.personalBest && w.platform == platform,
     )) {
@@ -543,7 +642,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowRarest;
-    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
+    _Entry entry(Widget row) =>
+        (label: label, cardName: null, platform: platform, row: row);
     if (widget.existing.any(
       (w) =>
           w.kind == ProfileWidgetKind.rarestAchievement &&
@@ -581,7 +681,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// disabled — the fallback is the answer to having nothing to show.
   _Entry _artRow(AppLocalizations l10n, int nextPosition) {
     final label = l10n.addCatalogRowArt;
-    _Entry entry(Widget row) => (label: label, platform: null, row: row);
+    _Entry entry(Widget row) =>
+        (label: label, cardName: null, platform: null, row: row);
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.art)) {
       return entry(_addedRow(const Key('artAddedRow'), label));
     }
@@ -608,7 +709,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.addCatalogRowMilestone;
     _Entry entry(Widget row) =>
-        (label: label, platform: Platform.steam, row: row);
+        (label: label, cardName: null, platform: Platform.steam, row: row);
     if (library.isEmpty) {
       return entry(
         _disabledRow(
@@ -636,7 +737,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     _Entry entry(String label, Widget row) =>
-        (label: label, platform: Platform.steam, row: row);
+        (label: label, cardName: null, platform: Platform.steam, row: row);
     final Widget curated;
     if (library.isEmpty) {
       curated = _disabledRow(
@@ -698,7 +799,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.completionistLabel;
     _Entry entry(Widget row) =>
-        (label: label, platform: Platform.steam, row: row);
+        (label: label, cardName: null, platform: Platform.steam, row: row);
     final resolved = resolveCompletionist(steamCard);
     if (widget.existing.any(
       (w) =>
