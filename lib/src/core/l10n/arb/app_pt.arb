@@ -337,6 +337,8 @@
   "addCatalogRowPersonalBest": "Recorde pessoal",
   "addCatalogReasonPersonalBestNoData": "Ainda não há um recorde.",
   "addCatalogRowArt": "Card de arte",
+  "addCatalogSearchHint": "Buscar cartões",
+  "addCatalogNoMatches": "Nenhum cartão corresponde ao que você procura.",
   "addCatalogFilterAll": "Todas",
   "addCatalogConnectMore": "Conectar mais contas",
   "profileEditIdentity": "Nome e bio",

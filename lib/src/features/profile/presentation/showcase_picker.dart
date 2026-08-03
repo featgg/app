@@ -93,6 +93,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// it — leaving the sheet open and the card addable a second time.
   Key? _acquiring;
 
+  /// What the owner typed, folded and trimmed. Narrows on top of the platform
+  /// chip rather than instead of it, so the two read as one filter.
+  String _query = '';
+
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final nextPosition = _nextPosition(widget.existing);
@@ -268,12 +280,65 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           key: const Key('addCatalogTitle'),
           style: textTheme.titleLarge,
         ),
+        _searchField(l10n),
         _platformFilter(l10n, groups),
         for (final (key, header, entries) in groups)
           _group(key, header, entries),
-        if (_catalogUniverse.any((platform) => !linked.contains(platform)))
+        if (groups.every((group) => _visible(group.$3).isEmpty))
+          _noMatches(l10n)
+        else if (_catalogUniverse.any((platform) => !linked.contains(platform)))
           _footer(l10n),
       ],
+    );
+  }
+
+  /// One field over the whole catalog. Kept above the chips so the two read as
+  /// one narrowing control rather than as competing entry points.
+  Widget _searchField(AppLocalizations l10n) => Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.sm),
+    child: TextField(
+      key: const Key('catalogSearchField'),
+      controller: _search,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        isDense: true,
+        prefixIcon: const Icon(Icons.search, size: AppSpacing.md),
+        hintText: l10n.addCatalogSearchHint,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+        ),
+        suffixIcon: _query.isEmpty
+            ? null
+            : IconButton(
+                key: const Key('catalogSearchClear'),
+                icon: const Icon(Icons.close, size: AppSpacing.md),
+                tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+                onPressed: () {
+                  _search.clear();
+                  setState(() => _query = '');
+                },
+              ),
+      ),
+      onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+    ),
+  );
+
+  /// What a narrowed catalog says when it has nothing left. It replaces the
+  /// connect-more footer rather than sitting beside it: an owner who filtered
+  /// their way to nothing is not looking for another account to link.
+  Widget _noMatches(AppLocalizations l10n) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Text(
+        l10n.addCatalogNoMatches,
+        key: const Key('catalogNoMatches'),
+        textAlign: TextAlign.center,
+        style: textTheme.bodyMedium?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 
@@ -347,13 +412,27 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// Keeps the entries the active filter admits. A platform-less card belongs to
   /// no platform, so narrowing to one leaves it out rather than pinning it to
   /// every list.
+
+  /// Keeps the entries both filters admit. A platform-less card belongs to no
+  /// platform, so narrowing to one leaves it out rather than pinning it to every
+  /// list. The query matches the row's own label and its platform's name, so
+  /// typing either a card name or a platform name finds the row.
   List<_Entry> _visible(List<_Entry> entries) {
     final platform = _platform;
-    if (platform == null) return entries;
+    final query = _query;
+    if (platform == null && query.isEmpty) return entries;
     return [
       for (final entry in entries)
-        if (entry.platform == platform) entry,
+        if ((platform == null || entry.platform == platform) &&
+            (query.isEmpty || _matches(entry, query)))
+          entry,
     ];
+  }
+
+  bool _matches(_Entry entry, String query) {
+    if (entry.label.toLowerCase().contains(query)) return true;
+    final platform = entry.platform;
+    return platform != null && _brand(platform).toLowerCase().contains(query);
   }
 
   /// A group renders its header only when the filter leaves it something to

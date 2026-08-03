@@ -1408,6 +1408,14 @@
   "@addCatalogRowArt": {
     "description": "Label of the add-card catalog's single Art row; one tap adds the card and it picks its own picture."
   },
+  "addCatalogSearchHint": "Search cards",
+  "@addCatalogSearchHint": {
+    "description": "Placeholder in the add-card catalog's search field, which matches a card's name or its platform's name."
+  },
+  "addCatalogNoMatches": "No cards match what you're looking for.",
+  "@addCatalogNoMatches": {
+    "description": "Shown in place of the add-card catalog when the search text and platform filter together leave no rows."
+  },
   "addCatalogFilterAll": "All",
   "@addCatalogFilterAll": {
     "description": "Chip that clears the add-card catalog's platform filter, showing every platform's cards again."

@@ -1872,4 +1872,111 @@ void main() {
     expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
     expect(repo.passportAdds, 1);
   });
+
+
+  testWidgets('search: matches a card name and drops everything else', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('catalogSearchField')),
+      'milestone',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('milestoneStepRow')), findsOneWidget);
+    expect(find.byKey(const Key('passportAddRow')), findsNothing);
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsNothing);
+  });
+
+  testWidgets('search: a platform name finds that platform\'s rows', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Case folded, so the brand name need not be typed the way it is spelled.
+    await tester.enterText(
+      find.byKey(const Key('catalogSearchField')),
+      'steam',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('completionistAddRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsNothing);
+  });
+
+  testWidgets('search: combines with the platform chip rather than replacing '
+      'it', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // A term that matches rows on more than one platform, then narrowed to one.
+    await tester.enterText(find.byKey(const Key('catalogSearchField')), 'rank');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_chess')));
+    await tester.pumpAndSettle();
+
+    // Chess has no row labelled "rank" — the two filters intersect, so the
+    // chip cannot widen what the query already excluded.
+    expect(find.byKey(const Key('catalogNoMatches')), findsOneWidget);
+  });
+
+  testWidgets('search: a query that matches nothing says so, and clearing it '
+      'brings the catalog back', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('catalogSearchField')),
+      'zzzzz-nothing',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('catalogNoMatches')), findsOneWidget);
+    // The connect-more footer steps aside: this owner is not short an account.
+    expect(find.byKey(const Key('catalogConnectMoreLink')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalogSearchClear')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('catalogNoMatches')), findsNothing);
+    expect(find.byKey(const Key('passportAddRow')), findsOneWidget);
+  });
 }
