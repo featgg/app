@@ -1408,6 +1408,14 @@
   "@addCatalogRowArt": {
     "description": "Label of the add-card catalog's single Art row; one tap adds the card and it picks its own picture."
   },
+  "addCatalogRowRank": "Rank",
+  "@addCatalogRowRank": {
+    "description": "The Rank card's own name. Its catalog row is labelled by platform (the category already names the card), so this is used to make the card findable by name in search."
+  },
+  "addCatalogRowMain": "Main",
+  "@addCatalogRowMain": {
+    "description": "The Main card's own name. Its catalog row is labelled by platform (the category already names the card), so this is used to make the card findable by name in search."
+  },
   "addCatalogSearchHint": "Search cards",
   "@addCatalogSearchHint": {
     "description": "Placeholder in the add-card catalog's search field, which matches a card's name or its platform's name."
