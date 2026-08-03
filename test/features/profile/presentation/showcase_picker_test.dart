@@ -16,6 +16,10 @@ import 'package:featgg/src/features/profile/domain/profile_widgets_providers.dar
 import 'package:featgg/src/features/profile/domain/profile_widgets_repository.dart';
 import 'package:featgg/src/features/profile/domain/rarest_achievement_value_resolver.dart';
 import 'package:featgg/src/features/profile/domain/showcase_selection.dart';
+import 'package:featgg/src/features/profile/presentation/cards/card_key.dart';
+import 'package:featgg/src/features/profile/domain/profile.dart';
+import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
+import 'package:featgg/src/features/profile/presentation/profile_composition_controller.dart';
 import 'package:featgg/src/features/profile/presentation/showcase_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -294,6 +298,25 @@ final class _FakeCardsRepository implements CardsRepository {
 
 /// Returns a distinct card per platform so each catalog row resolves against
 /// its own platform's card (a row's offer requires the card to match).
+final class _CountingCardsRepository implements CardsRepository {
+  _CountingCardsRepository(this.cards);
+
+  final Map<Platform, GameCard?> cards;
+  final List<Platform> fetched = [];
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchMyCard(Platform platform) async {
+    fetched.add(platform);
+    return right(cards[platform]);
+  }
+
+  @override
+  Future<Either<Failure, GameCard?>> fetchPublicCard(
+    String userId,
+    Platform platform,
+  ) async => right(cards[platform]);
+}
+
 final class _MapCardsRepository implements CardsRepository {
   _MapCardsRepository(this._cards);
 
@@ -661,6 +684,40 @@ Future<void> _open(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('openPicker')));
   await tester.pumpAndSettle();
 }
+
+/// A profile carrying [theme], for seeding an edit session.
+Profile _themedProfile(ProfileTheme theme) => Profile(
+  id: 'owner-1',
+  username: 'nico',
+  displayName: 'Nico',
+  avatarUrl: null,
+  bio: null,
+  theme: theme,
+  privacy: ProfilePrivacy.public,
+  featuredPlatform: null,
+);
+
+/// The picker over a container the test seeds itself, so an edit session can be
+/// open before the sheet is shown.
+Widget _themeHarness(
+  ProviderContainer container, {
+  required List<ProfileWidget> existing,
+}) => UncontrolledProviderScope(
+  container: container,
+  child: MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          key: const Key('openPicker'),
+          onPressed: () => showShowcasePicker(context, existing: existing),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  ),
+);
 
 /// The catalog's own copy, read the way the sheet reads it. A search test types
 /// what the ARB currently says rather than a literal, so a translation edit
@@ -2014,5 +2071,171 @@ void main() {
 
     expect(find.byKey(const Key('catalogNoMatches')), findsNothing);
     expect(find.byKey(const Key('passportAddRow')), findsOneWidget);
+  });
+
+  testWidgets(
+    'preview: each row draws the card it would create, built from the '
+    'card views the profile renders',
+    (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          cardsRepo: _MapCardsRepository(_richCards()),
+          widgetsRepo: _RecordingWidgetsRepository(),
+          connected: _allLinked,
+          existing: const [],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _open(tester);
+
+      // One preview per row, keyed by the card it stands for.
+      for (final key in const [
+        'catalogPreview_passport_none',
+        'catalogPreview_rank_leagueOfLegends',
+        'catalogPreview_completionist_steam',
+        'catalogPreview_art_none',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+
+      // The real card view, not a second drawing of it: the card the archetype
+      // registry builds carries its own key inside the preview.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalogPreview_rank_leagueOfLegends')),
+          matching: find.byKey(
+            personalizationCardKey('catalogPreview_rank_leagueOfLegends'),
+          ),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('preview: follows the theme being edited, not the stored one', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      retry: (count, error) => null,
+      overrides: [
+        cardsRepositoryProvider.overrideWithValue(
+          _MapCardsRepository(_richCards()),
+        ),
+        profileWidgetsRepositoryProvider.overrideWithValue(
+          _RecordingWidgetsRepository(),
+        ),
+        connectionsRepositoryProvider.overrideWithValue(
+          _FakeConnectionsRepository(_allLinked),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    // The session provider is autoDispose: without a listener it is torn down
+    // between the seed and the sheet, taking the draft with it. In production
+    // the profile screen holds it for the whole edit.
+    container.listen(profileCompositionProvider, (_, _) {});
+
+    // An edit session is open and the owner has picked a theme that is not the
+    // one on the stored profile — the profile behind the sheet has already
+    // re-tinted, and nothing is persisted yet.
+    container
+        .read(profileCompositionProvider.notifier)
+        .startEditing(_themedProfile(ProfileTheme.crimson), const []);
+    container
+        .read(profileCompositionProvider.notifier)
+        .selectTheme(ProfileTheme.frost);
+
+    await tester.pumpWidget(_themeHarness(container, existing: const []));
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    final palette = PersonalizationTheme.of(
+      tester.element(find.byKey(const Key('catalogPreview_passport_none'))),
+    );
+    expect(palette.accent, paletteForTheme(ProfileTheme.frost).accent);
+    expect(
+      palette.accent,
+      isNot(paletteForTheme(ProfileTheme.crimson).accent),
+      reason: 'the preview is still painted in the persisted theme',
+    );
+  });
+
+  testWidgets('preview: a filtered-away row takes its preview with it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+    expect(
+      find.byKey(const Key('catalogPreview_rank_leagueOfLegends')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_steam')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('catalogPreview_rank_leagueOfLegends')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('catalogPreview_completionist_steam')),
+      findsOneWidget,
+    );
+  });
+  testWidgets('preview: draws the size acquisition will actually append', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Rank supports a full row, and that is what the fold seeds — so the
+    // thumbnail has to be the full variant, not the half. The two are
+    // materially different cards, and a preview of the wrong one is a promise
+    // the add does not keep.
+    final box = tester.getRect(
+      find.byKey(const Key('catalogPreview_rank_leagueOfLegends')),
+    );
+    expect(
+      box.width / box.height,
+      closeTo(PersonalizationLayout.cardFullAspect, 0.01),
+    );
+  });
+
+  testWidgets('preview: reads only the platforms the sheet already fetches', (
+    tester,
+  ) async {
+    final cards = _CountingCardsRepository(_richCards());
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: cards,
+        widgetsRepo: _RecordingWidgetsRepository(),
+        // Only one platform linked; the rest must never be reached for.
+        connected: const [Platform.steam],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Identity and Art walk every platform looking for something to draw. With
+    // an unbounded source that becomes a read per platform, undoing the
+    // linked-only guard the sheet applies to its own fetches.
+    expect(cards.fetched.toSet(), {Platform.steam});
   });
 }

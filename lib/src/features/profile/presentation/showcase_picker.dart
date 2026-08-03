@@ -11,6 +11,8 @@ import '../domain/completionist_value_resolver.dart';
 import '../domain/game_collector_value_resolver.dart';
 import '../domain/main_value_resolver.dart';
 import '../domain/personal_best_value_resolver.dart';
+import '../domain/profile.dart';
+import '../domain/profile_archetype.dart';
 import '../domain/profile_widget.dart';
 import '../domain/rank_value_resolver.dart';
 import '../domain/rarest_achievement_value_resolver.dart';
@@ -18,7 +20,11 @@ import '../domain/recent_value_resolver.dart';
 import '../domain/showcase_selection.dart';
 import 'collection_picker.dart';
 import 'featured_platform_provider.dart';
+import 'personalization_archetype_cards.dart';
+import 'personalization_theme_palette.dart';
+import 'profile_composition_controller.dart';
 import 'profile_owner_cards_provider.dart';
+import 'profile_provider.dart';
 import 'profile_widgets_controller.dart';
 
 /// Opens the add-card catalog as a modal bottom sheet: a flat, archetype-grouped
@@ -63,10 +69,14 @@ Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
 /// modal route preserves the acquire rows' pop-guard semantics.
 enum _Step { catalog, milestone, collection }
 
-/// One line of the catalog: the row to draw, plus what the platform filter needs
-/// to decide whether it belongs on screen. [platform] is null for the cards that
+/// One line of the catalog: the row to draw, plus what the filters need to
+/// decide whether it belongs on screen. [platform] is null for the cards that
 /// are no single platform's — Identity draws on every linked account and Art on
 /// none — so filtering to a platform leaves them out.
+///
+/// [card] is a provisional widget standing for the card this row would create.
+/// It is never written; it exists so the row can draw the real card view rather
+/// than a picture of one.
 /// [cardName] is the card's own name, for the rows whose visible [label] is
 /// something else. Rank and Main are labelled by platform on purpose — their
 /// category already names the card — but they are still Rank and Main to an
@@ -76,8 +86,21 @@ typedef _Entry = ({
   String label,
   String? cardName,
   Platform? platform,
+  ProfileWidget card,
   Widget row,
 });
+
+/// The widget a catalog row would create, as the card views need to see it. The
+/// id is synthetic and local to the sheet — nothing persists it — but distinct
+/// per row so two previews never collide.
+ProfileWidget _provisional(ProfileWidgetKind kind, Platform? platform) =>
+    ProfileWidget(
+      id: 'catalogPreview_${kind.name}_${platform?.name ?? 'none'}',
+      kind: kind,
+      platform: platform,
+      position: 0,
+      isEnabled: true,
+    );
 
 class _CatalogSheet extends ConsumerStatefulWidget {
   const _CatalogSheet({required this.existing});
@@ -254,6 +277,8 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         : const <_Entry>[];
     final artRows = [_artRow(l10n, nextPosition)];
 
+    final previewSource = _previewCardSource(linked);
+
     final groups = <(Key, String, List<_Entry>)>[
       (const Key('catalogGroupWhoIAm'), l10n.addCatalogGroupWhoIAm, whoIAmRows),
       (
@@ -293,7 +318,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         _searchField(l10n),
         _platformFilter(l10n, groups),
         for (final (key, header, entries) in groups)
-          _group(key, header, entries),
+          _group(key, header, entries, previewSource),
         if (groups.every((group) => _visible(group.$3).isEmpty))
           _noMatches(l10n)
         else if (_catalogUniverse.any((platform) => !linked.contains(platform)))
@@ -451,7 +476,12 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
 
   /// A group renders its header only when the filter leaves it something to
   /// show, so a narrowed catalog carries no empty headers.
-  Widget _group(Key headerKey, String header, List<_Entry> entries) {
+  Widget _group(
+    Key headerKey,
+    String header,
+    List<_Entry> entries,
+    CardSource cardSource,
+  ) {
     final visible = _visible(entries);
     if (visible.isEmpty) return const SizedBox.shrink();
     final textTheme = Theme.of(context).textTheme;
@@ -462,8 +492,97 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         const SizedBox(height: AppSpacing.md),
         Text(header, key: headerKey, style: textTheme.titleSmall),
         const SizedBox(height: AppSpacing.xs),
-        for (final entry in visible) entry.row,
+        for (final entry in visible)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _preview(entry.card, cardSource),
+              // The row keeps its own padding and affordances; the preview is
+              // set beside it rather than threaded through every row builder.
+              Expanded(child: entry.row),
+            ],
+          ),
       ],
+    );
+  }
+
+  /// The card source the previews read through. A card view asks its source
+  /// about every platform it might draw from — Identity and Art walk the whole
+  /// enum — and the default source fetches each one. This answers for the
+  /// unlinked ones without going to look, so opening the catalog issues no read
+  /// the sheet had not already decided to make.
+  CardSource _previewCardSource(Set<Platform> linked) => (platform) =>
+      linked.contains(platform) ? ownerCardProvider(platform) : absentCardProvider;
+
+  /// The proportions the preview box takes: the ones the variant acquisition
+  /// will seed actually renders at. Art keeps its portrait full variant; every
+  /// other full card is landscape.
+  double _previewAspect(ProfileWidget card) {
+    final archetype = archetypeForWidget(card);
+    if (!supportedSizes(archetype).contains(ProfileCardSize.full)) {
+      return PersonalizationLayout.cardHalfAspect;
+    }
+    return archetype == ProfileArchetype.art
+        ? PersonalizationLayout.cardArtFullAspect
+        : PersonalizationLayout.cardFullAspect;
+  }
+
+  /// The card this row would create, drawn small. Composed at the width a half
+  /// card actually gets in the column and fitted down, so what the owner sees is
+  /// the shipped card rather than an impression of it — a preview that is a
+  /// second drawing drifts from the card it promises.
+  Widget _preview(ProfileWidget card, CardSource cardSource) {
+    // The sheet is a route of its own, outside the profile's palette scope, and
+    // every card asserts a palette ancestor.
+    //
+    // The theme comes from the edit session first: the catalog is opened from
+    // inside one, and a theme picked there re-tints the profile live without
+    // being persisted yet. Reading the stored profile would preview every card
+    // in the theme the owner just moved away from. The stored value is the
+    // fallback, and an unresolved profile previews on the default rather than
+    // blocking the catalog on a second read.
+    // The theme comes from the edit session first: the catalog is opened from
+    // inside one, and a theme picked there re-tints the profile live without
+    // being persisted yet. Reading the stored profile would preview every card
+    // in the theme the owner just moved away from. The stored value is the
+    // fallback, and an unresolved profile previews on the default rather than
+    // blocking the catalog on a second read.
+    final theme =
+        ref.watch(profileCompositionProvider.select((s) => s.draft?.theme)) ??
+        ref.watch(profileProvider).value?.theme ??
+        ProfileTheme.crimson;
+    return PersonalizationTheme(
+      palette: paletteForTheme(theme),
+      child: SizedBox(
+        width: PersonalizationLayout.catalogPreviewWidth,
+        child: AspectRatio(
+          aspectRatio: _previewAspect(card),
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
+              width: PersonalizationLayout.catalogPreviewSourceWidth,
+              child: IgnorePointer(
+                // The provisional id is already scoped to the catalog.
+                key: Key(card.id),
+                // The size acquisition will actually give it: a card that
+                // supports a full row is seeded as one, and half is materially
+                // a different card — different aspect, fewer supporting stats.
+                // Previewing the half of a card that lands full is a promise
+                // the add does not keep.
+                child: personalizationCardFor(
+                  card,
+                  cardSource: cardSource,
+                  size: supportedSizes(archetypeForWidget(card)).contains(
+                        ProfileCardSize.full,
+                      )
+                      ? ProfileCardSize.full
+                      : ProfileCardSize.half,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -475,8 +594,9 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.passportLabel;
+    final card = _provisional(ProfileWidgetKind.passport, null);
     _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: null, row: row);
+        (label: label, cardName: null, platform: null, card: card, row: row);
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.passport)) {
       return entry(_addedRow(const Key('passportAddedRow'), label));
     }
@@ -517,8 +637,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     final cardName = kind == ProfileWidgetKind.rank
         ? l10n.addCatalogRowRank
         : l10n.addCatalogRowMain;
-    _Entry entry(Widget row) =>
-        (label: label, cardName: cardName, platform: platform, row: row);
+    final card = _provisional(kind, platform);
+    _Entry entry(Widget row) => (
+      label: label,
+      cardName: cardName,
+      platform: platform,
+      card: card,
+      row: row,
+    );
     if (widget.existing.any((w) => w.kind == kind && w.platform == platform)) {
       return entry(_addedRow(Key('${prefix}AddedRow_${platform.name}'), label));
     }
@@ -557,8 +683,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowRecent;
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: platform, row: row);
+    final card = _provisional(ProfileWidgetKind.recent, platform);
+    _Entry entry(Widget row) => (
+      label: label,
+      cardName: null,
+      platform: platform,
+      card: card,
+      row: row,
+    );
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.recent && w.platform == platform,
     )) {
@@ -598,8 +730,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowPersonalBest;
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: platform, row: row);
+    final card = _provisional(ProfileWidgetKind.personalBest, platform);
+    _Entry entry(Widget row) => (
+      label: label,
+      cardName: null,
+      platform: platform,
+      card: card,
+      row: row,
+    );
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.personalBest && w.platform == platform,
     )) {
@@ -642,8 +780,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowRarest;
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: platform, row: row);
+    final card = _provisional(ProfileWidgetKind.rarestAchievement, platform);
+    _Entry entry(Widget row) => (
+      label: label,
+      cardName: null,
+      platform: platform,
+      card: card,
+      row: row,
+    );
     if (widget.existing.any(
       (w) =>
           w.kind == ProfileWidgetKind.rarestAchievement &&
@@ -681,8 +825,9 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// disabled — the fallback is the answer to having nothing to show.
   _Entry _artRow(AppLocalizations l10n, int nextPosition) {
     final label = l10n.addCatalogRowArt;
+    final card = _provisional(ProfileWidgetKind.art, null);
     _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: null, row: row);
+        (label: label, cardName: null, platform: null, card: card, row: row);
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.art)) {
       return entry(_addedRow(const Key('artAddedRow'), label));
     }
@@ -708,8 +853,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     List<LibraryShowcaseEntry> library,
   ) {
     final label = l10n.addCatalogRowMilestone;
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: Platform.steam, row: row);
+    final card = _provisional(ProfileWidgetKind.showcase, Platform.steam);
+    _Entry entry(Widget row) => (
+      label: label,
+      cardName: null,
+      platform: Platform.steam,
+      card: card,
+      row: row,
+    );
     if (library.isEmpty) {
       return entry(
         _disabledRow(
@@ -736,8 +887,17 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     List<LibraryShowcaseEntry> library,
     int nextPosition,
   ) {
-    _Entry entry(String label, Widget row) =>
-        (label: label, cardName: null, platform: Platform.steam, row: row);
+    _Entry entry(String label, ProfileWidgetKind kind, Widget row) => (
+      label: label, cardName: null,
+      platform: Platform.steam,
+      // Curated and Collector are one archetype under two kinds, so each
+      // previews as the card its own row would create.
+      card: _provisional(
+        kind,
+        kind == ProfileWidgetKind.collection ? null : Platform.steam,
+      ),
+      row: row,
+    );
     final Widget curated;
     if (library.isEmpty) {
       curated = _disabledRow(
@@ -785,8 +945,16 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       );
     }
     return [
-      entry(l10n.addCatalogRowCollectionCurated, curated),
-      entry(l10n.addCatalogRowCollectionLibrary, collector),
+      entry(
+        l10n.addCatalogRowCollectionCurated,
+        ProfileWidgetKind.collection,
+        curated,
+      ),
+      entry(
+        l10n.addCatalogRowCollectionLibrary,
+        ProfileWidgetKind.gameCollector,
+        collector,
+      ),
     ];
   }
 
@@ -798,8 +966,14 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     int nextPosition,
   ) {
     final label = l10n.completionistLabel;
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: Platform.steam, row: row);
+    final card = _provisional(ProfileWidgetKind.completionist, Platform.steam);
+    _Entry entry(Widget row) => (
+      label: label,
+      cardName: null,
+      platform: Platform.steam,
+      card: card,
+      row: row,
+    );
     final resolved = resolveCompletionist(steamCard);
     if (widget.existing.any(
       (w) =>

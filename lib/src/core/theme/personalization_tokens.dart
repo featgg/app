@@ -435,6 +435,24 @@ abstract final class PersonalizationLayout {
   /// The ring is drawn heavier than a card's own edge so it reads as something
   /// placed on the card rather than as part of it.
   static const double editorLandMarkWidth = 2;
+
+  /// The add catalog draws each row's card beside its name, so the owner picks a
+  /// card by what it looks like rather than by what it is called.
+  ///
+  /// The preview is the real card scaled down, not a second drawing of it: a
+  /// mock would drift from the card it promises. It is composed at
+  /// [catalogPreviewSourceWidth] and fitted into [catalogPreviewWidth] — wide
+  /// enough to read the card's shape at a glance, narrow enough that a row stays
+  /// a row.
+  ///
+  /// The source is a half slot at the widest column rather than the narrowest.
+  /// A card's type scale is fluid in the *column's* width, not its slot's, so
+  /// composing at the narrowest slot sizes the type for a column twice as wide
+  /// as the box it is drawn in and the card overflows its own aspect. Scaling
+  /// down loses nothing; the fit is what sets the final size either way.
+  static const double catalogPreviewWidth = 44;
+  static const double catalogPreviewSourceWidth =
+      (columnMaxWidth - 2 * columnSidePadding - rowGap) / 2;
 }
 
 /// A fluid size that ramps with the column width between [min] and [max],
