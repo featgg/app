@@ -769,4 +769,31 @@ void main() {
     );
     expect(tester.binding.transientCallbackCount, 0);
   });
+
+  testWidgets('reduced motion rings the card without fading it', (
+    tester,
+  ) async {
+    final repository = _FakeWidgetsRepository(const [_rank]);
+    final container = await _openEditor(
+      tester,
+      const [_rank],
+      reducedMotion: true,
+      repository: repository,
+    );
+
+    await _acquire(tester, container, repository, _acquired);
+
+    // The ring is there at full strength and the fade is not wired at all,
+    // rather than wired and hidden — the mark is what carries the meaning.
+    expect(find.byKey(const Key('compositionLanded_a')), findsOneWidget);
+    // Scoped to the editor: the app's own route transitions are FadeTransitions
+    // too, and they are not what this is about. No drag is in flight, so the
+    // ring's fade would be the editor's only one.
+    expect(_pulseTransitions(), findsNothing);
+
+    // It still leaves on its own; reduced motion suppresses the fade, not the
+    // mark's lifetime.
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('compositionLanded_a')), findsNothing);
+  });
 }

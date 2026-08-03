@@ -558,8 +558,8 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
         if (cardId == _landedId)
           Positioned.fill(
             child: IgnorePointer(
-              child: FadeTransition(
-                opacity: _land,
+              child: _Landed(
+                animation: _land,
                 child: DecoratedBox(
                   key: Key('compositionLanded_$cardId'),
                   decoration: BoxDecoration(
@@ -748,6 +748,24 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
       ),
     );
   }
+}
+
+/// Fades the acquired card's ring out at the end of its hold. Where the platform
+/// asks for reduced motion it steps aside, leaving the ring at full strength for
+/// the same span and then gone — the mark is what carries the meaning, and it is
+/// legible without the fade.
+class _Landed extends StatelessWidget {
+  const _Landed({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MediaQuery.disableAnimationsOf(context)
+      ? child
+      : RepaintBoundary(
+          child: FadeTransition(opacity: animation, child: child),
+        );
 }
 
 /// Breathes the landing indicator while a card is in the air. Wraps the mark
