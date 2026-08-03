@@ -25,6 +25,19 @@ import 'package:go_router/go_router.dart';
 /// Records each add-card write so the per-row write contract is provable, and
 /// returns `[]` for the read the controller re-fetches after a successful add.
 final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
+  _RecordingWidgetsRepository({bool holdPassport = false})
+    : _gate = holdPassport ? Completer<void>() : null;
+
+  /// Holds the passport write open so a test can act mid-flight.
+  final Completer<void>? _gate;
+
+  void releasePassport() {
+    final gate = _gate;
+    if (gate != null && !gate.isCompleted) gate.complete();
+  }
+
+  int passportAdds = 0;
+
   Platform? lastShowcasePlatform;
   ShowcaseSelection? lastShowcaseSelection;
   int? lastShowcasePosition;
@@ -72,6 +85,8 @@ final class _RecordingWidgetsRepository implements ProfileWidgetsRepository {
   Future<Either<Failure, ProfileWidget>> addPassportWidget({
     required int position,
   }) async {
+    if (_gate != null) await _gate.future;
+    passportAdds++;
     passportAdded = true;
     lastPassportPosition = position;
     return right(
@@ -1723,5 +1738,138 @@ void main() {
 
     expect(find.byKey(const Key('artAddedRow')), findsOneWidget);
     expect(find.byKey(const Key('artAddRow')), findsNothing);
+  });
+
+  testWidgets('platform filter: narrows every category at once and drops the '
+      'headers it empties', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Before: rows from more than one platform, across more than one category.
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsOneWidget);
+    expect(find.byKey(const Key('completionistAddRow_steam')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_steam')));
+    await tester.pumpAndSettle();
+
+    // Steam's rows survive across categories; another platform's are gone.
+    expect(find.byKey(const Key('completionistAddRow_steam')), findsOneWidget);
+    expect(find.byKey(const Key('milestoneStepRow')), findsOneWidget);
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsNothing);
+    // How-good-I-am has no Steam row, so its header goes with its rows rather
+    // than standing over an empty category.
+    expect(find.byKey(const Key('catalogGroupHowGoodIAm')), findsNothing);
+    expect(find.byKey(const Key('catalogGroupWhatIOwn')), findsOneWidget);
+  });
+
+  testWidgets('platform filter: a card that is no platform\'s leaves the list '
+      'when one platform is chosen', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    expect(find.byKey(const Key('passportAddRow')), findsOneWidget);
+    expect(find.byKey(const Key('artAddRow')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_steam')));
+    await tester.pumpAndSettle();
+
+    // Identity draws on every linked account and Art on none, so neither is
+    // Steam's to offer under a Steam filter.
+    expect(find.byKey(const Key('passportAddRow')), findsNothing);
+    expect(find.byKey(const Key('artAddRow')), findsNothing);
+    expect(find.byKey(const Key('catalogGroupWhoIAm')), findsNothing);
+    expect(find.byKey(const Key('catalogGroupArt')), findsNothing);
+  });
+
+  testWidgets('platform filter: re-tapping the held chip restores every row', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_steam')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_steam')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('rankAddRow_leagueOfLegends')), findsOneWidget);
+    expect(find.byKey(const Key('passportAddRow')), findsOneWidget);
+  });
+
+  testWidgets('platform filter: a single linked platform is offered no filter '
+      'at all', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository({
+          Platform.steam: _richCards()[Platform.steam],
+        }),
+        widgetsRepo: _RecordingWidgetsRepository(),
+        connected: const [Platform.steam],
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Nothing to narrow: a chip row here would only ask the owner to confirm
+    // what the list already shows.
+    expect(find.byKey(const Key('catalogPlatformChip_all')), findsNothing);
+    expect(find.byKey(const Key('catalogPlatformChip_steam')), findsNothing);
+    expect(find.byKey(const Key('completionistAddRow_steam')), findsOneWidget);
+  });
+  testWidgets('platform filter: changing the filter mid-write neither strands '
+      'the sheet nor offers the card twice', (tester) async {
+    final repo = _RecordingWidgetsRepository(holdPassport: true);
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: repo,
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Start the add, then filter the row off screen while the write is pending.
+    await tester.tap(find.byKey(const Key('passportAddRow')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('catalogPlatformChip_steam')));
+    await tester.pump();
+    expect(find.byKey(const Key('passportAddRow')), findsNothing);
+
+    repo.releasePassport();
+    await tester.pumpAndSettle();
+
+    // The sheet closed on its own, so the row can never be re-offered against
+    // the stale snapshot — and the card was written exactly once.
+    expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
+    expect(repo.passportAdds, 1);
   });
 }
