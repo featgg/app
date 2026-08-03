@@ -82,13 +82,22 @@ enum _Step { catalog, milestone, collection }
 /// category already names the card — but they are still Rank and Main to an
 /// owner searching for them, so the name has to be searchable even where it is
 /// not drawn.
+/// [add] is non-null only for a row that can be acquired with no further input,
+/// which is exactly the set a multi-card add may commit: a row that still has a
+/// question to ask cannot be answered in bulk.
 typedef _Entry = ({
   String label,
   String? cardName,
   Platform? platform,
   ProfileWidget card,
   Widget row,
+  _Acquire? add,
 });
+
+/// Adds one catalog row's card at [position]. Position is a parameter rather
+/// than a capture so a batch can hand each card its own slot.
+typedef _Acquire =
+    Future<void> Function(ProfileWidgetsController controller, int position);
 
 /// The widget a catalog row would create, as the card views need to see it. The
 /// id is synthetic and local to the sheet — nothing persists it — but distinct
@@ -125,6 +134,21 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// write is pending, and a lifecycle owned by the row would be disposed with
   /// it — leaving the sheet open and the card addable a second time.
   Key? _acquiring;
+
+  /// The rows ticked for a multi-card add, by their provisional card id. Only
+  /// rows that need no further input can be here, so a commit never has a
+  /// question left to ask.
+  final Set<String> _selected = {};
+
+  /// True while a batch is in flight.
+  bool _committing = false;
+
+  /// True while any write the sheet started is in flight — a single row or a
+  /// batch. Every add honours it: a row tapped during a batch would take the
+  /// batch's next free position, and because a failed card does not consume its
+  /// slot, the batch would then retry that occupied slot for every card left,
+  /// so most of an accepted batch would never land.
+  bool get _locked => _acquiring != null || _committing;
 
   /// What the owner typed, folded and trimmed. Narrows on top of the platform
   /// chip rather than instead of it, so the two read as one filter.
@@ -321,8 +345,11 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           _group(key, header, entries, previewSource),
         if (groups.every((group) => _visible(group.$3).isEmpty))
           _noMatches(l10n)
-        else if (_catalogUniverse.any((platform) => !linked.contains(platform)))
-          _footer(l10n),
+        else ...[
+          _batchAction(l10n, groups, nextPosition),
+          if (_catalogUniverse.any((platform) => !linked.contains(platform)))
+            _footer(l10n),
+        ],
       ],
     );
   }
@@ -444,6 +471,123 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     }
   }
 
+  /// Every row currently on screen that a batch could commit, in the order they
+  /// are drawn — so a multi-card add lands the cards in the order the owner read
+  /// them.
+  List<_Entry> _addable(List<(Key, String, List<_Entry>)> groups) => [
+    for (final (_, _, entries) in groups)
+      for (final entry in _visible(entries))
+        if (entry.add != null) entry,
+  ];
+
+  /// One action, never two: what the owner has ticked, or — with nothing ticked
+  /// and more than one card on offer — everything at once, which is the answer
+  /// to an empty profile. Absent when a single tap already does the job.
+  Widget _batchAction(
+    AppLocalizations l10n,
+    List<(Key, String, List<_Entry>)> groups,
+    int nextPosition,
+  ) {
+    final addable = _addable(groups);
+    final selected = [
+      for (final entry in addable)
+        if (_selected.contains(entry.card.id)) entry,
+    ];
+    if (selected.isEmpty && addable.length < 2) return const SizedBox.shrink();
+
+    final label = selected.isEmpty
+        ? l10n.addCatalogAddAll
+        : l10n.addCatalogAddSelected(selected.length);
+    final batch = selected.isEmpty ? addable : selected;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: FilledButton(
+        key: Key(
+          selected.isEmpty ? 'catalogAddAllButton' : 'catalogAddSelectedButton',
+        ),
+        onPressed: _locked ? null : () => _commit(batch, nextPosition),
+        child: _committing
+            ? SizedBox(
+                width: AppSpacing.md,
+                height: AppSpacing.md,
+                child: CircularProgressIndicator(
+                  strokeWidth: AppSpacing.hairline,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              )
+            : Text(label),
+      ),
+    );
+  }
+
+  /// Commits [batch] one card at a time, each at its own position — the stored
+  /// arrangement holds one card per slot, so a batch cannot write them all to
+  /// the same one. A card that fails does not consume its slot, so the rest
+  /// still land contiguously.
+  ///
+  /// A partial failure is reported by name: the sheet closes either way, and an
+  /// owner who asked for six cards and got four must not have to count them.
+  Future<void> _commit(List<_Entry> batch, int nextPosition) async {
+    if (_locked) return;
+    setState(() => _committing = true);
+    // Everything the run needs is taken before the first await, so the batch
+    // does not depend on this sheet surviving it. The owner can dismiss the
+    // sheet — back, the barrier, a swipe — while a write is in flight; the
+    // action they accepted still finishes, and the report still lands on the
+    // screen underneath. Bailing out mid-run would leave the cards already
+    // written in place and the rest silently skipped, with nothing said.
+    // The container, not this widget's ref: it outlives the sheet, so the run
+    // can still reach the controller after a dismissal.
+    final container = ProviderScope.containerOf(context, listen: false);
+    // The controller is autoDispose and the sheet may be its only listener, so
+    // the run holds it for exactly as long as it needs it. Without this the
+    // dismissal disposes it and the next write throws on a dead ref.
+    final keepAlive = container.listen(
+      profileWidgetsControllerProvider,
+      (_, _) {},
+    );
+    final controller = container.read(
+      profileWidgetsControllerProvider.notifier,
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    final failed = <String>[];
+    var position = nextPosition;
+
+    try {
+      for (final entry in batch) {
+        await entry.add!(controller, position);
+        if (container.read(profileWidgetsControllerProvider).hasError) {
+          failed.add(entry.label);
+        } else {
+          position++;
+        }
+      }
+    } finally {
+      keepAlive.close();
+    }
+
+    if (mounted) {
+      setState(() => _committing = false);
+      // Close only if this sheet is still the active route, mirroring the
+      // single-tap add: it may have been dismissed while the batch was running.
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        Navigator.of(context).pop();
+      }
+    }
+    if (failed.isNotEmpty) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const Key('catalogBatchPartialSnackBar'),
+            content: Text(l10n.addCatalogBatchFailed(failed.join(', '))),
+          ),
+        );
+    }
+  }
+
+
   /// Keeps the entries the active filter admits. A platform-less card belongs to
   /// no platform, so narrowing to one leaves it out rather than pinning it to
   /// every list.
@@ -496,6 +640,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              _tick(entry),
               _preview(entry.card, cardSource),
               // The row keeps its own padding and affordances; the preview is
               // set beside it rather than threaded through every row builder.
@@ -513,6 +658,37 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// the sheet had not already decided to make.
   CardSource _previewCardSource(Set<Platform> linked) => (platform) =>
       linked.contains(platform) ? ownerCardProvider(platform) : absentCardProvider;
+
+  /// The tick that includes a row in a multi-card add. A row that still has a
+  /// question to ask — or that is already placed, or has no data — has none, and
+  /// holds the same width instead so every preview in the list stays aligned.
+  Widget _tick(_Entry entry) {
+    final add = entry.add;
+    if (add == null) {
+      return const SizedBox(width: AppSpacing.xl);
+    }
+    final l10n = AppLocalizations.of(context);
+    final selected = _selected.contains(entry.card.id);
+    return SizedBox(
+      width: AppSpacing.xl,
+      child: Semantics(
+        label: l10n.addCatalogSelectRow(entry.label),
+        child: Checkbox(
+          key: Key('catalogSelect_${entry.card.id}'),
+          value: selected,
+          onChanged: _locked
+              ? null
+              : (checked) => setState(() {
+                  if (checked ?? false) {
+                    _selected.add(entry.card.id);
+                  } else {
+                    _selected.remove(entry.card.id);
+                  }
+                }),
+        ),
+      ),
+    );
+  }
 
   /// The proportions the preview box takes: the ones the variant acquisition
   /// will seed actually renders at. Art keeps its portrait full variant; every
@@ -595,8 +771,15 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.passportLabel;
     final card = _provisional(ProfileWidgetKind.passport, null);
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: null, card: card, row: row);
+    _Entry entry(Widget row, {_Acquire? add}) =>
+        (
+          label: label,
+          cardName: null,
+          platform: null,
+          card: card,
+          row: row,
+          add: add,
+        );
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.passport)) {
       return entry(_addedRow(const Key('passportAddedRow'), label));
     }
@@ -609,16 +792,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ),
       );
     }
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        c.addPassport(position: position);
     return entry(
       _AddRow(
         rowKey: const Key('passportAddRow'),
         label: label,
         busy: _acquiring == const Key('passportAddRow'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(const Key('passportAddRow'), (controller) =>
-            controller.addPassport(position: nextPosition)),
+            : () => _acquire(const Key('passportAddRow'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
@@ -638,12 +823,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ? l10n.addCatalogRowRank
         : l10n.addCatalogRowMain;
     final card = _provisional(kind, platform);
-    _Entry entry(Widget row) => (
+    _Entry entry(Widget row, {_Acquire? add}) => (
       label: label,
       cardName: cardName,
       platform: platform,
       card: card,
       row: row,
+      add: add,
     );
     if (widget.existing.any((w) => w.kind == kind && w.platform == platform)) {
       return entry(_addedRow(Key('${prefix}AddedRow_${platform.name}'), label));
@@ -657,17 +843,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ),
       );
     }
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        kind == ProfileWidgetKind.rank ? c.addRank(platform: platform, position: position) : c.addMain(platform: platform, position: position);
     return entry(
       _AddRow(
         rowKey: Key('${prefix}AddRow_${platform.name}'),
         label: label,
         busy: _acquiring == Key('${prefix}AddRow_${platform.name}'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(Key('${prefix}AddRow_${platform.name}'), (controller) => kind == ProfileWidgetKind.rank
-            ? controller.addRank(platform: platform, position: nextPosition)
-            : controller.addMain(platform: platform, position: nextPosition)),
+            : () => _acquire(Key('${prefix}AddRow_${platform.name}'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
@@ -684,12 +871,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.addCatalogRowRecent;
     final card = _provisional(ProfileWidgetKind.recent, platform);
-    _Entry entry(Widget row) => (
+    _Entry entry(Widget row, {_Acquire? add}) => (
       label: label,
       cardName: null,
       platform: platform,
       card: card,
       row: row,
+      add: add,
     );
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.recent && w.platform == platform,
@@ -705,16 +893,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ),
       );
     }
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        c.addRecent(platform: platform, position: position);
     return entry(
       _AddRow(
         rowKey: Key('recentAddRow_${platform.name}'),
         label: label,
         busy: _acquiring == Key('recentAddRow_${platform.name}'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(Key('recentAddRow_${platform.name}'), (controller) =>
-            controller.addRecent(platform: platform, position: nextPosition)),
+            : () => _acquire(Key('recentAddRow_${platform.name}'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
@@ -731,12 +921,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.addCatalogRowPersonalBest;
     final card = _provisional(ProfileWidgetKind.personalBest, platform);
-    _Entry entry(Widget row) => (
+    _Entry entry(Widget row, {_Acquire? add}) => (
       label: label,
       cardName: null,
       platform: platform,
       card: card,
       row: row,
+      add: add,
     );
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.personalBest && w.platform == platform,
@@ -754,18 +945,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ),
       );
     }
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        c.addPersonalBest( platform: platform, position: position);
     return entry(
       _AddRow(
         rowKey: Key('personalBestAddRow_${platform.name}'),
         label: label,
         busy: _acquiring == Key('personalBestAddRow_${platform.name}'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(Key('personalBestAddRow_${platform.name}'), (controller) => controller.addPersonalBest(
-          platform: platform,
-          position: nextPosition),
-        ),
+            : () => _acquire(Key('personalBestAddRow_${platform.name}'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
@@ -781,12 +972,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.addCatalogRowRarest;
     final card = _provisional(ProfileWidgetKind.rarestAchievement, platform);
-    _Entry entry(Widget row) => (
+    _Entry entry(Widget row, {_Acquire? add}) => (
       label: label,
       cardName: null,
       platform: platform,
       card: card,
       row: row,
+      add: add,
     );
     if (widget.existing.any(
       (w) =>
@@ -804,18 +996,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ),
       );
     }
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        c.addRarestAchievement( platform: platform, position: position);
     return entry(
       _AddRow(
         rowKey: Key('rarestAddRow_${platform.name}'),
         label: label,
         busy: _acquiring == Key('rarestAddRow_${platform.name}'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(Key('rarestAddRow_${platform.name}'), (controller) => controller.addRarestAchievement(
-          platform: platform,
-          position: nextPosition),
-        ),
+            : () => _acquire(Key('rarestAddRow_${platform.name}'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
@@ -826,23 +1018,31 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   _Entry _artRow(AppLocalizations l10n, int nextPosition) {
     final label = l10n.addCatalogRowArt;
     final card = _provisional(ProfileWidgetKind.art, null);
-    _Entry entry(Widget row) =>
-        (label: label, cardName: null, platform: null, card: card, row: row);
+    _Entry entry(Widget row, {_Acquire? add}) =>
+        (
+          label: label,
+          cardName: null,
+          platform: null,
+          card: card,
+          row: row,
+          add: add,
+        );
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.art)) {
       return entry(_addedRow(const Key('artAddedRow'), label));
     }
+    // A picture is the point, so it lands as a full-width card.
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        c.addArt(position: position);
     return entry(
       _AddRow(
         rowKey: const Key('artAddRow'),
         label: label,
         busy: _acquiring == const Key('artAddRow'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(const Key('artAddRow'), (controller) => controller.addArt(
-          position: nextPosition,
-          // A picture is the point, so it lands as a full-width card.
-        )),
+            : () => _acquire(const Key('artAddRow'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
@@ -854,12 +1054,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.addCatalogRowMilestone;
     final card = _provisional(ProfileWidgetKind.showcase, Platform.steam);
-    _Entry entry(Widget row) => (
+    _Entry entry(Widget row, {_Acquire? add}) => (
       label: label,
       cardName: null,
       platform: Platform.steam,
       card: card,
       row: row,
+      add: add,
     );
     if (library.isEmpty) {
       return entry(
@@ -887,7 +1088,12 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     List<LibraryShowcaseEntry> library,
     int nextPosition,
   ) {
-    _Entry entry(String label, ProfileWidgetKind kind, Widget row) => (
+    _Entry entry(
+      String label,
+      ProfileWidgetKind kind,
+      Widget row, {
+      _Acquire? add,
+    }) => (
       label: label, cardName: null,
       platform: Platform.steam,
       // Curated and Collector are one archetype under two kinds, so each
@@ -897,6 +1103,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         kind == ProfileWidgetKind.collection ? null : Platform.steam,
       ),
       row: row,
+      add: add,
     );
     final Widget curated;
     if (library.isEmpty) {
@@ -967,12 +1174,13 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   ) {
     final label = l10n.completionistLabel;
     final card = _provisional(ProfileWidgetKind.completionist, Platform.steam);
-    _Entry entry(Widget row) => (
+    _Entry entry(Widget row, {_Acquire? add}) => (
       label: label,
       cardName: null,
       platform: Platform.steam,
       card: card,
       row: row,
+      add: add,
     );
     final resolved = resolveCompletionist(steamCard);
     if (widget.existing.any(
@@ -991,18 +1199,18 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         ),
       );
     }
+    Future<void> add(ProfileWidgetsController c, int position) =>
+        c.addCompletionist( platform: Platform.steam, position: position);
     return entry(
       _AddRow(
         rowKey: const Key('completionistAddRow_steam'),
         label: label,
         busy: _acquiring == const Key('completionistAddRow_steam'),
-        onTap: _acquiring != null
+        onTap: _locked
             ? null
-            : () => _acquire(const Key('completionistAddRow_steam'), (controller) => controller.addCompletionist(
-          platform: Platform.steam,
-          position: nextPosition),
-        ),
+            : () => _acquire(const Key('completionistAddRow_steam'), (c) => add(c, nextPosition)),
       ),
+      add: add,
     );
   }
 
