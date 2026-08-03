@@ -1408,6 +1408,10 @@
   "@addCatalogRowArt": {
     "description": "Label of the add-card catalog's single Art row; one tap adds the card and it picks its own picture."
   },
+  "addCatalogFilterAll": "All",
+  "@addCatalogFilterAll": {
+    "description": "Chip that clears the add-card catalog's platform filter, showing every platform's cards again."
+  },
   "addCatalogConnectMore": "Connect more accounts",
   "@addCatalogConnectMore": {
     "description": "Footer link in the add-card catalog that navigates to the connections screen to link more platforms."

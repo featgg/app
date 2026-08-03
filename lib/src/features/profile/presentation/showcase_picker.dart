@@ -63,6 +63,12 @@ Color _onArtColor(ColorScheme scheme) => scheme.brightness == Brightness.dark
 /// modal route preserves the acquire rows' pop-guard semantics.
 enum _Step { catalog, milestone, collection }
 
+/// One line of the catalog: the row to draw, plus what the platform filter needs
+/// to decide whether it belongs on screen. [platform] is null for the cards that
+/// are no single platform's — Identity draws on every linked account and Art on
+/// none — so filtering to a platform leaves them out.
+typedef _Entry = ({String label, Platform? platform, Widget row});
+
 class _CatalogSheet extends ConsumerStatefulWidget {
   const _CatalogSheet({required this.existing});
 
@@ -74,6 +80,18 @@ class _CatalogSheet extends ConsumerStatefulWidget {
 
 class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   _Step _step = _Step.catalog;
+
+  /// The platform the catalog is narrowed to, or null for all of them. A second
+  /// axis over the categories rather than a replacement for them: a fully
+  /// connected owner reads one platform's cards without losing the grouping that
+  /// tells them what each card answers.
+  Platform? _platform;
+
+  /// The row whose write is in flight, by its key, or null. Held here rather
+  /// than in the row: a filter change can take the row off screen while the
+  /// write is pending, and a lifecycle owned by the row would be disposed with
+  /// it — leaving the sheet open and the card addable a second time.
+  Key? _acquiring;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +168,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     // Grouped by the question a card answers, never by archetype: the same
     // order drives a fresh composition's default order.
     final whoIAmRows = [_identityRow(l10n, linked, nextPosition)];
-    final whatIPlayRows = [
+    final whatIPlayRows = <_Entry>[
       for (final platform in kMainPlatforms)
         if (linked.contains(platform))
           _kindRow(
@@ -170,7 +188,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
             nextPosition,
           ),
     ];
-    final howGoodIAmRows = [
+    final howGoodIAmRows = <_Entry>[
       for (final platform in kRankPlatforms)
         if (linked.contains(platform))
           _kindRow(
@@ -193,7 +211,7 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           ),
     ];
     // The Steam-derived rows render only when Steam is linked.
-    final whatIAchievedRows = [
+    final whatIAchievedRows = <_Entry>[
       if (steamLinked) ...[
         _milestoneRow(l10n, steamLibrary),
         _completionistRow(l10n, steamCard, nextPosition),
@@ -211,8 +229,35 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
     ];
     final whatIOwnRows = steamLinked
         ? _collectionRows(l10n, steamCard, steamLibrary, nextPosition)
-        : const <Widget>[];
+        : const <_Entry>[];
     final artRows = [_artRow(l10n, nextPosition)];
+
+    final groups = <(Key, String, List<_Entry>)>[
+      (const Key('catalogGroupWhoIAm'), l10n.addCatalogGroupWhoIAm, whoIAmRows),
+      (
+        const Key('catalogGroupWhatIPlay'),
+        l10n.addCatalogGroupWhatIPlay,
+        whatIPlayRows,
+      ),
+      (
+        const Key('catalogGroupHowGoodIAm'),
+        l10n.addCatalogGroupHowGoodIAm,
+        howGoodIAmRows,
+      ),
+      (
+        const Key('catalogGroupWhatIAchieved'),
+        l10n.addCatalogGroupWhatIAchieved,
+        whatIAchievedRows,
+      ),
+      (
+        const Key('catalogGroupWhatIOwn'),
+        l10n.addCatalogGroupWhatIOwn,
+        whatIOwnRows,
+      ),
+      // Last: every category above answers a question with data; the visual
+      // family answers with a picture.
+      (const Key('catalogGroupArt'), l10n.addCatalogGroupArt, artRows),
+    ];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -223,43 +268,99 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
           key: const Key('addCatalogTitle'),
           style: textTheme.titleLarge,
         ),
-        _group(
-          const Key('catalogGroupWhoIAm'),
-          l10n.addCatalogGroupWhoIAm,
-          whoIAmRows,
-        ),
-        _group(
-          const Key('catalogGroupWhatIPlay'),
-          l10n.addCatalogGroupWhatIPlay,
-          whatIPlayRows,
-        ),
-        _group(
-          const Key('catalogGroupHowGoodIAm'),
-          l10n.addCatalogGroupHowGoodIAm,
-          howGoodIAmRows,
-        ),
-        _group(
-          const Key('catalogGroupWhatIAchieved'),
-          l10n.addCatalogGroupWhatIAchieved,
-          whatIAchievedRows,
-        ),
-        _group(
-          const Key('catalogGroupWhatIOwn'),
-          l10n.addCatalogGroupWhatIOwn,
-          whatIOwnRows,
-        ),
-        // Last: every category above answers a question with data; the visual
-        // family answers with a picture.
-        _group(const Key('catalogGroupArt'), l10n.addCatalogGroupArt, artRows),
+        _platformFilter(l10n, groups),
+        for (final (key, header, entries) in groups)
+          _group(key, header, entries),
         if (_catalogUniverse.any((platform) => !linked.contains(platform)))
           _footer(l10n),
       ],
     );
   }
 
-  /// A group renders its header only when it has at least one row.
-  Widget _group(Key headerKey, String header, List<Widget> rows) {
-    if (rows.isEmpty) return const SizedBox.shrink();
+  /// The platform axis, offered only for the platforms the catalog actually has
+  /// rows for — a filter that can empty the whole list is a dead end, not a
+  /// choice. Absent entirely below two platforms, where it would only ask the
+  /// owner to confirm what they can already see.
+  Widget _platformFilter(
+    AppLocalizations l10n,
+    List<(Key, String, List<_Entry>)> groups,
+  ) {
+    final platforms = <Platform>{
+      for (final (_, _, entries) in groups)
+        for (final entry in entries)
+          if (entry.platform != null) entry.platform!,
+    }.toList()..sort((a, b) => a.name.compareTo(b.name));
+    if (platforms.length < 2) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Wrap(
+        spacing: AppSpacing.xs,
+        children: [
+          ChoiceChip(
+            key: const Key('catalogPlatformChip_all'),
+            label: Text(l10n.addCatalogFilterAll),
+            selected: _platform == null,
+            onSelected: (_) => setState(() => _platform = null),
+          ),
+          for (final platform in platforms)
+            ChoiceChip(
+              key: Key('catalogPlatformChip_${platform.name}'),
+              label: Text(_brand(platform)),
+              selected: _platform == platform,
+              // Re-tapping the held chip clears it, so All is reachable without
+              // aiming at a different target.
+              onSelected: (selected) =>
+                  setState(() => _platform = selected ? platform : null),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Runs one row's write and closes the sheet. One at a time: a second tap
+  /// while a write is pending is ignored, so a card is never added twice.
+  ///
+  /// Placement is reactive — the owner wrapper folds each refetch of the widgets
+  /// read into the working layout — so this deliberately does not couple the
+  /// placement to the pop.
+  Future<void> _acquire(
+    Key rowKey,
+    Future<void> Function(ProfileWidgetsController) onAcquire,
+  ) async {
+    if (_acquiring != null) return;
+    setState(() => _acquiring = rowKey);
+    final controller = ref.read(profileWidgetsControllerProvider.notifier);
+    // The controller routes any failure through its own error state and never
+    // throws, so this completes on success and failure alike.
+    await onAcquire(controller);
+    if (!mounted) return;
+    setState(() => _acquiring = null);
+    // Close only if this sheet is still the active route: it may have been
+    // dismissed through another channel while the write was in flight, and an
+    // unconditional pop would land on the screen beneath it.
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Keeps the entries the active filter admits. A platform-less card belongs to
+  /// no platform, so narrowing to one leaves it out rather than pinning it to
+  /// every list.
+  List<_Entry> _visible(List<_Entry> entries) {
+    final platform = _platform;
+    if (platform == null) return entries;
+    return [
+      for (final entry in entries)
+        if (entry.platform == platform) entry,
+    ];
+  }
+
+  /// A group renders its header only when the filter leaves it something to
+  /// show, so a narrowed catalog carries no empty headers.
+  Widget _group(Key headerKey, String header, List<_Entry> entries) {
+    final visible = _visible(entries);
+    if (visible.isEmpty) return const SizedBox.shrink();
     final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -268,38 +369,49 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
         const SizedBox(height: AppSpacing.md),
         Text(header, key: headerKey, style: textTheme.titleSmall),
         const SizedBox(height: AppSpacing.xs),
-        ...rows,
+        for (final entry in visible) entry.row,
       ],
     );
   }
 
   /// Identity (Passport) is cross-platform: placed reads as added; with no
   /// linked platform it is disabled; otherwise it offers. Never offered empty.
-  Widget _identityRow(
+  _Entry _identityRow(
     AppLocalizations l10n,
     Set<Platform> linked,
     int nextPosition,
   ) {
+    final label = l10n.passportLabel;
+    ({String label, Platform? platform, Widget row}) entry(Widget row) =>
+        (label: label, platform: null, row: row);
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.passport)) {
-      return _addedRow(const Key('passportAddedRow'), l10n.passportLabel);
+      return entry(_addedRow(const Key('passportAddedRow'), label));
     }
     if (linked.isEmpty) {
-      return _disabledRow(
-        const Key('passportDisabledRow'),
-        l10n.passportLabel,
-        l10n.addCatalogReasonNoPlatforms,
+      return entry(
+        _disabledRow(
+          const Key('passportDisabledRow'),
+          label,
+          l10n.addCatalogReasonNoPlatforms,
+        ),
       );
     }
-    return _AddRow(
-      rowKey: const Key('passportAddRow'),
-      label: l10n.passportLabel,
-      onAcquire: (controller) => controller.addPassport(position: nextPosition),
+    return entry(
+      _AddRow(
+        rowKey: const Key('passportAddRow'),
+        label: label,
+        busy: _acquiring == const Key('passportAddRow'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(const Key('passportAddRow'), (controller) =>
+            controller.addPassport(position: nextPosition)),
+      ),
     );
   }
 
   /// A per-platform Rank or Main row: added when already placed, disabled with a
   /// reason when the card carries no data, otherwise a single-tap offer.
-  Widget _kindRow({
+  _Entry _kindRow({
     required AppLocalizations l10n,
     required ProfileWidgetKind kind,
     required Platform platform,
@@ -309,22 +421,30 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   }) {
     final label = _brand(platform);
     final prefix = kind == ProfileWidgetKind.rank ? 'rank' : 'main';
+    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
     if (widget.existing.any((w) => w.kind == kind && w.platform == platform)) {
-      return _addedRow(Key('${prefix}AddedRow_${platform.name}'), label);
+      return entry(_addedRow(Key('${prefix}AddedRow_${platform.name}'), label));
     }
     if (!hasData) {
-      return _disabledRow(
-        Key('${prefix}DisabledRow_${platform.name}'),
-        label,
-        reason,
+      return entry(
+        _disabledRow(
+          Key('${prefix}DisabledRow_${platform.name}'),
+          label,
+          reason,
+        ),
       );
     }
-    return _AddRow(
-      rowKey: Key('${prefix}AddRow_${platform.name}'),
-      label: label,
-      onAcquire: (controller) => kind == ProfileWidgetKind.rank
-          ? controller.addRank(platform: platform, position: nextPosition)
-          : controller.addMain(platform: platform, position: nextPosition),
+    return entry(
+      _AddRow(
+        rowKey: Key('${prefix}AddRow_${platform.name}'),
+        label: label,
+        busy: _acquiring == Key('${prefix}AddRow_${platform.name}'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(Key('${prefix}AddRow_${platform.name}'), (controller) => kind == ProfileWidgetKind.rank
+            ? controller.addRank(platform: platform, position: nextPosition)
+            : controller.addMain(platform: platform, position: nextPosition)),
+      ),
     );
   }
 
@@ -333,30 +453,38 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// single-tap offer. Labelled by card name rather than by platform — the
   /// group's Main rows already carry the platform names, so a second one would
   /// be ambiguous.
-  Widget _recentRow(
+  _Entry _recentRow(
     AppLocalizations l10n,
     Platform platform,
     bool hasData,
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowRecent;
+    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.recent && w.platform == platform,
     )) {
-      return _addedRow(Key('recentAddedRow_${platform.name}'), label);
+      return entry(_addedRow(Key('recentAddedRow_${platform.name}'), label));
     }
     if (!hasData) {
-      return _disabledRow(
-        Key('recentDisabledRow_${platform.name}'),
-        label,
-        l10n.addCatalogReasonRecentNoData,
+      return entry(
+        _disabledRow(
+          Key('recentDisabledRow_${platform.name}'),
+          label,
+          l10n.addCatalogReasonRecentNoData,
+        ),
       );
     }
-    return _AddRow(
-      rowKey: Key('recentAddRow_${platform.name}'),
-      label: label,
-      onAcquire: (controller) =>
-          controller.addRecent(platform: platform, position: nextPosition),
+    return entry(
+      _AddRow(
+        rowKey: Key('recentAddRow_${platform.name}'),
+        label: label,
+        busy: _acquiring == Key('recentAddRow_${platform.name}'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(Key('recentAddRow_${platform.name}'), (controller) =>
+            controller.addRecent(platform: platform, position: nextPosition)),
+      ),
     );
   }
 
@@ -365,31 +493,41 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// single-tap offer. Labelled by card name rather than by platform — the
   /// group's Rank rows already carry the platform names, so a second one would
   /// be ambiguous.
-  Widget _personalBestRow(
+  _Entry _personalBestRow(
     AppLocalizations l10n,
     Platform platform,
     bool hasData,
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowPersonalBest;
+    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
     if (widget.existing.any(
       (w) => w.kind == ProfileWidgetKind.personalBest && w.platform == platform,
     )) {
-      return _addedRow(Key('personalBestAddedRow_${platform.name}'), label);
-    }
-    if (!hasData) {
-      return _disabledRow(
-        Key('personalBestDisabledRow_${platform.name}'),
-        label,
-        l10n.addCatalogReasonPersonalBestNoData,
+      return entry(
+        _addedRow(Key('personalBestAddedRow_${platform.name}'), label),
       );
     }
-    return _AddRow(
-      rowKey: Key('personalBestAddRow_${platform.name}'),
-      label: label,
-      onAcquire: (controller) => controller.addPersonalBest(
-        platform: platform,
-        position: nextPosition,
+    if (!hasData) {
+      return entry(
+        _disabledRow(
+          Key('personalBestDisabledRow_${platform.name}'),
+          label,
+          l10n.addCatalogReasonPersonalBestNoData,
+        ),
+      );
+    }
+    return entry(
+      _AddRow(
+        rowKey: Key('personalBestAddRow_${platform.name}'),
+        label: label,
+        busy: _acquiring == Key('personalBestAddRow_${platform.name}'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(Key('personalBestAddRow_${platform.name}'), (controller) => controller.addPersonalBest(
+          platform: platform,
+          position: nextPosition),
+        ),
       ),
     );
   }
@@ -398,33 +536,41 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// disabled with a reason when the platform published no achievement rarity,
   /// otherwise a single-tap offer. Labelled by card name rather than by
   /// platform, like the Recent row.
-  Widget _rarestRow(
+  _Entry _rarestRow(
     AppLocalizations l10n,
     Platform platform,
     bool hasData,
     int nextPosition,
   ) {
     final label = l10n.addCatalogRowRarest;
+    _Entry entry(Widget row) => (label: label, platform: platform, row: row);
     if (widget.existing.any(
       (w) =>
           w.kind == ProfileWidgetKind.rarestAchievement &&
           w.platform == platform,
     )) {
-      return _addedRow(Key('rarestAddedRow_${platform.name}'), label);
+      return entry(_addedRow(Key('rarestAddedRow_${platform.name}'), label));
     }
     if (!hasData) {
-      return _disabledRow(
-        Key('rarestDisabledRow_${platform.name}'),
-        label,
-        l10n.addCatalogReasonRarestNoData,
+      return entry(
+        _disabledRow(
+          Key('rarestDisabledRow_${platform.name}'),
+          label,
+          l10n.addCatalogReasonRarestNoData,
+        ),
       );
     }
-    return _AddRow(
-      rowKey: Key('rarestAddRow_${platform.name}'),
-      label: label,
-      onAcquire: (controller) => controller.addRarestAchievement(
-        platform: platform,
-        position: nextPosition,
+    return entry(
+      _AddRow(
+        rowKey: Key('rarestAddRow_${platform.name}'),
+        label: label,
+        busy: _acquiring == Key('rarestAddRow_${platform.name}'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(Key('rarestAddRow_${platform.name}'), (controller) => controller.addRarestAchievement(
+          platform: platform,
+          position: nextPosition),
+        ),
       ),
     );
   }
@@ -433,48 +579,64 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
   /// picture at render time (best available art, else the theme's ground), so
   /// the row never asks the owner to choose between platforms and is never
   /// disabled — the fallback is the answer to having nothing to show.
-  Widget _artRow(AppLocalizations l10n, int nextPosition) {
+  _Entry _artRow(AppLocalizations l10n, int nextPosition) {
+    final label = l10n.addCatalogRowArt;
+    _Entry entry(Widget row) => (label: label, platform: null, row: row);
     if (widget.existing.any((w) => w.kind == ProfileWidgetKind.art)) {
-      return _addedRow(const Key('artAddedRow'), l10n.addCatalogRowArt);
+      return entry(_addedRow(const Key('artAddedRow'), label));
     }
-    return _AddRow(
-      rowKey: const Key('artAddRow'),
-      label: l10n.addCatalogRowArt,
-      onAcquire: (controller) => controller.addArt(
-        position: nextPosition,
-        // A picture is the point, so it lands as a full-width card.
+    return entry(
+      _AddRow(
+        rowKey: const Key('artAddRow'),
+        label: label,
+        busy: _acquiring == const Key('artAddRow'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(const Key('artAddRow'), (controller) => controller.addArt(
+          position: nextPosition,
+          // A picture is the point, so it lands as a full-width card.
+        )),
       ),
     );
   }
 
   /// Milestone offers a single-game showcase picked in step 2. An empty Steam
   /// library disables the row rather than creating a card that reads as empty.
-  Widget _milestoneRow(
+  _Entry _milestoneRow(
     AppLocalizations l10n,
     List<LibraryShowcaseEntry> library,
   ) {
+    final label = l10n.addCatalogRowMilestone;
+    _Entry entry(Widget row) =>
+        (label: label, platform: Platform.steam, row: row);
     if (library.isEmpty) {
-      return _disabledRow(
-        const Key('milestoneDisabledRow'),
-        l10n.addCatalogRowMilestone,
-        l10n.showcasePickerEmpty,
+      return entry(
+        _disabledRow(
+          const Key('milestoneDisabledRow'),
+          label,
+          l10n.showcasePickerEmpty,
+        ),
       );
     }
-    return _stepRow(
-      const Key('milestoneStepRow'),
-      l10n.addCatalogRowMilestone,
-      () => setState(() => _step = _Step.milestone),
+    return entry(
+      _stepRow(
+        const Key('milestoneStepRow'),
+        label,
+        () => setState(() => _step = _Step.milestone),
+      ),
     );
   }
 
   /// The Collection group: a curated set (step 2) and the whole-library
   /// Collector variant (single tap).
-  List<Widget> _collectionRows(
+  List<_Entry> _collectionRows(
     AppLocalizations l10n,
     GameCard? steamCard,
     List<LibraryShowcaseEntry> library,
     int nextPosition,
   ) {
+    _Entry entry(String label, Widget row) =>
+        (label: label, platform: Platform.steam, row: row);
     final Widget curated;
     if (library.isEmpty) {
       curated = _disabledRow(
@@ -512,46 +674,59 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       collector = _AddRow(
         rowKey: const Key('collectorAddRow_steam'),
         label: l10n.addCatalogRowCollectionLibrary,
-        onAcquire: (controller) => controller.addGameCollector(
+        busy: _acquiring == const Key('collectorAddRow_steam'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(const Key('collectorAddRow_steam'), (controller) => controller.addGameCollector(
           platform: Platform.steam,
-          position: nextPosition,
+          position: nextPosition),
         ),
       );
     }
-    return [curated, collector];
+    return [
+      entry(l10n.addCatalogRowCollectionCurated, curated),
+      entry(l10n.addCatalogRowCollectionLibrary, collector),
+    ];
   }
 
   /// Achievement Grid offers the whole-library Completionist variant. A card
   /// with no perfect games is disabled rather than created empty.
-  Widget _completionistRow(
+  _Entry _completionistRow(
     AppLocalizations l10n,
     GameCard? steamCard,
     int nextPosition,
   ) {
+    final label = l10n.completionistLabel;
+    _Entry entry(Widget row) =>
+        (label: label, platform: Platform.steam, row: row);
     final resolved = resolveCompletionist(steamCard);
     if (widget.existing.any(
       (w) =>
           w.kind == ProfileWidgetKind.completionist &&
           w.platform == Platform.steam,
     )) {
-      return _addedRow(
-        const Key('completionistAddedRow_steam'),
-        l10n.completionistLabel,
-      );
+      return entry(_addedRow(const Key('completionistAddedRow_steam'), label));
     }
     if (resolved == null || resolved.gamesPerfect == 0) {
-      return _disabledRow(
-        const Key('completionistDisabledRow_steam'),
-        l10n.completionistLabel,
-        l10n.completionistPickerEmpty,
+      return entry(
+        _disabledRow(
+          const Key('completionistDisabledRow_steam'),
+          label,
+          l10n.completionistPickerEmpty,
+        ),
       );
     }
-    return _AddRow(
-      rowKey: const Key('completionistAddRow_steam'),
-      label: l10n.completionistLabel,
-      onAcquire: (controller) => controller.addCompletionist(
-        platform: Platform.steam,
-        position: nextPosition,
+    return entry(
+      _AddRow(
+        rowKey: const Key('completionistAddRow_steam'),
+        label: label,
+        busy: _acquiring == const Key('completionistAddRow_steam'),
+        onTap: _acquiring != null
+            ? null
+            : () => _acquire(const Key('completionistAddRow_steam'), (controller) => controller.addCompletionist(
+          platform: Platform.steam,
+          position: nextPosition),
+        ),
       ),
     );
   }
@@ -810,48 +985,24 @@ class _CatalogSheetState extends ConsumerState<_CatalogSheet> {
       platformDescriptors[platform]?.displayName ?? platform.name;
 }
 
-/// One tappable auto-acquire row: a label with an Add affordance. Tapping awaits
-/// the repository write and shows a spinner while it is in flight; a local busy
-/// flag ignores a repeat tap on this row so the write fires exactly once.
-/// Landing the acquired card in the working layout is reactive — the owner
-/// wrapper folds each refetch of the widgets read in — so this row deliberately
-/// does not couple placement to the pop.
-class _AddRow extends ConsumerStatefulWidget {
+/// One tappable auto-acquire row: a label with an Add affordance. It owns no
+/// acquisition state of its own — the sheet does. A row can be taken off screen
+/// by a filter while its write is still in flight, and a lifecycle living here
+/// would die with it: the sheet would never close, and because the placed-card
+/// check reads the snapshot taken when the sheet opened, clearing the filter
+/// would offer the same card again and add it twice.
+class _AddRow extends StatelessWidget {
   const _AddRow({
     required this.rowKey,
     required this.label,
-    required this.onAcquire,
+    required this.busy,
+    required this.onTap,
   });
 
   final Key rowKey;
   final String label;
-  final Future<void> Function(ProfileWidgetsController) onAcquire;
-
-  @override
-  ConsumerState<_AddRow> createState() => _AddRowState();
-}
-
-class _AddRowState extends ConsumerState<_AddRow> {
-  bool _busy = false;
-
-  Future<void> _acquire() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    final controller = ref.read(profileWidgetsControllerProvider.notifier);
-    // Await the write only to bound this row's busy/spinner lifetime and keep the
-    // single-tap guard meaningful; the controller routes any failure through its
-    // own error state (it never throws), so this completes on success and failure
-    // alike. Placement is handled reactively by the owner wrapper's listener.
-    await widget.onAcquire(controller);
-    if (!mounted) return;
-    // Close only if this row's own sheet is still the active route. It may have
-    // already been dismissed through another channel while the write was in
-    // flight; its route is then no longer current, and an unconditional pop would
-    // land on the screen beneath the sheet instead.
-    if (ModalRoute.of(context)?.isCurrent == true) {
-      Navigator.of(context).pop();
-    }
-  }
+  final bool busy;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -859,8 +1010,8 @@ class _AddRowState extends ConsumerState<_AddRow> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
-      key: widget.rowKey,
-      onTap: _busy ? null : _acquire,
+      key: rowKey,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadii.md),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -869,9 +1020,9 @@ class _AddRowState extends ConsumerState<_AddRow> {
         ),
         child: Row(
           children: [
-            Expanded(child: Text(widget.label, style: textTheme.bodyMedium)),
+            Expanded(child: Text(label, style: textTheme.bodyMedium)),
             const SizedBox(width: AppSpacing.sm),
-            if (_busy)
+            if (busy)
               SizedBox(
                 width: AppSpacing.md,
                 height: AppSpacing.md,
