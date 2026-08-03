@@ -745,6 +745,62 @@ void main() {
     });
   });
 
+  group('the reveal an acquire leaves behind', () {
+    test(
+      'names the first card of the batch, so the run is entered at its top',
+      () {
+        final container = _container(_FakeRepository());
+        final notifier = container.read(profileCompositionProvider.notifier);
+        notifier.startEditing(_profileWith(_layout), _widgets);
+
+        notifier.appendUnplacedWidgets([
+          ..._widgets,
+          _widgetAt('e', 4),
+          _widgetAt('d', 3),
+        ]);
+
+        // Sorted by position, so the batch is entered at 'd' however the refreshed
+        // list happened to be ordered.
+        expect(container.read(profileCompositionProvider).acquiredId, 'd');
+      },
+    );
+
+    test('is not raised by an emission that adds nothing', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      notifier.appendUnplacedWidgets(_widgets);
+
+      expect(container.read(profileCompositionProvider).acquiredId, isNull);
+    });
+
+    test('is cleared once acknowledged, so it fires exactly once', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      notifier.appendUnplacedWidgets([..._widgets, _widgetAt('d', 3)]);
+
+      notifier.acknowledgeAcquired();
+
+      expect(container.read(profileCompositionProvider).acquiredId, isNull);
+    });
+
+    test('does not survive into the next edit session', () {
+      final container = _container(_FakeRepository());
+      final notifier = container.read(profileCompositionProvider.notifier);
+      notifier.startEditing(_profileWith(_layout), _widgets);
+      notifier.appendUnplacedWidgets([..._widgets, _widgetAt('d', 3)]);
+      // Left pending: the owner closed the editor before it was consumed.
+      notifier.cancelEditing();
+
+      notifier.startEditing(_profileWith(_layout), _widgets);
+
+      // Reopening must not scroll to a card acquired in a session that is over.
+      expect(container.read(profileCompositionProvider).acquiredId, isNull);
+    });
+  });
+
   group('the identity the session carries alongside the arrangement', () {
     test('opens seeded from the profile and clean', () {
       final container = _container(_FakeRepository());
