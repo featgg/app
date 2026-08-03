@@ -14,6 +14,12 @@ part 'profile_owner_cards_provider.g.dart';
 typedef CardSource =
     ProviderListenable<AsyncValue<GameCard?>> Function(Platform);
 
+/// A card that is not there, without going to look for it. Stands in for a
+/// platform a caller already knows is unlinked, so a [CardSource] can answer for
+/// every platform a card view asks about while only the linked ones are fetched.
+@riverpod
+AsyncValue<GameCard?> absentCard(Ref ref) => const AsyncValue.data(null);
+
 /// Returns null for every error so Riverpod never auto-retries. A Left(Failure)
 /// is surfaced immediately as AsyncError; retrying authed reads behind the error
 /// UI would re-issue privileged calls and amplify crash reports.
