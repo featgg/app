@@ -21,6 +21,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:go_router/go_router.dart';
 
 const _userId = 'owner-1';
 const _wowArt = 'https://cdn.test/wow-hero.jpg';
@@ -197,6 +198,84 @@ Future<void> _pump(
     );
     await tester.pumpAndSettle();
   });
+}
+
+/// The stand-in for the surface that owns the refresh. Pressing it performs the
+/// refresh and pops, which is the sequence the owner performs there.
+const _connectionsStubKey = Key('connectionsStub');
+
+/// Pumps the owner's render behind a real router, so the withheld card's tap
+/// resolves a route and the return trip is exercised rather than simulated.
+Future<void> _pumpRouter(
+  WidgetTester tester, {
+  required List<ProfileLayoutRow> layout,
+  required Map<Platform, GameCard?> cards,
+  required VoidCallback onRefresh,
+}) async {
+  tester.view.physicalSize = const Size(600, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  final container = ProviderContainer(
+    retry: (count, error) => null,
+    overrides: [
+      profileWidgetsRepositoryProvider.overrideWithValue(
+        _FakeWidgetsRepository(_widgets),
+      ),
+      cardsRepositoryProvider.overrideWithValue(_FakeCardsRepository(cards)),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  final router = GoRouter(
+    initialLocation: '/profile',
+    routes: [
+      GoRoute(
+        path: '/profile',
+        builder: (_, _) => Scaffold(
+          body: PersonalizationProfileView(
+            profile: _profile(layout),
+            userId: _userId,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/connections',
+        builder: (context, _) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              key: _connectionsStubKey,
+              onPressed: () {
+                onRefresh();
+                context.pop();
+              },
+              child: const Text('refresh'),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      key: ValueKey('pump-${_pumpSeq++}'),
+      container: container,
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en')],
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Finder _slot(String id) => find.byKey(personalizationCardKey(id));
@@ -390,5 +469,45 @@ void main() {
 
     expect(_slot('art'), findsNothing);
     expect(_imageFor(_wowArt), findsNothing);
+  });
+
+  testWidgets('a refresh on the pushed route clears the withheld state on '
+      'return', (tester) async {
+    // The round trip the withheld card exists to start. The surface that owns
+    // the refresh reads this data through its own provider, so a successful
+    // refresh there leaves this side's read untouched: without the return
+    // invalidating it, the owner refreshes and comes back to the same notice.
+    //
+    // The whole body runs under the pinned clock — the card is re-judged on
+    // every rebuild, so the frames after the pop must be judged against the
+    // same "now" as the frames before it.
+    final cards = <Platform, GameCard?>{
+      Platform.wowRetail: _wowCard(_pastWindow),
+    };
+
+    await withClock(Clock.fixed(_now), () async {
+      await _pumpRouter(
+        tester,
+        layout: const [FullRow('wow')],
+        cards: cards,
+        // What the connections screen does on a successful sync: the stored
+        // card becomes current.
+        onRefresh: () => cards[Platform.wowRetail] = _wowCard(_insideWindow),
+      );
+
+      expect(tester.widget(_slot('wow')), isA<PersonalizationStaleCard>());
+
+      await tester.tap(find.byKey(const Key('personalizationStaleRefresh')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(_connectionsStubKey), findsOneWidget);
+
+      await tester.tap(find.byKey(_connectionsStubKey));
+      await tester.pumpAndSettle();
+
+      // Back on the profile: the notice is gone and the card answers again.
+      expect(find.byType(PersonalizationStaleCard), findsNothing);
+      expect(_slot('wow'), findsOneWidget);
+      expect(find.text(formatCardValue(_wowItemLevel, _en)), findsOneWidget);
+    });
   });
 }

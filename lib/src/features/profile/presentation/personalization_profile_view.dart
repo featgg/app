@@ -309,8 +309,16 @@ class _Rows extends ConsumerWidget {
         size: renderedCardSize(archetype, size),
         // The refresh, its cooldown and its outcome belong to the connections
         // surface; the owner is taken there rather than given a second path
-        // into the same action.
-        onRefresh: () => context.push('/connections'),
+        // into the same action. That surface refreshes through its own read of
+        // the same data and cannot reach across to this one, so returning is
+        // the only signal this side gets that the cards may have moved — and
+        // any platform can be refreshed while the owner is there, not only the
+        // one whose card was tapped.
+        onRefresh: () async {
+          await context.push('/connections');
+          if (!context.mounted) return;
+          ref.invalidate(ownerCardProvider);
+        },
       ),
       CardFreshnessGate.none => personalizationCardFor(
         w,
