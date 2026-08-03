@@ -1416,6 +1416,37 @@
   "@addCatalogRowMain": {
     "description": "The Main card's own name. Its catalog row is labelled by platform (the category already names the card), so this is used to make the card findable by name in search."
   },
+  "addCatalogAddSelected": "Add selected ({count})",
+  "@addCatalogAddSelected": {
+    "description": "Button that commits every add-card catalog row the owner ticked, in one action. Count is how many are ticked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addCatalogAddAll": "Add all available",
+  "@addCatalogAddAll": {
+    "description": "Button that adds every add-card catalog row that needs no further input, for an owner starting from an empty profile."
+  },
+  "addCatalogBatchFailed": "Not added: {cards}",
+  "@addCatalogBatchFailed": {
+    "description": "Snackbar after a multi-card add where some cards failed; lists the names of the ones that did not land.",
+    "placeholders": {
+      "cards": {
+        "type": "String"
+      }
+    }
+  },
+  "addCatalogSelectRow": "Select {card}",
+  "@addCatalogSelectRow": {
+    "description": "Accessibility label of the tick box that includes an add-card catalog row in a multi-card add.",
+    "placeholders": {
+      "card": {
+        "type": "String"
+      }
+    }
+  },
   "addCatalogSearchHint": "Search cards",
   "@addCatalogSearchHint": {
     "description": "Placeholder in the add-card catalog's search field, which matches a card's name or its platform's name."

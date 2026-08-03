@@ -594,6 +594,139 @@ ProfileWidget _rankWidget(Platform platform, {required int position}) =>
       isEnabled: true,
     );
 
+/// Logs every add in order with the position it was given, and fails the kinds
+/// it is told to — the two things a multi-card add has to be provable about.
+final class _BatchWidgetsRepository implements ProfileWidgetsRepository {
+  _BatchWidgetsRepository({
+    this.failKinds = const {},
+    bool holdFirstWrite = false,
+  }) : _gate = holdFirstWrite ? Completer<void>() : null;
+
+  final Set<ProfileWidgetKind> failKinds;
+  final List<(ProfileWidgetKind, int)> added = [];
+
+  /// Holds the first write open so a test can act while the run is mid-flight.
+  final Completer<void>? _gate;
+  bool _held = false;
+
+  void releaseFirstWrite() {
+    final gate = _gate;
+    if (gate != null && !gate.isCompleted) gate.complete();
+  }
+
+  Future<void> _maybeHold() async {
+    final gate = _gate;
+    if (gate == null || _held) return;
+    _held = true;
+    await gate.future;
+  }
+
+  Either<Failure, ProfileWidget> _record(
+    ProfileWidgetKind kind,
+    Platform? platform,
+    int position,
+  ) {
+    if (failKinds.contains(kind)) return left(const ServerFailure());
+    added.add((kind, position));
+    return right(
+      ProfileWidget(
+        id: 'new-${added.length}',
+        kind: kind,
+        platform: platform,
+        position: position,
+        isEnabled: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addPassportWidget({
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.passport, null, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addArtWidget({
+    Platform? source,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.art, null, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRankWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.rank, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addMainWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.main, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRecentWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.recent, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addPersonalBestWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.personalBest, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addRarestAchievementWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.rarestAchievement, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addGameCollectorWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.gameCollector, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, ProfileWidget>> addCompletionistWidget({
+    required Platform platform,
+    required int position,
+  }) async {
+    await _maybeHold();
+    return _record(ProfileWidgetKind.completionist, platform, position);
+  }
+
+  @override
+  Future<Either<Failure, List<ProfileWidget>>> fetchMyWidgets() async =>
+      right(const []);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 Widget _harness({
   required CardsRepository cardsRepo,
   required ProfileWidgetsRepository widgetsRepo,
@@ -729,6 +862,21 @@ AppLocalizations _catalogL10n(WidgetTester tester) => AppLocalizations.of(
 /// Types [term] into the catalog's search field and settles.
 Future<void> _search(WidgetTester tester, String term) async {
   await tester.enterText(find.byKey(const Key('catalogSearchField')), term);
+  await tester.pumpAndSettle();
+}
+
+/// How many rows the catalog currently offers for a batch — the ticks are drawn
+/// only on those, so counting them counts the batch.
+int _addableCount(WidgetTester tester) =>
+    tester.widgetList(find.byType(Checkbox)).length;
+
+/// Taps [key] inside the sheet. The catalog is one tall scroll surface, so a
+/// target below the fold has to be brought into view before it can be hit.
+Future<void> _tapInSheet(WidgetTester tester, Key key) async {
+  final target = find.byKey(key);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }
 
@@ -2237,5 +2385,213 @@ void main() {
     // an unbounded source that becomes a read per platform, undoing the
     // linked-only guard the sheet applies to its own fetches.
     expect(cards.fetched.toSet(), {Platform.steam});
+  });
+
+  testWidgets('multi-add: ticked rows commit in one action, each at its own '
+      'position, and the sheet closes', (tester) async {
+    final repo = _BatchWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: repo,
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await _tapInSheet(
+      tester,
+      const Key('catalogSelect_catalogPreview_passport_none'),
+    );
+    await _tapInSheet(
+      tester,
+      const Key('catalogSelect_catalogPreview_art_none'),
+    );
+    await _tapInSheet(tester, const Key('catalogAddSelectedButton'));
+
+    // Both landed, and no two share a slot — the stored arrangement holds one
+    // card per position.
+    expect(repo.added, const [
+      (ProfileWidgetKind.passport, 0),
+      (ProfileWidgetKind.art, 1),
+    ]);
+    expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
+  });
+
+  testWidgets('multi-add: "add all available" takes every zero-config row and '
+      'leaves the ones that still ask a question', (tester) async {
+    final repo = _BatchWidgetsRepository();
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: repo,
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Nothing ticked, so the action is the whole-catalog one.
+    expect(find.byKey(const Key('catalogAddSelectedButton')), findsNothing);
+    await _tapInSheet(tester, const Key('catalogAddAllButton'));
+
+    final kinds = repo.added.map((e) => e.$1).toSet();
+    expect(kinds, contains(ProfileWidgetKind.passport));
+    expect(kinds, contains(ProfileWidgetKind.completionist));
+    // Milestone and the curated Collection each need a pick, so a batch cannot
+    // answer for them.
+    expect(kinds, isNot(contains(ProfileWidgetKind.showcase)));
+    expect(kinds, isNot(contains(ProfileWidgetKind.collection)));
+    // Contiguous from the first free slot, in the order they were read.
+    expect(
+      repo.added.map((e) => e.$2),
+      List<int>.generate(repo.added.length, (i) => i),
+    );
+  });
+
+  testWidgets('multi-add: a card that fails is named, and the rest still land '
+      'contiguously', (tester) async {
+    final repo = _BatchWidgetsRepository(
+      failKinds: const {ProfileWidgetKind.passport},
+    );
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: repo,
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    await _tapInSheet(tester, const Key('catalogAddAllButton'));
+
+    expect(
+      repo.added.map((e) => e.$1),
+      isNot(contains(ProfileWidgetKind.passport)),
+    );
+    // The failed card did not consume its slot.
+    expect(
+      repo.added.map((e) => e.$2),
+      List<int>.generate(repo.added.length, (i) => i),
+    );
+    // An owner who asked for everything and got all but one must not have to
+    // count them.
+    expect(
+      find.byKey(const Key('catalogBatchPartialSnackBar')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('multi-add: dismissing the sheet mid-run still lands every card '
+      'the owner asked for', (tester) async {
+    final repo = _BatchWidgetsRepository(holdFirstWrite: true);
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: repo,
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    final expected = _addableCount(tester);
+    expect(expected, greaterThan(1), reason: 'the fixture offers no batch');
+
+    // Start the run, then dismiss the sheet while the first write is still in
+    // flight — back, the barrier and a swipe all reach this state. No settle
+    // here: the held write means the sheet never comes to rest.
+    final button = find.byKey(const Key('catalogAddAllButton'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pump();
+
+    Navigator.of(tester.element(find.byKey(const Key('openPicker')))).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('addCatalogTitle')), findsNothing);
+
+    // The accepted action finishes anyway: every card lands, not just the ones
+    // written before the sheet went away.
+    repo.releaseFirstWrite();
+    await tester.pumpAndSettle();
+    expect(repo.added.length, expected);
+  });
+
+  testWidgets('multi-add: a row that still asks a question, one already '
+      'placed, and one without data carry no tick', (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: _BatchWidgetsRepository(),
+        connected: _allLinked,
+        existing: [_artWidget(Platform.steam, position: 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    // Step-two rows: no tick, because a batch cannot make their pick.
+    expect(find.byKey(const Key('milestoneStepRow')), findsOneWidget);
+    expect(
+      find.byKey(const Key('catalogSelect_catalogPreview_showcase_steam')),
+      findsNothing,
+    );
+    // Already placed: nothing left to add.
+    expect(find.byKey(const Key('artAddedRow')), findsOneWidget);
+    expect(
+      find.byKey(const Key('catalogSelect_catalogPreview_art_none')),
+      findsNothing,
+    );
+    // Still offerable, so still tickable.
+    expect(
+      find.byKey(const Key('catalogSelect_catalogPreview_passport_none')),
+      findsOneWidget,
+    );
+  });
+  testWidgets('multi-add: a row cannot start its own write while a batch is '
+      'running', (tester) async {
+    final repo = _BatchWidgetsRepository(holdFirstWrite: true);
+    await tester.pumpWidget(
+      _harness(
+        cardsRepo: _MapCardsRepository(_richCards()),
+        widgetsRepo: repo,
+        connected: _allLinked,
+        existing: const [],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    final button = find.byKey(const Key('catalogAddAllButton'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pump();
+
+    // A loose row tapped mid-batch would take the batch's next free position.
+    // Because a failed card does not consume its slot, the batch would then
+    // retry that occupied slot for every card left — most of an accepted batch
+    // would never land. Every row honours the same lock.
+    final row = find.byKey(const Key('passportAddRow'));
+    await tester.ensureVisible(row);
+    await tester.pump();
+    await tester.tap(row, warnIfMissed: false);
+    await tester.pump();
+
+    repo.releaseFirstWrite();
+    await tester.pumpAndSettle();
+
+    // Contiguous from the first free slot, with nothing written twice.
+    final positions = repo.added.map((e) => e.$2).toList();
+    expect(positions, List<int>.generate(positions.length, (i) => i));
+    expect(positions.toSet().length, positions.length);
   });
 }
