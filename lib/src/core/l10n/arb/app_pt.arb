@@ -282,6 +282,8 @@
   "personalizationCollectionTitle": "Coleção",
   "personalizationStatGames": "Jogos",
   "personalizationStatPerfect": "Perfeito",
+  "personalizationCardStale": "Desatualizado",
+  "personalizationCardStaleRefresh": "Toque para atualizar",
   "cardStatRating": "Rating",
   "cardStatGamesOwned": "Jogos",
   "cardStatHoursPlayed": "Horas",

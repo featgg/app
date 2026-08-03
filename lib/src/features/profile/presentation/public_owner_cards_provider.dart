@@ -1,4 +1,3 @@
-import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../connections/domain/connection.dart';
@@ -19,6 +18,11 @@ Duration? _noRetry(int retryCount, Object error) => null;
 /// reads it directly for a platform widget), so the same views resolve the
 /// public — not the owner — card. It lives in `profile/presentation` so the
 /// public source never reaches into the feed feature.
+///
+/// The card is returned as published; what a given viewer may be shown of it —
+/// including whether its data is fresh enough to draw at all — is decided by
+/// the composed render, which is the only layer that can tell a withheld card
+/// from a missing one.
 @Riverpod(retry: _noRetry)
 Future<GameCard?> publicOwnerCard(
   Ref ref,
@@ -27,12 +31,5 @@ Future<GameCard?> publicOwnerCard(
 ) async {
   final repo = ref.watch(cardsRepositoryProvider);
   final result = await repo.fetchPublicCard(userId, platform);
-  final card = result.fold((failure) => throw failure, (c) => c);
-  // Viewer-aware freshness gate (feed contract): every visitor is a non-owner,
-  // so a stale WoW card is hidden entirely. Nulling it here hides it across ALL
-  // visitor paths — platform, template, and composed — because each resolves
-  // through this source; the platform card view's own gate only covers the
-  // platform path.
-  if (card != null && card.isStaleAt(clock.now())) return null;
-  return card;
+  return result.fold((failure) => throw failure, (c) => c);
 }

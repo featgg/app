@@ -170,3 +170,8 @@ Set<ProfileCardSize> supportedSizes(ProfileArchetype a) => switch (a) {
   // Both sizes: a picture is worth placing wide or beside something.
   ProfileArchetype.art => const {ProfileCardSize.full, ProfileCardSize.half},
 };
+
+/// The size [a] renders at when placed in a [size] slot: a full-only archetype
+/// dropped into a half slot renders full within that column.
+ProfileCardSize renderedCardSize(ProfileArchetype a, ProfileCardSize size) =>
+    supportedSizes(a).contains(size) ? size : ProfileCardSize.full;
