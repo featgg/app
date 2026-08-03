@@ -35,7 +35,7 @@ class CompositionEditorRows extends ConsumerStatefulWidget {
 }
 
 class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // Everything below is born and dies inside one drag and is read nowhere else;
   // every consequence of it goes through the composition controller.
   //
@@ -60,9 +60,28 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
   late final AnimationController _pulseController;
   late final Animation<double> _pulse;
 
+  // The card a just-finished acquire is marking, or null. Lives here rather than
+  // in the session: it is what this editor is drawing right now and outlives
+  // neither the mark nor the widget.
+  String? _landedId;
+  late final AnimationController _landController;
+  late final Animation<double> _land;
+
   @override
   void initState() {
     super.initState();
+    _landController = AnimationController(
+      vsync: this,
+      duration: PersonalizationLayout.editorLandMark,
+    );
+    // Holds at full strength, then leaves: the mark has to be found before it
+    // starts fading, and a ring that fades from the first frame reads as an
+    // artifact rather than as an answer to "where did it go".
+    _land = _landController.drive(
+      Tween<double>(begin: 1, end: 0).chain(
+        CurveTween(curve: const Interval(0.55, 1, curve: Curves.easeOut)),
+      ),
+    );
     _pulseController = AnimationController(
       vsync: this,
       duration: PersonalizationLayout.editorMarkPulse,
@@ -79,6 +98,7 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
 
   @override
   void dispose() {
+    _landController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -122,6 +142,62 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
         math.min(position.maxScrollExtent, position.pixels + step),
       );
     }
+  }
+
+  /// The slot rendering [cardId], or null when the layout does not hold it — an
+  /// acquire whose card was deleted before the reveal ran has nothing to show.
+  BuildContext? _slotContextOf(String cardId) {
+    final working = ref.read(profileCompositionProvider).working;
+    for (var i = 0; i < working.length; i++) {
+      final int slotIndex;
+      switch (working[i]) {
+        case FullRow(cardId: final id):
+          if (id != cardId) continue;
+          slotIndex = 0;
+        case PairRow(:final left, :final right):
+          if (left == cardId) {
+            slotIndex = 0;
+          } else if (right == cardId) {
+            slotIndex = 1;
+          } else {
+            continue;
+          }
+      }
+      return _slotKeys[(i, slotIndex)]?.currentContext;
+    }
+    return null;
+  }
+
+  /// Carries the card an acquire just added into view and rings it. The row is
+  /// folded in during the frame this is asked for, so its slot has no context
+  /// until that frame is laid out — hence the wait.
+  ///
+  /// The session is acknowledged before anything can bail out, so a card that
+  /// cannot be revealed still consumes its reveal instead of leaving one pending
+  /// for the next rebuild to replay.
+  void _revealAcquired(String cardId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(profileCompositionProvider.notifier).acknowledgeAcquired();
+      final target = _slotContextOf(cardId);
+      if (target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        // Scrolls only far enough to clear the fold, and not at all when the
+        // card is already on screen: the page stays where the owner left it
+        // unless the new card is somewhere they cannot see.
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : PersonalizationLayout.editorLandScroll,
+        curve: Curves.easeOut,
+      );
+      setState(() => _landedId = cardId);
+      _landController.forward(from: 0).whenComplete(() {
+        if (!mounted) return;
+        setState(() => _landedId = null);
+      });
+    });
   }
 
   /// Anchors the lifted card on the pointer — the answer
@@ -274,6 +350,11 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
     final widgets = ref.watch(ownerProfileWidgetsProvider).value ?? const [];
     // Edit mode builds from every owner widget, including disabled ones.
     final byId = {for (final w in widgets) w.id: w};
+    // An acquire lands its card at the end of the column, which is usually off
+    // screen — the add sheet closes and, without this, nothing visibly happened.
+    ref.listen(profileCompositionProvider.select((s) => s.acquiredId), (_, id) {
+      if (id != null) _revealAcquired(id);
+    });
     final palette = PersonalizationTheme.of(context);
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
@@ -472,6 +553,26 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
               ),
             ),
           ),
+        // Rings the card an acquire just added. Above the card and below the
+        // affordances, so it frames the card without dimming what it offers.
+        if (cardId == _landedId)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: _Landed(
+                animation: _land,
+                child: DecoratedBox(
+                  key: Key('compositionLanded_$cardId'),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: palette.accent,
+                      width: PersonalizationLayout.editorLandMarkWidth,
+                    ),
+                    borderRadius: BorderRadius.circular(palette.radius),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           top: AppSpacing.xs,
           left: AppSpacing.xs,
@@ -647,6 +748,24 @@ class _CompositionEditorRowsState extends ConsumerState<CompositionEditorRows>
       ),
     );
   }
+}
+
+/// Fades the acquired card's ring out at the end of its hold. Where the platform
+/// asks for reduced motion it steps aside, leaving the ring at full strength for
+/// the same span and then gone — the mark is what carries the meaning, and it is
+/// legible without the fade.
+class _Landed extends StatelessWidget {
+  const _Landed({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MediaQuery.disableAnimationsOf(context)
+      ? child
+      : RepaintBoundary(
+          child: FadeTransition(opacity: animation, child: child),
+        );
 }
 
 /// Breathes the landing indicator while a card is in the air. Wraps the mark

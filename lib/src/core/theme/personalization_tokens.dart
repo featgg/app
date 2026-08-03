@@ -421,6 +421,20 @@ abstract final class PersonalizationLayout {
   /// the cycle.
   static const Duration editorMarkPulse = Duration(milliseconds: 900);
   static const double editorMarkPulseFloor = 0.45;
+
+  /// A card acquired from the add sheet lands at the end of the column, often
+  /// below the fold: the sheet closes over the profile and nothing visibly
+  /// changed. The page carries the new card into view and rings it.
+  ///
+  /// The travel is brisk enough to read as the page following the add rather
+  /// than as a scroll of its own, and the ring holds long enough to be found
+  /// with the eye before it leaves — a mark, never a selected state.
+  static const Duration editorLandScroll = Duration(milliseconds: 320);
+  static const Duration editorLandMark = Duration(milliseconds: 1400);
+
+  /// The ring is drawn heavier than a card's own edge so it reads as something
+  /// placed on the card rather than as part of it.
+  static const double editorLandMarkWidth = 2;
 }
 
 /// A fluid size that ramps with the column width between [min] and [max],

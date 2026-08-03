@@ -96,6 +96,15 @@ const _identity = ProfileWidget(
   isEnabled: true,
 );
 
+/// The card an acquire adds mid-session, after the editor is already open.
+const _acquired = ProfileWidget(
+  id: 'a',
+  kind: ProfileWidgetKind.rank,
+  platform: Platform.chess,
+  position: 4,
+  isEnabled: true,
+);
+
 /// A profile with no saved arrangement, so the session bootstraps one.
 const _unarrangedProfile = Profile(
   id: 'owner-1',
@@ -149,12 +158,13 @@ Future<ProviderContainer> _openEditor(
   WidgetTester tester,
   List<ProfileWidget> widgets, {
   bool reducedMotion = false,
+  _FakeWidgetsRepository? repository,
 }) async {
   final container = ProviderContainer(
     retry: (count, error) => null,
     overrides: [
       profileWidgetsRepositoryProvider.overrideWithValue(
-        _FakeWidgetsRepository(widgets),
+        repository ?? _FakeWidgetsRepository(widgets),
       ),
       cardsRepositoryProvider.overrideWithValue(_NullCardsRepository()),
     ],
@@ -220,12 +230,42 @@ Finder _anyMark() => find.byWidgetPredicate((w) {
   return key is ValueKey<String> && key.value.startsWith('compositionMark_');
 });
 
-/// The pulse wired onto a landing mark. Nothing else inside the editor fades,
-/// so this is the animation's whole footprint.
+/// The pulse wired onto a landing mark. The only other fade the editor draws is
+/// an acquired card's ring, which lives and dies inside a reveal — so during a
+/// drag this is the animation's whole footprint.
 Finder _pulseTransitions() => find.descendant(
   of: find.byType(CompositionEditorRows),
   matching: find.byType(FadeTransition),
 );
+
+/// The page the editor scrolls inside.
+ScrollPosition _page(WidgetTester tester) => tester
+    .state<ScrollableState>(
+      find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.byType(Scrollable),
+      ),
+    )
+    .position;
+
+/// Acquires [card] the way production does: it appears in the owner's read, and
+/// the settled read is folded into the working layout. Two frames — the first
+/// folds the row in and schedules the reveal, the second runs it.
+Future<void> _acquire(
+  WidgetTester tester,
+  ProviderContainer container,
+  _FakeWidgetsRepository repository,
+  ProfileWidget card,
+) async {
+  repository.widgets.add(card);
+  container.invalidate(ownerProfileWidgetsProvider);
+  final widgets = await container.read(ownerProfileWidgetsProvider.future);
+  container
+      .read(profileCompositionProvider.notifier)
+      .appendUnplacedWidgets(widgets);
+  await tester.pump();
+  await tester.pump();
+}
 
 void main() {
   testWidgets(
@@ -618,5 +658,142 @@ void main() {
 
     await gesture.up();
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('an acquired card below the fold is carried into view', (
+    tester,
+  ) async {
+    final repository = _FakeWidgetsRepository(const [
+      _rank,
+      _main,
+      _showcase,
+      _identity,
+    ]);
+    final container = await _openEditor(tester, const [
+      _rank,
+      _main,
+      _showcase,
+      _identity,
+    ], repository: repository);
+    expect(_page(tester).pixels, 0);
+
+    await _acquire(tester, container, repository, _acquired);
+    await tester.pumpAndSettle();
+
+    final viewport = tester.getRect(find.byType(SingleChildScrollView));
+    final card = tester.getRect(find.byKey(personalizationCardKey('a')));
+    expect(
+      _page(tester).pixels,
+      greaterThan(0),
+      reason: 'the page never followed the card that was added',
+    );
+    expect(
+      card.bottom,
+      lessThanOrEqualTo(viewport.bottom),
+      reason: 'the acquired card is still under the fold',
+    );
+  });
+
+  testWidgets('the reveal does not replay once the owner scrolls away', (
+    tester,
+  ) async {
+    final repository = _FakeWidgetsRepository(const [
+      _rank,
+      _main,
+      _showcase,
+      _identity,
+    ]);
+    final container = await _openEditor(tester, const [
+      _rank,
+      _main,
+      _showcase,
+      _identity,
+    ], repository: repository);
+
+    await _acquire(tester, container, repository, _acquired);
+    await tester.pumpAndSettle();
+    expect(_page(tester).pixels, greaterThan(0));
+
+    // The owner reads back up the column, then anything at all rebuilds the
+    // editor. A reveal driven off the built state instead of the transition
+    // would drag them back down to the card they already saw.
+    _page(tester).jumpTo(0);
+    await tester.pump();
+    container.read(profileCompositionProvider.notifier).onToggleSize('r');
+    await tester.pumpAndSettle();
+
+    expect(_page(tester).pixels, 0);
+  });
+
+  testWidgets('the acquired card is ringed, and the ring leaves', (
+    tester,
+  ) async {
+    final repository = _FakeWidgetsRepository(const [_rank]);
+    final container = await _openEditor(tester, const [
+      _rank,
+    ], repository: repository);
+    expect(find.byKey(const Key('compositionLanded_a')), findsNothing);
+
+    await _acquire(tester, container, repository, _acquired);
+    expect(find.byKey(const Key('compositionLanded_a')), findsOneWidget);
+
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('compositionLanded_a')), findsNothing);
+    // A controller left running past the mark hangs every settle in this suite.
+    expect(tester.binding.transientCallbackCount, 0);
+  });
+
+  testWidgets('reduced motion still reveals the card, without travelling', (
+    tester,
+  ) async {
+    final repository = _FakeWidgetsRepository(const [
+      _rank,
+      _main,
+      _showcase,
+      _identity,
+    ]);
+    final container = await _openEditor(
+      tester,
+      const [_rank, _main, _showcase, _identity],
+      reducedMotion: true,
+      repository: repository,
+    );
+
+    await _acquire(tester, container, repository, _acquired);
+    await tester.pumpAndSettle();
+
+    final viewport = tester.getRect(find.byType(SingleChildScrollView));
+    expect(
+      tester.getRect(find.byKey(personalizationCardKey('a'))).bottom,
+      lessThanOrEqualTo(viewport.bottom),
+    );
+    expect(tester.binding.transientCallbackCount, 0);
+  });
+
+  testWidgets('reduced motion rings the card without fading it', (
+    tester,
+  ) async {
+    final repository = _FakeWidgetsRepository(const [_rank]);
+    final container = await _openEditor(
+      tester,
+      const [_rank],
+      reducedMotion: true,
+      repository: repository,
+    );
+
+    await _acquire(tester, container, repository, _acquired);
+
+    // The ring is there at full strength and the fade is not wired at all,
+    // rather than wired and hidden — the mark is what carries the meaning.
+    expect(find.byKey(const Key('compositionLanded_a')), findsOneWidget);
+    // Scoped to the editor: the app's own route transitions are FadeTransitions
+    // too, and they are not what this is about. No drag is in flight, so the
+    // ring's fade would be the editor's only one.
+    expect(_pulseTransitions(), findsNothing);
+
+    // It still leaves on its own; reduced motion suppresses the fade, not the
+    // mark's lifetime.
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('compositionLanded_a')), findsNothing);
   });
 }

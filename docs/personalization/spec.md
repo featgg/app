@@ -308,6 +308,16 @@ Settings keeps what the profile page does not show: privacy, account, language, 
 - **⇆ size toggle** on dual-size archetypes, the one control whose purpose is the size: full → orphan half in place; half → new full row inserted after the origin row, ex-partner stays centered orphan.
 - `mockups/layout-editor.html` is normative for editor interaction — its mutations (`removeCard`, `insertAsRow`, `pairWith`, `toggleSize`) and what each drop zone *means* — and for nothing else. Port the behavior, not the code. How a zone is *acquired* is this section's prose, not the mockup's pointer-exact hit test; #208 is where that model was decided.
 
+### 9.3 Landing an acquired card
+
+A card acquired from the catalog is appended at the end of the arrangement, which on any profile past a couple of cards is below the fold. The sheet closes over a page that, from where the owner is looking, did not change — so the editor **carries the new card into view and marks it** for a moment.
+
+- **The page travels, it does not jump.** The movement is what states that the page moved and by how much; a cut leaves the owner re-orienting on a surface they were in the middle of arranging (§10's second motion exception).
+- **It moves only as far as the fold requires.** A card already on screen leaves the page where the owner put it — the reveal answers "where did it go", and when that is not a question it says nothing.
+- **The mark is a ring on the card**, in the theme's accent. It holds at full strength long enough to be found, then fades out — a ring that starts fading on its first frame is half gone by the time the eye arrives and reads as an artifact rather than as an answer. It is drawn over the card and under the card's own affordances, so it frames what was added without covering what can be done with it.
+- **It fires once per acquisition**, never on a rebuild: a reveal that replays would drag an owner back down to a card they already saw.
+- Under reduced motion the card is still brought into view and still ringed — without the travel, and without the fade: the ring holds for the same span and then leaves.
+
 ## 10. Deferred
 
 Out of v1 — deferred, not rejected, except where a line says otherwise.
@@ -316,7 +326,19 @@ Out of v1 — deferred, not rejected, except where a line says otherwise.
 - **Recap / "Feat Replay"** (monthly wrapped card): requires historical aggregation (monthly stat snapshots) that does not exist. Own epic post-V1; high retention value, not a launch blocker.
 - **Public-text moderation** — unblocks Text Note *editing*; one policy for note + display_name + bio, reusing the existing moderation provider seam with text input (#199).
 - Uploading your own header art (choosing among the art the profile already carries is part of the header, §4).
-- **Motion** — post-V1 polish, with one exception already taken: the composition editor's landing indicator pulses while a card is in the air (§9.2). It earns the exception because it is the only thing telling an owner where a release will land, it sits in the channel beside the card rather than on it and so cannot lean on the card's own contrast, and a drag is exactly the moment the eye is elsewhere. It is scoped to that indicator, it runs only during a drag, and reduced motion suppresses it — the static bar is the one that has to be legible. Nothing else in the product animates.
+- **Motion** — a budget, not a ban. What is deferred is *building* motion: **no motion system, no choreographed transitions, no shared-element or hero work, no animation library.** That is where the days go, and none of it is where v1's value is. A small movement local to a surface someone is already working on is not that, and does not need permission.
+
+  The line: **if the movement is a few lines inside the widget that already exists, take it. If it needs a system to hold it, defer it.** A page that follows an add, a mark that fades out when its moment passes, a control that settles rather than snapping — all fine. A motion vocabulary, coordinated timing across screens, or anything whose implementation is its own piece of work — not now.
+
+  Three constraints hold for anything taken, and these do not bend:
+
+  - **It is suppressed under reduced motion**, and what remains has to be legible on its own. This is the accessibility contract, not a preference. A movement with no readable static form is not ready.
+  - **Its durations come from the shared tokens**, never a number typed at the call site — that is how a handful of local movements stays a handful and does not become the system this defers.
+  - **It stays local to the surface that wanted it.** Motion that reaches across screens is the system, whatever it is called.
+
+  Taken so far: the composition editor's **landing indicator pulse** while a card is in the air (§9.2), and the **reveal that follows an add** (§9.3) — the page's travel to the new card and the ring that marks it. Both are local, both are token-timed, both vanish under reduced motion.
+
+  Still deferred: skeleton shimmer, ripples beyond the platform default, page-transition flourishes, and any movement on the profile render itself — a profile is read, not watched.
 - Per-platform premium card art; user-derived palettes; multi-asset header art; animated backgrounds.
 - 3+ column layouts, vertical spans, free grid — **explicitly rejected**.
 

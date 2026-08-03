@@ -36,6 +36,7 @@ final class ProfileCompositionState extends Equatable {
     this.framings = const {},
     this.savedFramings = const {},
     this.framingId,
+    this.acquiredId,
     this.saving = false,
     this.saveFailed = false,
     this.hasPersisted = false,
@@ -59,6 +60,12 @@ final class ProfileCompositionState extends Equatable {
   /// editor: while a picture is being moved the page must not scroll under the
   /// finger, and the page is not the editor's to silence.
   final String? framingId;
+
+  /// The card the last acquire folded in, or null. One-shot: the editor consumes
+  /// it to bring the new card into view and clears it immediately, so no rebuild
+  /// can replay the reveal.
+  final String? acquiredId;
+
   final bool saving;
   final bool saveFailed;
   final bool hasPersisted;
@@ -84,6 +91,7 @@ final class ProfileCompositionState extends Equatable {
     Map<String, ArtFraming>? framings,
     Map<String, ArtFraming>? savedFramings,
     String? Function()? framingId,
+    String? Function()? acquiredId,
     bool? saving,
     bool? saveFailed,
     bool? hasPersisted,
@@ -97,6 +105,7 @@ final class ProfileCompositionState extends Equatable {
     savedFramings: savedFramings ?? this.savedFramings,
     // Nullary so leaving the mode can be expressed at all.
     framingId: framingId != null ? framingId() : this.framingId,
+    acquiredId: acquiredId != null ? acquiredId() : this.acquiredId,
     saving: saving ?? this.saving,
     saveFailed: saveFailed ?? this.saveFailed,
     hasPersisted: hasPersisted ?? this.hasPersisted,
@@ -112,6 +121,7 @@ final class ProfileCompositionState extends Equatable {
     framings,
     savedFramings,
     framingId,
+    acquiredId,
     saving,
     saveFailed,
     hasPersisted,
@@ -177,6 +187,9 @@ class ProfileComposition extends _$ProfileComposition {
       framings: const {},
       savedFramings: const {},
       framingId: () => null,
+      // A reveal the previous session never consumed dies with it, so opening
+      // the editor again does not scroll to a card acquired long ago.
+      acquiredId: () => null,
       saveFailed: false,
     );
   }
@@ -275,7 +288,17 @@ class ProfileComposition extends _$ProfileComposition {
         for (final w in additions)
           _supportsFull(w.id) ? FullRow(w.id) : PairRow(left: w.id),
       ],
+      // The first of the batch: the appended cards are contiguous, so its top is
+      // where the run of new rows begins and where the eye should land.
+      acquiredId: () => additions.first.id,
     );
+  }
+
+  /// Clears the pending reveal once the editor has acted on it, so the scroll
+  /// and its mark fire exactly once per acquire.
+  void acknowledgeAcquired() {
+    if (state.acquiredId == null) return;
+    state = state.copyWith(acquiredId: () => null);
   }
 
   // Records whether each card supports a full row, from the owner's widgets. Full
