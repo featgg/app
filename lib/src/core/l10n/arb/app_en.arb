@@ -1162,9 +1162,9 @@
   "@personalizationStatMemberSince": {
     "description": "Stat-footer label on the Identity card; the value is the year the profile was created."
   },
-  "personalizationMainTopChampion": "Top champion",
-  "@personalizationMainTopChampion": {
-    "description": "Generic Main-card title used when the payload carries no main name — for example a League champion the payload could not name."
+  "personalizationMainFallbackTitle": "Main",
+  "@personalizationMainFallbackTitle": {
+    "description": "Main-card title used when the payload names no subject. Every platform this card serves reaches it, so the wording is platform-neutral."
   },
   "personalizationCollectionTitle": "Collection",
   "@personalizationCollectionTitle": {
