@@ -389,6 +389,12 @@ abstract final class PersonalizationLayout {
   /// rather than duplicated.
   static const double editorOriginOpacity = 0.35;
 
+  /// How far a card whose data is out of date is faded. The strongest fade the
+  /// notice can carry and still clear AA-normal on every palette — over the
+  /// profile background and over the brightest corner glow behind it — so the
+  /// card reads inactive without its one line becoming unreadable.
+  static const double staleCardOpacity = 0.85;
+
   /// How far outside the rows region a release still lands in the nearest
   /// landing place — about half a full card at the design floor
   /// (`(320 - 28) / 1.5 / 2 ≈ 97`). Inside the region every point already

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:featgg/src/core/theme/personalization_tokens.dart';
 import 'package:featgg/src/features/profile/domain/profile.dart';
 import 'package:featgg/src/features/profile/presentation/personalization_theme_palette.dart';
 import 'package:flutter/widgets.dart';
@@ -60,6 +61,34 @@ void main() {
           );
         }
       });
+
+      test('${theme.name} keeps the stale notice legible while faded', () {
+        final palette = paletteForTheme(theme);
+        // The withheld card is faded as one layer, so both its notice and the
+        // ground under it are composited over whatever the card sits on. The
+        // lighter stop of the card ground is the worst backdrop for light text,
+        // and the corner glow is the brightest thing the column can sit over.
+        for (final backdrop in {
+          'bg': palette.bg,
+          'glow': palette.artB,
+        }.entries) {
+          expect(
+            _contrastRatio(
+              _faded(palette.text, backdrop.value),
+              _faded(palette.artB, backdrop.value),
+            ),
+            greaterThanOrEqualTo(4.5),
+            reason: 'stale notice over ${backdrop.key}',
+          );
+        }
+      });
     }
   });
 }
+
+/// [color] as it reaches the canvas inside a card faded by
+/// [PersonalizationLayout.staleCardOpacity] over [backdrop].
+Color _faded(Color color, Color backdrop) => Color.alphaBlend(
+  color.withValues(alpha: PersonalizationLayout.staleCardOpacity),
+  backdrop,
+);

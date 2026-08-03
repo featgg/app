@@ -1178,6 +1178,14 @@
   "@personalizationStatPerfect": {
     "description": "Stat-footer label on the Achievement Grid card; the value is the count of 100%-completed (perfect) games."
   },
+  "personalizationCardStale": "Out of date",
+  "@personalizationCardStale": {
+    "description": "Shown to the profile owner in place of a card whose platform data is past its freshness window. Kept to two or three words: it renders centred on a card as narrow as half a phone column."
+  },
+  "personalizationCardStaleRefresh": "Tap to refresh",
+  "@personalizationCardStaleRefresh": {
+    "description": "Action line under the out-of-date notice on the owner's own profile; tapping the card opens the connections screen, where the refresh lives."
+  },
   "cardStatRating": "Rating",
   "@cardStatRating": {
     "description": "Card datum label for the rating stat. Terse on purpose: a card label has to fit beside a platform name at the narrowest supported width."

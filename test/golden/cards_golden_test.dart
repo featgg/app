@@ -826,4 +826,60 @@ void main() {
       );
     });
   });
+
+  // The card the owner is shown in place of one whose platform data is past its
+  // freshness window: the fade, the centred notice, and the band the archetype
+  // would have had.
+  group('Stale', () {
+    goldenTest('full fades the frame and centres the notice over an empty '
+        'band', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: const PersonalizationStaleCard(
+          archetype: ProfileArchetype.platform,
+          size: ProfileCardSize.full,
+        ),
+        width: goldenFullWidth,
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/stale_full.png'),
+      );
+    });
+
+    goldenTest('half carries the same notice at the narrowest slot the '
+        'catalog ships', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: const PersonalizationStaleCard(
+          archetype: ProfileArchetype.platform,
+          size: ProfileCardSize.half,
+        ),
+        width: goldenHalfWidth,
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/stale_half.png'),
+      );
+    });
+
+    goldenTest('the Art chassis keeps its portrait plate and has no band to '
+        'empty', (tester) async {
+      await pumpCardGolden(
+        tester,
+        card: const PersonalizationStaleCard(
+          archetype: ProfileArchetype.art,
+          size: ProfileCardSize.full,
+        ),
+        width: goldenFullWidth,
+      );
+
+      await expectLater(
+        find.byKey(goldenSubjectKey),
+        matchesGoldenFile('goldens/stale_art_full.png'),
+      );
+    });
+  });
 }

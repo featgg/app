@@ -28,6 +28,7 @@ export 'cards/platform_card.dart';
 export 'cards/rank_card.dart';
 export 'cards/rarest_achievement_card.dart';
 export 'cards/recent_card.dart';
+export 'cards/stale_card.dart';
 
 /// Builds the archetype card for [widget] at [size]. A full-only archetype in a
 /// half slot renders full within its column. Shared by the read view and the
@@ -39,9 +40,7 @@ Widget personalizationCardFor(
   DateTime? memberSince,
 }) {
   final archetype = archetypeForWidget(widget);
-  final effectiveSize = supportedSizes(archetype).contains(size)
-      ? size
-      : ProfileCardSize.full;
+  final effectiveSize = renderedCardSize(archetype, size);
   return switch (archetype) {
     ProfileArchetype.identity => IdentityCard(
       widget: widget,

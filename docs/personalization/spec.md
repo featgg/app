@@ -122,7 +122,7 @@ Framing pans and scales, with a floor at the size that covers the frame: framing
 
 - A card whose subject cannot be named does not ship (§2, rule 2).
 - A card the owner has not filled, or one whose platform cannot support it, renders as an owner-only placeholder and is hidden from visitors (the behavior `docs/integration/personalization.md` § `type` already describes for a showcase bound to an unsupported platform).
-- A visitor never sees stale platform data presented as current; the composed render applies the same freshness rule the platform card render applies. How staleness reads visually — withheld or marked — is settled by #232.
+- A visitor never sees stale platform data presented as current; the composed render applies the same freshness rule the platform card render applies. Staleness is **withheld, not marked**: a card whose platform is past its freshness window shows no data and no platform art to anyone. The owner keeps its slot — so the composition does not reflow under them — and the card renders in its framed form with a line saying the data is out of date and a tap to refresh; every other viewer gets no card at all, and the row closes up exactly as it does for a card the owner disabled. Because such a card resolves as absent, the surfaces that read several platforms at once — the header cover and its marks, the passport chips, an unpointed Art card's fallback — behave as if that platform published nothing.
 
 ## 7. Card catalog
 

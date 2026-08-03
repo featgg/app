@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/core.dart';
@@ -211,56 +212,112 @@ class _LayoutRows extends ConsumerWidget {
           ref.invalidate(provider as ProviderOrFamily);
         }
       },
-      data: (widgets) {
-        // A disabled card is dropped from the read render: a full row with a
-        // disabled card is omitted; a pair with one disabled side centers the
-        // other.
-        final byId = {
-          for (final w in widgets)
-            if (w.isEnabled) w.id: w,
-        };
-        // A profile whose owner never arranged one still shows its cards, in
-        // the order the editor would seed — arranging is a refinement, not a
-        // precondition for being rendered.
-        final effective = layout.isEmpty ? defaultLayoutFor(widgets) : layout;
-        final rows = <Widget>[];
-        for (final row in effective) {
-          final built = _buildRow(row, byId);
-          if (built == null) continue;
-          if (rows.isNotEmpty) {
-            rows.add(const SizedBox(height: PersonalizationLayout.rowGap));
-          }
-          rows.add(built);
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: rows,
-        );
-      },
+      data: (widgets) => _Rows(
+        layout: layout,
+        widgets: widgets,
+        cardSource: cardSource,
+        memberSince: memberSince,
+      ),
+    );
+  }
+}
+
+/// Composes the resolved widgets into rows. Its own consumer because deciding
+/// whether a slot is filled reads that slot's card, and the enclosing widget's
+/// build is already over by the time this builder runs.
+class _Rows extends ConsumerWidget {
+  const _Rows({
+    required this.layout,
+    required this.widgets,
+    required this.cardSource,
+    this.memberSince,
+  });
+
+  final List<ProfileLayoutRow> layout;
+  final List<ProfileWidget> widgets;
+  final CardSource? cardSource;
+  final DateTime? memberSince;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // A disabled card is dropped from the read render: a full row with a
+    // disabled card is omitted; a pair with one disabled side centers the
+    // other.
+    final byId = {
+      for (final w in widgets)
+        if (w.isEnabled) w.id: w,
+    };
+    // A profile whose owner never arranged one still shows its cards, in
+    // the order the editor would seed — arranging is a refinement, not a
+    // precondition for being rendered.
+    final effective = layout.isEmpty ? defaultLayoutFor(widgets) : layout;
+    final rows = <Widget>[];
+    for (final row in effective) {
+      final built = _buildRow(context, ref, row, byId);
+      if (built == null) continue;
+      if (rows.isNotEmpty) {
+        rows.add(const SizedBox(height: PersonalizationLayout.rowGap));
+      }
+      rows.add(built);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
     );
   }
 
   /// Builds one row, or null when nothing in it resolves (the row is omitted).
-  Widget? _buildRow(ProfileLayoutRow row, Map<String, ProfileWidget> byId) {
+  Widget? _buildRow(
+    BuildContext context,
+    WidgetRef ref,
+    ProfileLayoutRow row,
+    Map<String, ProfileWidget> byId,
+  ) {
     switch (row) {
       case FullRow(:final cardId):
-        return _card(byId[cardId], ProfileCardSize.full);
+        return _card(context, ref, byId[cardId], ProfileCardSize.full);
       case PairRow(:final left, :final right):
-        final leftCard = _card(byId[left], ProfileCardSize.half);
-        final rightCard = _card(byId[right], ProfileCardSize.half);
+        final leftCard = _card(context, ref, byId[left], ProfileCardSize.half);
+        final rightCard = _card(
+          context,
+          ref,
+          byId[right],
+          ProfileCardSize.half,
+        );
         if (leftCard == null && rightCard == null) return null;
         return personalizationPairFrame(left: leftCard, right: rightCard);
     }
   }
 
   /// Builds the archetype card for [w] at [size], or null when the widget id did
-  /// not resolve to a placed, enabled widget (deleted/hidden).
-  Widget? _card(ProfileWidget? w, ProfileCardSize size) => w == null
-      ? null
-      : personalizationCardFor(
-          w,
-          size: size,
-          cardSource: cardSource,
-          memberSince: memberSince,
-        );
+  /// not resolve to a placed, enabled widget (deleted/hidden) — or when the
+  /// platform it draws from is past its freshness window and the viewer is not
+  /// the owner, in which case the row closes up around it.
+  Widget? _card(
+    BuildContext context,
+    WidgetRef ref,
+    ProfileWidget? w,
+    ProfileCardSize size,
+  ) {
+    if (w == null) return null;
+    final archetype = archetypeForWidget(w);
+    return switch (cardFreshnessGate(ref, w, cardSource)) {
+      CardFreshnessGate.hidden => null,
+      CardFreshnessGate.withheld => PersonalizationStaleCard(
+        key: personalizationCardKey(w.id),
+        archetype: archetype,
+        size: renderedCardSize(archetype, size),
+        // The refresh, its cooldown and its outcome belong to the connections
+        // surface; the owner is taken there rather than given a second path
+        // into the same action.
+        onRefresh: () => context.push('/connections'),
+      ),
+      CardFreshnessGate.none => personalizationCardFor(
+        w,
+        size: size,
+        cardSource: cardSource,
+        memberSince: memberSince,
+      ),
+    };
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/core.dart';
@@ -7,6 +8,7 @@ import '../../../connections/domain/platform_descriptor.dart';
 import '../../domain/completionist_value_resolver.dart';
 import '../../domain/game_collector_value_resolver.dart';
 import '../../domain/personal_best_value_resolver.dart';
+import '../../domain/profile_widget.dart';
 import '../../domain/rarest_achievement_value_resolver.dart';
 import '../../domain/recent_value_resolver.dart';
 import '../../domain/showcase_selection.dart';
@@ -31,14 +33,69 @@ String formatCardValue(num value, AppLocalizations l10n) {
   return NumberFormat.compact(locale: l10n.localeName).format(whole);
 }
 
-/// The current card for [platform] from the injected [source] (owner default is
+/// A platform's card as the composed render may use it, plus whether a card
+/// that does exist is being withheld for being past the freshness window its
+/// platform's provider requires.
+typedef ResolvedCardState = ({GameCard? card, bool stale});
+
+/// [platform]'s card from the injected [source] (owner default is
 /// [ownerCardProvider]; the visitor render injects a public source). An errored
 /// read resolves as absent so a single failing platform never errors the card.
-GameCard? resolveCard(WidgetRef ref, CardSource? source, Platform platform) {
+/// A card past its platform's freshness window also resolves as absent — its
+/// data and its art are not this client's to draw — and reports [stale] so the
+/// render still knows why the card is empty.
+ResolvedCardState resolveCardState(
+  WidgetRef ref,
+  CardSource? source,
+  Platform platform,
+) {
   final state = source == null
       ? ref.watch(ownerCardProvider(platform))
       : ref.watch(source(platform));
-  return state.hasError ? null : state.value;
+  final card = state.hasError ? null : state.value;
+  if (card != null && card.isStaleAt(clock.now())) {
+    return (card: null, stale: true);
+  }
+  return (card: card, stale: false);
+}
+
+/// The current card for [platform], or null where none may be drawn.
+GameCard? resolveCard(WidgetRef ref, CardSource? source, Platform platform) =>
+    resolveCardState(ref, source, platform).card;
+
+/// What the composed render does with a card whose platform data is past the
+/// freshness window its provider requires.
+enum CardFreshnessGate {
+  /// Nothing — the card renders exactly as it always did.
+  none,
+
+  /// The slot stays, and says the data is out of date. Only the owner can act
+  /// on it, so only the owner is shown it.
+  withheld,
+
+  /// No card at all.
+  hidden,
+}
+
+/// The gate for [widget]. A widget that draws from no single platform — the
+/// passport, an art card the owner has not pointed anywhere — is never gated:
+/// it aggregates, and the platform it can no longer read has already dropped
+/// out of what [resolveCard] hands it.
+///
+/// A null [source] is the owner's own render; a non-null one is injected only
+/// by the visitor route, which is what makes the decision viewer-aware without
+/// threading an owner flag through every card.
+CardFreshnessGate cardFreshnessGate(
+  WidgetRef ref,
+  ProfileWidget widget,
+  CardSource? source,
+) {
+  final platform = widget.platform ?? widget.artSelection.source;
+  if (platform == null) return CardFreshnessGate.none;
+  if (!resolveCardState(ref, source, platform).stale) {
+    return CardFreshnessGate.none;
+  }
+  return source == null ? CardFreshnessGate.withheld : CardFreshnessGate.hidden;
 }
 
 /// The first [cap] of the card's envelope stats whose key resolves to a label.
